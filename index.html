@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FinanceTracker">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="main-heading-display">Personal Finance Dashboard</h1>
+            <p id="sub-heading-display">Track your income, expenses, and savings with style</p>
+            <button class="btn btn-install" id="install-app-btn" style="display: none; margin-top: 15px; background: #4CAF50;">
+                📥 Install App
+            </button>
+            </div>
+
+        <div class="tabs">
+            <div class="tab" data-tab-target="dashboard">📊 Dashboard</div>
+            <div class="tab" data-tab-target="income">💰 Income</div>
+            <div class="tab" data-tab-target="expenses">💸 Expenses</div>
+            <div class="tab" data-tab-target="savings">📈 Savings</div>
+            <div class="tab" data-tab-target="liabilities">⚖️ Liabilities</div>
+            <div class="tab" data-tab-target="whatIf">🤔 What If?</div>
+            <div class="tab" data-tab-target="guiSettings">🎨 GUI Settings</div>
+            <div class="tab active" data-tab-target="settings">⚙️ Settings</div>
+        </div>
+
+        <div class="content">
+            <div id="dashboard" class="tab-content">
+                <div class="dashboard-controls">
+                    <label for="dashboard-view-period">View Period:</label>
+                    <select id="dashboard-view-period">
+                        <option value="daily">Daily (5-Day Week)</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="fortnightly">Fortnightly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">Income Overview</div>
+                                <div class="card-subtitle" id="dashboard-income-subtitle">After Tax (Fortnightly)</div>
+                            </div>
+                        </div>
+                        <div class="amount neutral" id="dashboard-income-period-display">A$0.00</div>
+                        <div class="time-periods">
+                             <div class="time-item">
+                                <div class="time-label">Annual</div>
+                                <div class="time-amount" id="dashboard-annual-income">A$0.00</div>
+                            </div>
+                            <div class="time-item">
+                                <div class="time-label">Weekly</div>
+                                <div class="time-amount" id="dashboard-weekly-income">A$0.00</div>
+                            </div>
+                            <div class="time-item">
+                                <div class="time-label">Daily (5-Day)</div>
+                                <div class="time-amount" id="dashboard-daily-income">A$0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title" id="dashboard-outgoing-savings-title">Fortnightly Overview</div>
+                                <div class="card-subtitle">Outgoing vs Savings</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div style="text-align: center; flex: 1; min-width: 100px;">
+                                <div class="card-subtitle">Outgoing</div>
+                                <div class="amount expense" id="dashboard-period-expenses">A$0.00</div>
+                            </div>
+                            <div style="text-align: center; flex: 1; min-width: 100px;">
+                                <div class="card-subtitle">Savings</div>
+                                <div class="amount" id="dashboard-period-savings">A$0.00</div>
+                            </div>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="savings-progress" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">Net Worth</div>
+                                <div class="card-subtitle">Assets minus Liabilities</div>
+                            </div>
+                        </div>
+                        <div class="amount net-worth" id="net-worth-display">A$0.00</div>
+                         <div class="net-worth-breakdown">
+                            <div>
+                                <div class="card-subtitle">Total Assets</div>
+                                <div class="amount" id="total-assets-display">A$0.00</div>
+                            </div>
+                            <div>
+                                <div class="card-subtitle">Total Liabilities</div>
+                                <div class="amount expense" id="total-liabilities-display">A$0.00</div>
+                            </div>
+                        </div>
+                        <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+                        <div class="card-subtitle" style="text-align: center; margin-bottom: 10px;">Breakdown</div>
+                        <div class="accounts-grid" id="assets-display"></div>
+                        <div class="accounts-grid" id="liabilities-display"></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title" id="allocation-title">Income Allocation Strategy</div>
+                    <div class="card-subtitle" id="allocation-period-subtitle">Based on Net Income (Fortnightly)</div>
+                    <div class="savings-breakdown" id="allocation-display"></div>
+                </div>
+            </div>
+
+            <div id="income" class="tab-content">
+                <div class="info-section">
+                    <h3>Understanding Your Income</h3>
+                    <p>Your income section helps you track all your revenue sources and understand your true earning potential. This includes tracking gross income, tax deductions, and net take-home pay.</p>
+                    <p><strong>Key Features:</strong></p>
+                    <ul>
+                        <li><strong>Multiple Income Sources:</strong> Track salary, freelance work, investments, and other revenue streams</li>
+                        <li><strong>Tax Calculations:</strong> Monitor how much you're paying in taxes across all sources</li>
+                        <li><strong>Net Income Focus:</strong> See your actual spending power after all deductions</li>
+                        <li><strong>Pay Schedule Flexibility:</strong> Handle weekly, fortnightly, monthly, or yearly payment cycles</li>
+                    </ul>
+                </div>
+                <div id="income-streams-display"></div>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-title">Income Breakdown (Total)</div>
+                        <div class="card-subtitle">Annual Summary</div>
+                        <div style="margin: 20px 0;" id="income-breakdown"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Tax Brackets (Reference Only)</div>
+                        <div class="card-subtitle">Based on primary income's gross for ATO comparison. Not used for active tax calculation if 'Tax Removed' or 'Invoiced Pay' is set.</div>
+                        <div style="margin-top: 20px;" id="tax-breakdown-reference"></div>
+                    </div>
+                </div>
+                <div class="summary-stats" id="income-stats"></div>
+            </div>
+
+            <div id="expenses" class="tab-content">
+                <div class="info-section">
+                    <h3>Managing Your Expenses</h3>
+                    <p>Expense tracking is crucial for understanding where your money goes and identifying opportunities to optimize your spending. We categorize expenses into Essential and Non-Essential to help prioritize your financial decisions.</p>
+                    <p><strong>Essential vs Non-Essential:</strong></p>
+                    <ul>
+                        <li><strong>Essential Expenses:</strong> Necessary costs like rent, utilities, groceries, and minimum debt payments</li>
+                        <li><strong>Non-Essential Expenses:</strong> Lifestyle choices like entertainment, dining out, subscriptions, and hobbies</li>
+                        <li><strong>Optimization Strategy:</strong> Focus on reducing non-essential expenses first when looking to increase savings</li>
+                    </ul>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-title">Essential Expenses</div>
+                        <div class="card-subtitle" id="essential-subtitle">A$0.00/week • A$0.00/year</div>
+                        <div class="expense-list" id="essential-expenses"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Non-Essential Expenses</div>
+                        <div class="card-subtitle" id="non-essential-subtitle">A$0.00/week • A$0.00/year</div>
+                        <div class="expense-list" id="non-essential-expenses"></div>
+                    </div>
+                </div>
+                <div class="summary-stats" id="expense-stats"></div>
+            </div>
+
+            <div id="savings" class="tab-content">
+                <div class="info-section">
+                    <h3>Building Your Financial Future</h3>
+                    <p>Your savings rate is one of the most important metrics for financial health and independence. This section shows your capacity to save and invest for the future.</p>
+                    <p><strong>Key Concepts:</strong></p>
+                    <ul>
+                        <li><strong>Savings Rate:</strong> Percentage of net income you're able to save (aim for 20%+ for strong financial health)</li>
+                        <li><strong>Financial Independence:</strong> The point where your assets generate enough passive income to cover expenses</li>
+                        <li><strong>Compound Growth:</strong> How your investments grow over time through reinvested returns</li>
+                        <li><strong>The 4% Rule:</strong> A common guideline suggesting you can withdraw 4% of your portfolio annually in retirement</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <div class="card-title">Net Savings Capacity</div>
+                    <div class="card-subtitle">Income minus all expenses</div>
+                    <div class="time-periods" style="margin-top: 30px;" id="savings-capacity"></div>
+                </div>
+                <div class="dashboard-grid" style="margin-top: 30px;">
+                    <div class="card">
+                        <div class="card-title">Savings Rate</div>
+                        <div class="card-subtitle">Percentage of net income saved</div>
+                        <div class="amount" style="color: #4CAF50;" id="savings-rate">0.0%</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="savings-rate-progress" style="width: 0%;"></div>
+                        </div>
+                        <p style="margin-top: 15px; color: #666; font-size: 0.9em;" id="savings-message"></p>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Financial Independence</div>
+                        <div class="card-subtitle">At current savings rate</div>
+                        <div style="margin: 20px 0;" id="fi-stats"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="liabilities" class="tab-content">
+                <div class="info-section">
+                    <h3>Understanding Your Liabilities</h3>
+                    <p>Liabilities are debts or financial obligations you owe to others. Tracking them is essential for understanding your true financial position (Net Worth) and planning strategies like debt reduction.</p>
+                    <p><strong>Common Types:</strong></p>
+                    <ul>
+                        <li><strong>High-Interest Debt:</strong> Credit cards, personal loans (prioritize paying these off first)</li>
+                        <li><strong>Secured Loans:</strong> Mortgages, car loans (often lower interest rates)</li>
+                        <li><strong>Student Loans:</strong> Education debt (may have favorable terms)</li>
+                        <li><strong>Investment Debt:</strong> Loans used to purchase appreciating assets</li>
+                    </ul>
+                    <p style="margin-top: 15px;"><strong>Strategy Tip:</strong> Focus on paying off high-interest debts first while making minimum payments on lower-interest loans.</p>
+                </div>
+                <div class="card">
+                    <div class="card-title">Liability Summary</div>
+                    <div class="card-subtitle">Your current debt obligations</div>
+                    <div class="liability-summary" id="liability-summary-display"></div>
+                </div>
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-title">Debt Reduction Impact</div>
+                    <div class="card-subtitle">How paying off debts improves your net worth</div>
+                    <div style="margin: 20px 0;" id="debt-impact-stats"></div>
+                </div>
+            </div>
+
+            <div id="whatIf" class="tab-content">
+                <div class="info-section">
+                    <h3>Financial Scenario Planning</h3>
+                    <p>Use this powerful tool to explore "what if" scenarios and see how changes in your financial situation could impact your path to Financial Independence.</p>
+                    <p><strong>How to Use:</strong></p>
+                    <ul>
+                        <li><strong>Test Income Changes:</strong> See how salary increases or career changes affect your timeline</li>
+                        <li><strong>Experiment with Expenses:</strong> Add potential new expenses or test cost-cutting measures</li>
+                        <li><strong>Model Investment Returns:</strong> Understand how different market conditions impact your goals</li>
+                        <li><strong>Asset Adjustments:</strong> Factor in windfalls, inheritance, or major purchases</li>
+                    </ul>
+                    <p><strong>Note:</strong> All changes here are temporary and won't affect your saved data.</p>
+                </div>
+                <div class="settings-section" style="border-left-color: #00acc1;">
+                    <div class="settings-title">🤔 "What If" Scenario Planner</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="whatif-new-annual-income">New Annual Net Income (Total)</label>
+                            <input type="number" class="form-input" id="whatif-new-annual-income" placeholder="e.g., 65000">
+                        </div>
+                         <div class="form-group">
+                            <label class="form-label" for="whatif-assets-change">Current Assets Change (Amount)</label>
+                            <input type="number" class="form-input" id="whatif-assets-change" placeholder="e.g., 5000 or -1000" value="0">
+                        </div>
+                         <div class="form-group">
+                            <label class="form-label" for="whatif-return-change">New Expected Return (%)</label>
+                            <input type="number" class="form-input" id="whatif-return-change" placeholder="e.g., 8 or 6" step="0.1">
+                        </div>
+                    </div>
+                    <div class="settings-section" style="margin-top: 20px;">
+                        <div class="settings-title">💸 Test Essential Expenses</div>
+                        <div class="dynamic-list">
+                            <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
+                                <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
+                            </div>
+                            <div id="whatif-essential-expenses-settings"></div>
+                        </div>
+                        <button class="add-btn" id="add-whatif-essential-expense">+ Add Test Essential</button>
+                    </div>
+                    <div class="settings-section" style="margin-top: 20px;">
+                        <div class="settings-title">🎮 Test Non-Essential Expenses</div>
+                        <div class="dynamic-list">
+                            <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
+                                <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
+                            </div>
+                            <div id="whatif-non-essential-expenses-settings"></div>
+                        </div>
+                        <button class="add-btn" id="add-whatif-non-essential-expense">+ Add Test Non-Essential</button>
+                    </div>
+                    <button class="btn" id="run-whatif-calculation" style="display: block; margin: 25px auto;">Calculate Scenario</button>
+                    <div class="scenario-results" id="whatif-results-display">
+                        <h3>Scenario Results</h3>
+                        <p>Your "What If" results will appear here after calculation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="guiSettings" class="tab-content">
+                <div class="settings-section">
+                    <div class="settings-title">🎨 Appearance Customization</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="gui-primary-bg-start">Primary Background Start</label>
+                            <input type="color" class="form-color-picker" id="gui-primary-bg-start">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-primary-bg-end">Primary Background End</label>
+                            <input type="color" class="form-color-picker" id="gui-primary-bg-end">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-header-text-color">Header Text Color</label>
+                            <input type="color" class="form-color-picker" id="gui-header-text-color">
+                        </div>
+                         <div class="form-group">
+                            <label class="form-label" for="gui-card-bg-start">Card Background Start</label>
+                            <input type="color" class="form-color-picker" id="gui-card-bg-start">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-card-bg-end">Card Background End</label>
+                            <input type="color" class="form-color-picker" id="gui-card-bg-end">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-accent-color">Accent Color</label>
+                            <input type="color" class="form-color-picker" id="gui-accent-color">
+                        </div>
+                    </div>
+                </div>
+                 <div class="settings-section">
+                    <div class="settings-title">✒️ Typography &amp; Text</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="gui-font-family">Font Family</label>
+                            <select class="form-select" id="gui-font-family">
+                                <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI (Default)</option>
+                                <option value="Arial, Helvetica, sans-serif">Arial</option>
+                                <option value="Verdana, Geneva, sans-serif">Verdana</option>
+                                <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                                <option value="'Courier New', Courier, monospace">Courier New</option>
+                                <option value="Georgia, serif">Georgia</option>
+                                <option value="'Lucida Sans Unicode', 'Lucida Grande', sans-serif">Lucida Sans Unicode</option>
+                                <option value="'Trebuchet MS', Helvetica, sans-serif">Trebuchet MS</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-base-font-size">Base Font Size (px)</label>
+                            <input type="number" class="form-input" id="gui-base-font-size" min="10" max="24" step="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-main-heading">Main Heading Text</label>
+                            <input type="text" class="form-input" id="gui-main-heading">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-sub-heading">Sub-Heading Text</label>
+                            <input type="text" class="form-input" id="gui-sub-heading">
+                        </div>
+                         </div>
+                </div>
+                <div class="settings-actions">
+                    <button class="btn" id="apply-gui-settings">Apply GUI Settings</button>
+                    <button class="btn btn-secondary" id="reset-gui-settings">Reset GUI to Defaults</button>
+                    <button class="btn btn-secondary" id="export-json-gui">📊 Export Backup (JSON)</button>
+                    <input type="file" id="json-import-gui" accept=".json" style="display: none;">
+                    <button class="btn btn-secondary" id="import-json-gui-btn">📥 Import Backup (JSON)</button>
+                </div>
+            </div>
+
+            <div id="settings" class="tab-content active">
+                <div class="settings-section">
+                    <div class="settings-title">🌍 General Settings</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="currency-select">Currency</label>
+                            <select class="form-select" id="currency-select">
+                                <option value="AUD">AUD - Australian Dollar</option>
+                                <option value="USD">USD - US Dollar</option>
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="GBP">GBP - British Pound</option>
+                                <option value="CAD">CAD - Canadian Dollar</option>
+                                <option value="NZD">NZD - New Zealand Dollar</option>
+                                <option value="JPY">JPY - Japanese Yen</option>
+                                <option value="CHF">CHF - Swiss Franc</option>
+                                <option value="CNY">CNY - Chinese Yuan</option>
+                                <option value="INR">INR - Indian Rupee</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">💰 Income Sources
+                        <span class="info-icon">ⓘ<span class="tooltip">Tax is calculated based on 'Invoiced Pay' (Priority) or 'Tax Removed'. If neither, tax is 0. Clear 'Invoiced Pay' to use 'Tax Removed'.</span></span>
+                    </div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 0.4fr 1.2fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr 0.5fr;">
+                            <span>Primary</span> <span>Name</span> <span>Annual Gross</span> <span>Schedule</span> <span>Invoiced Pay / Cycle (Post Tax)</span> <span>Hours/Cycle</span> <span>Tax Removed / Cycle</span> <span>Action</span>
+                        </div>
+                        <div id="income-sources-settings"></div>
+                    </div>
+                    <button class="add-btn" id="add-income-source">+ Add Income Source</button>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">
+                        📊 Tax Brackets (Reference Only)
+                        <span id="tax-brackets-info">These brackets are for informational purposes (e.g., ATO comparison) and are NOT used for active tax calculation if 'Tax Removed' or 'Invoiced Pay' is set for income sources.</span>
+                    </div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 1fr 1fr 1fr auto;">
+                            <span>Min Income</span> <span>Max Income</span> <span>Tax Rate %</span> <span>Action</span>
+                        </div>
+                        <div id="tax-brackets-settings"></div>
+                    </div>
+                    <button class="add-btn" id="add-tax-bracket">+ Add Tax Bracket</button>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">📈 Assets</div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 2fr 1.5fr auto;">
+                            <span>Asset Name</span> <span>Current Balance</span> <span>Action</span>
+                        </div>
+                        <div id="assets-settings"></div>
+                    </div>
+                    <button class="add-btn" id="add-asset">+ Add Asset</button>
+                </div>
+                 <div class="settings-section" style="border-left-color: #f44336;">
+                    <div class="settings-title">⚖️ Liabilities Management</div>
+                     <div class="dynamic-list">
+                         <div class="list-header" style="grid-template-columns: 2fr 1.5fr 1fr auto;">
+                            <span>Liability Name</span> <span>Current Balance</span> <span>Interest Rate (%)</span> <span>Action</span>
+                        </div>
+                        <div id="liabilities-settings"></div>
+                     </div>
+                     <button class="add-btn" id="add-liability">+ Add Liability</button>
+                     <div style="margin-top: 20px; text-align: right; font-size: 1.2em; font-weight: 600;">
+                         Total Liabilities: <span id="total-liabilities-settings" style="color: #f44336;">A$0.00</span>
+                     </div>
+                </div>
+                 <div class="settings-section">
+                    <div class="settings-title">📊 Money Allocation Percentages</div>
+                     <div class="dynamic-list">
+                         <div class="list-header" style="grid-template-columns: 2fr 1fr auto;">
+                            <span>Allocation Name</span> <span>Percentage (%)</span> <span>Action</span>
+                        </div>
+                        <div id="allocation-settings"></div>
+                     </div>
+                     <button class="add-btn" id="add-allocation-category">+ Add Category</button>
+                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
+                        Total: <span id="total-percent">0.0%</span> (should equal 100%)
+                    </p>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">💸 Essential Expenses</div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
+                            <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
+                        </div>
+                        <div id="essential-expenses-settings-list"></div>
+                    </div>
+                    <button class="add-btn" id="add-essential-expense-settings">+ Add Essential Expense</button>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">🎮 Non-Essential Expenses</div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
+                            <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
+                        </div>
+                        <div id="non-essential-expenses-settings-list"></div>
+                    </div>
+                    <button class="add-btn" id="add-non-essential-expense-settings">+ Add Non-Essential Expense</button>
+                </div>
+                <div class="settings-section">
+                   <div class="settings-title">
+                       🏦 Financial Independence Settings
+                       <span class="info-icon">
+                           ⓘ
+                           <span class="tooltip">
+                               This section helps estimate when you might reach Financial Independence (FI).
+                               <br>• <b>FI Multiple:</b> How many years of expenses you need saved (e.g., 25 means a 4% withdrawal rate).
+                               <br>• <b>Expected Return:</b> Your estimated average annual investment return after inflation.
+                           </span>
+                       </span>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="fi-multiple">FI Multiple (e.g., 25 for 4% rule)</label>
+                            <input type="number" class="form-input" id="fi-multiple" step="0.1" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="expected-return">Expected Annual Return (%)</label>
+                            <input type="number" class="form-input" id="expected-return" step="0.1" min="0">
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-actions">
+                    <button class="btn" id="save-download-html">📥 Save &amp; Download HTML</button>
+                    <button class="btn btn-secondary" id="set-current-default">🌟 Set Current as Default</button>
+                    <button class="btn btn-secondary" id="reset-to-defaults">🔄 Reset to Defaults</button>
+                    <button class="btn btn-secondary" id="export-data-json">📊 Export Data (JSON)</button>
+                     <input type="file" id="json-import-settings" accept=".json" style="display: none;">
+                    <button class="btn btn-secondary" id="import-data-json-btn">📥 Import Data (JSON)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/state.js" defer></script>
+    <script src="js/utils.js" defer></script> 
+    <script src="js/calculations.js" defer></script>
+    <script src="js/uiDashboard.js" defer></script>
+    <script src="js/uiSettings.js" defer></script>
+    <script src="js/events.js" defer></script>
+    <script src="js/main.js" defer></script>
+</body>
+</html>
