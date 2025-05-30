@@ -22,7 +22,7 @@ const urlsToCache = [
   '/js/uiSettings.js',
   '/js/events.js'
 ];
-  
+ 
 // Install event: Cache files and force activation
 self.addEventListener('install', event => {
   console.log('🔧 [Service Worker] Installing version:', VERSION);

@@ -129,8 +129,22 @@ function handleSettingsChangeEvents(event) {
         updateDataAndUI(); // Re-render income sources to reflect primary change
         return;
     }
+    // CORRECTED: Handle FI inputs in the main if/else if chain
+    else if (target.id === 'fi-multiple') {
+        financeData.fiSettings.multiple = parseFloat(value) || 25;
+        console.log("📊 FI Multiple updated to:", financeData.fiSettings.multiple);
+        updateDataAndUI();
+        return;
+    }
+    else if (target.id === 'expected-return') {
+        financeData.fiSettings.expectedReturn = parseFloat(value) || 7;
+        console.log("📊 Expected Return updated to:", financeData.fiSettings.expectedReturn);
+        updateDataAndUI();
+        return;
+    }
 
-    if (field) { // Ensure field is defined
+    // This block now correctly handles ONLY the array-based items that have a data-field attribute
+    if (field) {
         // Determine which array to update
         let arrayToUpdate;
         if (target.closest('#income-sources-settings')) arrayToUpdate = financeData.incomeSources;
@@ -140,19 +154,6 @@ function handleSettingsChangeEvents(event) {
         else if (target.closest('#allocation-settings')) arrayToUpdate = financeData.allocation;
         else if (target.dataset.array === 'essentialExpenses') arrayToUpdate = financeData.essentialExpenses;
         else if (target.dataset.array === 'nonEssentialExpenses') arrayToUpdate = financeData.nonEssentialExpenses;
-        else if (target.id === 'fi-multiple') { 
-            financeData.fiSettings.multiple = parseFloat(value) || 25; 
-            console.log("📊 FI Multiple updated to:", financeData.fiSettings.multiple);
-            updateDataAndUI(); 
-            return; 
-        }
-        else if (target.id === 'expected-return') { 
-            financeData.fiSettings.expectedReturn = parseFloat(value) || 7; 
-            console.log("📊 Expected Return updated to:", financeData.fiSettings.expectedReturn);
-            updateDataAndUI(); 
-            return; 
-        }
-
 
         if (arrayToUpdate && arrayToUpdate[index] !== undefined) {
             // Type conversions
