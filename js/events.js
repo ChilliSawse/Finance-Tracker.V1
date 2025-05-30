@@ -140,8 +140,18 @@ function handleSettingsChangeEvents(event) {
         else if (target.closest('#allocation-settings')) arrayToUpdate = financeData.allocation;
         else if (target.dataset.array === 'essentialExpenses') arrayToUpdate = financeData.essentialExpenses;
         else if (target.dataset.array === 'nonEssentialExpenses') arrayToUpdate = financeData.nonEssentialExpenses;
-        else if (target.id === 'fi-multiple') { financeData.fiSettings.multiple = parseFloat(value) || 25; updateDataAndUI(); return; }
-        else if (target.id === 'expected-return') { financeData.fiSettings.expectedReturn = parseFloat(value) || 7; updateDataAndUI(); return; }
+        else if (target.id === 'fi-multiple') { 
+            financeData.fiSettings.multiple = parseFloat(value) || 25; 
+            console.log("📊 FI Multiple updated to:", financeData.fiSettings.multiple);
+            updateDataAndUI(); 
+            return; 
+        }
+        else if (target.id === 'expected-return') { 
+            financeData.fiSettings.expectedReturn = parseFloat(value) || 7; 
+            console.log("📊 Expected Return updated to:", financeData.fiSettings.expectedReturn);
+            updateDataAndUI(); 
+            return; 
+        }
 
 
         if (arrayToUpdate && arrayToUpdate[index] !== undefined) {
@@ -351,8 +361,19 @@ function actionSaveAndDownloadHTML() {
 }
 
 function updateFinanceDataFromFISettingsInputs() {
-    financeData.fiSettings.multiple = parseFloat(getValue('fi-multiple')) || 25;
-    financeData.fiSettings.expectedReturn = parseFloat(getValue('expected-return')) || 7;
+    // Only update from inputs if the financeData values are somehow invalid
+    const inputMultiple = parseFloat(getValue('fi-multiple')) || 25;
+    const inputReturn = parseFloat(getValue('expected-return')) || 7;
+    
+    // Only override if financeData doesn't have valid values
+    if (!financeData.fiSettings.multiple || isNaN(financeData.fiSettings.multiple)) {
+        financeData.fiSettings.multiple = inputMultiple;
+    }
+    if (!financeData.fiSettings.expectedReturn || isNaN(financeData.fiSettings.expectedReturn)) {
+        financeData.fiSettings.expectedReturn = inputReturn;
+    }
+    
+    console.log("📊 FI Settings after input sync - Multiple:", financeData.fiSettings.multiple, "Return:", financeData.fiSettings.expectedReturn);
 }
 
 

@@ -311,6 +311,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Setup All Event Listeners (needs events.js)
     setupEventListeners();
 
+    // Listen for data changes and update UI accordingly
+    document.addEventListener('dataChanged', () => {
+        console.log("📊 Data changed event received - updating all UI components");
+        updateAllUI();
+    });
+
     // Setup PWA Listeners (needs utils.js for getElement)
     setupPwaInstallListeners();
 
