@@ -8,19 +8,19 @@ console.log('🚀 Service Worker Loading - Auto Version:', VERSION);
 console.log('🚀 Cache Name:', CACHE_NAME);
 
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/js/state.js',
-  '/js/main.js',
-  '/js/utils.js',
-  '/js/calculations.js',
-  '/js/uiDashboard.js',
-  '/js/uiSettings.js',
-  '/js/events.js'
+  './', // This will map to your base directory (e.g., /repository-name/)
+  './index.html',
+  './style.css',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './js/state.js',
+  './js/main.js',
+  './js/utils.js',
+  './js/calculations.js',
+  './js/uiDashboard.js',
+  './js/uiSettings.js',
+  './js/events.js'
 ];
  
 // Install event: Cache files and force activation

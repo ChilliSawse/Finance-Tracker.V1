@@ -50,7 +50,7 @@ function setupPwaUpdateListeners() {
     console.log('🔍 Setting up PWA update listeners...');
     
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('./sw.js')
             .then(registration => {
                 console.log('✅ Service Worker registered:', registration);
                 
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Register Service Worker
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('./sw.js')
             .then(registration => {
                 console.log('Service Worker registered with scope:', registration.scope);
             })
