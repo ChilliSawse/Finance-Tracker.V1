@@ -39,6 +39,9 @@ function showTab(tabName) {
     }
 
     if (tabName === 'whatIf') {
+        // Phase 0.4: only seed the What If tab from live data on the FIRST visit (or after an
+        // explicit "Reset to current" click). Re-initialising on every switch wiped the user's
+        // in-progress edits. initializeWhatIfTab() is a no-op once whatIfInitialized is true.
         initializeWhatIfTab();
     } else if (tabName === 'settings') {
         const totals = calculateTotals();

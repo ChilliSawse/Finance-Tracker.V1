@@ -108,7 +108,6 @@ function handleSettingsClickEvents(event) {
     }
 
     // Action buttons
-    else if (target.id === 'save-download-html') actionSaveAndDownloadHTML();
     else if (target.id === 'set-current-default') actionSetCurrentAsDefault();
     else if (target.id === 'reset-to-defaults') actionResetToAppDefaults();
     else if (target.id === 'export-data-json') actionExportDataJSON();
@@ -212,6 +211,7 @@ function handleWhatIfClickEvents(event) {
     if (target.id === 'add-whatif-essential-expense') addWhatIfExpenseItem('essential');
     else if (target.id === 'add-whatif-non-essential-expense') addWhatIfExpenseItem('nonEssential');
     else if (target.id === 'run-whatif-calculation') runWhatIfScenario();
+    else if (target.id === 'reset-whatif-to-current') initializeWhatIfTab(true); // Phase 0.4: force-reseed from live data
     else if (target.classList.contains('delete-btn')) {
         if (dataType === 'whatIfEssential') removeWhatIfExpenseItem('essential', index);
         else if (dataType === 'whatIfNonEssential') removeWhatIfExpenseItem('nonEssential', index);
@@ -387,37 +387,11 @@ function removeWhatIfExpenseItem(type, index) {
 
 
 // Main Settings Actions
-function actionSaveAndDownloadHTML() {
-    // Gather current settings from inputs first, in case they haven't triggered 'change'
-    updateFinanceDataFromFISettingsInputs();
-
-    const currentFinanceDataString = `let financeData = ${JSON.stringify(financeData, null, 4)};`;
-    const currentDefaultFinanceDataString = `let defaultFinanceData = ${JSON.stringify(defaultFinanceData, null, 4)};`;
-    const currentGuiSettingsString = `let guiSettingsData = ${JSON.stringify(guiSettingsData, null, 4)};`;
-    const currentDefaultGuiSettingsString = `let defaultGuiSettings = ${JSON.stringify(defaultGuiSettings, null, 4)};`;
-
-    let htmlContent = document.documentElement.outerHTML;
-
-    // Replace financeData
-    htmlContent = htmlContent.replace(/let financeData = \{[\s\S]*?};/, currentFinanceDataString);
-    // Replace defaultFinanceData
-    htmlContent = htmlContent.replace(/let defaultFinanceData = \{[\s\S]*?};/, currentDefaultFinanceDataString);
-    // Replace guiSettingsData
-    htmlContent = htmlContent.replace(/let guiSettingsData = \{[\s\S]*?};/, currentGuiSettingsString);
-    // Replace defaultGuiSettings
-    htmlContent = htmlContent.replace(/let defaultGuiSettings = \{[\s\S]*?};/, currentDefaultGuiSettingsString);
-
-
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-').replace('T', '_');
-    link.download = `finance-tracker-backup-${timestamp}.html`;
-    link.href = url;
-    link.click();
-    URL.revokeObjectURL(url);
-    showCustomModal("HTML Backup Saved!");
-}
+// NOTE: "Save & Download HTML" backup was removed (Phase 0.3). It regex-replaced
+// `let financeData = {…}` inside document.outerHTML to bake state into a downloadable
+// page, but the app's JS now lives in external js/*.js files, so the pattern was never
+// present in the HTML and the regex matched nothing — producing a broken/empty backup.
+// JSON Export/Import (validated) is the supported backup path.
 
 function updateFinanceDataFromFISettingsInputs() {
     // Only update from inputs if the financeData values are somehow invalid
@@ -611,33 +585,12 @@ function runWhatIfScenario() {
     // Create a deep copy of the current financeData for scenario planning
     let scenarioFinanceData = JSON.parse(JSON.stringify(financeData));
 
-    // Adjust income for the scenario
-    // This is a simplified adjustment; a more robust approach might scale individual sources
-    // or require more detailed input for how the income changes.
-    // For now, we'll assume the change applies proportionally or is a new total net.
-    const currentTotalsForRatio = calculateTotals(financeData);
-    if (currentTotalsForRatio.totalNetAnnualIncome > 0) {
-        const incomeMultiplier = newAnnualNetIncomeInput / currentTotalsForRatio.totalNetAnnualIncome;
-        scenarioFinanceData.incomeSources.forEach(source => {
-            source.grossAnnual = (source.grossAnnual || 0) * incomeMultiplier;
-            // If taxRemoved or invoicedPayPostTax were set, they should also be scaled
-            // or the tax calculation logic re-run for the new gross.
-            // For simplicity here, we are primarily affecting the gross and letting calculateTotals re-evaluate net.
-            // This means the tax logic in calculateTotals will apply to the new gross.
-            // If specific net or tax amounts were part of the scenario, this would need more detail.
-        });
-    } else if (newAnnualNetIncomeInput > 0 && scenarioFinanceData.incomeSources.length > 0) {
-        // If current net is 0, distribute new income to the first source's gross for simplicity
-        scenarioFinanceData.incomeSources[0].grossAnnual = newAnnualNetIncomeInput; // This is a rough approximation
-        // A proper tax calculation would be needed to get from this new gross to a net.
-        // For now, we'll assume the input IS the new net, and calculateTotals will work from that.
-        // This part is tricky without knowing how tax is structured for the new income.
-        // Let's assume the input 'newAnnualNetIncomeInput' IS the target net income for the scenario.
-        // And calculateTotals will use this to derive savings etc.
-        // So, we need to adjust scenarioFinanceData so calculateTotals() yields this net income.
-        // This is complex. For now, let's use the input directly as the scenario's net income.
-    }
-
+    // Phase 0.4 (G.3) — Income math fix.
+    // The What If income lever is a *total net annual income* override. We apply it directly
+    // to the scenario's net income and let savings/FI derive from that. We deliberately do NOT
+    // scale per-source grossAnnual: the old multiplier/ratio approach was circular (it scaled
+    // gross, then overrode net with the raw input anyway, so the gross-scaling did nothing) and
+    // broke whenever current net was 0. Operating on totals keeps the scenario honest and simple.
 
     // Use the temporary what-if expenses
     scenarioFinanceData.essentialExpenses = JSON.parse(JSON.stringify(whatIfEssentialExpenses));
@@ -646,14 +599,11 @@ function runWhatIfScenario() {
     // Apply new expected return for FI calculation in scenario
     scenarioFinanceData.fiSettings.expectedReturn = isNaN(newExpectedReturn) ? financeData.fiSettings.expectedReturn : newExpectedReturn;
 
-    // Calculate totals for the scenario
-    // We need calculateTotals to reflect the newAnnualNetIncomeInput as the net income.
-    // This is where it gets a bit circular if calculateTotals derives net from gross.
-    // Let's make a temporary override for the scenario's net income for this calculation.
+    // Derive scenario totals from the (expense-adjusted) scenario data, then override the
+    // income directly with the user's net-income lever.
     const scenarioTotals = calculateTotals(scenarioFinanceData);
-    // If newAnnualNetIncomeInput was meant to be the *net* income for the scenario:
     const scenarioNetAnnualIncome = newAnnualNetIncomeInput;
-    scenarioTotals.totalNetAnnualIncome = scenarioNetAnnualIncome; // Override
+    scenarioTotals.totalNetAnnualIncome = scenarioNetAnnualIncome;
     scenarioTotals.weeklySavings = (scenarioNetAnnualIncome / 52) - scenarioTotals.totalWeeklyExpenses;
     scenarioTotals.annualSavings = scenarioTotals.weeklySavings * 52;
     scenarioTotals.savingsRate = scenarioNetAnnualIncome > 0 ? (scenarioTotals.annualSavings / scenarioNetAnnualIncome) * 100 : 0;
@@ -680,43 +630,50 @@ function runWhatIfScenario() {
 
     const resultsDiv = getElement('whatif-results-display');
     if (resultsDiv) {
+        // Phase 0.5 — token-ised colours. All colours below resolve to theme CSS variables so the
+        // panel renders correctly on every theme (incl. dark) instead of hardcoded light-mode hex.
+        const POS = 'var(--color-positive)';
+        const NEG = 'var(--color-negative)';
+        const MUTED = 'var(--text-color-secondary)';
+        const cardStyle = 'background: var(--info-bg); border: 1px solid var(--info-border); padding: 15px; border-radius: 8px;';
+        const headingStyle = 'color: var(--accent-color); margin-bottom: 10px;';
         resultsDiv.innerHTML = `
             <h3>Scenario Results vs Current Situation</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0;">
-                <div style="background: #f0f8ff; padding: 15px; border-radius: 8px;">
-                    <h4 style="color: #1976d2; margin-bottom: 10px;">💰 Net Income (Annual)</h4>
+                <div style="${cardStyle}">
+                    <h4 style="${headingStyle}">💰 Net Income (Annual)</h4>
                     <p><strong>Scenario:</strong> ${formatCurrency(scenarioNetAnnualIncome)}</p>
                     <p><strong>Current:</strong> ${formatCurrency(currentTotals.totalNetAnnualIncome)}</p>
-                    <p style="color: ${scenarioNetAnnualIncome >= currentTotals.totalNetAnnualIncome ? '#4CAF50' : '#f44336'};">
+                    <p style="color: ${scenarioNetAnnualIncome >= currentTotals.totalNetAnnualIncome ? POS : NEG};">
                         <strong>Change:</strong> ${scenarioNetAnnualIncome >= currentTotals.totalNetAnnualIncome ? '+' : ''}${formatCurrency(scenarioNetAnnualIncome - currentTotals.totalNetAnnualIncome)}
                     </p>
                 </div>
-                <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
-                    <h4 style="color: #f57c00; margin-bottom: 10px;">💸 Expenses (Annual)</h4>
+                <div style="${cardStyle}">
+                    <h4 style="${headingStyle}">💸 Expenses (Annual)</h4>
                     <p><strong>Scenario:</strong> ${formatCurrency(scenarioAnnualExpenses)}</p>
                     <p><strong>Current:</strong> ${formatCurrency(currentAnnualExpenses)}</p>
-                    <p style="color: ${scenarioAnnualExpenses <= currentAnnualExpenses ? '#4CAF50' : '#f44336'};">
+                    <p style="color: ${scenarioAnnualExpenses <= currentAnnualExpenses ? POS : NEG};">
                         <strong>Change:</strong> ${scenarioAnnualExpenses <= currentAnnualExpenses ? '' : '+'}${formatCurrency(scenarioAnnualExpenses - currentAnnualExpenses)}
                     </p>
                 </div>
-                <div style="background: #e8f5e8; padding: 15px; border-radius: 8px;">
-                    <h4 style="color: #4CAF50; margin-bottom: 10px;">📈 Savings (Annual)</h4>
+                <div style="${cardStyle}">
+                    <h4 style="${headingStyle}">📈 Savings (Annual)</h4>
                     <p><strong>Scenario:</strong> ${formatCurrency(scenarioTotals.annualSavings)}</p>
                     <p><strong>Current:</strong> ${formatCurrency(currentTotals.annualSavings)}</p>
-                    <p style="color: ${scenarioTotals.annualSavings >= currentTotals.annualSavings ? '#4CAF50' : '#f44336'};">
+                    <p style="color: ${scenarioTotals.annualSavings >= currentTotals.annualSavings ? POS : NEG};">
                         <strong>Change:</strong> ${scenarioTotals.annualSavings >= currentTotals.annualSavings ? '+' : ''}${formatCurrency(scenarioTotals.annualSavings - currentTotals.annualSavings)}
                     </p>
                 </div>
-                <div style="background: #fce4ec; padding: 15px; border-radius: 8px;">
-                    <h4 style="color: #c2185b; margin-bottom: 10px;">🎯 FI Timeline (Years)</h4>
+                <div style="${cardStyle}">
+                    <h4 style="${headingStyle}">🎯 FI Timeline (Years)</h4>
                     <p><strong>Scenario:</strong> ${typeof scenarioYearsToFI === 'number' ? scenarioYearsToFI.toFixed(1) : '∞'}</p>
                     <p><strong>Current:</strong> ${typeof currentYearsToFI === 'number' ? currentYearsToFI.toFixed(1) : '∞'}</p>
-                    <p style="color: ${yearsDifference !== 'N/A' && yearsDifference < 0 ? '#4CAF50' : (yearsDifference !== 'N/A' && yearsDifference > 0 ? '#f44336' : '#666')};">
+                    <p style="color: ${yearsDifference !== 'N/A' && yearsDifference < 0 ? POS : (yearsDifference !== 'N/A' && yearsDifference > 0 ? NEG : MUTED)};">
                         <strong>Difference:</strong> ${yearsDifference !== 'N/A' ? (yearsDifference > 0 ? '+' : '') + yearsDifference.toFixed(1) : 'N/A'} years
                     </p>
                 </div>
             </div>
-            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+            <div style="margin-top: 20px; padding: 15px; background: var(--content-bg-color); border: 1px solid var(--info-border); border-radius: 8px;">
                 <h4>📊 Key Metrics (Scenario)</h4>
                 <p><strong>Savings Rate:</strong> ${scenarioTotals.savingsRate.toFixed(1)}% (Current: ${currentTotals.savingsRate.toFixed(1)}%, Change: ${savingsRateDifference > 0 ? '+' : ''}${savingsRateDifference.toFixed(1)}%)</p>
                 <p><strong>FI Target Amount:</strong> ${formatCurrency(scenarioFiTarget)}</p>

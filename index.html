@@ -258,6 +258,9 @@
                 </div>
                 <div class="settings-section" style="border-left-color: #00acc1;">
                     <div class="settings-title">🤔 "What If" Scenario Planner</div>
+                    <p class="form-hint" style="margin: 0 0 15px; color: var(--text-color-secondary);">
+                        Your scenario edits stay put when you switch tabs. Click <strong>Reset to current</strong> to reload the levers from your live data.
+                    </p>
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label" for="whatif-new-annual-income">New Annual Net Income (Total)</label>
@@ -292,7 +295,10 @@
                         </div>
                         <button class="add-btn" id="add-whatif-non-essential-expense">+ Add Test Non-Essential</button>
                     </div>
-                    <button class="btn" id="run-whatif-calculation" style="display: block; margin: 25px auto;">Calculate Scenario</button>
+                    <div style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 25px 0;">
+                        <button class="btn" id="run-whatif-calculation">Calculate Scenario</button>
+                        <button class="btn btn-secondary" id="reset-whatif-to-current">🔄 Reset to current</button>
+                    </div>
                     <div class="scenario-results" id="whatif-results-display">
                         <h3>Scenario Results</h3>
                         <p>Your "What If" results will appear here after calculation.</p>
@@ -498,7 +504,6 @@
                     </div>
                 </div>
                 <div class="settings-actions">
-                    <button class="btn" id="save-download-html">📥 Save &amp; Download HTML</button>
                     <button class="btn btn-secondary" id="set-current-default">🌟 Save as My Defaults</button>
                     <button class="btn btn-secondary" id="reset-to-defaults">🔄 Reset to Factory Defaults</button>
                     <button class="btn btn-secondary" id="export-data-json">📊 Export Data (JSON)</button>
