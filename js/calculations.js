@@ -6,28 +6,33 @@ function calculateTotals(currentData = financeData) {
     let totalAnnualTaxFromSources = 0;
 
     currentData.incomeSources.forEach(source => {
-        const grossAnnual = source.grossAnnual || 0;
-        totalGrossAnnualIncome += grossAnnual;
         const payCycles = getPayCyclesPerYear(source.paySchedule);
-        let sourceAnnualNet = grossAnnual; // Default to gross if no tax info
-        let sourceAnnualTax = 0;
+        const type = source.incomeType === 'selfEmployed' ? 'selfEmployed' : 'salaried';
 
-        const invoicedPay = parseFloat(source.invoicedPayPostTax);
-        const taxRemovedPerCycle = parseFloat(source.taxRemoved);
+        let sourceGrossAnnual, sourceAnnualNet, sourceAnnualTax;
 
-        if (!isNaN(invoicedPay) && source.invoicedPayPostTax !== null && source.invoicedPayPostTax !== '') {
-            sourceAnnualNet = invoicedPay * payCycles;
-            sourceAnnualTax = Math.max(0, grossAnnual - sourceAnnualNet); // Tax cannot be negative
-        } else if (!isNaN(taxRemovedPerCycle) && source.taxRemoved !== null && source.taxRemoved !== '') {
-            sourceAnnualTax = taxRemovedPerCycle * payCycles;
-            sourceAnnualNet = Math.max(0, grossAnnual - sourceAnnualTax); // Net income cannot be negative
+        if (type === 'selfEmployed') {
+            // Path B — enter net pay per cycle (+ optional tax per cycle); gross is back-calculated.
+            const netPerCycle = parseFloat(source.invoicedPayPostTax);
+            const taxPerCycle = parseFloat(source.taxRemoved);
+            sourceAnnualNet = (!isNaN(netPerCycle) && source.invoicedPayPostTax !== null && source.invoicedPayPostTax !== '')
+                ? netPerCycle * payCycles : 0;
+            sourceAnnualTax = (!isNaN(taxPerCycle) && source.taxRemoved !== null && source.taxRemoved !== '')
+                ? Math.max(0, taxPerCycle * payCycles) : 0;
+            sourceGrossAnnual = sourceAnnualNet + sourceAnnualTax;
+        } else {
+            // Path A — salaried: enter gross, tax estimated from the progressive brackets, net derived.
+            sourceGrossAnnual = source.grossAnnual || 0;
+            sourceAnnualTax = calculateTaxFromBrackets(sourceGrossAnnual, currentData.taxBrackets);
+            sourceAnnualNet = Math.max(0, sourceGrossAnnual - sourceAnnualTax);
         }
-        // If neither, net is gross and tax is 0 (already initialized)
 
+        totalGrossAnnualIncome += sourceGrossAnnual;
         totalNetAnnualIncome += sourceAnnualNet;
         totalAnnualTaxFromSources += sourceAnnualTax;
 
-        // Store calculated values back on the source object for reference
+        // Store calculated values back on the source object for display (auditable per-source)
+        source._calculatedGrossAnnual = sourceGrossAnnual;
         source._calculatedNetAnnual = sourceAnnualNet;
         source._calculatedAnnualTax = sourceAnnualTax;
     });
@@ -62,8 +67,51 @@ function calculateTotals(currentData = financeData) {
         currentAssets,
         currentLiabilities,
         netWorth,
-        savingsRate: Math.max(0, savingsRate) // Savings rate cannot be negative for this metric
+        savingsRate // May be negative when spending exceeds income
     };
+}
+
+/**
+ * Progressive tax on a gross annual income using a bracket array.
+ * Each bracket: { min, max, rate } where rate is a decimal (0.19 = 19%)
+ * and max may be Infinity (or null) for the top band.
+ * @returns {number} Estimated annual tax (0 if no brackets / no income).
+ */
+function calculateTaxFromBrackets(grossAnnual, brackets) {
+    const gross = parseFloat(grossAnnual) || 0;
+    if (gross <= 0 || !Array.isArray(brackets) || brackets.length === 0) return 0;
+
+    const sorted = [...brackets].sort((a, b) => (a.min || 0) - (b.min || 0));
+    let tax = 0;
+    for (const bracket of sorted) {
+        const min = bracket.min || 0;
+        if (gross <= min) continue;
+        const max = (bracket.max === Infinity || bracket.max == null) ? Infinity : bracket.max;
+        const taxableInBand = Math.min(gross, max) - min;
+        if (taxableInBand > 0) tax += taxableInBand * (bracket.rate || 0);
+    }
+    return tax;
+}
+
+/**
+ * Per-band breakdown of the progressive tax calc, for an auditable display.
+ * @returns {Array<{min,max,rate,taxable,tax}>} Only bands that the income reaches.
+ */
+function getTaxBracketBreakdown(grossAnnual, brackets) {
+    const gross = parseFloat(grossAnnual) || 0;
+    if (gross <= 0 || !Array.isArray(brackets) || brackets.length === 0) return [];
+
+    const sorted = [...brackets].sort((a, b) => (a.min || 0) - (b.min || 0));
+    const rows = [];
+    for (const bracket of sorted) {
+        const min = bracket.min || 0;
+        if (gross <= min) continue;
+        const max = (bracket.max === Infinity || bracket.max == null) ? Infinity : bracket.max;
+        const taxable = Math.max(0, Math.min(gross, max) - min);
+        if (taxable <= 0) continue;
+        rows.push({ min, max, rate: bracket.rate || 0, taxable, tax: taxable * (bracket.rate || 0) });
+    }
+    return rows;
 }
 
 function calculateYearsToFI(annualSavings, currentAssets, fiTarget, expectedReturnRate) {

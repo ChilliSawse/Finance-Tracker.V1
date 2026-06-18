@@ -11,6 +11,7 @@ function initializeSettingsUI() {
     renderAllocationSettings();
     renderExpensesSettingsLists(); // Combined essential and non-essential
     renderFISettings();
+    updateDefaultsButtonLabels(); // Reflect whether user defaults exist
     initializeGuiSettingsForm(); // For the GUI Settings tab
     initializeWhatIfTab(); // For the What If? tab
 }
@@ -22,11 +23,18 @@ function renderIncomeSourcesSettings() {
     financeData.incomeSources.forEach((source, index) => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'list-item';
-        itemDiv.style.gridTemplateColumns = '0.4fr 1.2fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr 0.5fr'; // Keep original grid
+        itemDiv.style.gridTemplateColumns = '0.4fr 0.9fr 1.2fr 0.8fr 0.8fr 1fr 0.6fr 0.8fr 0.5fr';
         const isPrimary = index === financeData.primaryIncomeIndex;
+        const isSelfEmployed = source.incomeType === 'selfEmployed';
         const invoicedPayValue = source.invoicedPayPostTax === null || source.invoicedPayPostTax === undefined ? '' : source.invoicedPayPostTax;
         const taxRemovedValue = source.taxRemoved === null || source.taxRemoved === undefined ? '' : source.taxRemoved;
         const baseId = `income-${index}`;
+
+        // Salaried: gross is entered, tax/net derived from brackets (those fields disabled).
+        // Self-employed: net (+ optional tax) per cycle is entered, gross back-calculated (gross disabled).
+        const grossDisabled = isSelfEmployed ? 'disabled' : '';
+        const netTaxDisabled = isSelfEmployed ? '' : 'disabled';
+        const autoNote = '— auto —';
 
         itemDiv.innerHTML = `
             <span>
@@ -34,12 +42,19 @@ function renderIncomeSourcesSettings() {
                 <input type="radio" name="primary-income" ${isPrimary ? 'checked' : ''} data-index="${index}" id="${baseId}-primary" style="justify-self: center;">
             </span>
             <span>
+                <label for="${baseId}-type" class="visually-hidden">Income Type ${index + 1}</label>
+                <select data-index="${index}" data-field="incomeType" id="${baseId}-type" name="${baseId}-type">
+                    <option value="salaried" ${!isSelfEmployed ? 'selected' : ''}>Salaried</option>
+                    <option value="selfEmployed" ${isSelfEmployed ? 'selected' : ''}>Self-employed</option>
+                </select>
+            </span>
+            <span>
                 <label for="${baseId}-name" class="visually-hidden">Income Source Name ${index + 1}</label>
                 <input type="text" value="${escapeHtml(source.name || '')}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
             </span>
             <span>
                 <label for="${baseId}-gross" class="visually-hidden">Gross Annual Income ${index + 1}</label>
-                <input type="number" value="${source.grossAnnual || 0}" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" name="${baseId}-gross" placeholder="Gross Annual" step="0.01">
+                <input type="number" value="${source.grossAnnual || 0}" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" name="${baseId}-gross" placeholder="${isSelfEmployed ? autoNote : 'Gross Annual'}" step="0.01" ${grossDisabled}>
             </span>
             <span>
                 <label for="${baseId}-schedule" class="visually-hidden">Pay Schedule ${index + 1}</label>
@@ -52,7 +67,7 @@ function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-netpay" class="visually-hidden">Net Pay Per Cycle ${index + 1}</label>
-                <input type="number" value="${invoicedPayValue}" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" name="${baseId}-netpay" placeholder="Net Pay/Cycle" step="0.01">
+                <input type="number" value="${invoicedPayValue}" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" name="${baseId}-netpay" placeholder="${isSelfEmployed ? 'Net Pay/Cycle' : autoNote}" step="0.01" ${netTaxDisabled}>
             </span>
             <span>
                  <label for="${baseId}-hours" class="visually-hidden">Hours Per Cycle ${index + 1}</label>
@@ -60,7 +75,7 @@ function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-taxremoved" class="visually-hidden">Tax Removed Per Cycle ${index + 1}</label>
-                <input type="number" value="${taxRemovedValue}" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="Tax/Cycle" step="0.01">
+                <input type="number" value="${taxRemovedValue}" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="${isSelfEmployed ? 'Tax/Cycle (opt)' : autoNote}" step="0.01" ${netTaxDisabled}>
             </span>
             <button class="delete-btn" data-index="${index}" data-type="incomeSource" aria-label="Delete Income Source ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
