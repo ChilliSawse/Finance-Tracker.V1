@@ -252,23 +252,31 @@ function migrateIncomeSourceTypes(data) {
         const grossAnnual = parseFloat(source.grossAnnual) || 0;
         const netVal = parseFloat(source.invoicedPayPostTax);
         const taxVal = parseFloat(source.taxRemoved);
+        // Include taxRemoved=0 as "explicitly set" — old default was 0, not null.
+        // Excluding zero caused old-format sources to migrate to salaried, silently
+        // applying brackets and dropping net income by 20–30%.
         const hasNet = source.invoicedPayPostTax !== null && source.invoicedPayPostTax !== '' && !isNaN(netVal);
-        const hasTax = source.taxRemoved !== null && source.taxRemoved !== '' && !isNaN(taxVal) && taxVal !== 0;
+        const hasTax = source.taxRemoved !== null && source.taxRemoved !== '' && !isNaN(taxVal);
 
-        if (hasNet || hasTax) {
-            let oldNetAnnual, oldTaxAnnual;
-            if (hasNet) {
-                oldNetAnnual = netVal * cycles;
-                oldTaxAnnual = Math.max(0, grossAnnual - oldNetAnnual);
-            } else {
-                oldTaxAnnual = taxVal * cycles;
-                oldNetAnnual = Math.max(0, grossAnnual - oldTaxAnnual);
-            }
-            source.incomeType = 'selfEmployed';
+        // All old-format sources become selfEmployed — the old engine never deducted
+        // brackets, so net was always gross-derived. Users who want bracket-estimated
+        // tax can explicitly switch a source to Salaried.
+        source.incomeType = 'selfEmployed';
+
+        if (hasNet) {
+            const oldNetAnnual = netVal * cycles;
+            const oldTaxAnnual = Math.max(0, grossAnnual - oldNetAnnual);
+            source.invoicedPayPostTax = +(oldNetAnnual / cycles).toFixed(2);
+            source.taxRemoved = +(oldTaxAnnual / cycles).toFixed(2);
+        } else if (hasTax) {
+            const oldTaxAnnual = taxVal * cycles;
+            const oldNetAnnual = Math.max(0, grossAnnual - oldTaxAnnual);
             source.invoicedPayPostTax = +(oldNetAnnual / cycles).toFixed(2);
             source.taxRemoved = +(oldTaxAnnual / cycles).toFixed(2);
         } else {
-            source.incomeType = 'salaried';
+            // No net or tax entry — old engine gave net = gross.
+            source.invoicedPayPostTax = cycles > 0 ? +(grossAnnual / cycles).toFixed(2) : 0;
+            source.taxRemoved = null;
         }
     });
 }
