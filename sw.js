@@ -17,6 +17,7 @@ const urlsToCache = [
   './js/state.js',
   './js/main.js',
   './js/utils.js',
+  './js/theme.js',
   './js/calculations.js',
   './js/uiDashboard.js',
   './js/uiSettings.js',
@@ -76,17 +77,26 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch event: Serve cached content with network fallback
+// Fetch event: Network-first for HTML, cache-first for all other assets
 self.addEventListener('fetch', event => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(event.request)
       .then(cachedResponse => {
         if (cachedResponse) {
           return cachedResponse;
         }
-        return fetch(event.request).catch(error => {
-          console.error('[Service Worker] Fetch failed:', error);
-        });
+        return fetch(event.request).catch(() =>
+          new Response('Offline — check your connection.', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain' }
+          })
+        );
       })
   );
 });

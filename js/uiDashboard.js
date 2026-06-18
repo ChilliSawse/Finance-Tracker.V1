@@ -71,7 +71,7 @@ function updateDashboardUI(totals) {
         financeData.assets.forEach(asset => {
             const assetDiv = document.createElement('div');
             assetDiv.className = 'account-item asset';
-            assetDiv.innerHTML = `<div class="account-name">${asset.name}</div><div class="account-balance">${formatCurrency(asset.balance)}</div>`;
+            assetDiv.innerHTML = `<div class="account-name">${escapeHtml(asset.name)}</div><div class="account-balance">${formatCurrency(asset.balance)}</div>`;
             assetsDisplayContainer.appendChild(assetDiv);
         });
         if (financeData.assets.length === 0) {
@@ -85,7 +85,7 @@ function updateDashboardUI(totals) {
         financeData.liabilities.forEach(liability => {
             const liabilityDiv = document.createElement('div');
             liabilityDiv.className = 'account-item liability';
-            liabilityDiv.innerHTML = `<div class="account-name">${liability.name}</div><div class="account-balance">${formatCurrency(liability.balance)}</div>`;
+            liabilityDiv.innerHTML = `<div class="account-name">${escapeHtml(liability.name)}</div><div class="account-balance">${formatCurrency(liability.balance)}</div>`;
             liabilitiesDisplayContainer.appendChild(liabilityDiv);
         });
          if (financeData.liabilities.length === 0) {
@@ -107,7 +107,7 @@ function updateDashboardUI(totals) {
             itemDiv.className = 'savings-item';
             let periodSuffix = viewPeriod.replace('ly', '').replace('y', '');
             if (periodSuffix === 'dai') periodSuffix = 'day';
-            itemDiv.innerHTML = `<div class="savings-label">${alloc.name} (${alloc.percentage}%)</div><div class="savings-amount">${formatCurrency(amountForPeriod)}/${periodSuffix}</div>`;
+            itemDiv.innerHTML = `<div class="savings-label">${escapeHtml(alloc.name)} (${alloc.percentage}%)</div><div class="savings-amount">${formatCurrency(amountForPeriod)}/${periodSuffix}</div>`;
             allocationDisplayContainer.appendChild(itemDiv);
         });
         if (financeData.allocation.length === 0) {
@@ -130,15 +130,15 @@ function updateIncomeTabUI(totals) {
             card.className = 'card';
             card.style.marginBottom = '20px';
             card.innerHTML = `
-                <div class="card-title">${source.name} ${isPrimary ? '(Primary)' : ''}</div>
+                <div class="card-title">${escapeHtml(source.name)} ${isPrimary ? '(Primary)' : ''}</div>
                 <div class="card-subtitle">Gross: ${formatCurrency(source.grossAnnual)}/year</div>
                 <div class="time-periods">
                     <div class="time-item">
-                        <div class="time-label">Gross / ${source.paySchedule}</div>
+                        <div class="time-label">Gross / ${escapeHtml(source.paySchedule)}</div>
                         <div class="time-amount">${formatCurrency(payCycleGross)}</div>
                     </div>
                     <div class="time-item">
-                        <div class="time-label">Net / ${source.paySchedule}</div>
+                        <div class="time-label">Net / ${escapeHtml(source.paySchedule)}</div>
                         <div class="time-amount">${formatCurrency(payCycleNet)}</div>
                     </div>
                     <div class="time-item">
@@ -157,11 +157,11 @@ function updateIncomeTabUI(totals) {
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <span>Total Tax Paid (All Sources):</span>
-            <span style="font-weight: 600; color: #f44336;">${formatCurrency(totals.totalAnnualTax)}</span>
+            <span style="font-weight: 600; color: var(--color-negative);">${formatCurrency(totals.totalAnnualTax)}</span>
         </div>
         <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px solid #e0e0e0; flex-wrap: wrap; gap: 10px;">
             <span style="font-weight: 600;">Total Net Income (All Sources):</span>
-            <span style="font-weight: 700; color: #4CAF50; font-size: 1.2em;">${formatCurrency(totals.totalNetAnnualIncome)}</span>
+            <span style="font-weight: 700; color: var(--color-positive); font-size: 1.2em;">${formatCurrency(totals.totalNetAnnualIncome)}</span>
         </div>`);
 
     const taxBreakdownRefEl = getElement('tax-breakdown-reference');
@@ -192,7 +192,7 @@ function updateIncomeTabUI(totals) {
                             </div>
                             <div style="display: flex; justify-content: space-between; font-size: 0.9em; flex-wrap: wrap; gap: 10px;">
                                 <span>Rate: ${(bracket.rate * 100).toFixed(1)}% on income above ${formatCurrency(bracket.min)}</span>
-                                <span style="color: #f44336;">Tax: ${formatCurrency(taxInBracket)}</span>
+                                <span style="color: var(--color-negative);">Tax: ${formatCurrency(taxInBracket)}</span>
                             </div>
                         </div>`;
                     remainingIncomeForBrackets -= taxableInThisBracket;
@@ -232,11 +232,11 @@ function updateExpensesTabUI(totals) {
             expenseDiv.className = `expense-item ${typeClass}`;
             expenseDiv.innerHTML = `
                 <div>
-                    <div class="expense-name">${expense.name}</div>
+                    <div class="expense-name">${escapeHtml(expense.name)}</div>
                     <div class="expense-category">${typeClass === 'essential' ? 'Essential' : 'Non-Essential'}</div>
                 </div>
                 <div>
-                    <div class="expense-amount">${formatCurrency(expense.amount)}/${expense.frequency}</div>
+                    <div class="expense-amount">${formatCurrency(expense.amount)}/${escapeHtml(expense.frequency)}</div>
                     <div class="expense-frequency">${formatCurrency(fortnightlyAmount)}/fortnight • ${formatCurrency(monthlyAmount)}/month</div>
                 </div>`;
             container.appendChild(expenseDiv);
@@ -256,19 +256,19 @@ function updateExpensesTabUI(totals) {
     const ofNetIncome = (totals.totalNetAnnualIncome / 52) > 0 ? (totals.totalWeeklyExpenses / (totals.totalNetAnnualIncome / 52)) * 100 : 0;
 
     setHTML('expense-stats', `
-        <div class="stat-card" style="border-top-color: #f44336;"><div class="stat-value">${formatCurrency(totals.totalWeeklyExpenses)}</div><div class="stat-label">Total Weekly</div></div>
-        <div class="stat-card" style="border-top-color: #f44336;"><div class="stat-value">${formatCurrency(totals.totalWeeklyExpenses * 52)}</div><div class="stat-label">Total Annual</div></div>
-        <div class="stat-card" style="border-top-color: #4CAF50;"><div class="stat-value">${essentialRatio.toFixed(0)}%</div><div class="stat-label">Essential Ratio</div></div>
-        <div class="stat-card" style="border-top-color: #2196F3;"><div class="stat-value">${ofNetIncome.toFixed(0)}%</div><div class="stat-label">Of Net Income</div></div>
+        <div class="stat-card" style="border-top-color: var(--color-negative);"><div class="stat-value">${formatCurrency(totals.totalWeeklyExpenses)}</div><div class="stat-label">Total Weekly</div></div>
+        <div class="stat-card" style="border-top-color: var(--color-negative);"><div class="stat-value">${formatCurrency(totals.totalWeeklyExpenses * 52)}</div><div class="stat-label">Total Annual</div></div>
+        <div class="stat-card" style="border-top-color: var(--color-positive);"><div class="stat-value">${essentialRatio.toFixed(0)}%</div><div class="stat-label">Essential Ratio</div></div>
+        <div class="stat-card" style="border-top-color: var(--color-neutral);"><div class="stat-value">${ofNetIncome.toFixed(0)}%</div><div class="stat-label">Of Net Income</div></div>
     `);
 }
 
 function updateSavingsTabUI(totals) {
     const monthlySavings = totals.weeklySavings * (52 / 12);
     setHTML('savings-capacity', `
-        <div class="time-item" style="background: rgba(76, 175, 80, 0.1);"><div class="time-label">Per Year</div><div class="time-amount" style="color: #4CAF50; font-size: 1.4em;">${formatCurrency(totals.weeklySavings * 52)}</div></div>
-        <div class="time-item" style="background: rgba(76, 175, 80, 0.1);"><div class="time-label">Per Month</div><div class="time-amount" style="color: #4CAF50; font-size: 1.4em;">${formatCurrency(monthlySavings)}</div></div>
-        <div class="time-item" style="background: rgba(76, 175, 80, 0.1);"><div class="time-label">Per Week</div><div class="time-amount" style="color: #4CAF50; font-size: 1.4em;">${formatCurrency(totals.weeklySavings)}</div></div>
+        <div class="time-item" style="background: var(--positive-tint);"><div class="time-label">Per Year</div><div class="time-amount" style="color: var(--color-positive); font-size: 1.4em;">${formatCurrency(totals.weeklySavings * 52)}</div></div>
+        <div class="time-item" style="background: var(--positive-tint);"><div class="time-label">Per Month</div><div class="time-amount" style="color: var(--color-positive); font-size: 1.4em;">${formatCurrency(monthlySavings)}</div></div>
+        <div class="time-item" style="background: var(--positive-tint);"><div class="time-label">Per Week</div><div class="time-amount" style="color: var(--color-positive); font-size: 1.4em;">${formatCurrency(totals.weeklySavings)}</div></div>
     `);
 
     setText('savings-rate', `${totals.savingsRate.toFixed(1)}%`);
@@ -293,22 +293,32 @@ function updateSavingsTabUI(totals) {
     const yearsToFIValue = calculateYearsToFI(totals.annualSavings, totals.currentAssets, fiTarget, financeData.fiSettings.expectedReturn);
     const currentProgress = fiTarget > 0 ? (totals.currentAssets / fiTarget) * 100 : (totals.currentAssets > 0 ? 100 : 0);
 
+    // Build a human-readable label — Infinity is a number in JS so typeof isn't enough
+    let yearsLabel;
+    if (yearsToFIValue === 0) {
+        yearsLabel = '🎉 Already reached!';
+    } else if (!Number.isFinite(yearsToFIValue)) {
+        yearsLabel = totals.annualSavings <= 0 ? 'Needs positive savings' : '∞ years';
+    } else {
+        yearsLabel = yearsToFIValue.toFixed(1) + ' years';
+    }
+
     setHTML('fi-stats', `
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
             <span>Years to FI (${financeData.fiSettings.multiple}x expenses):</span>
-            <span style="font-weight: 600; color: #4CAF50;">${typeof yearsToFIValue === 'number' ? yearsToFIValue.toFixed(1) : '∞'} years</span>
+            <span style="font-weight: 600; color: var(--color-positive);">${yearsLabel}</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
             <span>Target amount needed:</span>
-            <span style="font-weight: 600; color: #2196F3;">${formatCurrency(fiTarget)}</span>
+            <span style="font-weight: 600; color: var(--color-neutral);">${formatCurrency(fiTarget)}</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
             <span>Annual expenses:</span>
-            <span style="font-weight: 600; color: #f44336;">${formatCurrency(annualExpenses)}</span>
+            <span style="font-weight: 600; color: var(--color-negative);">${formatCurrency(annualExpenses)}</span>
         </div>
         <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #e0e0e0; flex-wrap: wrap; gap: 10px;">
             <span>Current progress:</span>
-            <span style="font-weight: 600; color: #ff9800;">${currentProgress.toFixed(1)}%</span>
+            <span style="font-weight: 600; color: var(--color-warning);">${currentProgress.toFixed(1)}%</span>
         </div>
     `);
 }
@@ -318,7 +328,7 @@ function updateLiabilitiesTabUI(totals) {
     if (summaryContainer) {
         summaryContainer.innerHTML = '';
         if (financeData.liabilities.length === 0) {
-            summaryContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #4CAF50; font-size: 1.2em;">🎉 No liabilities tracked - Great job!</div>';
+            summaryContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--color-positive); font-size: 1.2em;">🎉 No liabilities tracked - Great job!</div>';
         } else {
             financeData.liabilities.forEach(debt => {
                 const debtCard = document.createElement('div');
@@ -326,7 +336,7 @@ function updateLiabilitiesTabUI(totals) {
                 const monthlyInterest = (debt.balance * (debt.interestRate / 100)) / 12;
                 const yearlyInterest = debt.balance * (debt.interestRate / 100);
                 debtCard.innerHTML = `
-                    <div class="liability-card-title">${debt.name}</div>
+                    <div class="liability-card-title">${escapeHtml(debt.name)}</div>
                     <div class="liability-details">
                         <div class="liability-balance">${formatCurrency(debt.balance)}</div>
                         <div class="liability-rate">Interest Rate: ${debt.interestRate}% annually</div>
@@ -351,19 +361,19 @@ function updateLiabilitiesTabUI(totals) {
         impactStatsContainer.innerHTML = `
             <div style="display: flex; justify-content: space-between; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <span>Total Liabilities:</span>
-                <span style="font-weight: 600; color: #f44336;">${formatCurrency(totalLiabilities)}</span>
+                <span style="font-weight: 600; color: var(--color-negative);">${formatCurrency(totalLiabilities)}</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <span>Annual Interest Cost:</span>
-                <span style="font-weight: 600; color: #f44336;">${formatCurrency(totalAnnualInterest)}</span>
+                <span style="font-weight: 600; color: var(--color-negative);">${formatCurrency(totalAnnualInterest)}</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <span>Average Interest Rate:</span>
-                <span style="font-weight: 600; color: #ff9800;">${averageInterestRate.toFixed(2)}%</span>
+                <span style="font-weight: 600; color: var(--color-warning);">${averageInterestRate.toFixed(2)}%</span>
             </div>
             <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px solid #e0e0e0; flex-wrap: wrap; gap: 10px;">
                 <span style="font-weight: 600;">Net Worth if Debt-Free:</span>
-                <span style="font-weight: 700; color: #4CAF50; font-size: 1.2em;">${formatCurrency(netWorthWithoutDebt)}</span>
+                <span style="font-weight: 700; color: var(--color-positive); font-size: 1.2em;">${formatCurrency(netWorthWithoutDebt)}</span>
             </div>`;
     }
     setText('total-liabilities-settings', formatCurrency(totals.currentLiabilities));

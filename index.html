@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-ft-fouc-init'; style-src 'self' 'unsafe-inline';">
     <title>Finance Tracker</title>
+    <script nonce="ft-fouc-init">
+    /* FOUC prevention — replays the last-applied theme before CSS loads */
+    (function(){try{var t=JSON.parse(localStorage.getItem('ft-theme-fouc'));if(!t)return;var s=document.documentElement.style;for(var k in t){s.setProperty(k,t[k]);}var m=document.querySelector('meta[name="theme-color"]');if(m&&t['--primary-bg-color-start'])m.setAttribute('content',t['--primary-bg-color-start']);}catch(e){}})();
+    </script>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,6 +20,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 </head>
 <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <div class="container">
         <div class="header">
             <h1 id="main-heading-display">Personal Finance Dashboard</h1>
@@ -24,19 +30,19 @@
             </button>
             </div>
 
-        <div class="tabs">
-            <div class="tab" data-tab-target="dashboard">📊 Dashboard</div>
-            <div class="tab" data-tab-target="income">💰 Income</div>
-            <div class="tab" data-tab-target="expenses">💸 Expenses</div>
-            <div class="tab" data-tab-target="savings">📈 Savings</div>
-            <div class="tab" data-tab-target="liabilities">⚖️ Liabilities</div>
-            <div class="tab" data-tab-target="whatIf">🤔 What If?</div>
-            <div class="tab" data-tab-target="guiSettings">🎨 GUI Settings</div>
-            <div class="tab active" data-tab-target="settings">⚙️ Settings</div>
-        </div>
+        <nav role="tablist" aria-label="Finance sections" class="tabs">
+            <button role="tab" class="tab" data-tab-target="dashboard" aria-controls="dashboard" aria-selected="false" tabindex="-1">Dashboard</button>
+            <button role="tab" class="tab" data-tab-target="income" aria-controls="income" aria-selected="false" tabindex="-1">Income</button>
+            <button role="tab" class="tab" data-tab-target="expenses" aria-controls="expenses" aria-selected="false" tabindex="-1">Expenses</button>
+            <button role="tab" class="tab" data-tab-target="savings" aria-controls="savings" aria-selected="false" tabindex="-1">Savings</button>
+            <button role="tab" class="tab" data-tab-target="liabilities" aria-controls="liabilities" aria-selected="false" tabindex="-1">Liabilities</button>
+            <button role="tab" class="tab" data-tab-target="whatIf" aria-controls="whatIf" aria-selected="false" tabindex="-1">What If?</button>
+            <button role="tab" class="tab" data-tab-target="guiSettings" aria-controls="guiSettings" aria-selected="false" tabindex="-1">GUI Settings</button>
+            <button role="tab" class="tab active" data-tab-target="settings" aria-controls="settings" aria-selected="true" tabindex="0">Settings</button>
+        </nav>
 
-        <div class="content">
-            <div id="dashboard" class="tab-content">
+        <div class="content" id="main-content">
+            <div id="dashboard" role="tabpanel" aria-labelledby="tab-dashboard" class="tab-content">
                 <div class="dashboard-controls">
                     <label for="dashboard-view-period">View Period:</label>
                     <select id="dashboard-view-period">
@@ -55,7 +61,7 @@
                                 <div class="card-subtitle" id="dashboard-income-subtitle">After Tax (Fortnightly)</div>
                             </div>
                         </div>
-                        <div class="amount neutral" id="dashboard-income-period-display">A$0.00</div>
+                        <div class="amount neutral" id="dashboard-income-period-display" aria-live="polite" aria-atomic="true">A$0.00</div>
                         <div class="time-periods">
                              <div class="time-item">
                                 <div class="time-label">Annual</div>
@@ -99,7 +105,7 @@
                                 <div class="card-subtitle">Assets minus Liabilities</div>
                             </div>
                         </div>
-                        <div class="amount net-worth" id="net-worth-display">A$0.00</div>
+                        <div class="amount net-worth" id="net-worth-display" aria-live="polite" aria-atomic="true">A$0.00</div>
                          <div class="net-worth-breakdown">
                             <div>
                                 <div class="card-subtitle">Total Assets</div>
@@ -123,7 +129,7 @@
                 </div>
             </div>
 
-            <div id="income" class="tab-content">
+            <div id="income" role="tabpanel" aria-labelledby="tab-income" class="tab-content">
                 <div class="info-section">
                     <h3>Understanding Your Income</h3>
                     <p>Your income section helps you track all your revenue sources and understand your true earning potential. This includes tracking gross income, tax deductions, and net take-home pay.</p>
@@ -151,7 +157,7 @@
                 <div class="summary-stats" id="income-stats"></div>
             </div>
 
-            <div id="expenses" class="tab-content">
+            <div id="expenses" role="tabpanel" aria-labelledby="tab-expenses" class="tab-content">
                 <div class="info-section">
                     <h3>Managing Your Expenses</h3>
                     <p>Expense tracking is crucial for understanding where your money goes and identifying opportunities to optimize your spending. We categorize expenses into Essential and Non-Essential to help prioritize your financial decisions.</p>
@@ -177,7 +183,7 @@
                 <div class="summary-stats" id="expense-stats"></div>
             </div>
 
-            <div id="savings" class="tab-content">
+            <div id="savings" role="tabpanel" aria-labelledby="tab-savings" class="tab-content">
                 <div class="info-section">
                     <h3>Building Your Financial Future</h3>
                     <p>Your savings rate is one of the most important metrics for financial health and independence. This section shows your capacity to save and invest for the future.</p>
@@ -212,7 +218,7 @@
                 </div>
             </div>
 
-            <div id="liabilities" class="tab-content">
+            <div id="liabilities" role="tabpanel" aria-labelledby="tab-liabilities" class="tab-content">
                 <div class="info-section">
                     <h3>Understanding Your Liabilities</h3>
                     <p>Liabilities are debts or financial obligations you owe to others. Tracking them is essential for understanding your true financial position (Net Worth) and planning strategies like debt reduction.</p>
@@ -237,7 +243,7 @@
                 </div>
             </div>
 
-            <div id="whatIf" class="tab-content">
+            <div id="whatIf" role="tabpanel" aria-labelledby="tab-whatIf" class="tab-content">
                 <div class="info-section">
                     <h3>Financial Scenario Planning</h3>
                     <p>Use this powerful tool to explore "what if" scenarios and see how changes in your financial situation could impact your path to Financial Independence.</p>
@@ -255,15 +261,15 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label" for="whatif-new-annual-income">New Annual Net Income (Total)</label>
-                            <input type="number" class="form-input" id="whatif-new-annual-income" placeholder="e.g., 65000">
+                            <input type="number" class="form-input" id="whatif-new-annual-income" placeholder="e.g., 65000" autocomplete="off">
                         </div>
                          <div class="form-group">
                             <label class="form-label" for="whatif-assets-change">Current Assets Change (Amount)</label>
-                            <input type="number" class="form-input" id="whatif-assets-change" placeholder="e.g., 5000 or -1000" value="0">
+                            <input type="number" class="form-input" id="whatif-assets-change" placeholder="e.g., 5000 or -1000" value="0" autocomplete="off">
                         </div>
                          <div class="form-group">
                             <label class="form-label" for="whatif-return-change">New Expected Return (%)</label>
-                            <input type="number" class="form-input" id="whatif-return-change" placeholder="e.g., 8 or 6" step="0.1">
+                            <input type="number" class="form-input" id="whatif-return-change" placeholder="e.g., 8 or 6" step="0.1" autocomplete="off">
                         </div>
                     </div>
                     <div class="settings-section" style="margin-top: 20px;">
@@ -294,9 +300,12 @@
                 </div>
             </div>
 
-            <div id="guiSettings" class="tab-content">
+            <div id="guiSettings" role="tabpanel" aria-labelledby="tab-guiSettings" class="tab-content">
                 <div class="settings-section">
                     <div class="settings-title">🎨 Appearance Customization</div>
+                    <p class="theme-section-title">Theme Presets</p>
+                    <div id="theme-switcher-container" class="theme-switcher" role="group" aria-label="Theme presets"></div>
+                    <p class="theme-section-title">Customise Colours</p>
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label" for="gui-primary-bg-start">Primary Background Start</label>
@@ -363,7 +372,7 @@
                 </div>
             </div>
 
-            <div id="settings" class="tab-content active">
+            <div id="settings" role="tabpanel" aria-labelledby="tab-settings" class="tab-content active">
                 <div class="settings-section">
                     <div class="settings-title">🌍 General Settings</div>
                     <div class="form-grid">
@@ -480,11 +489,11 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label" for="fi-multiple">FI Multiple (e.g., 25 for 4% rule)</label>
-                            <input type="number" class="form-input" id="fi-multiple" step="0.1" min="1">
+                            <input type="number" class="form-input" id="fi-multiple" step="0.1" min="1" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label class="form-label" for="expected-return">Expected Annual Return (%)</label>
-                            <input type="number" class="form-input" id="expected-return" step="0.1" min="0">
+                            <input type="number" class="form-input" id="expected-return" step="0.1" min="0" autocomplete="off">
                         </div>
                     </div>
                 </div>
@@ -500,7 +509,8 @@
         </div>
     </div>
     <script src="js/state.js" defer></script>
-    <script src="js/utils.js" defer></script> 
+    <script src="js/utils.js" defer></script>
+    <script src="js/theme.js" defer></script>
     <script src="js/calculations.js" defer></script>
     <script src="js/uiDashboard.js" defer></script>
     <script src="js/uiSettings.js" defer></script>

@@ -67,33 +67,28 @@ function calculateTotals(currentData = financeData) {
 }
 
 function calculateYearsToFI(annualSavings, currentAssets, fiTarget, expectedReturnRate) {
-    if (annualSavings <= 0 && currentAssets < fiTarget) {
-        return Infinity; // Cannot reach FI if not saving and not already there
-    }
-    if (currentAssets >= fiTarget) {
-        return 0; // Already at FI
-    }
+    if (fiTarget <= 0) return 0;
+    if (currentAssets >= fiTarget) return 0;
+    if (annualSavings <= 0) return Infinity;
 
-    const r = expectedReturnRate / 100; // Annual return rate as decimal
+    const r = expectedReturnRate / 100;
 
-    if (r === 0) { // Simple calculation if no return
+    if (r === 0) {
         return (fiTarget - currentAssets) / annualSavings;
     }
 
-    // Formula: n = log((FV*r + A) / (P*r + A)) / log(1+r)
-    // FV = fiTarget, P = currentAssets, A = annualSavings
-    const numerator = fiTarget * r + annualSavings;
+    // Shad Sloan / compound growth formula:
+    // n = log((FV·r + A) / (P·r + A)) / log(1+r)
+    const numerator   = fiTarget * r + annualSavings;
     const denominator = currentAssets * r + annualSavings;
 
-    if (numerator <= 0 || denominator <= 0 || numerator < denominator) {
-        // This can happen if current assets are very high, or savings are negative and large
-        // or if the target is somehow less than current + one year saving with return.
-        // Fallback to simple calculation or indicate an issue.
-        return (fiTarget - currentAssets) / annualSavings; // Could still be Infinity if annualSavings is negative
+    if (denominator <= 0 || numerator <= denominator) {
+        const simple = (fiTarget - currentAssets) / annualSavings;
+        return isNaN(simple) || simple < 0 ? Infinity : simple;
     }
 
-    let years = Math.log(numerator / denominator) / Math.log(1 + r);
-    return Math.max(0, years); // Years cannot be negative
+    const years = Math.log(numerator / denominator) / Math.log(1 + r);
+    return isNaN(years) ? Infinity : Math.max(0, years);
 }
 
 

@@ -36,12 +36,16 @@ let defaultFinanceData = {
 };
 
 let defaultGuiSettings = {
+    theme: 'default',
     primaryBgStart: "#667eea",
     primaryBgEnd: "#764ba2",
     headerTextColor: "#ffffff",
     cardBgStart: "#ffffff",
     cardBgEnd: "#f0f0f0",
     accentColor: "#667eea",
+    colorPositive: "#4CAF50",
+    colorNegative: "#f44336",
+    colorNeutral: "#2196F3",
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     baseFontSize: "16",
     mainHeading: "Personal Finance Dashboard",
@@ -84,8 +88,10 @@ class FinanceAutoSave {
 
         this.statusIndicator = document.createElement('div');
         this.statusIndicator.id = 'save-status-indicator';
-        this.statusIndicator.textContent = '✓ All changes saved'; // Initial state
-        this.statusIndicator.classList.add('saved', 'visible'); // Start as saved and visible
+        this.statusIndicator.textContent = '✓ All changes saved';
+        this.statusIndicator.setAttribute('aria-live', 'polite');
+        this.statusIndicator.setAttribute('aria-atomic', 'true');
+        this.statusIndicator.classList.add('saved', 'visible');
         header.appendChild(this.statusIndicator);
         this.updateSaveStatus('saved'); // Explicitly set style for saved
     }
@@ -171,9 +177,13 @@ class FinanceAutoSave {
                 if (loadedBundle && loadedBundle.financeData && loadedBundle.guiSettings) {
                     financeData = loadedBundle.financeData;
                     guiSettingsData = loadedBundle.guiSettings;
-                    this.lastSaveHash = this.getDataHash(); // Set initial hash
+                    // Migrate older saves that predate the theme system
+                    if (!guiSettingsData.theme) guiSettingsData.theme = 'default';
+                    if (!guiSettingsData.colorPositive) guiSettingsData.colorPositive = defaultGuiSettings.colorPositive;
+                    if (!guiSettingsData.colorNegative) guiSettingsData.colorNegative = defaultGuiSettings.colorNegative;
+                    if (!guiSettingsData.colorNeutral) guiSettingsData.colorNeutral = defaultGuiSettings.colorNeutral;
+                    this.lastSaveHash = this.getDataHash();
                     this.updateSaveStatus('saved');
-                    console.log("Data loaded successfully from localStorage (v2).");
                     return true;
                 }
             }
@@ -211,8 +221,8 @@ class FinanceAutoSave {
             if (this.saveStatus === 'unsaved') {
                 this.forceSave();
                 // Standard way to prompt user if there are unsaved changes, though modern browsers might override this.
-                // e.preventDefault(); // Necessary for Chrome
-                // e.returnValue = ''; // Necessary for other browsers
+                e.preventDefault(); // Necessary for Chrome
+                e.returnValue = ''; // Necessary for other browsers
             }
         });
 

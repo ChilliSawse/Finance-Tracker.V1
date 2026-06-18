@@ -35,7 +35,7 @@ function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-name" class="visually-hidden">Income Source Name ${index + 1}</label>
-                <input type="text" value="${source.name || ''}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
+                <input type="text" value="${escapeHtml(source.name || '')}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
             </span>
             <span>
                 <label for="${baseId}-gross" class="visually-hidden">Gross Annual Income ${index + 1}</label>
@@ -109,7 +109,7 @@ function renderAssetsSettings() {
         itemDiv.innerHTML = `
             <span>
                 <label for="${baseId}-name" class="visually-hidden">Asset Name ${index + 1}</label>
-                <input type="text" value="${asset.name}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Asset name">
+                <input type="text" value="${escapeHtml(asset.name)}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Asset name">
             </span>
             <span>
                 <label for="${baseId}-balance" class="visually-hidden">Asset Balance ${index + 1}</label>
@@ -132,7 +132,7 @@ function renderLiabilitiesSettings() {
         itemDiv.innerHTML = `
             <span>
                 <label for="${baseId}-name" class="visually-hidden">Liability Name ${index + 1}</label>
-                <input type="text" value="${liability.name}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Liability name">
+                <input type="text" value="${escapeHtml(liability.name)}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Liability name">
             </span>
             <span>
                 <label for="${baseId}-balance" class="visually-hidden">Liability Balance ${index + 1}</label>
@@ -161,7 +161,7 @@ function renderAllocationSettings() {
         itemDiv.innerHTML = `
             <span>
                 <label for="${baseId}-name" class="visually-hidden">Allocation Category Name ${index + 1}</label>
-                <input type="text" value="${alloc.name}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Category Name">
+                <input type="text" value="${escapeHtml(alloc.name)}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Category Name">
             </span>
             <span>
                 <label for="${baseId}-percentage" class="visually-hidden">Allocation Percentage ${index + 1}</label>
@@ -178,7 +178,9 @@ function updateAllocationTotalDisplay() {
     const totalSpan = getElement('total-percent');
     if (totalSpan) {
         totalSpan.textContent = `${total.toFixed(1)}%`;
-        totalSpan.style.color = Math.abs(total - 100) < 0.11 ? '#4CAF50' : '#f44336';
+        totalSpan.style.color = Math.abs(total - 100) < 0.11
+            ? 'var(--color-positive)'
+            : 'var(--color-negative)';
     }
 }
 
@@ -196,7 +198,7 @@ function renderExpensesSettingsLists() {
             itemDiv.innerHTML = `
                 <span>
                     <label for="${baseId}-name" class="visually-hidden">${typeLabel} Expense Name ${index + 1}</label>
-                    <input type="text" value="${expense.name}" data-index="${index}" data-field="name" data-array="${expensesArrayName}" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
+                    <input type="text" value="${escapeHtml(expense.name)}" data-index="${index}" data-field="name" data-array="${expensesArrayName}" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
                 </span>
                 <span>
                     <label for="${baseId}-amount" class="visually-hidden">${typeLabel} Expense Amount ${index + 1}</label>
@@ -225,6 +227,7 @@ function renderFISettings() {
 }
 
 function initializeGuiSettingsForm() {
+    renderThemeSwitcher(document.getElementById('theme-switcher-container'));
     setValue('gui-primary-bg-start', guiSettingsData.primaryBgStart);
     setValue('gui-primary-bg-end', guiSettingsData.primaryBgEnd);
     setValue('gui-header-text-color', guiSettingsData.headerTextColor);
@@ -235,22 +238,35 @@ function initializeGuiSettingsForm() {
     setValue('gui-base-font-size', guiSettingsData.baseFontSize);
     setValue('gui-main-heading', guiSettingsData.mainHeading);
     setValue('gui-sub-heading', guiSettingsData.subHeading);
-    applyGuiStylesToPage(); // Apply them immediately
+    applyGuiStylesToPage();
 }
 
 function applyGuiStylesToPage() {
     const root = document.documentElement;
-    root.style.setProperty('--primary-bg-color-start', guiSettingsData.primaryBgStart);
-    root.style.setProperty('--primary-bg-color-end', guiSettingsData.primaryBgEnd);
-    root.style.setProperty('--header-text-color', guiSettingsData.headerTextColor);
-    root.style.setProperty('--card-bg-gradient-start', guiSettingsData.cardBgStart);
-    root.style.setProperty('--card-bg-gradient-end', guiSettingsData.cardBgEnd);
-    root.style.setProperty('--accent-color', guiSettingsData.accentColor);
+    const pickerVars = {
+        '--primary-bg-color-start': guiSettingsData.primaryBgStart,
+        '--primary-bg-color-end':   guiSettingsData.primaryBgEnd,
+        '--header-text-color':      guiSettingsData.headerTextColor,
+        '--card-bg-gradient-start': guiSettingsData.cardBgStart,
+        '--card-bg-gradient-end':   guiSettingsData.cardBgEnd,
+        '--accent-color':           guiSettingsData.accentColor,
+        '--color-positive':         guiSettingsData.colorPositive || '#4CAF50',
+        '--color-negative':         guiSettingsData.colorNegative || '#f44336',
+        '--color-neutral':          guiSettingsData.colorNeutral  || '#2196F3',
+    };
+    for (const [k, v] of Object.entries(pickerVars)) root.style.setProperty(k, v);
     root.style.setProperty('--font-family-main', guiSettingsData.fontFamily);
     root.style.setProperty('--base-font-size', guiSettingsData.baseFontSize + 'px');
 
     setText('main-heading-display', guiSettingsData.mainHeading);
     setText('sub-heading-display', guiSettingsData.subHeading);
+
+    // Merge picker-based values into the FOUC cache so the bg is correct on next load
+    try {
+        const fouc = JSON.parse(localStorage.getItem('ft-theme-fouc') || '{}');
+        Object.assign(fouc, pickerVars);
+        localStorage.setItem('ft-theme-fouc', JSON.stringify(fouc));
+    } catch (_) {}
 }
 
 function initializeWhatIfTab() {
@@ -280,7 +296,7 @@ function renderWhatIfExpenseSettingsList(containerId, expensesArray, typePrefix)
         itemDiv.innerHTML = `
             <span>
                 <label for="${baseId}-name" class="visually-hidden">${typeLabel} Expense Name ${index + 1}</label>
-                <input type="text" value="${expense.name}" data-index="${index}" data-field="name" data-array-prefix="${typePrefix}" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
+                <input type="text" value="${escapeHtml(expense.name)}" data-index="${index}" data-field="name" data-array-prefix="${typePrefix}" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
             </span>
             <span>
                 <label for="${baseId}-amount" class="visually-hidden">${typeLabel} Expense Amount ${index + 1}</label>

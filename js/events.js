@@ -2,14 +2,13 @@
 
 function setupEventListeners() {
     // Tab navigation
-    const tabsContainer = document.querySelector('.tabs');
+    const tabsContainer = document.querySelector('[role="tablist"]');
     if (tabsContainer) {
         tabsContainer.addEventListener('click', (event) => {
-            if (event.target.classList.contains('tab')) {
-                const tabName = event.target.dataset.tabTarget;
-                if (tabName) {
-                    showTab(tabName);
-                }
+            const tab = event.target.closest('.tab');
+            if (tab) {
+                const tabName = tab.dataset.tabTarget;
+                if (tabName) showTab(tabName);
             }
         });
     }
@@ -126,25 +125,41 @@ function handleSettingsChangeEvents(event) {
     // Handle radio button for primary income separately
     if (target.name === 'primary-income' && target.type === 'radio') {
         financeData.primaryIncomeIndex = index;
-        updateDataAndUI(); // Re-render income sources to reflect primary change
+        updateDataAndUI();
         return;
     }
-    // CORRECTED: Handle FI inputs in the main if/else if chain
     else if (target.id === 'fi-multiple') {
-        financeData.fiSettings.multiple = parseFloat(value) || 25;
-        console.log("📊 FI Multiple updated to:", financeData.fiSettings.multiple);
+        const val = parseFloat(value);
+        if (isNaN(val) || val <= 0) {
+            showFieldError(target, 'Must be greater than 0');
+            return;
+        }
+        clearFieldError(target);
+        financeData.fiSettings.multiple = val;
         updateDataAndUI();
         return;
     }
     else if (target.id === 'expected-return') {
-        financeData.fiSettings.expectedReturn = parseFloat(value) || 7;
-        console.log("📊 Expected Return updated to:", financeData.fiSettings.expectedReturn);
+        const val = parseFloat(value);
+        if (isNaN(val) || val < 0) {
+            showFieldError(target, 'Must be 0 or greater');
+            return;
+        }
+        clearFieldError(target);
+        financeData.fiSettings.expectedReturn = val;
         updateDataAndUI();
         return;
     }
 
     // This block now correctly handles ONLY the array-based items that have a data-field attribute
     if (field) {
+        const validationError = validateFieldValue(field, value);
+        if (validationError) {
+            showFieldError(target, validationError);
+            return;
+        }
+        clearFieldError(target);
+
         // Determine which array to update
         let arrayToUpdate;
         if (target.closest('#income-sources-settings')) arrayToUpdate = financeData.incomeSources;
@@ -220,10 +235,44 @@ function handleWhatIfChangeEvents(event) {
 
 function handleGuiSettingsClickEvents(event) {
     const target = event.target;
-    if (target.id === 'apply-gui-settings') actionApplyGuiSettings();
-    else if (target.id === 'reset-gui-settings') actionResetGuiToDefaults();
-    else if (target.id === 'export-json-gui') actionExportDataJSON(); // Re-use the main JSON export
-    else if (target.id === 'import-json-gui-btn') getElement('json-import-gui').click();
+    if (target.id === 'apply-gui-settings') {
+        actionApplyGuiSettings();
+        return;
+    }
+    if (target.id === 'reset-gui-settings') { actionResetGuiToDefaults(); return; }
+    if (target.id === 'export-json-gui') { actionExportDataJSON(); return; }
+    if (target.id === 'import-json-gui-btn') { getElement('json-import-gui').click(); return; }
+
+    // Theme preset swatch click
+    const swatch = target.closest('[data-theme]');
+    if (swatch && typeof THEMES !== 'undefined') {
+        const key = swatch.dataset.theme;
+        const preset = THEMES[key];
+        if (!preset) return;
+
+        // Apply full theme immediately (derives tab colours, tints, etc.)
+        applyTheme(preset);
+
+        // Update colour pickers to reflect the preset so clicking Apply saves them
+        const tokens = deriveTokens(preset);
+        setValue('gui-primary-bg-start', preset.bg);
+        setValue('gui-primary-bg-end',   preset.accent);
+        setValue('gui-header-text-color', tokens['--header-text-color']);
+        setValue('gui-card-bg-start',    preset.panel);
+        setValue('gui-card-bg-end',      tokens['--card-bg-gradient-end']);
+        setValue('gui-accent-color',     preset.accent);
+
+        // Persist theme name + semantic colours immediately
+        guiSettingsData.theme = key;
+        guiSettingsData.colorPositive = preset.positive;
+        guiSettingsData.colorNegative = preset.negative;
+        guiSettingsData.colorNeutral  = preset.neutral;
+
+        // Re-render swatches so active state updates
+        renderThemeSwitcher(document.getElementById('theme-switcher-container'));
+
+        if (autoSave) autoSave.onDataChange();
+    }
 }
 
 // --- Action Functions (called by event handlers) ---
@@ -374,7 +423,6 @@ function updateFinanceDataFromFISettingsInputs() {
         financeData.fiSettings.expectedReturn = inputReturn;
     }
     
-    console.log("📊 FI Settings after input sync - Multiple:", financeData.fiSettings.multiple, "Return:", financeData.fiSettings.expectedReturn);
 }
 
 
@@ -415,6 +463,22 @@ function actionExportDataJSON() {
     showCustomModal("Data exported as JSON!");
 }
 
+function validateImportBundle(bundle) {
+    if (!bundle || typeof bundle !== 'object') return 'File does not contain valid JSON.';
+    if (!bundle.financeData || typeof bundle.financeData !== 'object') return 'Missing financeData in backup file.';
+    if (!bundle.guiSettings || typeof bundle.guiSettings !== 'object') return 'Missing guiSettings in backup file.';
+
+    const fd = bundle.financeData;
+    if (!Array.isArray(fd.incomeSources)) return 'financeData.incomeSources must be an array.';
+    if (!Array.isArray(fd.essentialExpenses)) return 'financeData.essentialExpenses must be an array.';
+    if (!Array.isArray(fd.nonEssentialExpenses)) return 'financeData.nonEssentialExpenses must be an array.';
+    if (!Array.isArray(fd.assets)) return 'financeData.assets must be an array.';
+    if (!Array.isArray(fd.liabilities)) return 'financeData.liabilities must be an array.';
+    if (!fd.fiSettings || typeof fd.fiSettings.multiple !== 'number') return 'financeData.fiSettings is invalid.';
+
+    return null;
+}
+
 function handleJSONImport(event, isGuiTabImport = false) {
     const file = event.target.files[0];
     if (!file) return;
@@ -423,47 +487,45 @@ function handleJSONImport(event, isGuiTabImport = false) {
     reader.onload = (e) => {
         try {
             const importedBundle = JSON.parse(e.target.result);
-            if (importedBundle.financeData && importedBundle.guiSettings) {
-                 if (confirmAction('Importing this file will replace ALL current data (financial and GUI). Are you sure?')) {
-                    financeData = importedBundle.financeData;
-                    guiSettingsData = importedBundle.guiSettings;
-
-                    initializeSettingsUI(); // Re-render settings inputs
-                    initializeGuiSettingsForm(); // Re-render GUI settings inputs and apply styles
-                    updateDataAndUI(); // Update all displays and save
-
-                    showCustomModal('Data imported successfully! Please review all tabs.');
-                    // Optionally, switch to a relevant tab, e.g., dashboard
-                    showTab('dashboard');
-                }
-            } else {
-                showCustomModal('Invalid backup file format. Must contain financeData and guiSettings.', 'error');
+            const validationError = validateImportBundle(importedBundle);
+            if (validationError) {
+                showCustomModal(`Invalid backup file: ${validationError}`, 'error');
+                return;
+            }
+            if (confirmAction('Importing this file will replace ALL current data (financial and GUI). Are you sure?')) {
+                financeData = importedBundle.financeData;
+                guiSettingsData = importedBundle.guiSettings;
+                initializeSettingsUI();
+                initializeGuiSettingsForm();
+                updateDataAndUI();
+                showCustomModal('Data imported successfully! Please review all tabs.');
+                showTab('dashboard');
             }
         } catch (error) {
             showCustomModal('Failed to import backup file. It might be corrupted.', 'error');
-            console.error("Import error:", error);
+            console.error('Import error:', error);
         }
     };
     reader.readAsText(file);
-    event.target.value = ''; // Reset file input
+    event.target.value = '';
 }
 
 
 // GUI Settings Actions
 function actionApplyGuiSettings() {
     guiSettingsData.primaryBgStart = getValue('gui-primary-bg-start');
-    guiSettingsData.primaryBgEnd = getValue('gui-primary-bg-end');
+    guiSettingsData.primaryBgEnd   = getValue('gui-primary-bg-end');
     guiSettingsData.headerTextColor = getValue('gui-header-text-color');
-    guiSettingsData.cardBgStart = getValue('gui-card-bg-start');
-    guiSettingsData.cardBgEnd = getValue('gui-card-bg-end');
-    guiSettingsData.accentColor = getValue('gui-accent-color');
-    guiSettingsData.fontFamily = getValue('gui-font-family');
-    guiSettingsData.baseFontSize = getValue('gui-base-font-size');
-    guiSettingsData.mainHeading = getValue('gui-main-heading');
-    guiSettingsData.subHeading = getValue('gui-sub-heading');
+    guiSettingsData.cardBgStart    = getValue('gui-card-bg-start');
+    guiSettingsData.cardBgEnd      = getValue('gui-card-bg-end');
+    guiSettingsData.accentColor    = getValue('gui-accent-color');
+    guiSettingsData.fontFamily     = getValue('gui-font-family');
+    guiSettingsData.baseFontSize   = getValue('gui-base-font-size');
+    guiSettingsData.mainHeading    = getValue('gui-main-heading');
+    guiSettingsData.subHeading     = getValue('gui-sub-heading');
 
     applyGuiStylesToPage();
-    if (autoSave) autoSave.onDataChange(); // Save GUI changes
+    if (autoSave) autoSave.onDataChange();
     showCustomModal('GUI Settings Applied!');
 }
 

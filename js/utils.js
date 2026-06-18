@@ -1,5 +1,15 @@
 // --- START OF: utils.js ---
 
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 /**
  * Returns the number of pay cycles per year based on the schedule.
  * @param {string} schedule - 'weekly', 'fortnightly', 'monthly', 'yearly'.
@@ -91,10 +101,84 @@ function updateDataAndUI(callback) {
 
     // Dispatch a custom event to signal that data has changed
     // main.js will listen for this event and trigger the UI update.
-    console.log("Dispatching 'dataChanged' event.");
+    log("Dispatching 'dataChanged' event.");
     document.dispatchEvent(new CustomEvent('dataChanged'));
 }
 
+
+// --- Inline Field Validation ---
+
+function showFieldError(input, message) {
+    clearFieldError(input);
+    input.classList.add('field-error');
+    const errEl = document.createElement('span');
+    errEl.className = 'field-error-msg';
+    errEl.textContent = message;
+    errEl.setAttribute('role', 'alert');
+    input.insertAdjacentElement('afterend', errEl);
+}
+
+function clearFieldError(input) {
+    input.classList.remove('field-error');
+    const parent = input.closest('span') || input.parentElement;
+    if (parent) {
+        const existing = parent.querySelector('.field-error-msg');
+        if (existing) existing.remove();
+    }
+}
+
+// Returns an error string if invalid, or null if valid.
+function validateFieldValue(field, rawValue) {
+    const str = rawValue == null ? '' : String(rawValue);
+    const num = parseFloat(str);
+    const empty = str.trim() === '';
+
+    switch (field) {
+        case 'name':
+            if (empty) return 'Name cannot be empty';
+            if (str.trim().length > 100) return 'Max 100 characters';
+            return null;
+
+        case 'grossAnnual':
+        case 'balance':
+        case 'amount':
+        case 'taxRemoved':
+            if (empty) return null;
+            if (isNaN(num) || num < 0) return 'Must be 0 or greater';
+            return null;
+
+        case 'interestRate':
+            if (isNaN(num) || num < 0 || num > 100) return 'Must be 0 – 100 %';
+            return null;
+
+        case 'percentage':
+            if (isNaN(num) || num < 0 || num > 100) return 'Must be 0 – 100';
+            return null;
+
+        case 'rate':
+            // Input is shown as % (0–100); stored as decimal after /100 conversion
+            if (isNaN(num) || num < 0 || num > 100) return 'Must be 0 – 100 %';
+            return null;
+
+        case 'hoursPerCycle':
+        case 'invoicedPayPostTax':
+            if (empty) return null; // optional fields
+            if (isNaN(num) || num < 0) return 'Must be 0 or greater';
+            return null;
+
+        case 'min':
+            if (isNaN(num) || num < 0) return 'Must be 0 or greater';
+            return null;
+
+        case 'max':
+            if (empty) return null; // empty = Infinity
+            if (isNaN(num) || num < 0) return 'Must be 0 or greater';
+            return null;
+
+        default:
+            return null;
+    }
+}
 
 // --- DOM Helper Functions ---
 
