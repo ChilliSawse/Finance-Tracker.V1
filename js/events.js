@@ -128,6 +128,15 @@ function handleSettingsChangeEvents(event) {
         updateDataAndUI();
         return;
     }
+    // Income source type (salaried / self-employed) — re-render to toggle which fields are active
+    else if (field === 'incomeType' && target.closest('#income-sources-settings')) {
+        if (financeData.incomeSources[index] !== undefined) {
+            financeData.incomeSources[index].incomeType = value === 'selfEmployed' ? 'selfEmployed' : 'salaried';
+            renderIncomeSourcesSettings();
+            updateDataAndUI();
+        }
+        return;
+    }
     else if (target.id === 'fi-multiple') {
         const val = parseFloat(value);
         if (isNaN(val) || val <= 0) {
@@ -279,7 +288,7 @@ function handleGuiSettingsClickEvents(event) {
 
 // Add/Remove for main settings
 function addIncomeSource() {
-    financeData.incomeSources.push({ name: "New Income", grossAnnual: 0, paySchedule: "monthly", hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null });
+    financeData.incomeSources.push({ name: "New Income", incomeType: "salaried", grossAnnual: 0, paySchedule: "monthly", hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null });
     renderIncomeSourcesSettings();
     updateDataAndUI();
 }
@@ -426,22 +435,71 @@ function updateFinanceDataFromFISettingsInputs() {
 }
 
 
+const USER_DEFAULTS_KEY = 'ft-user-defaults';
+
+// Returns the saved user-defaults bundle, or null if none/invalid.
+function getUserDefaults() {
+    try {
+        const raw = localStorage.getItem(USER_DEFAULTS_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.financeData) return parsed;
+    } catch (e) {
+        console.error('Failed to read user defaults:', e);
+    }
+    return null;
+}
+
+// Keeps the reset button label in sync with whether user defaults exist.
+function updateDefaultsButtonLabels() {
+    const resetBtn = getElement('reset-to-defaults');
+    if (resetBtn) {
+        resetBtn.textContent = getUserDefaults()
+            ? '🔄 Reset to My Defaults'
+            : '🔄 Reset to Factory Defaults';
+    }
+}
+
 function actionSetCurrentAsDefault() {
-    if (confirmAction('Set current finance settings as the new default? This will be used when you reset.')) {
-        updateFinanceDataFromFISettingsInputs(); // Ensure FI settings are captured from inputs
+    if (!confirmAction('Save your current finance and appearance settings as your defaults? Resetting will return to this state.')) return;
+    updateFinanceDataFromFISettingsInputs(); // Ensure FI settings are captured from inputs
+
+    const bundle = {
+        financeData: JSON.parse(JSON.stringify(financeData)),
+        guiSettings: JSON.parse(JSON.stringify(guiSettingsData)),
+        timestamp: new Date().toISOString()
+    };
+    try {
+        localStorage.setItem(USER_DEFAULTS_KEY, JSON.stringify(bundle));
+        // Keep the in-memory session default in sync too
         defaultFinanceData = JSON.parse(JSON.stringify(financeData));
-        showCustomModal('Current settings set as default.');
-        if(autoSave) autoSave.forceSave(); // Save this change if defaults are part of the main save bundle (they are not currently)
+        updateDefaultsButtonLabels();
+        showCustomModal('Saved as your defaults.', 'success');
+    } catch (e) {
+        console.error('Failed to save user defaults:', e);
+        showCustomModal('Could not save defaults (storage error).', 'error');
     }
 }
 
 function actionResetToAppDefaults() {
-    if (confirmAction('Reset all finance data to the application defaults? All your current data will be lost.')) {
+    const userDefaults = getUserDefaults();
+    const message = userDefaults
+        ? 'Reset all data to your saved defaults? Your current changes will be lost.'
+        : 'Reset all finance data to the factory defaults? All your current data will be lost.';
+    if (!confirmAction(message)) return;
+
+    if (userDefaults) {
+        financeData = JSON.parse(JSON.stringify(userDefaults.financeData));
+        if (userDefaults.guiSettings) {
+            guiSettingsData = JSON.parse(JSON.stringify(userDefaults.guiSettings));
+        }
+    } else {
         financeData = JSON.parse(JSON.stringify(defaultFinanceData));
-        initializeSettingsUI(); // Re-render all settings inputs
-        updateDataAndUI(); // Update all displays and save
-        showCustomModal('Reset to defaults complete!');
     }
+
+    initializeSettingsUI(); // Re-render all settings inputs (also re-applies GUI settings form/styles)
+    updateDataAndUI();       // Update all displays and save
+    showCustomModal(userDefaults ? 'Reset to your defaults complete!' : 'Reset to factory defaults complete!', 'success');
 }
 
 function actionExportDataJSON() {
@@ -495,6 +553,7 @@ function handleJSONImport(event, isGuiTabImport = false) {
             if (confirmAction('Importing this file will replace ALL current data (financial and GUI). Are you sure?')) {
                 financeData = importedBundle.financeData;
                 guiSettingsData = importedBundle.guiSettings;
+                migrateIncomeSourceTypes(financeData); // Backfill incomeType on imported legacy data
                 initializeSettingsUI();
                 initializeGuiSettingsForm();
                 updateDataAndUI();

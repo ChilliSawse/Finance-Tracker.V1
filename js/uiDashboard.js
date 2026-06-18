@@ -53,6 +53,10 @@ function updateDashboardUI(totals) {
     setText('dashboard-outgoing-savings-title', `${incomePeriodLabel} Overview`);
     setText('dashboard-period-expenses', formatCurrency(expensesForPeriod));
     setText('dashboard-period-savings', formatCurrency(savingsForPeriod));
+    const periodSavingsEl = getElement('dashboard-period-savings');
+    if (periodSavingsEl) {
+        periodSavingsEl.style.color = savingsForPeriod < 0 ? 'var(--color-negative)' : '';
+    }
     const savingsPercentageDisplay = totals.savingsRate; // Use calculated savingsRate
     const savingsProgressEl = getElement('savings-progress');
     if (savingsProgressEl) {
@@ -122,16 +126,20 @@ function updateIncomeTabUI(totals) {
         incomeStreamsContainer.innerHTML = '';
         financeData.incomeSources.forEach((source, index) => {
             const payCycles = getPayCyclesPerYear(source.paySchedule);
-            const payCycleGross = source.grossAnnual / payCycles;
-            const payCycleNet = source._calculatedNetAnnual / payCycles; // Use pre-calculated net
+            const grossAnnual = source._calculatedGrossAnnual != null ? source._calculatedGrossAnnual : (source.grossAnnual || 0);
+            const taxAnnual = source._calculatedAnnualTax || 0;
+            const netAnnual = source._calculatedNetAnnual || 0;
+            const payCycleGross = grossAnnual / payCycles;
+            const payCycleNet = netAnnual / payCycles; // Use pre-calculated net
             const isPrimary = index === financeData.primaryIncomeIndex;
+            const typeLabel = source.incomeType === 'selfEmployed' ? 'Self-employed' : 'Salaried';
 
             const card = document.createElement('div');
             card.className = 'card';
             card.style.marginBottom = '20px';
             card.innerHTML = `
                 <div class="card-title">${escapeHtml(source.name)} ${isPrimary ? '(Primary)' : ''}</div>
-                <div class="card-subtitle">Gross: ${formatCurrency(source.grossAnnual)}/year</div>
+                <div class="card-subtitle">${typeLabel} · Gross: ${formatCurrency(grossAnnual)}/year</div>
                 <div class="time-periods">
                     <div class="time-item">
                         <div class="time-label">Gross / ${escapeHtml(source.paySchedule)}</div>
@@ -145,6 +153,11 @@ function updateIncomeTabUI(totals) {
                         <div class="time-label">Hours / Cycle</div>
                         <div class="time-amount">${source.hoursPerCycle || 'N/A'}</div>
                     </div>
+                </div>
+                <div class="source-annual-breakdown" style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color, #e0e0e0); font-size:0.9em; font-variant-numeric: tabular-nums;">
+                    <span>Gross: <strong>${formatCurrency(grossAnnual)}</strong>/yr</span>
+                    <span style="color: var(--color-negative);">Tax: <strong>${formatCurrency(taxAnnual)}</strong>/yr</span>
+                    <span style="color: var(--color-positive);">Net: <strong>${formatCurrency(netAnnual)}</strong>/yr</span>
                 </div>`;
             incomeStreamsContainer.appendChild(card);
         });
@@ -166,42 +179,36 @@ function updateIncomeTabUI(totals) {
 
     const taxBreakdownRefEl = getElement('tax-breakdown-reference');
     if (taxBreakdownRefEl) {
-        taxBreakdownRefEl.innerHTML = ''; // Clear previous
         const primaryIncomeSource = financeData.incomeSources[financeData.primaryIncomeIndex];
         if (primaryIncomeSource && primaryIncomeSource.grossAnnual > 0) {
+            const rows = getTaxBracketBreakdown(primaryIncomeSource.grossAnnual, financeData.taxBrackets);
             let taxBreakdownHTML = '';
-            let remainingIncomeForBrackets = primaryIncomeSource.grossAnnual;
-            let cumulativeTax = 0;
-            const sortedBrackets = [...financeData.taxBrackets].sort((a, b) => a.min - b.min);
+            let totalTax = 0;
 
-            for (const bracket of sortedBrackets) {
-                if (remainingIncomeForBrackets <= 0) break; // No more income to tax
+            rows.forEach(row => {
+                totalTax += row.tax;
+                taxBreakdownHTML += `
+                    <div style="padding: 10px; margin-bottom: 10px; background: var(--card-bg-gradient-end, #f8f9fa); border-radius: 8px;">
+                        <div style="font-weight: 600; margin-bottom: 5px;">
+                            ${formatCurrency(row.min)} – ${row.max === Infinity ? 'Above' : formatCurrency(row.max)}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9em; flex-wrap: wrap; gap: 10px;">
+                            <span>${(row.rate * 100).toFixed(1)}% on ${formatCurrency(row.taxable)}</span>
+                            <span style="color: var(--color-negative);">Tax: ${formatCurrency(row.tax)}</span>
+                        </div>
+                    </div>`;
+            });
 
-                const taxableInThisBracketMin = Math.max(0, primaryIncomeSource.grossAnnual - bracket.min);
-                const bracketRange = (bracket.max === Infinity ? primaryIncomeSource.grossAnnual : bracket.max) - bracket.min;
-                const taxableInThisBracket = Math.min(taxableInThisBracketMin, bracketRange);
-
-
-                if (taxableInThisBracket > 0) {
-                    const taxInBracket = taxableInThisBracket * bracket.rate;
-                    cumulativeTax += taxInBracket;
-                    taxBreakdownHTML += `
-                        <div style="padding: 10px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px;">
-                            <div style="font-weight: 600; margin-bottom: 5px;">
-                                ${formatCurrency(bracket.min)} - ${bracket.max === Infinity ? 'Above' : formatCurrency(bracket.max)}
-                            </div>
-                            <div style="display: flex; justify-content: space-between; font-size: 0.9em; flex-wrap: wrap; gap: 10px;">
-                                <span>Rate: ${(bracket.rate * 100).toFixed(1)}% on income above ${formatCurrency(bracket.min)}</span>
-                                <span style="color: var(--color-negative);">Tax: ${formatCurrency(taxInBracket)}</span>
-                            </div>
-                        </div>`;
-                    remainingIncomeForBrackets -= taxableInThisBracket;
-                }
-                 if (primaryIncomeSource.grossAnnual <= (bracket.max === Infinity ? Infinity : bracket.max) && bracket.max !== Infinity) break;
+            if (taxBreakdownHTML) {
+                taxBreakdownHTML += `
+                    <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 2px solid var(--border-color, #e0e0e0); font-weight: 700; flex-wrap: wrap; gap: 10px;">
+                        <span>Estimated Total Tax</span>
+                        <span style="color: var(--color-negative);">${formatCurrency(totalTax)}</span>
+                    </div>`;
             }
-            taxBreakdownRefEl.innerHTML = taxBreakdownHTML || "<p>Tax bracket details could not be calculated for the primary income.</p>";
+            taxBreakdownRefEl.innerHTML = taxBreakdownHTML || "<p>No tax payable on the primary income at these brackets.</p>";
         } else {
-            taxBreakdownRefEl.innerHTML = "<p>Select a primary income source with gross annual income to see its reference tax breakdown.</p>";
+            taxBreakdownRefEl.innerHTML = "<p>Select a primary income source with gross annual income to see its estimated tax breakdown.</p>";
         }
     }
 
@@ -272,6 +279,10 @@ function updateSavingsTabUI(totals) {
     `);
 
     setText('savings-rate', `${totals.savingsRate.toFixed(1)}%`);
+    const savingsRateEl = getElement('savings-rate');
+    if (savingsRateEl) {
+        savingsRateEl.style.color = totals.savingsRate < 0 ? 'var(--color-negative)' : 'var(--color-positive)';
+    }
     const savingsRateProgressEl = getElement('savings-rate-progress');
     if (savingsRateProgressEl) {
         savingsRateProgressEl.style.width = `${Math.max(0, Math.min(100, totals.savingsRate))}%`;
@@ -279,7 +290,8 @@ function updateSavingsTabUI(totals) {
 
 
     let message = '';
-    if (totals.savingsRate >= 70) message = "Outstanding!";
+    if (totals.savingsRate < 0) message = "⚠ Spending exceeds income";
+    else if (totals.savingsRate >= 70) message = "Outstanding!";
     else if (totals.savingsRate >= 50) message = "Excellent!";
     else if (totals.savingsRate >= 30) message = "Great job!";
     else if (totals.savingsRate >= 10) message = "Good work!";

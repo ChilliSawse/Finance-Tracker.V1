@@ -5,7 +5,7 @@ let defaultFinanceData = {
     currency: "AUD",
     primaryIncomeIndex: 0,
     incomeSources: [
-        { name: "New Income Source", grossAnnual: 0, paySchedule: "fortnightly", hoursPerCycle: 0, taxRemoved: 0, invoicedPayPostTax: null }
+        { name: "New Income Source", incomeType: "salaried", grossAnnual: 0, paySchedule: "fortnightly", hoursPerCycle: 0, taxRemoved: null, invoicedPayPostTax: null }
     ],
     taxBrackets: [
         { min: 0, max: 18200, rate: 0 },
@@ -182,6 +182,7 @@ class FinanceAutoSave {
                     if (!guiSettingsData.colorPositive) guiSettingsData.colorPositive = defaultGuiSettings.colorPositive;
                     if (!guiSettingsData.colorNegative) guiSettingsData.colorNegative = defaultGuiSettings.colorNegative;
                     if (!guiSettingsData.colorNeutral) guiSettingsData.colorNeutral = defaultGuiSettings.colorNeutral;
+                    migrateIncomeSourceTypes(financeData); // Backfill incomeType on legacy saves
                     this.lastSaveHash = this.getDataHash();
                     this.updateSaveStatus('saved');
                     return true;
@@ -233,6 +234,43 @@ class FinanceAutoSave {
             }
         });
     }
+}
+
+/**
+ * Backfills the `incomeType` field on income sources saved before the
+ * salaried/self-employed split. Sources that had a manual net or tax entry
+ * become 'selfEmployed' (with their net + tax per cycle reconstructed so the
+ * numbers are preserved exactly); everything else becomes 'salaried' so the
+ * tax brackets drive the estimate. Idempotent — skips already-tagged sources.
+ */
+function migrateIncomeSourceTypes(data) {
+    if (!data || !Array.isArray(data.incomeSources)) return;
+    data.incomeSources.forEach(source => {
+        if (source.incomeType === 'salaried' || source.incomeType === 'selfEmployed') return;
+
+        const cycles = getPayCyclesPerYear(source.paySchedule);
+        const grossAnnual = parseFloat(source.grossAnnual) || 0;
+        const netVal = parseFloat(source.invoicedPayPostTax);
+        const taxVal = parseFloat(source.taxRemoved);
+        const hasNet = source.invoicedPayPostTax !== null && source.invoicedPayPostTax !== '' && !isNaN(netVal);
+        const hasTax = source.taxRemoved !== null && source.taxRemoved !== '' && !isNaN(taxVal) && taxVal !== 0;
+
+        if (hasNet || hasTax) {
+            let oldNetAnnual, oldTaxAnnual;
+            if (hasNet) {
+                oldNetAnnual = netVal * cycles;
+                oldTaxAnnual = Math.max(0, grossAnnual - oldNetAnnual);
+            } else {
+                oldTaxAnnual = taxVal * cycles;
+                oldNetAnnual = Math.max(0, grossAnnual - oldTaxAnnual);
+            }
+            source.incomeType = 'selfEmployed';
+            source.invoicedPayPostTax = +(oldNetAnnual / cycles).toFixed(2);
+            source.taxRemoved = +(oldTaxAnnual / cycles).toFixed(2);
+        } else {
+            source.incomeType = 'salaried';
+        }
+    });
 }
 
 let autoSave; // Will be initialized in main.js after DOM content loaded

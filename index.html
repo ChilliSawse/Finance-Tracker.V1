@@ -149,8 +149,8 @@
                         <div style="margin: 20px 0;" id="income-breakdown"></div>
                     </div>
                     <div class="card">
-                        <div class="card-title">Tax Brackets (Reference Only)</div>
-                        <div class="card-subtitle">Based on primary income's gross for ATO comparison. Not used for active tax calculation if 'Tax Removed' or 'Invoiced Pay' is set.</div>
+                        <div class="card-title">Tax Brackets (Estimate)</div>
+                        <div class="card-subtitle">Progressive tax on your primary income's gross. Used to estimate net income for any source where 'Net Pay/Cycle' and 'Tax Removed/Cycle' are left blank.</div>
                         <div style="margin-top: 20px;" id="tax-breakdown-reference"></div>
                     </div>
                 </div>
@@ -398,8 +398,8 @@
                         <span class="info-icon">ⓘ<span class="tooltip">Tax is calculated based on 'Invoiced Pay' (Priority) or 'Tax Removed'. If neither, tax is 0. Clear 'Invoiced Pay' to use 'Tax Removed'.</span></span>
                     </div>
                     <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 0.4fr 1.2fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr 0.5fr;">
-                            <span>Primary</span> <span>Name</span> <span>Annual Gross</span> <span>Schedule</span> <span>Invoiced Pay / Cycle (Post Tax)</span> <span>Hours/Cycle</span> <span>Tax Removed / Cycle</span> <span>Action</span>
+                        <div class="list-header" style="grid-template-columns: 0.4fr 0.9fr 1.2fr 0.8fr 0.8fr 1fr 0.6fr 0.8fr 0.5fr;">
+                            <span>Primary</span> <span>Type</span> <span>Name</span> <span>Annual Gross</span> <span>Schedule</span> <span>Net Pay / Cycle (Post Tax)</span> <span>Hours/Cycle</span> <span>Tax Removed / Cycle</span> <span>Action</span>
                         </div>
                         <div id="income-sources-settings"></div>
                     </div>
@@ -407,8 +407,8 @@
                 </div>
                 <div class="settings-section">
                     <div class="settings-title">
-                        📊 Tax Brackets (Reference Only)
-                        <span id="tax-brackets-info">These brackets are for informational purposes (e.g., ATO comparison) and are NOT used for active tax calculation if 'Tax Removed' or 'Invoiced Pay' is set for income sources.</span>
+                        📊 Tax Brackets (used for estimates)
+                        <span id="tax-brackets-info">These progressive brackets estimate tax on gross income. They calculate net income for any source where 'Net Pay/Cycle' and 'Tax Removed/Cycle' are left blank. If you enter either of those, your manual value takes precedence.</span>
                     </div>
                     <div class="dynamic-list">
                         <div class="list-header" style="grid-template-columns: 1fr 1fr 1fr auto;">
@@ -499,8 +499,8 @@
                 </div>
                 <div class="settings-actions">
                     <button class="btn" id="save-download-html">📥 Save &amp; Download HTML</button>
-                    <button class="btn btn-secondary" id="set-current-default">🌟 Set Current as Default</button>
-                    <button class="btn btn-secondary" id="reset-to-defaults">🔄 Reset to Defaults</button>
+                    <button class="btn btn-secondary" id="set-current-default">🌟 Save as My Defaults</button>
+                    <button class="btn btn-secondary" id="reset-to-defaults">🔄 Reset to Factory Defaults</button>
                     <button class="btn btn-secondary" id="export-data-json">📊 Export Data (JSON)</button>
                      <input type="file" id="json-import-settings" accept=".json" style="display: none;">
                     <button class="btn btn-secondary" id="import-data-json-btn">📥 Import Data (JSON)</button>
