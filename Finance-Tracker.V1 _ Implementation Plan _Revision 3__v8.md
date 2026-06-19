@@ -149,15 +149,15 @@ Inline 20×20 `currentColor` SVGs (no icon font): dashboard grid, income trendin
 
 ---
 
-## Phase C — Collapsible Info Sections
+## Phase C — Collapsible Info Sections — ✅ DONE (2026-06-19)
 
-Affects Income, Expenses, Savings, Liabilities. **Rev 4: no longer gated on Phase A** — the info blocks live inside each tab's content and are independent of the nav shell.
+Affects Income, Expenses, Savings, Liabilities **and What If** (5 sections — the generic component made adding What If free).
 
-### C.1 — Component pattern
-Collapse toggle (chevron) top-right; collapsed = heading row only; "Don't show again" checkbox; dismissed state in `localStorage` (`ft-info-dismissed`, keyed by tab); restore collapsed on load.
+### ✅ C.1 — Component pattern — DONE
+Each `.info-section[data-info-key]` has a header row (heading + chevron toggle, top-right) and a collapsible body containing a "Don't show again" checkbox. Collapsed state persists per key in `localStorage` (`ft-info-collapsed`) and restores on load via `setupInfoSections()`. Collapsed = heading row only (chevron rotates -90°). The checkbox collapses+persists; the always-visible chevron is the path back to expanded.
 
-### C.2 — Rewrite info content
-Each block → 2–3 sentence intro + 2–4 "how to use" bullets + collapsed "Learn more" expander. Halves visual weight even when open.
+### ✅ C.2 — Rewrite info content — DONE
+Every block rewritten to a 2–3 sentence intro + 3 "How to use" bullets + a native `<details>` "Learn more" expander for the deeper detail. Also tokenised the previously hardcoded info colours (`#1976d2`/`#424242` → `--accent-color`/`--text-color-primary`) so the blocks read correctly on dark themes.
 
 ---
 
@@ -280,7 +280,7 @@ R       Event-routing refactor (data-collection)     0 (recommended) XS–S (½ 
 T       Minimal test harness (tests.html)            —              XS           ✅ DONE (19 assertions)
 B       Quick wins (B.1*/B.3/B.4/B.6/B.7)            —              S (1 s)      ✅ DONE (B.1→0.4; B.2–B.7 ✅)
 A       Sidebar nav + layout                         R recommended  L (3–4 s)    ✅ DONE PR1 (mobile bottom-nav → PR2)
-C       Collapsible info sections                    —             S (<1 s)     TODO  (Rev 4: no longer gated on A)
+C       Collapsible info sections                    —             S (<1 s)     ✅ DONE (5 sections incl. What If)
 D       Data entry into tabs + Settings rearchitect  R (mandatory)  L (3–4 s)    TODO
 E       Tax bracket calc (E.4 only)                  D             XS           PARTIAL (E.1–E.3✅)
 F       Dashboard improvements                       D, E          M (1–2 s)    TODO

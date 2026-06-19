@@ -124,6 +124,7 @@ function deriveTokens(colors) {
         '--content-bg-color':       hexToRgba(colors.panel, 0.95),
         '--card-bg-gradient-start': colors.panel,
         '--card-bg-gradient-end':   panelAlt,
+        '--border-color':           colors.border,
         '--text-color-primary':     colors.fg,
         '--text-color-secondary':   hexToRgba(colors.fg, 0.6),
         '--accent-color':           colors.accent,
