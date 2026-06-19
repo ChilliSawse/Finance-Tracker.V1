@@ -1,5 +1,14 @@
 // --- START OF: events.js ---
 
+// Phase R — the financeData array keys that settings inputs may write to. An input declares
+// its target via `data-collection`; this whitelist keeps a stray/forged value from writing to
+// an arbitrary financeData property. Names must match the keys in defaultFinanceData exactly
+// (note `allocation` is singular).
+const SETTINGS_COLLECTIONS = [
+    'incomeSources', 'taxBrackets', 'assets', 'liabilities',
+    'allocation', 'essentialExpenses', 'nonEssentialExpenses'
+];
+
 function setupEventListeners() {
     // Tab navigation
     const tabsContainer = document.querySelector('[role="tablist"]');
@@ -62,8 +71,10 @@ function setupEventListeners() {
     guiElementsToWatch.forEach(id => {
         const el = getElement(id);
         if (el) {
-            el.addEventListener('input', () => { /* Could call applyGuiSettings for live preview */ });
-            el.addEventListener('change', () => { /* Could call applyGuiSettings for live preview */ });
+            // B.6 — live preview on every input/change (colour pickers fire 'input' continuously
+            // while dragging). Preview only; Save persists via actionApplyGuiSettings.
+            el.addEventListener('input', applyGuiSettingsLivePreview);
+            el.addEventListener('change', applyGuiSettingsLivePreview);
         }
     });
 // --- JSON IMPORT LISTNER ---
@@ -96,15 +107,18 @@ function handleSettingsClickEvents(event) {
     else if (target.id === 'add-essential-expense-settings') addExpenseToList('essentialExpenses');
     else if (target.id === 'add-non-essential-expense-settings') addExpenseToList('nonEssentialExpenses');
 
-    // Delete buttons for dynamic lists
+    // Delete buttons for dynamic lists.
+    // B.4: expense and liability deletes go through a non-blocking inline confirm popover
+    // (the rows users edit most and are most likely to delete by accident). The other lists
+    // keep their existing immediate delete plus their own "must keep at least one" guards.
     else if (target.classList.contains('delete-btn')) {
         if (dataType === 'incomeSource') removeIncomeSource(index);
         else if (dataType === 'taxBracket') removeTaxBracket(index);
         else if (dataType === 'asset') removeAsset(index);
-        else if (dataType === 'liability') removeLiability(index);
         else if (dataType === 'allocation') removeAllocationCategory(index);
-        else if (dataType === 'essentialExpense') removeExpenseFromList('essentialExpenses', index);
-        else if (dataType === 'nonEssentialExpense') removeExpenseFromList('nonEssentialExpenses', index);
+        else if (dataType === 'liability') inlineConfirm(target, 'Delete this liability?', () => removeLiability(index));
+        else if (dataType === 'essentialExpense') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('essentialExpenses', index));
+        else if (dataType === 'nonEssentialExpense') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('nonEssentialExpenses', index));
     }
 
     // Action buttons
@@ -128,7 +142,7 @@ function handleSettingsChangeEvents(event) {
         return;
     }
     // Income source type (salaried / self-employed) — re-render to toggle which fields are active
-    else if (field === 'incomeType' && target.closest('#income-sources-settings')) {
+    else if (field === 'incomeType' && target.dataset.collection === 'incomeSources') {
         if (financeData.incomeSources[index] !== undefined) {
             financeData.incomeSources[index].incomeType = value === 'selfEmployed' ? 'selfEmployed' : 'salaried';
             renderIncomeSourcesSettings();
@@ -168,15 +182,12 @@ function handleSettingsChangeEvents(event) {
         }
         clearFieldError(target);
 
-        // Determine which array to update
-        let arrayToUpdate;
-        if (target.closest('#income-sources-settings')) arrayToUpdate = financeData.incomeSources;
-        else if (target.closest('#tax-brackets-settings')) arrayToUpdate = financeData.taxBrackets;
-        else if (target.closest('#assets-settings')) arrayToUpdate = financeData.assets;
-        else if (target.closest('#liabilities-settings')) arrayToUpdate = financeData.liabilities;
-        else if (target.closest('#allocation-settings')) arrayToUpdate = financeData.allocation;
-        else if (target.dataset.array === 'essentialExpenses') arrayToUpdate = financeData.essentialExpenses;
-        else if (target.dataset.array === 'nonEssentialExpenses') arrayToUpdate = financeData.nonEssentialExpenses;
+        // Phase R — declarative routing. The collection an input belongs to is read from
+        // `data-collection` (set in uiSettings.js) rather than DOM ancestry (`.closest()`),
+        // so these inputs keep routing correctly no matter where Phase D relocates them.
+        // The whitelist guards against writing to arbitrary financeData keys.
+        const collection = target.dataset.collection;
+        const arrayToUpdate = SETTINGS_COLLECTIONS.includes(collection) ? financeData[collection] : undefined;
 
         if (arrayToUpdate && arrayToUpdate[index] !== undefined) {
             // Type conversions
@@ -194,7 +205,7 @@ function handleSettingsChangeEvents(event) {
             }
             arrayToUpdate[index][field] = value;
 
-            if (field === 'percentage' && target.closest('#allocation-settings')) {
+            if (field === 'percentage' && collection === 'allocation') {
                  updateAllocationTotalDisplay(); // Special update for allocation total
             }
             updateDataAndUI();
@@ -545,21 +556,33 @@ function handleJSONImport(event, isGuiTabImport = false) {
 
 
 // GUI Settings Actions
-function actionApplyGuiSettings() {
-    guiSettingsData.primaryBgStart = getValue('gui-primary-bg-start');
-    guiSettingsData.primaryBgEnd   = getValue('gui-primary-bg-end');
-    guiSettingsData.headerTextColor = getValue('gui-header-text-color');
-    guiSettingsData.cardBgStart    = getValue('gui-card-bg-start');
-    guiSettingsData.cardBgEnd      = getValue('gui-card-bg-end');
-    guiSettingsData.accentColor    = getValue('gui-accent-color');
-    guiSettingsData.fontFamily     = getValue('gui-font-family');
-    guiSettingsData.baseFontSize   = getValue('gui-base-font-size');
-    guiSettingsData.mainHeading    = getValue('gui-main-heading');
-    guiSettingsData.subHeading     = getValue('gui-sub-heading');
 
+// Copies the GUI form inputs into guiSettingsData (no persistence / side effects).
+function syncGuiSettingsFromInputs() {
+    guiSettingsData.primaryBgStart  = getValue('gui-primary-bg-start');
+    guiSettingsData.primaryBgEnd    = getValue('gui-primary-bg-end');
+    guiSettingsData.headerTextColor = getValue('gui-header-text-color');
+    guiSettingsData.cardBgStart     = getValue('gui-card-bg-start');
+    guiSettingsData.cardBgEnd       = getValue('gui-card-bg-end');
+    guiSettingsData.accentColor     = getValue('gui-accent-color');
+    guiSettingsData.fontFamily      = getValue('gui-font-family');
+    guiSettingsData.baseFontSize    = getValue('gui-base-font-size');
+    guiSettingsData.mainHeading     = getValue('gui-main-heading');
+    guiSettingsData.subHeading      = getValue('gui-sub-heading');
+}
+
+// B.6 — live preview while the user drags a colour picker / edits a field. Applies styles
+// immediately but does NOT persist; persistence happens on Save (or the debounced autosave).
+function applyGuiSettingsLivePreview() {
+    syncGuiSettingsFromInputs();
+    applyGuiStylesToPage();
+}
+
+function actionApplyGuiSettings() {
+    syncGuiSettingsFromInputs();
     applyGuiStylesToPage();
     if (autoSave) autoSave.onDataChange();
-    showCustomModal('GUI Settings Applied!');
+    showCustomModal('Settings saved!', 'success');
 }
 
 function actionResetGuiToDefaults() {
@@ -695,6 +718,51 @@ function showCustomModal(message, type = 'info') { // type can be 'info', 'error
 function confirmAction(message) {
     // Replace with a proper UI element for confirmation dialogs
     return confirm(message);
+}
+
+// B.4 — Non-blocking inline confirmation popover, anchored to the trigger element.
+// Reusable (intended for reuse by H.5's reset confirm and any future destructive action).
+// Auto-focuses "Yes"; dismisses on Escape, "No", or any outside click. Calls onConfirm()
+// only when the user explicitly confirms.
+function inlineConfirm(triggerEl, message, onConfirm) {
+    // Only one popover at a time.
+    document.querySelectorAll('.inline-confirm').forEach(el => el.dispatchEvent(new Event('ft-dismiss')));
+
+    const pop = document.createElement('div');
+    pop.className = 'inline-confirm';
+    pop.setAttribute('role', 'dialog');
+    pop.setAttribute('aria-label', message);
+    pop.innerHTML = `
+        <span class="inline-confirm-msg">${escapeHtml(message)}</span>
+        <span class="inline-confirm-actions">
+            <button type="button" class="inline-confirm-yes">Yes</button>
+            <button type="button" class="inline-confirm-no">No</button>
+        </span>`;
+    document.body.appendChild(pop);
+
+    // Anchor under the trigger, right-aligned to it, kept within the viewport.
+    const rect = triggerEl.getBoundingClientRect();
+    const left = Math.max(8, Math.min(rect.right - pop.offsetWidth, window.innerWidth - pop.offsetWidth - 8));
+    pop.style.top = `${rect.bottom + 6}px`;
+    pop.style.left = `${left}px`;
+
+    const cleanup = () => {
+        pop.removeEventListener('ft-dismiss', cleanup);
+        document.removeEventListener('keydown', onKey, true);
+        document.removeEventListener('mousedown', onOutside, true);
+        pop.remove();
+    };
+    const dismiss = (refocus) => { cleanup(); if (refocus && document.body.contains(triggerEl)) triggerEl.focus(); };
+    const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); dismiss(true); } };
+    const onOutside = (e) => { if (!pop.contains(e.target)) dismiss(false); };
+
+    pop.addEventListener('ft-dismiss', cleanup);
+    pop.querySelector('.inline-confirm-yes').addEventListener('click', () => { cleanup(); onConfirm(); });
+    pop.querySelector('.inline-confirm-no').addEventListener('click', () => dismiss(true));
+    document.addEventListener('keydown', onKey, true);
+    document.addEventListener('mousedown', onOutside, true);
+
+    pop.querySelector('.inline-confirm-yes').focus();
 }
 
 
