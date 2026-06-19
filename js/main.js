@@ -133,6 +133,48 @@ function setupGuiModal() {
     modal.addEventListener('mousedown', (e) => { if (e.target === modal) close(); }); // backdrop click
 }
 
+// C.1 — collapsible info sections. Per-tab collapsed state persists in localStorage.
+const INFO_STATE_KEY = 'ft-info-collapsed';
+
+function readInfoState() {
+    try { return JSON.parse(localStorage.getItem(INFO_STATE_KEY) || '{}') || {}; }
+    catch (_) { return {}; }
+}
+
+function applyInfoCollapsed(section, toggle, checkbox, collapsed) {
+    section.classList.toggle('collapsed', collapsed);
+    if (toggle) {
+        toggle.setAttribute('aria-expanded', String(!collapsed));
+        toggle.setAttribute('aria-label', collapsed ? 'Expand this guide' : 'Collapse this guide');
+    }
+    if (checkbox) checkbox.checked = collapsed;
+}
+
+function setupInfoSections() {
+    const sections = document.querySelectorAll('.info-section[data-info-key]');
+    const state = readInfoState();
+
+    sections.forEach(section => {
+        const key = section.dataset.infoKey;
+        const toggle = section.querySelector('.info-toggle');
+        const checkbox = section.querySelector('.info-dismiss-check');
+
+        applyInfoCollapsed(section, toggle, checkbox, state[key] === true);
+
+        const setCollapsed = (next) => {
+            const s = readInfoState();
+            s[key] = next;
+            try { localStorage.setItem(INFO_STATE_KEY, JSON.stringify(s)); } catch (_) {}
+            applyInfoCollapsed(section, toggle, checkbox, next);
+        };
+
+        // The "Don't show again" checkbox lives in the body (hidden once collapsed); the
+        // always-visible chevron is the way back to expanded.
+        if (toggle) toggle.addEventListener('click', () => setCollapsed(!section.classList.contains('collapsed')));
+        if (checkbox) checkbox.addEventListener('change', () => setCollapsed(checkbox.checked));
+    });
+}
+
 function setupTabKeyboardNav() {
     const tabList = document.querySelector('[role="tablist"]');
     if (!tabList) return;
@@ -313,6 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTabKeyboardNav();
     setupSidebar();   // A.3 — collapse toggle + restore
     setupGuiModal();  // A.4 — appearance modal
+    setupInfoSections(); // C.1 — collapsible info guides
 
     updateAllUI();
     restoreActiveTab(); // A.3 — restore last-viewed section (defaults to dashboard)

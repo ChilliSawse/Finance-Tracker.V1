@@ -160,16 +160,31 @@
             </div>
 
             <div id="income" role="tabpanel" aria-labelledby="tab-income" class="tab-content">
-                <div class="info-section">
-                    <h3>Understanding Your Income</h3>
-                    <p>Your income section helps you track all your revenue sources and understand your true earning potential. This includes tracking gross income, tax deductions, and net take-home pay.</p>
-                    <p><strong>Key Features:</strong></p>
-                    <ul>
-                        <li><strong>Multiple Income Sources:</strong> Track salary, freelance work, investments, and other revenue streams</li>
-                        <li><strong>Tax Calculations:</strong> Monitor how much you're paying in taxes across all sources</li>
-                        <li><strong>Net Income Focus:</strong> See your actual spending power after all deductions</li>
-                        <li><strong>Pay Schedule Flexibility:</strong> Handle weekly, fortnightly, monthly, or yearly payment cycles</li>
-                    </ul>
+                <div class="info-section" data-info-key="income">
+                    <div class="info-section-header">
+                        <h3>Understanding Your Income</h3>
+                        <button class="info-toggle" type="button" aria-expanded="true" aria-controls="info-body-income" aria-label="Collapse this guide">
+                            <svg class="ic info-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                    </div>
+                    <div class="info-section-body" id="info-body-income">
+                        <p>Track each income source and see your real take-home pay after tax. Salaried sources estimate tax from the brackets; self-employed sources use the net amount you actually receive.</p>
+                        <p><strong>How to use:</strong></p>
+                        <ul>
+                            <li>Add each source in Settings and choose Salaried or Self-employed.</li>
+                            <li>Mark your main earner as Primary.</li>
+                            <li>Focus on the <strong>Net</strong> figures — that's your true spending power.</li>
+                        </ul>
+                        <details class="info-more">
+                            <summary>Learn more</summary>
+                            <ul>
+                                <li><strong>Multiple sources:</strong> salary, freelance, investments, and side income.</li>
+                                <li><strong>Tax:</strong> salaried tax is estimated from your progressive brackets; enter Net/Tax per cycle to override it.</li>
+                                <li><strong>Pay cycles:</strong> weekly, fortnightly, monthly, or yearly are all converted for you.</li>
+                            </ul>
+                        </details>
+                        <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
+                    </div>
                 </div>
                 <div id="income-streams-display"></div>
                 <div class="dashboard-grid">
@@ -188,15 +203,30 @@
             </div>
 
             <div id="expenses" role="tabpanel" aria-labelledby="tab-expenses" class="tab-content">
-                <div class="info-section">
-                    <h3>Managing Your Expenses</h3>
-                    <p>Expense tracking is crucial for understanding where your money goes and identifying opportunities to optimize your spending. We categorize expenses into Essential and Non-Essential to help prioritize your financial decisions.</p>
-                    <p><strong>Essential vs Non-Essential:</strong></p>
-                    <ul>
-                        <li><strong>Essential Expenses:</strong> Necessary costs like rent, utilities, groceries, and minimum debt payments</li>
-                        <li><strong>Non-Essential Expenses:</strong> Lifestyle choices like entertainment, dining out, subscriptions, and hobbies</li>
-                        <li><strong>Optimization Strategy:</strong> Focus on reducing non-essential expenses first when looking to increase savings</li>
-                    </ul>
+                <div class="info-section" data-info-key="expenses">
+                    <div class="info-section-header">
+                        <h3>Managing Your Expenses</h3>
+                        <button class="info-toggle" type="button" aria-expanded="true" aria-controls="info-body-expenses" aria-label="Collapse this guide">
+                            <svg class="ic info-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                    </div>
+                    <div class="info-section-body" id="info-body-expenses">
+                        <p>Split your spending into Essential needs and Non-Essential wants so you can see exactly where to cut first.</p>
+                        <p><strong>How to use:</strong></p>
+                        <ul>
+                            <li>Add each expense with its real frequency (weekly, monthly, …).</li>
+                            <li>When you want to save more, trim Non-Essentials first.</li>
+                            <li>Check the per-category weekly and yearly totals.</li>
+                        </ul>
+                        <details class="info-more">
+                            <summary>Learn more</summary>
+                            <ul>
+                                <li><strong>Essential:</strong> rent, utilities, groceries, minimum debt payments.</li>
+                                <li><strong>Non-Essential:</strong> dining out, entertainment, subscriptions, hobbies.</li>
+                            </ul>
+                        </details>
+                        <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
+                    </div>
                 </div>
                 <div class="dashboard-grid">
                     <div class="card">
@@ -214,16 +244,31 @@
             </div>
 
             <div id="savings" role="tabpanel" aria-labelledby="tab-savings" class="tab-content">
-                <div class="info-section">
-                    <h3>Building Your Financial Future</h3>
-                    <p>Your savings rate is one of the most important metrics for financial health and independence. This section shows your capacity to save and invest for the future.</p>
-                    <p><strong>Key Concepts:</strong></p>
-                    <ul>
-                        <li><strong>Savings Rate:</strong> Percentage of net income you're able to save (aim for 20%+ for strong financial health)</li>
-                        <li><strong>Financial Independence:</strong> The point where your assets generate enough passive income to cover expenses</li>
-                        <li><strong>Compound Growth:</strong> How your investments grow over time through reinvested returns</li>
-                        <li><strong>The 4% Rule:</strong> A common guideline suggesting you can withdraw 4% of your portfolio annually in retirement</li>
-                    </ul>
+                <div class="info-section" data-info-key="savings">
+                    <div class="info-section-header">
+                        <h3>Building Your Financial Future</h3>
+                        <button class="info-toggle" type="button" aria-expanded="true" aria-controls="info-body-savings" aria-label="Collapse this guide">
+                            <svg class="ic info-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                    </div>
+                    <div class="info-section-body" id="info-body-savings">
+                        <p>Your savings rate — the share of net income you keep — is the single biggest lever on when you reach financial independence.</p>
+                        <p><strong>How to use:</strong></p>
+                        <ul>
+                            <li>Aim for 20%+ to build wealth steadily.</li>
+                            <li>Raise income or cut expenses to lift the rate.</li>
+                            <li>Your FI estimate updates from your Settings (multiple + expected return).</li>
+                        </ul>
+                        <details class="info-more">
+                            <summary>Learn more</summary>
+                            <ul>
+                                <li><strong>Financial Independence:</strong> when your assets cover your expenses.</li>
+                                <li><strong>The 4% rule:</strong> a common guide that ~25× annual expenses can fund retirement.</li>
+                                <li><strong>Compound growth:</strong> reinvested returns accelerate the climb over time.</li>
+                            </ul>
+                        </details>
+                        <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
+                    </div>
                 </div>
                 <div class="card">
                     <div class="card-title">Net Savings Capacity</div>
@@ -249,17 +294,31 @@
             </div>
 
             <div id="liabilities" role="tabpanel" aria-labelledby="tab-liabilities" class="tab-content">
-                <div class="info-section">
-                    <h3>Understanding Your Liabilities</h3>
-                    <p>Liabilities are debts or financial obligations you owe to others. Tracking them is essential for understanding your true financial position (Net Worth) and planning strategies like debt reduction.</p>
-                    <p><strong>Common Types:</strong></p>
-                    <ul>
-                        <li><strong>High-Interest Debt:</strong> Credit cards, personal loans (prioritize paying these off first)</li>
-                        <li><strong>Secured Loans:</strong> Mortgages, car loans (often lower interest rates)</li>
-                        <li><strong>Student Loans:</strong> Education debt (may have favorable terms)</li>
-                        <li><strong>Investment Debt:</strong> Loans used to purchase appreciating assets</li>
-                    </ul>
-                    <p style="margin-top: 15px;"><strong>Strategy Tip:</strong> Focus on paying off high-interest debts first while making minimum payments on lower-interest loans.</p>
+                <div class="info-section" data-info-key="liabilities">
+                    <div class="info-section-header">
+                        <h3>Understanding Your Liabilities</h3>
+                        <button class="info-toggle" type="button" aria-expanded="true" aria-controls="info-body-liabilities" aria-label="Collapse this guide">
+                            <svg class="ic info-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                    </div>
+                    <div class="info-section-body" id="info-body-liabilities">
+                        <p>Track what you owe to see your true net worth and decide which debts to clear first.</p>
+                        <p><strong>How to use:</strong></p>
+                        <ul>
+                            <li>Add each debt with its balance and interest rate.</li>
+                            <li>Attack the highest-interest debt first (the "avalanche" method).</li>
+                            <li>Every dollar of debt paid down raises your net worth.</li>
+                        </ul>
+                        <details class="info-more">
+                            <summary>Learn more</summary>
+                            <ul>
+                                <li><strong>High-interest:</strong> credit cards, personal loans — clear these first.</li>
+                                <li><strong>Secured:</strong> mortgages, car loans — usually lower rates.</li>
+                                <li><strong>Student / investment debt:</strong> often more favourable terms.</li>
+                            </ul>
+                        </details>
+                        <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
+                    </div>
                 </div>
                 <div class="card">
                     <div class="card-title">Liability Summary</div>
@@ -274,17 +333,29 @@
             </div>
 
             <div id="whatIf" role="tabpanel" aria-labelledby="tab-whatIf" class="tab-content">
-                <div class="info-section">
-                    <h3>Financial Scenario Planning</h3>
-                    <p>Use this powerful tool to explore "what if" scenarios and see how changes in your financial situation could impact your path to Financial Independence.</p>
-                    <p><strong>How to Use:</strong></p>
-                    <ul>
-                        <li><strong>Test Income Changes:</strong> See how salary increases or career changes affect your timeline</li>
-                        <li><strong>Experiment with Expenses:</strong> Add potential new expenses or test cost-cutting measures</li>
-                        <li><strong>Model Investment Returns:</strong> Understand how different market conditions impact your goals</li>
-                        <li><strong>Asset Adjustments:</strong> Factor in windfalls, inheritance, or major purchases</li>
-                    </ul>
-                    <p><strong>Note:</strong> All changes here are temporary and won't affect your saved data.</p>
+                <div class="info-section" data-info-key="whatIf">
+                    <div class="info-section-header">
+                        <h3>Financial Scenario Planning</h3>
+                        <button class="info-toggle" type="button" aria-expanded="true" aria-controls="info-body-whatIf" aria-label="Collapse this guide">
+                            <svg class="ic info-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                    </div>
+                    <div class="info-section-body" id="info-body-whatIf">
+                        <p>Model "what if" changes — a raise, new expenses, different returns — and see how they shift your path to FI. <strong>Nothing here touches your saved data.</strong></p>
+                        <p><strong>How to use:</strong></p>
+                        <ul>
+                            <li>Adjust the levers below, then click <strong>Calculate Scenario</strong>.</li>
+                            <li>Compare the scenario figures against your current plan.</li>
+                            <li>Click <strong>Reset to current</strong> to reload the levers from your live data.</li>
+                        </ul>
+                        <details class="info-more">
+                            <summary>Learn more</summary>
+                            <ul>
+                                <li>Test income changes, added or trimmed expenses, asset windfalls, and different return rates.</li>
+                            </ul>
+                        </details>
+                        <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
+                    </div>
                 </div>
                 <div class="settings-section" style="border-left-color: #00acc1;">
                     <div class="settings-title">🤔 "What If" Scenario Planner</div>
