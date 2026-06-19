@@ -126,31 +126,26 @@ Dashboard "Daily" figure relabelled "Daily (5-day week)" with a keyboard-accessi
 
 ---
 
-## Phase A — Left Sidebar Navigation + Layout Restructure (DEMOTED — do any time)
+## Phase A — Left Sidebar Navigation + Layout Restructure — ✅ DONE (PR 1, 2026-06-19)
 
-**No numeric work depends on this.** It can slot in whenever convenient; recommended after Phase 0 + R so we're not re-routing handlers and moving layout simultaneously.
+**Decisions (locked with user):** keep the ARIA `tablist` pattern but render it vertically (↑/↓); app-shell = full-height sidebar + slim top bar; appearance settings → gear-button modal **now**; desktop + tablet tiers this PR, **mobile bottom-nav deferred to PR 2**.
 
-### A.1 — HTML restructure
-Replace `.tabs-nav` + flat panels with a `<nav class="sidebar">` + `<main class="main-content">` shell. Sections: dashboard, income, expenses, savings, liabilities, what-if, settings. Appearance (GUI) settings move to a gear-button modal (A.4).
+### ✅ A.1 — HTML restructure — DONE
+`.container` + horizontal `.tabs` replaced with `.app-shell` (CSS grid: `topbar` row, `sidebar`+`main` row). Top bar reuses `class="header"` so `FinanceAutoSave`'s `querySelector('.header')` still finds it. Vertical `<nav class="sidebar" role="tablist" aria-orientation="vertical">`; panels in `<main class="content main-content">`. GUI panel extracted into a body-level modal (kept out of `.content` because its `backdrop-filter` would otherwise trap `position:fixed`).
 
-### A.2 — Sidebar CSS
-- Desktop (≥768px): 240px, collapses to 64px icon-only via `.sidebar--collapsed`.
-- Tablet (640–767px): 64px icon-only, expand on hover/focus.
-- Mobile (<640px): hidden sidebar; fixed bottom nav; `padding-bottom: calc(60px + env(safe-area-inset-bottom))` on main.
-- Active: accent left border + tinted bg (`--tab-bg-color`).
-- `width 0.2s ease`, guarded by `prefers-reduced-motion`.
+### ✅ A.2 — Sidebar CSS — DONE
+Grid `auto 1fr` so the sidebar's own width drives the column (transitioning width animates collapse). Desktop 240px ↔ 64px via `.app-shell.is-collapsed`; tablet (≤768px) defaults icon-only and expands on hover/`:focus-within`; active = accent left border + `--tab-active-bg-color`. Motion already covered by the global `prefers-reduced-motion` guard. **Mobile (<640px) bottom-nav deferred to PR 2** — small screens fall back to the icon-only sidebar (usable, not broken).
 
-### A.3 — JS navigation
-- Sidebar nav-item click handler replaces tab clicks; `showTab(sectionId)` toggles `.active` + panel visibility.
-- Keyboard: ↑/↓ within sidebar, Home/End.
-- Persist last section in `localStorage` (`ft-active-tab`), restore on load.
-- **Note:** ensure `showTab('whatIf')` no longer force-reinitialises (depends on 0.4/B.1).
+### ✅ A.3 — JS navigation — DONE
+Click routing unchanged (sidebar keeps `role="tablist"`, so the existing `[role="tablist"]` delegation works). Keyboard switched to ↑/↓ + Home/End. `showTab` persists `ft-active-tab`; `restoreActiveTab()` restores on load (validates against `VALID_TABS`, defaults dashboard, ignores legacy `guiSettings`). Sidebar collapse persisted as `ft-sidebar-collapsed`. `showTab('whatIf')` already non-reinitialising since 0.4.
 
-### A.4 — GUI Settings modal
-Gear button opens a centered `#gui-settings-modal` (`role="dialog"`, `aria-modal`, `aria-labelledby`). Contains all theme/colour/font controls. Close via ✕ / Escape / backdrop. Trap focus; restore focus to trigger on close. Keep `id="guiSettings"` on the modal body so existing delegation works.
+### ✅ A.4 — GUI Settings modal — DONE
+Gear button (`#open-gui-settings`) opens `#gui-settings-modal` (`role="dialog"`, `aria-modal`, `aria-labelledby`); close via ✕ / Escape / backdrop mousedown. Focus trap + restore-to-trigger. `initializeGuiSettingsForm()` runs on open. Modal body keeps `id="guiSettings"` so swatch delegation + B.6 live-preview listeners are untouched.
 
-### A.5 — Sidebar icons
-Inline 20×20 SVG (`currentColor`), no icon-font dependency: dashboard grid, income up-arrow, expenses down-arrow, savings clock, liabilities card, what-if sliders, settings filter, gear, collapse chevron.
+### ✅ A.5 — Sidebar icons — DONE
+Inline 20×20 `currentColor` SVGs (no icon font): dashboard grid, income trending-up, expenses trending-down, savings clock, liabilities card, what-if sliders, settings funnel, plus gear (modal) and hamburger (collapse toggle).
+
+> **Deferred to Phase A — PR 2:** mobile (<640px) fixed bottom-nav with safe-area inset, and any mobile-specific icon/label tuning.
 
 ---
 
@@ -284,7 +279,7 @@ Phase   Description                                  Depends on     Effort      
 R       Event-routing refactor (data-collection)     0 (recommended) XS–S (½ s)   ✅ DONE ← de-risks D
 T       Minimal test harness (tests.html)            —              XS           ✅ DONE (19 assertions)
 B       Quick wins (B.1*/B.3/B.4/B.6/B.7)            —              S (1 s)      ✅ DONE (B.1→0.4; B.2–B.7 ✅)
-A       Sidebar nav + layout (DEMOTED)               R recommended  L (3–4 s)    TODO  (off critical path)
+A       Sidebar nav + layout                         R recommended  L (3–4 s)    ✅ DONE PR1 (mobile bottom-nav → PR2)
 C       Collapsible info sections                    —             S (<1 s)     TODO  (Rev 4: no longer gated on A)
 D       Data entry into tabs + Settings rearchitect  R (mandatory)  L (3–4 s)    TODO
 E       Tax bracket calc (E.4 only)                  D             XS           PARTIAL (E.1–E.3✅)
@@ -302,8 +297,8 @@ Size key: XS < 0.5 session, S < 1, M 1–2, L 3+.
 2. ~~**Phase R** — decouple event routing.~~ ✅ **DONE** — makes D safe.
 3. ~~**Phase B** remaining quick wins.~~ ✅ **DONE** (B.3/B.4/B.6/B.7).
 4. ~~**Phase T** test harness before D churns the routing.~~ ✅ **DONE** (`tests.html`, 19 assertions).
-5. **Phase A** sidebar whenever convenient — it no longer blocks anything numeric. **← next candidate (L)**
-6. **C** any time (no longer waits on A) **→ D → E.4 → (F / G.2 / H)**; **G.4/G.5** can land independently; **I** last.
+5. ~~**Phase A** sidebar~~ ✅ **DONE (PR1)** — app-shell + vertical sidebar + gear modal; mobile bottom-nav deferred to A-PR2.
+6. **C** any time (no longer waits on A) **→ D → E.4 → (F / G.2 / H)**; **G.4/G.5** can land independently; **I** last. **← next candidates**
 
 > **State as of 2026-06-19:** everything off the critical path's "cheap + safe" bucket is done (0, R, B, T). What remains is the large, design-bearing work: **A** (sidebar/layout, L), **D** (data-entry relocation, L — now de-risked by R), and the feature phases on top. These each warrant their own session and a layout/UX decision before coding.
 

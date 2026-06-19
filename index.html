@@ -21,28 +21,56 @@
 </head>
 <body>
     <a href="#main-content" class="skip-link">Skip to main content</a>
-    <div class="container">
-        <div class="header">
-            <h1 id="main-heading-display">Personal Finance Dashboard</h1>
-            <p id="sub-heading-display">Track your income, expenses, and savings with style</p>
-            <button class="btn btn-install" id="install-app-btn" style="display: none; margin-top: 15px; background: #4CAF50;">
-                📥 Install App
+    <div class="app-shell" id="app-shell">
+        <header class="header topbar">
+            <button class="icon-btn sidebar-toggle" id="sidebar-toggle" aria-label="Collapse navigation" aria-expanded="true" aria-controls="sidebar">
+                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
+            <div class="topbar-titles">
+                <h1 id="main-heading-display">Personal Finance Dashboard</h1>
+                <p id="sub-heading-display">Track your income, expenses, and savings with style</p>
             </div>
+            <div class="topbar-actions">
+                <button class="btn btn-install" id="install-app-btn" style="display: none;">📥 Install App</button>
+                <button class="icon-btn" id="open-gui-settings" aria-label="Appearance settings" aria-haspopup="dialog">
+                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+            </div>
+        </header>
 
-        <nav role="tablist" aria-label="Finance sections" class="tabs">
-            <button role="tab" class="tab" data-tab-target="dashboard" aria-controls="dashboard" aria-selected="false" tabindex="-1">Dashboard</button>
-            <button role="tab" class="tab" data-tab-target="income" aria-controls="income" aria-selected="false" tabindex="-1">Income</button>
-            <button role="tab" class="tab" data-tab-target="expenses" aria-controls="expenses" aria-selected="false" tabindex="-1">Expenses</button>
-            <button role="tab" class="tab" data-tab-target="savings" aria-controls="savings" aria-selected="false" tabindex="-1">Savings</button>
-            <button role="tab" class="tab" data-tab-target="liabilities" aria-controls="liabilities" aria-selected="false" tabindex="-1">Liabilities</button>
-            <button role="tab" class="tab" data-tab-target="whatIf" aria-controls="whatIf" aria-selected="false" tabindex="-1">What If?</button>
-            <button role="tab" class="tab" data-tab-target="guiSettings" aria-controls="guiSettings" aria-selected="false" tabindex="-1">GUI Settings</button>
-            <button role="tab" class="tab active" data-tab-target="settings" aria-controls="settings" aria-selected="true" tabindex="0">Settings</button>
+        <nav class="sidebar" id="sidebar" role="tablist" aria-orientation="vertical" aria-label="Finance sections">
+            <button role="tab" class="tab active" data-tab-target="dashboard" aria-controls="dashboard" aria-selected="true" tabindex="0">
+                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
+                <span class="tab-label">Dashboard</span>
+            </button>
+            <button role="tab" class="tab" data-tab-target="income" aria-controls="income" aria-selected="false" tabindex="-1">
+                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg></span>
+                <span class="tab-label">Income</span>
+            </button>
+            <button role="tab" class="tab" data-tab-target="expenses" aria-controls="expenses" aria-selected="false" tabindex="-1">
+                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/></svg></span>
+                <span class="tab-label">Expenses</span>
+            </button>
+            <button role="tab" class="tab" data-tab-target="savings" aria-controls="savings" aria-selected="false" tabindex="-1">
+                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg></span>
+                <span class="tab-label">Savings</span>
+            </button>
+            <button role="tab" class="tab" data-tab-target="liabilities" aria-controls="liabilities" aria-selected="false" tabindex="-1">
+                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
+                <span class="tab-label">Liabilities</span>
+            </button>
+            <button role="tab" class="tab" data-tab-target="whatIf" aria-controls="whatIf" aria-selected="false" tabindex="-1">
+                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="20" cy="14" r="2"/></svg></span>
+                <span class="tab-label">What If?</span>
+            </button>
+            <button role="tab" class="tab" data-tab-target="settings" aria-controls="settings" aria-selected="false" tabindex="-1">
+                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></span>
+                <span class="tab-label">Settings</span>
+            </button>
         </nav>
 
-        <div class="content" id="main-content">
-            <div id="dashboard" role="tabpanel" aria-labelledby="tab-dashboard" class="tab-content">
+        <main class="content main-content" id="main-content">
+            <div id="dashboard" role="tabpanel" aria-labelledby="tab-dashboard" class="tab-content active">
                 <div class="dashboard-controls">
                     <label for="dashboard-view-period">View Period:</label>
                     <select id="dashboard-view-period">
@@ -308,79 +336,7 @@
                 </div>
             </div>
 
-            <div id="guiSettings" role="tabpanel" aria-labelledby="tab-guiSettings" class="tab-content">
-                <div class="settings-section">
-                    <div class="settings-title">🎨 Appearance Customization</div>
-                    <p class="theme-section-title">Theme Presets</p>
-                    <div id="theme-switcher-container" class="theme-switcher" role="group" aria-label="Theme presets"></div>
-                    <p class="theme-section-title">Customise Colours</p>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="gui-primary-bg-start">Primary Background Start</label>
-                            <input type="color" class="form-color-picker" id="gui-primary-bg-start">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-primary-bg-end">Primary Background End</label>
-                            <input type="color" class="form-color-picker" id="gui-primary-bg-end">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-header-text-color">Header Text Color</label>
-                            <input type="color" class="form-color-picker" id="gui-header-text-color">
-                        </div>
-                         <div class="form-group">
-                            <label class="form-label" for="gui-card-bg-start">Card Background Start</label>
-                            <input type="color" class="form-color-picker" id="gui-card-bg-start">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-card-bg-end">Card Background End</label>
-                            <input type="color" class="form-color-picker" id="gui-card-bg-end">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-accent-color">Accent Color</label>
-                            <input type="color" class="form-color-picker" id="gui-accent-color">
-                        </div>
-                    </div>
-                </div>
-                 <div class="settings-section">
-                    <div class="settings-title">✒️ Typography &amp; Text</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="gui-font-family">Font Family</label>
-                            <select class="form-select" id="gui-font-family">
-                                <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI (Default)</option>
-                                <option value="Arial, Helvetica, sans-serif">Arial</option>
-                                <option value="Verdana, Geneva, sans-serif">Verdana</option>
-                                <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                                <option value="'Courier New', Courier, monospace">Courier New</option>
-                                <option value="Georgia, serif">Georgia</option>
-                                <option value="'Lucida Sans Unicode', 'Lucida Grande', sans-serif">Lucida Sans Unicode</option>
-                                <option value="'Trebuchet MS', Helvetica, sans-serif">Trebuchet MS</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-base-font-size">Base Font Size (px)</label>
-                            <input type="number" class="form-input" id="gui-base-font-size" min="10" max="24" step="1">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-main-heading">Main Heading Text</label>
-                            <input type="text" class="form-input" id="gui-main-heading">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-sub-heading">Sub-Heading Text</label>
-                            <input type="text" class="form-input" id="gui-sub-heading">
-                        </div>
-                         </div>
-                </div>
-                <div class="settings-actions">
-                    <button class="btn" id="apply-gui-settings">💾 Save Settings</button>
-                    <button class="btn btn-secondary" id="reset-gui-settings">Reset GUI to Defaults</button>
-                    <button class="btn btn-secondary" id="export-json-gui">📊 Export Backup (JSON)</button>
-                    <input type="file" id="json-import-gui" accept=".json" style="display: none;">
-                    <button class="btn btn-secondary" id="import-json-gui-btn">📥 Import Backup (JSON)</button>
-                </div>
-            </div>
-
-            <div id="settings" role="tabpanel" aria-labelledby="tab-settings" class="tab-content active">
+            <div id="settings" role="tabpanel" aria-labelledby="tab-settings" class="tab-content">
                 <div class="settings-section">
                     <div class="settings-title">🌍 General Settings</div>
                     <div class="form-grid">
@@ -513,8 +469,93 @@
                     <button class="btn btn-secondary" id="import-data-json-btn">📥 Import Data (JSON)</button>
                 </div>
             </div>
+        </main>
+    </div>
+
+    <!-- A.4 — GUI Settings modal. The dialog body keeps id="guiSettings" so the existing
+         swatch/colour-picker delegation and B.6 live-preview listeners keep working unchanged. -->
+    <div class="modal-backdrop" id="gui-settings-modal" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gui-settings-title">
+            <div class="modal-header">
+                <h2 id="gui-settings-title">🎨 Appearance</h2>
+                <button class="modal-close" id="close-gui-settings" aria-label="Close appearance settings">
+                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body" id="guiSettings">
+                <div class="settings-section">
+                    <div class="settings-title">🎨 Appearance Customization</div>
+                    <p class="theme-section-title">Theme Presets</p>
+                    <div id="theme-switcher-container" class="theme-switcher" role="group" aria-label="Theme presets"></div>
+                    <p class="theme-section-title">Customise Colours</p>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="gui-primary-bg-start">Primary Background Start</label>
+                            <input type="color" class="form-color-picker" id="gui-primary-bg-start">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-primary-bg-end">Primary Background End</label>
+                            <input type="color" class="form-color-picker" id="gui-primary-bg-end">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-header-text-color">Header Text Color</label>
+                            <input type="color" class="form-color-picker" id="gui-header-text-color">
+                        </div>
+                         <div class="form-group">
+                            <label class="form-label" for="gui-card-bg-start">Card Background Start</label>
+                            <input type="color" class="form-color-picker" id="gui-card-bg-start">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-card-bg-end">Card Background End</label>
+                            <input type="color" class="form-color-picker" id="gui-card-bg-end">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-accent-color">Accent Color</label>
+                            <input type="color" class="form-color-picker" id="gui-accent-color">
+                        </div>
+                    </div>
+                </div>
+                 <div class="settings-section">
+                    <div class="settings-title">✒️ Typography &amp; Text</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="gui-font-family">Font Family</label>
+                            <select class="form-select" id="gui-font-family">
+                                <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI (Default)</option>
+                                <option value="Arial, Helvetica, sans-serif">Arial</option>
+                                <option value="Verdana, Geneva, sans-serif">Verdana</option>
+                                <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                                <option value="'Courier New', Courier, monospace">Courier New</option>
+                                <option value="Georgia, serif">Georgia</option>
+                                <option value="'Lucida Sans Unicode', 'Lucida Grande', sans-serif">Lucida Sans Unicode</option>
+                                <option value="'Trebuchet MS', Helvetica, sans-serif">Trebuchet MS</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-base-font-size">Base Font Size (px)</label>
+                            <input type="number" class="form-input" id="gui-base-font-size" min="10" max="24" step="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-main-heading">Main Heading Text</label>
+                            <input type="text" class="form-input" id="gui-main-heading">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="gui-sub-heading">Sub-Heading Text</label>
+                            <input type="text" class="form-input" id="gui-sub-heading">
+                        </div>
+                         </div>
+                </div>
+                <div class="settings-actions">
+                    <button class="btn" id="apply-gui-settings">💾 Save Settings</button>
+                    <button class="btn btn-secondary" id="reset-gui-settings">Reset GUI to Defaults</button>
+                    <button class="btn btn-secondary" id="export-json-gui">📊 Export Backup (JSON)</button>
+                    <input type="file" id="json-import-gui" accept=".json" style="display: none;">
+                    <button class="btn btn-secondary" id="import-json-gui-btn">📥 Import Backup (JSON)</button>
+                </div>
+            </div>
         </div>
     </div>
+
     <script src="js/state.js" defer></script>
     <script src="js/utils.js" defer></script>
     <script src="js/theme.js" defer></script>

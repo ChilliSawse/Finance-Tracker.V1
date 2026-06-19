@@ -1,7 +1,11 @@
-// sw.js - Automatic Timestamp Versioning
+// sw.js - Manually-versioned cache
 
-// Pure automatic versioning - generates new version every time you deploy!
-const VERSION = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-');
+// IMPORTANT: bump CACHE_VERSION whenever any cached asset below (html/css/js) changes.
+// The previous scheme generated VERSION from new Date() at runtime, but the sw.js *bytes*
+// never changed between deploys — so the browser (which detects SW updates by byte-comparing
+// sw.js) never re-installed and kept serving stale CSS/JS. A static, manually-bumped string
+// changes the file bytes, which is what actually triggers the update → re-cache → activate flow.
+const VERSION = '2026-06-19-phase-a';
 const CACHE_NAME = `finance-tracker-${VERSION}`;
 
 console.log('🚀 Service Worker Loading - Auto Version:', VERSION);
