@@ -103,6 +103,30 @@
         assertEqual('Negative savings → Infinity', calculateYearsToFI(-100, 0, 100000, 7), Infinity);
         assertClose('Compound case (10k/yr, 0 assets, 100k, 7%)', calculateYearsToFI(10000, 0, 100000, 7), 7.84273, 1e-4);
 
+        // --- calculateTotals: net/tax override (Phase 0.6) ---
+        // Salaried must honour an actual net/tax override (from a payslip) when present,
+        // and fall back to the bracket estimate only when both are blank — matching self-employed.
+        group('calculateTotals — net/tax override (0.6)');
+        function makeData(sources) {
+            return { incomeSources: sources, taxBrackets: B, primaryIncomeIndex: 0,
+                essentialExpenses: [], nonEssentialExpenses: [], assets: [], liabilities: [] };
+        }
+        const src = (over) => Object.assign(
+            { name: 'WR', incomeType: 'salaried', grossAnnual: 79500, paySchedule: 'fortnightly',
+              hoursPerCycle: 75, invoicedPayPostTax: null, taxRemoved: null }, over);
+
+        const rSal = calculateTotals(makeData([src({ invoicedPayPostTax: 2359.69, taxRemoved: 698 })]));
+        assertClose('Salaried honours tax override (698 × 26)', rSal.totalAnnualTax, 18148, 1e-6);
+        assertClose('Salaried honours net override (2359.69 × 26)', rSal.totalNetAnnualIncome, 61351.94, 1e-6);
+
+        const rSelf = calculateTotals(makeData([src({ incomeType: 'selfEmployed', invoicedPayPostTax: 2359.69, taxRemoved: 698 })]));
+        assertClose('Salaried-with-actuals net == self-employed net', rSal.totalNetAnnualIncome, rSelf.totalNetAnnualIncome, 1e-6);
+        assertClose('Salaried-with-actuals tax == self-employed tax', rSal.totalAnnualTax, rSelf.totalAnnualTax, 1e-6);
+
+        const rEst = calculateTotals(makeData([src({})])); // net/tax blank → estimate
+        assertClose('Salaried falls back to bracket estimate when net/tax blank', rEst.totalAnnualTax, T(79500), 1e-6);
+        assertClose('Salaried estimate net = gross − bracket tax', rEst.totalNetAnnualIncome, 79500 - T(79500), 1e-6);
+
         // --- Render ---
         const tbody = document.getElementById('results');
         let n = 0;
