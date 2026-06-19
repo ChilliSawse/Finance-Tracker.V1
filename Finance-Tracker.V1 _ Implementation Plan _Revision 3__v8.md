@@ -298,6 +298,7 @@ Builds on the corrected, persistent 0.4 state and the G.2 levers. Helps users pl
 ### H.1 — Income — top "Add income source" button; total Gross/Tax/Net summary row.
 ### H.2 — Expenses — name search filter; category grouping polish (with D.2).
 ### H.3 — Savings — collapsible allocation explainer; benchmark label; live sum enforcement.
+### H.6 — Savings — **Assets display card** (NEW, user request 2026-06-20). Assets are currently only surfaced on the Dashboard's Net Worth card; add a card on the Savings tab listing each asset (name + balance) with a total, matching the existing card style. Natural complement to D.3 (assets are *edited* in the Savings gear modal but not *shown* on the tab). Read-only display; reuse the dashboard's asset-render logic. Effort XS.
 ### H.4 — Liabilities — interest field + cost indicator; debt-free projection (with D.4).
 ### H.5 — Settings — replace reset `confirm()` with inline pattern (reuse B.4); FI sensitivity hints.
 
