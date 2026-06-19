@@ -13,6 +13,7 @@
     --content-bg-color: rgba(255, 255, 255, 0.95);
     --card-bg-gradient-start: #ffffff;
     --card-bg-gradient-end: #f0f0f0;
+    --border-color: #e0e0e0;
     --text-color-primary: #333;
     --text-color-secondary: #666;
     --accent-color: #667eea;
@@ -763,10 +764,11 @@ body {
 
 /* Settings Tab Styles */
 .settings-section {
-    background: #f8f9fa;
+    background: var(--card-bg-gradient-end);
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 25px;
+    border: 1px solid var(--border-color);
     border-left: 4px solid var(--accent-color);
 }
 
@@ -786,7 +788,7 @@ body {
     font-weight: normal;
     margin-left: 10px;
     color: var(--text-color-secondary);
-    background-color: #f0f0f0;
+    background-color: var(--info-bg);
     padding: 5px 8px;
     border-radius: 5px;
     word-wrap: break-word;
@@ -806,7 +808,7 @@ body {
 
 .form-label {
     font-weight: 500;
-    color: #555;
+    color: var(--text-color-primary);
     margin-bottom: 8px;
     font-size: 0.85em;
     word-wrap: break-word;
@@ -814,11 +816,12 @@ body {
 
 .form-input, .form-select, .form-color-picker {
     padding: 10px;
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--border-color);
     border-radius: 8px;
     font-size: 0.9em;
     transition: border-color 0.3s ease;
-    background-color: white;
+    background-color: var(--card-bg-gradient-start);
+    color: var(--text-color-primary);
     width: 100%;
     min-width: 0;
 }
@@ -875,7 +878,7 @@ body {
 
 
 .dynamic-list {
-    border: 2px solid #e0e0e0;
+    border: 2px solid var(--border-color);
     border-radius: 8px;
     max-height: 350px;
     overflow: auto;
@@ -885,8 +888,8 @@ body {
     display: grid;
     gap: 8px;
     padding: 8px 12px;
-    background: #f0f0f0;
-    border-bottom: 2px solid #e0e0e0;
+    background: var(--card-bg-gradient-end);
+    border-bottom: 2px solid var(--border-color);
     font-weight: 600;
     font-size: 0.75em;
     color: #555;
@@ -902,8 +905,8 @@ body {
     align-items: center;
     gap: 8px;
     padding: 12px;
-    border-bottom: 1px solid #f0f0f0;
-    background: white;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--card-bg-gradient-start);
 }
 
 .list-item:last-child {
@@ -912,8 +915,10 @@ body {
 
 .list-item input, .list-item select {
     padding: 6px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 4px;
+    background-color: var(--card-bg-gradient-end);
+    color: var(--text-color-primary);
     width: 100%;
     font-size: 0.85em;
     min-width: 0;
@@ -1000,7 +1005,7 @@ body {
     justify-content: center;
     margin-top: 30px;
     padding-top: 30px;
-    border-top: 2px solid #e0e0e0;
+    border-top: 2px solid var(--border-color);
     flex-wrap: wrap;
 }
 
@@ -1009,8 +1014,8 @@ body {
     grid-template-columns: 1fr 1fr 1fr auto;
     gap: 8px;
     padding: 10px 12px;
-    background: white;
-    border-bottom: 1px solid #f0f0f0;
+    background: var(--card-bg-gradient-start);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .tax-bracket-item:last-child {
@@ -1077,7 +1082,8 @@ body {
 /* What If Scenario Styles */
 
 .scenario-results {
-    background: white;
+    background: var(--card-bg-gradient-start);
+    border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 20px;
     margin-top: 20px;
@@ -1102,7 +1108,7 @@ body {
 .scenario-results h3 {
     margin-bottom: 20px;
     font-weight: 600;
-    color: #00838f;
+    color: var(--accent-color);
 }
 
 /* Liability specific styles */
