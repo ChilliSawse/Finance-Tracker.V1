@@ -284,7 +284,12 @@ function applyGuiStylesToPage() {
     } catch (_) {}
 }
 
-function initializeWhatIfTab() {
+// Phase 0.4: Seed the What If tab from live data ONLY on first show (or when the user
+// explicitly clicks "Reset to current", which passes force=true). On ordinary tab switches
+// this is a no-op so in-progress scenario edits survive.
+function initializeWhatIfTab(force = false) {
+    if (whatIfInitialized && !force) return;
+
     whatIfEssentialExpenses = JSON.parse(JSON.stringify(financeData.essentialExpenses));
     whatIfNonEssentialExpenses = JSON.parse(JSON.stringify(financeData.nonEssentialExpenses));
 
@@ -296,6 +301,8 @@ function initializeWhatIfTab() {
     setValue('whatif-assets-change', 0);
     setValue('whatif-return-change', financeData.fiSettings.expectedReturn);
     setHTML('whatif-results-display', '<h3>Scenario Results</h3><p>Your "What If" results will appear here after calculation.</p>');
+
+    whatIfInitialized = true;
 }
 
 function renderWhatIfExpenseSettingsList(containerId, expensesArray, typePrefix) {

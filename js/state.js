@@ -7,10 +7,14 @@ let defaultFinanceData = {
     incomeSources: [
         { name: "New Income Source", incomeType: "salaried", grossAnnual: 0, paySchedule: "fortnightly", hoursPerCycle: 0, taxRemoved: null, invoicedPayPostTax: null }
     ],
+    // Half-open intervals [min, max): each band's min equals the previous band's max,
+    // so no income value can fall between bands (fixes off-by-one cracks). The top band
+    // uses max: Infinity so income above the cap keeps being taxed (fixes regressive cap).
     taxBrackets: [
         { min: 0, max: 18200, rate: 0 },
-        { min: 18201, max: 45000, rate: 0.19 },
-        { min: 45001, max: 120000, rate: 0.325 },
+        { min: 18200, max: 45000, rate: 0.19 },
+        { min: 45000, max: 120000, rate: 0.325 },
+        { min: 120000, max: Infinity, rate: 0.37 },
     ],
     assets: [
         { name: "New Asset", balance: 0 },
@@ -57,6 +61,9 @@ let financeData = JSON.parse(JSON.stringify(defaultFinanceData));
 let guiSettingsData = JSON.parse(JSON.stringify(defaultGuiSettings));
 let whatIfEssentialExpenses = [];
 let whatIfNonEssentialExpenses = [];
+// Phase 0.4: tracks whether the What If tab has been seeded from live data yet, so tab
+// switches don't clobber in-progress edits. Reset to false by "Reset to current".
+let whatIfInitialized = false;
 
 // AutoSave Class (Simplified for this context, full IndexedDB would be more complex)
 class FinanceAutoSave {
