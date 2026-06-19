@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Tracker — Calc Tests (Phase T)</title>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 24px; background: #f5f6f8; color: #222; }
+        h1 { font-size: 1.3rem; margin: 0 0 4px; }
+        .sub { color: #666; margin: 0 0 20px; font-size: 0.9rem; }
+        #summary { font-size: 1.1rem; font-weight: 700; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; }
+        #summary.pass { background: #e6f4ea; color: #1e7e34; border: 1px solid #b7dfc2; }
+        #summary.fail { background: #fdecea; color: #b71c1c; border: 1px solid #f5c2bd; }
+        table { border-collapse: collapse; width: 100%; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 0.85rem; }
+        th { background: #fafafa; font-weight: 600; }
+        td.status { font-weight: 700; white-space: nowrap; }
+        tr.pass td.status { color: #1e7e34; }
+        tr.fail td.status { color: #b71c1c; }
+        tr.fail { background: #fff7f6; }
+        code { font-family: ui-monospace, 'Cascadia Code', monospace; }
+        .group td { background: #f0f1f4; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <h1>Finance Tracker — Calculation Tests</h1>
+    <p class="sub">Phase T harness. Exercises the pure functions in <code>calculations.js</code> against
+    independently-verified expected values. Open this file in a browser; results render below.</p>
+    <div id="summary">Running…</div>
+    <table>
+        <thead><tr><th>#</th><th>Status</th><th>Test</th><th>Expected</th><th>Actual</th></tr></thead>
+        <tbody id="results"></tbody>
+    </table>
+
+    <!-- Minimal globals some functions reference via default params (only evaluated if called). -->
+    <script>var financeData = { currency: 'AUD' };</script>
+    <script src="js/utils.js"></script>
+    <script src="js/calculations.js"></script>
+    <script>
+    (function () {
+        const results = [];
+        let pass = 0, fail = 0;
+
+        function record(name, ok, expected, actual) {
+            results.push({ name, ok, expected, actual });
+            ok ? pass++ : fail++;
+        }
+        function group(label) { results.push({ group: label }); }
+        function assertEqual(name, actual, expected) { record(name, actual === expected, String(expected), String(actual)); }
+        function assertTrue(name, cond, note) { record(name, !!cond, 'true', note != null ? String(note) : String(!!cond)); }
+        function assertClose(name, actual, expected, tol = 1e-6) {
+            record(name, Math.abs(actual - expected) <= tol, expected + ' (±' + tol + ')', String(actual));
+        }
+
+        // Default AU brackets — must mirror defaultFinanceData.taxBrackets in state.js.
+        const B = [
+            { min: 0, max: 18200, rate: 0 },
+            { min: 18200, max: 45000, rate: 0.19 },
+            { min: 45000, max: 120000, rate: 0.325 },
+            { min: 120000, max: Infinity, rate: 0.37 },
+        ];
+        const T = (g) => calculateTaxFromBrackets(g, B);
+
+        // --- calculateTaxFromBrackets ---
+        group('calculateTaxFromBrackets');
+        assertEqual('Tax(0) is 0', T(0), 0);
+        assertEqual('Tax(18200) is 0 (top of free band)', T(18200), 0);
+        assertClose('Tax(18200.50) taxes only the 0.50 above the band (no fractional crack)', T(18200.50), 0.095, 1e-9);
+        assertClose('Tax(45000) = 26800 * 0.19', T(45000), 5092, 1e-6);
+        assertClose('Tax(120000)', T(120000), 29467, 1e-6);
+        assertClose('Tax(200000) keeps taxing above the old cap (no regressive cap)', T(200000), 59067, 1e-6);
+        assertTrue('Tax(120k) < Tax(200k)', T(120000) < T(200000), T(120000) + ' < ' + T(200000));
+
+        // Boundary continuity: half-open [min,max) means no gap and no double-count at a boundary.
+        const eps = 0.01;
+        assertClose('Boundary 45000 is continuous (upper band picks up immediately)',
+            T(45000 + eps), T(45000) + eps * 0.325, 1e-6);
+
+        // Effective rate monotonically non-decreasing as income rises.
+        const incomes = [20000, 50000, 100000, 150000, 200000, 500000];
+        let monotonic = true, prev = -1, detail = '';
+        for (const g of incomes) {
+            const eff = T(g) / g;
+            if (eff < prev - 1e-12) { monotonic = false; detail = 'drop at ' + g; }
+            prev = eff;
+        }
+        assertTrue('Effective rate is monotonically non-decreasing', monotonic, detail || 'ok across ' + incomes.join(', '));
+
+        // --- getTaxBracketBreakdown ---
+        group('getTaxBracketBreakdown');
+        const rows = getTaxBracketBreakdown(200000, B);
+        const sumTaxable = rows.reduce((s, r) => s + r.taxable, 0);
+        const sumTax = rows.reduce((s, r) => s + r.tax, 0);
+        assertClose('Sum of per-band taxable = gross (bands start at 0)', sumTaxable, 200000, 1e-6);
+        assertClose('Sum of per-band tax = calculateTaxFromBrackets', sumTax, T(200000), 1e-6);
+        assertEqual('Breakdown is empty for gross <= 0', getTaxBracketBreakdown(0, B).length, 0);
+
+        // --- calculateYearsToFI ---
+        group('calculateYearsToFI');
+        assertClose('Zero return → simple division (100k / 10k = 10)', calculateYearsToFI(10000, 0, 100000, 0), 10, 1e-9);
+        assertEqual('Already at target → 0', calculateYearsToFI(10000, 100000, 100000, 7), 0);
+        assertEqual('Zero savings → Infinity', calculateYearsToFI(0, 0, 100000, 7), Infinity);
+        assertEqual('Negative savings → Infinity', calculateYearsToFI(-100, 0, 100000, 7), Infinity);
+        assertClose('Compound case (10k/yr, 0 assets, 100k, 7%)', calculateYearsToFI(10000, 0, 100000, 7), 7.84273, 1e-4);
+
+        // --- Render ---
+        const tbody = document.getElementById('results');
+        let n = 0;
+        for (const r of results) {
+            const tr = document.createElement('tr');
+            if (r.group) {
+                tr.className = 'group';
+                tr.innerHTML = '<td colspan="5">' + r.group + '</td>';
+            } else {
+                n++;
+                tr.className = r.ok ? 'pass' : 'fail';
+                tr.innerHTML =
+                    '<td>' + n + '</td>' +
+                    '<td class="status">' + (r.ok ? '✓ PASS' : '✗ FAIL') + '</td>' +
+                    '<td>' + r.name + '</td>' +
+                    '<td><code>' + r.expected + '</code></td>' +
+                    '<td><code>' + r.actual + '</code></td>';
+            }
+            tbody.appendChild(tr);
+        }
+        const summary = document.getElementById('summary');
+        summary.className = fail === 0 ? 'pass' : 'fail';
+        summary.textContent = fail === 0
+            ? '✓ All ' + pass + ' tests passed.'
+            : '✗ ' + fail + ' of ' + (pass + fail) + ' tests failed.';
+        document.title = (fail === 0 ? '✓ ' : '✗ ') + 'Calc Tests (' + pass + '/' + (pass + fail) + ')';
+    })();
+    </script>
+</body>
+</html>

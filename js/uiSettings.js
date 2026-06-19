@@ -43,22 +43,22 @@ function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-type" class="visually-hidden">Income Type ${index + 1}</label>
-                <select data-index="${index}" data-field="incomeType" id="${baseId}-type" name="${baseId}-type">
+                <select data-collection="incomeSources" data-index="${index}" data-field="incomeType" id="${baseId}-type" name="${baseId}-type">
                     <option value="salaried" ${!isSelfEmployed ? 'selected' : ''}>Salaried</option>
                     <option value="selfEmployed" ${isSelfEmployed ? 'selected' : ''}>Self-employed</option>
                 </select>
             </span>
             <span>
                 <label for="${baseId}-name" class="visually-hidden">Income Source Name ${index + 1}</label>
-                <input type="text" value="${escapeHtml(source.name || '')}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
+                <input type="text" value="${escapeHtml(source.name || '')}" data-collection="incomeSources" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
             </span>
             <span>
                 <label for="${baseId}-gross" class="visually-hidden">Gross Annual Income ${index + 1}</label>
-                <input type="number" value="${source.grossAnnual || 0}" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" name="${baseId}-gross" placeholder="${isSelfEmployed ? autoNote : 'Gross Annual'}" step="0.01" ${grossDisabled}>
+                <input type="number" value="${source.grossAnnual || 0}" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" name="${baseId}-gross" placeholder="${isSelfEmployed ? autoNote : 'Gross Annual'}" step="0.01" ${grossDisabled}>
             </span>
             <span>
                 <label for="${baseId}-schedule" class="visually-hidden">Pay Schedule ${index + 1}</label>
-                <select data-index="${index}" data-field="paySchedule" id="${baseId}-schedule" name="${baseId}-schedule">
+                <select data-collection="incomeSources" data-index="${index}" data-field="paySchedule" id="${baseId}-schedule" name="${baseId}-schedule">
                     <option value="weekly" ${source.paySchedule === 'weekly' ? 'selected' : ''}>Weekly</option>
                     <option value="fortnightly" ${source.paySchedule === 'fortnightly' ? 'selected' : ''}>Fortnightly</option>
                     <option value="monthly" ${source.paySchedule === 'monthly' ? 'selected' : ''}>Monthly</option>
@@ -67,15 +67,15 @@ function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-netpay" class="visually-hidden">Net Pay Per Cycle ${index + 1}</label>
-                <input type="number" value="${invoicedPayValue}" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" name="${baseId}-netpay" placeholder="${isSelfEmployed ? 'Net Pay/Cycle' : autoNote}" step="0.01" ${netTaxDisabled}>
+                <input type="number" value="${invoicedPayValue}" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" name="${baseId}-netpay" placeholder="${isSelfEmployed ? 'Net Pay/Cycle' : autoNote}" step="0.01" ${netTaxDisabled}>
             </span>
             <span>
                  <label for="${baseId}-hours" class="visually-hidden">Hours Per Cycle ${index + 1}</label>
-                 <input type="number" value="${source.hoursPerCycle || ''}" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" name="${baseId}-hours" placeholder="Hours" step="1">
+                 <input type="number" value="${source.hoursPerCycle || ''}" data-collection="incomeSources" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" name="${baseId}-hours" placeholder="Hours" step="1">
             </span>
             <span>
                 <label for="${baseId}-taxremoved" class="visually-hidden">Tax Removed Per Cycle ${index + 1}</label>
-                <input type="number" value="${taxRemovedValue}" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="${isSelfEmployed ? 'Tax/Cycle (opt)' : autoNote}" step="0.01" ${netTaxDisabled}>
+                <input type="number" value="${taxRemovedValue}" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="${isSelfEmployed ? 'Tax/Cycle (opt)' : autoNote}" step="0.01" ${netTaxDisabled}>
             </span>
             <button class="delete-btn" data-index="${index}" data-type="incomeSource" aria-label="Delete Income Source ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -97,15 +97,15 @@ function renderTaxBracketsSettings() {
         itemDiv.innerHTML = `
             <span>
                 <label for="${baseId}-min" class="visually-hidden">Min Income Bracket ${index + 1}</label>
-                <input type="number" value="${bracket.min}" data-index="${index}" data-field="min" id="${baseId}-min" name="${baseId}-min" placeholder="Min income" step="0.01">
+                <input type="number" value="${bracket.min}" data-collection="taxBrackets" data-index="${index}" data-field="min" id="${baseId}-min" name="${baseId}-min" placeholder="Min income" step="0.01">
             </span>
             <span>
                 <label for="${baseId}-max" class="visually-hidden">Max Income Bracket ${index + 1}</label>
-                <input type="number" value="${bracket.max === Infinity ? '' : bracket.max}" data-index="${index}" data-field="max" id="${baseId}-max" name="${baseId}-max" placeholder="Max (empty=infinity)" step="0.01">
+                <input type="number" value="${bracket.max === Infinity ? '' : bracket.max}" data-collection="taxBrackets" data-index="${index}" data-field="max" id="${baseId}-max" name="${baseId}-max" placeholder="Max (empty=infinity)" step="0.01">
             </span>
             <span>
                 <label for="${baseId}-rate" class="visually-hidden">Tax Rate Bracket ${index + 1}</label>
-                <input type="number" value="${(bracket.rate * 100).toFixed(2)}" data-index="${index}" data-field="rate" id="${baseId}-rate" name="${baseId}-rate" placeholder="Rate %" step="0.01">
+                <input type="number" value="${(bracket.rate * 100).toFixed(2)}" data-collection="taxBrackets" data-index="${index}" data-field="rate" id="${baseId}-rate" name="${baseId}-rate" placeholder="Rate %" step="0.01">
             </span>
             <button class="delete-btn" data-index="${index}" data-type="taxBracket" aria-label="Delete Tax Bracket ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -124,11 +124,11 @@ function renderAssetsSettings() {
         itemDiv.innerHTML = `
             <span>
                 <label for="${baseId}-name" class="visually-hidden">Asset Name ${index + 1}</label>
-                <input type="text" value="${escapeHtml(asset.name)}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Asset name">
+                <input type="text" value="${escapeHtml(asset.name)}" data-collection="assets" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Asset name">
             </span>
             <span>
                 <label for="${baseId}-balance" class="visually-hidden">Asset Balance ${index + 1}</label>
-                <input type="number" value="${asset.balance}" data-index="${index}" data-field="balance" id="${baseId}-balance" name="${baseId}-balance" placeholder="Balance" step="0.01">
+                <input type="number" value="${asset.balance}" data-collection="assets" data-index="${index}" data-field="balance" id="${baseId}-balance" name="${baseId}-balance" placeholder="Balance" step="0.01">
             </span>
             <button class="delete-btn" data-index="${index}" data-type="asset" aria-label="Delete Asset ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -147,15 +147,15 @@ function renderLiabilitiesSettings() {
         itemDiv.innerHTML = `
             <span>
                 <label for="${baseId}-name" class="visually-hidden">Liability Name ${index + 1}</label>
-                <input type="text" value="${escapeHtml(liability.name)}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Liability name">
+                <input type="text" value="${escapeHtml(liability.name)}" data-collection="liabilities" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Liability name">
             </span>
             <span>
                 <label for="${baseId}-balance" class="visually-hidden">Liability Balance ${index + 1}</label>
-                <input type="number" value="${liability.balance}" data-index="${index}" data-field="balance" id="${baseId}-balance" name="${baseId}-balance" placeholder="Balance" step="0.01">
+                <input type="number" value="${liability.balance}" data-collection="liabilities" data-index="${index}" data-field="balance" id="${baseId}-balance" name="${baseId}-balance" placeholder="Balance" step="0.01">
             </span>
             <span>
                 <label for="${baseId}-rate" class="visually-hidden">Liability Interest Rate ${index + 1}</label>
-                <input type="number" value="${liability.interestRate || 0}" data-index="${index}" data-field="interestRate" id="${baseId}-rate" name="${baseId}-rate" placeholder="Interest %" step="0.01">
+                <input type="number" value="${liability.interestRate || 0}" data-collection="liabilities" data-index="${index}" data-field="interestRate" id="${baseId}-rate" name="${baseId}-rate" placeholder="Interest %" step="0.01">
             </span>
             <button class="delete-btn" data-index="${index}" data-type="liability" aria-label="Delete Liability ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -176,11 +176,11 @@ function renderAllocationSettings() {
         itemDiv.innerHTML = `
             <span>
                 <label for="${baseId}-name" class="visually-hidden">Allocation Category Name ${index + 1}</label>
-                <input type="text" value="${escapeHtml(alloc.name)}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Category Name">
+                <input type="text" value="${escapeHtml(alloc.name)}" data-collection="allocation" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Category Name">
             </span>
             <span>
                 <label for="${baseId}-percentage" class="visually-hidden">Allocation Percentage ${index + 1}</label>
-                <input type="number" value="${alloc.percentage}" data-index="${index}" data-field="percentage" id="${baseId}-percentage" name="${baseId}-percentage" placeholder="%" step="0.1" min="0">
+                <input type="number" value="${alloc.percentage}" data-collection="allocation" data-index="${index}" data-field="percentage" id="${baseId}-percentage" name="${baseId}-percentage" placeholder="%" step="0.1" min="0">
             </span>
             <button class="delete-btn" data-index="${index}" data-type="allocation" aria-label="Delete Allocation Category ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -213,15 +213,15 @@ function renderExpensesSettingsLists() {
             itemDiv.innerHTML = `
                 <span>
                     <label for="${baseId}-name" class="visually-hidden">${typeLabel} Expense Name ${index + 1}</label>
-                    <input type="text" value="${escapeHtml(expense.name)}" data-index="${index}" data-field="name" data-array="${expensesArrayName}" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
+                    <input type="text" value="${escapeHtml(expense.name)}" data-collection="${expensesArrayName}" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
                 </span>
                 <span>
                     <label for="${baseId}-amount" class="visually-hidden">${typeLabel} Expense Amount ${index + 1}</label>
-                    <input type="number" value="${expense.amount}" data-index="${index}" data-field="amount" data-array="${expensesArrayName}" id="${baseId}-amount" name="${baseId}-amount" placeholder="Amount" step="0.01">
+                    <input type="number" value="${expense.amount}" data-collection="${expensesArrayName}" data-index="${index}" data-field="amount" id="${baseId}-amount" name="${baseId}-amount" placeholder="Amount" step="0.01">
                 </span>
                 <span>
                     <label for="${baseId}-frequency" class="visually-hidden">${typeLabel} Expense Frequency ${index + 1}</label>
-                    <select data-index="${index}" data-field="frequency" data-array="${expensesArrayName}" id="${baseId}-frequency" name="${baseId}-frequency">
+                    <select data-collection="${expensesArrayName}" data-index="${index}" data-field="frequency" id="${baseId}-frequency" name="${baseId}-frequency">
                         <option value="weekly" ${expense.frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
                         <option value="fortnightly" ${expense.frequency === 'fortnightly' ? 'selected' : ''}>Fortnightly</option>
                         <option value="monthly" ${expense.frequency === 'monthly' ? 'selected' : ''}>Monthly</option>

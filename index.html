@@ -61,19 +61,21 @@
                                 <div class="card-subtitle" id="dashboard-income-subtitle">After Tax (Fortnightly)</div>
                             </div>
                         </div>
-                        <div class="amount neutral" id="dashboard-income-period-display" aria-live="polite" aria-atomic="true">A$0.00</div>
+                        <div class="amount neutral" id="dashboard-income-period-display" aria-live="polite" aria-atomic="true"></div>
                         <div class="time-periods">
                              <div class="time-item">
                                 <div class="time-label">Annual</div>
-                                <div class="time-amount" id="dashboard-annual-income">A$0.00</div>
+                                <div class="time-amount" id="dashboard-annual-income"></div>
                             </div>
                             <div class="time-item">
                                 <div class="time-label">Weekly</div>
-                                <div class="time-amount" id="dashboard-weekly-income">A$0.00</div>
+                                <div class="time-amount" id="dashboard-weekly-income"></div>
                             </div>
                             <div class="time-item">
-                                <div class="time-label">Daily (5-Day)</div>
-                                <div class="time-amount" id="dashboard-daily-income">A$0.00</div>
+                                <div class="time-label">Daily (5-day week)
+                                    <span class="info-icon" tabindex="0" role="img" aria-label="Daily figures use a 5-day working week (260 days per year)">ⓘ<span class="tooltip">Daily figures divide your annual net income by 260 working days (5 days × 52 weeks), not 365 calendar days — so this reflects a typical pay day rather than a calendar day.</span></span>
+                                </div>
+                                <div class="time-amount" id="dashboard-daily-income"></div>
                             </div>
                         </div>
                     </div>
@@ -87,11 +89,11 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <div style="text-align: center; flex: 1; min-width: 100px;">
                                 <div class="card-subtitle">Outgoing</div>
-                                <div class="amount expense" id="dashboard-period-expenses">A$0.00</div>
+                                <div class="amount expense" id="dashboard-period-expenses"></div>
                             </div>
                             <div style="text-align: center; flex: 1; min-width: 100px;">
                                 <div class="card-subtitle">Savings</div>
-                                <div class="amount" id="dashboard-period-savings">A$0.00</div>
+                                <div class="amount" id="dashboard-period-savings"></div>
                             </div>
                         </div>
                         <div class="progress-bar">
@@ -105,15 +107,15 @@
                                 <div class="card-subtitle">Assets minus Liabilities</div>
                             </div>
                         </div>
-                        <div class="amount net-worth" id="net-worth-display" aria-live="polite" aria-atomic="true">A$0.00</div>
+                        <div class="amount net-worth" id="net-worth-display" aria-live="polite" aria-atomic="true"></div>
                          <div class="net-worth-breakdown">
                             <div>
                                 <div class="card-subtitle">Total Assets</div>
-                                <div class="amount" id="total-assets-display">A$0.00</div>
+                                <div class="amount" id="total-assets-display"></div>
                             </div>
                             <div>
                                 <div class="card-subtitle">Total Liabilities</div>
-                                <div class="amount expense" id="total-liabilities-display">A$0.00</div>
+                                <div class="amount expense" id="total-liabilities-display"></div>
                             </div>
                         </div>
                         <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
@@ -171,12 +173,12 @@
                 <div class="dashboard-grid">
                     <div class="card">
                         <div class="card-title">Essential Expenses</div>
-                        <div class="card-subtitle" id="essential-subtitle">A$0.00/week • A$0.00/year</div>
+                        <div class="card-subtitle" id="essential-subtitle"></div>
                         <div class="expense-list" id="essential-expenses"></div>
                     </div>
                     <div class="card">
                         <div class="card-title">Non-Essential Expenses</div>
-                        <div class="card-subtitle" id="non-essential-subtitle">A$0.00/week • A$0.00/year</div>
+                        <div class="card-subtitle" id="non-essential-subtitle"></div>
                         <div class="expense-list" id="non-essential-expenses"></div>
                     </div>
                 </div>
@@ -370,7 +372,7 @@
                          </div>
                 </div>
                 <div class="settings-actions">
-                    <button class="btn" id="apply-gui-settings">Apply GUI Settings</button>
+                    <button class="btn" id="apply-gui-settings">💾 Save Settings</button>
                     <button class="btn btn-secondary" id="reset-gui-settings">Reset GUI to Defaults</button>
                     <button class="btn btn-secondary" id="export-json-gui">📊 Export Backup (JSON)</button>
                     <input type="file" id="json-import-gui" accept=".json" style="display: none;">
@@ -444,7 +446,7 @@
                      </div>
                      <button class="add-btn" id="add-liability">+ Add Liability</button>
                      <div style="margin-top: 20px; text-align: right; font-size: 1.2em; font-weight: 600;">
-                         Total Liabilities: <span id="total-liabilities-settings" style="color: #f44336;">A$0.00</span>
+                         Total Liabilities: <span id="total-liabilities-settings" style="color: #f44336;"></span>
                      </div>
                 </div>
                  <div class="settings-section">

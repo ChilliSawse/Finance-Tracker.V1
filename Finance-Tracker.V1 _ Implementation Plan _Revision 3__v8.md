@@ -1,11 +1,22 @@
-# Finance-Tracker.V1 — Implementation Plan (Revision 3)
+# Finance-Tracker.V1 — Implementation Plan (Revision 4)
 
-Last updated: 2026-06-18 (Phase 0 complete)
-Supersedes Revision 2. Reflects completed work (orig. Phases 1–3, 5–7, plus B.2, B.5, E.1–E.3) and re-sequences all remaining work around a **correctness-first** philosophy.
+Last updated: 2026-06-19 (Phase R + Phase B in progress)
+Supersedes Revision 3. Reflects completed work (orig. Phases 1–3, 5–7, plus B.2, B.5, E.1–E.3, all of Phase 0) and re-sequences all remaining work around a **correctness-first** philosophy.
 
 ---
 
-## What changed in Rev 3 (read me first)
+## What changed in Rev 4 (read me first)
+
+A code-vs-plan audit on 2026-06-19 confirmed every Phase 0 "✅ DONE" claim is real in the source (not aspirational): the tax engine handles `max: Infinity`, bands are half-open `[min,max)`, the broken HTML backup is gone, and What If both overrides net directly and persists across tab switches via `whatIfInitialized`. The audit produced four refinements, now folded in:
+
+1. **Phase R is cheaper and half-done.** Every input already carries `data-index` + `data-field`, and expenses already route declaratively via `data-array`; only the *collection* mapping still walks the DOM (`.closest()`). R is now "add `data-collection` everywhere, delete the `.closest()` branches, unify the expense `data-array` onto the same attribute." Down-graded XS–S.
+2. **Phase R's attribute list was wrong against the data model.** Rev 3 listed `liabilities|allocations` — but state uses `allocation` (singular) and omitted `assets` entirely. Corrected below.
+3. **Two dependencies repeated the Rev-2 anti-pattern Rev 3 set out to kill** (valuable work gated behind chrome): `C → A` and `G.4/G.5 → D`. Both edges are cut — collapsible info lives inside each tab regardless of the nav shell, and What If comparison/saved-scenarios build on the already-corrected, already-persistent state from 0.4, not on the data-entry relocation.
+4. **Correctness-first, but no automated tests exist.** Every "Test:" line in this plan is manual. `calculations.js` is pure functions (`calculateTaxFromBrackets`, `getTaxBracketBreakdown`, `calculateYearsToFI`) and is trivially unit-testable. Adding a minimal `tests.html` assertion harness is the single biggest gap and is recommended before Phase D churns the routing those functions depend on. Tracked as **Phase T** below.
+
+---
+
+## What changed in Rev 3
 
 Rev 2 gated almost all valuable work behind **Phase A (the sidebar)**. That's backwards: the sidebar is *layout chrome*, while the high-value, high-risk work is *logic* (tax math, What If, data-entry routing). We already proved the gate was wrong by shipping B.2/B.5/E out of order with no problems.
 
@@ -69,18 +80,23 @@ Self-contained, no layout dependency, each shippable independently. These fix wr
 
 ---
 
-## Phase R — Event-Routing Refactor (NEW — prerequisite to Phase D)
+## ✅ Phase R — Event-Routing Refactor — DONE (2026-06-19)
+
+> Implemented: `data-collection` added to every editable settings input in `uiSettings.js`; the expense `data-array` migrated onto it; `handleSettingsChangeEvents` now resolves the target array via `financeData[target.dataset.collection]` against the `SETTINGS_COLLECTIONS` whitelist instead of `.closest()`. The `incomeType` re-render branch and allocation-total special case were switched to read `data-collection` too. Behaviour-preserving; the delegated listeners remain on `#settings` (the one attachment point Phase D still needs to relocate).
 
 **Why:** `handleSettingsChangeEvents` (and delete/add handlers) in `events.js` identify *which collection* an input belongs to by DOM ancestry — `target.closest('#income-sources-settings')`, `'#expenses-settings'`, etc. Phase D moves those containers out of Settings into each tab, which **silently breaks routing** (the `closest()` selectors no longer match). Fixing this reactively, mid-D, is painful.
 
+**Starting point (audited 2026-06-19):** `data-index` and `data-field` are *already* present on every editable input. Expenses *already* route declaratively via `data-array="essentialExpenses|nonEssentialExpenses"` (events.js). Everything else (income, tax, assets, liabilities, allocation) still routes by ancestry. So R is mostly "finish what's started + unify the attribute name."
+
 **Fix (do before D):**
-- Add declarative routing attributes to each editable input: `data-collection="incomeSources|essentialExpenses|nonEssentialExpenses|liabilities|allocations"`, `data-index`, `data-field`.
-- Rewrite handlers to read `target.dataset.collection / .index / .field` instead of walking ancestors.
-- This makes the same inputs work *anywhere in the DOM*, so Phase D becomes pure markup relocation with zero handler changes.
+- Add `data-collection` to each editable input. Valid values are the exact `financeData` keys: `incomeSources`, `taxBrackets`, `assets`, `liabilities`, `allocation` (singular), `essentialExpenses`, `nonEssentialExpenses`. *(Note: `allocation` is singular and `assets`/`taxBrackets` were missing from Rev 3's list — both corrected here.)*
+- Migrate the existing expense `data-array` onto `data-collection` so there is one attribute, not two.
+- Rewrite `handleSettingsChangeEvents` to resolve the array via `financeData[target.dataset.collection]` (guarded by a whitelist of the keys above) instead of `target.closest('#…-settings')`. Do the same for the `incomeType` re-render branch and the allocation-total special case.
+- This makes the field→collection mapping DOM-independent. **Caveat (honest scoping):** the delegated listeners are still attached to `#settings`, so Phase D must re-attach (or hoist to `#main-content`/`document`) when it relocates containers — that is the *one* handler touch D still needs. R removes the dangerous part (silent per-field mis-routing), not the listener-attachment point.
 
 **Test:** All existing Settings edits still write to the right `financeData` path after the refactor, with containers left exactly where they are (refactor is behaviour-preserving until D moves them).
 
-**Effort:** S–M (≈1 session). High leverage — turns the riskiest phase (D) into a safe one.
+**Effort:** XS–S (≈½ session, down from Rev 3's S–M now that half the work was already in place). High leverage — turns the riskiest phase (D) into a safe one.
 
 ---
 
@@ -94,19 +110,19 @@ Self-contained, low-risk, any order. No longer gated on Phase A.
 
 ### ✅ B.2 — Persistent user defaults — DONE
 
-### B.3 — Fix hardcoded A$ in HTML
-Replace every static `A$0.00` placeholder in `index.html` with an empty span; ensure all render passes in `uiDashboard.js` / `uiSettings.js` fill via `currencySymbol()`. Remove hardcoded currency chars from HTML.
+### ✅ B.3 — Fix hardcoded A$ in HTML — DONE
+All static `A$0.00` placeholders removed from `index.html` (currency spans now empty); render passes in `uiDashboard.js` / `uiSettings.js` / `main.js` fill them via `formatCurrency()` on load.
 
-### B.4 — Delete confirmations (non-blocking)
-Replace `window.confirm()` in expense/liability delete handlers with an inline popover ("Delete? [Yes] [No]") — auto-focus Yes, dismiss on Escape/focus-out. Styleable, non-blocking. (Shared component reused by H.5/SE4.)
+### ✅ B.4 — Delete confirmations (non-blocking) — DONE
+Added reusable `inlineConfirm(triggerEl, message, onConfirm)` in `events.js` + `.inline-confirm` styles. Wired into expense + liability delete handlers: auto-focus Yes, dismiss on Escape / No / outside-click, refocus trigger on cancel. Built to be reused by H.5's reset confirm.
 
 ### ✅ B.5 — Negative savings rate — DONE
 
-### B.6 — Live colour picker preview
-`input` listeners on colour pickers → `applyGuiStylesToPage()` live. Keep Apply button, relabel "Save Settings" → triggers `autoSave.onDataChange()`.
+### ✅ B.6 — Live colour picker preview — DONE
+`input`/`change` listeners on the GUI form call `applyGuiSettingsLivePreview()` (factored `syncGuiSettingsFromInputs()` + `applyGuiStylesToPage()`, no persistence). Apply button relabelled "💾 Save Settings"; Save still triggers `autoSave.onDataChange()`.
 
-### B.7 — Document daily assumption
-Add `(5-day week)` label + info tooltip explaining the 260-day basis next to the Dashboard "Daily" figure.
+### ✅ B.7 — Document daily assumption — DONE
+Dashboard "Daily" figure relabelled "Daily (5-day week)" with a keyboard-accessible info tooltip explaining the 260-day basis (5 × 52). Tooltip reveal extended to `:focus`/`:focus-within` for a11y.
 
 ---
 
@@ -140,7 +156,7 @@ Inline 20×20 SVG (`currentColor`), no icon-font dependency: dashboard grid, inc
 
 ## Phase C — Collapsible Info Sections
 
-Affects Income, Expenses, Savings, Liabilities.
+Affects Income, Expenses, Savings, Liabilities. **Rev 4: no longer gated on Phase A** — the info blocks live inside each tab's content and are independent of the nav shell.
 
 ### C.1 — Component pattern
 Collapse toggle (chevron) top-right; collapsed = heading row only; "Don't show again" checkbox; dismissed state in `localStorage` (`ft-info-dismissed`, keyed by tab); restore collapsed on load.
@@ -201,6 +217,8 @@ New `financeData.upcomingBills[]` (`name`, `amount`, `dueDate`, `frequency`). Da
 ## Phase G — What If Tab Rebuild
 
 > G.1 + G.3 fast-tracked into **Phase 0.4** (correctness). Phase G now covers the value-add levers, comparison, and saved scenarios on top of the corrected, persistent state.
+>
+> **Rev 4:** G.4 (comparison) and G.5 (saved scenarios) are pure What-If-tab work built on the corrected, persistent 0.4 state — they do **not** depend on Phase D's data-entry relocation and can ship independently. Only G.2's full lever set benefits from D's richer per-tab inputs.
 
 ### G.1 — Scenario persistence — *moved to Phase 0.4*
 
@@ -239,25 +257,40 @@ Name + store up to 3 in `localStorage` (`ft-what-if-scenarios`); dropdown/tabs a
 
 ---
 
-## Execution Order (Rev 3)
+## ✅ Phase T — Minimal Test Harness — DONE (2026-06-19)
+
+**Why:** The plan is correctness-first yet had zero automated tests; the 0.1/0.2 bugs are exactly what a small assertion table catches and prevents regressing. `calculations.js` is pure functions, so this is cheap.
+
+**Implemented:** Standalone `tests.html` (no framework) loads `utils.js` + `calculations.js` and runs 19 assertions, rendering a pass/fail table + summary (and a ✓/✗ document title). Open it in a browser to run. Coverage:
+- `calculateTaxFromBrackets`: `Tax(0)===0`; `Tax(18200)===0`; `Tax(18200.50)===0.095` (no fractional crack); `Tax(45000)`, `Tax(120000)`, `Tax(200000)` exact; `Tax(120k) < Tax(200k)`; boundary continuity at 45000; effective rate monotonically non-decreasing across $20k–$500k.
+- `getTaxBracketBreakdown`: Σ per-band `taxable` = gross; Σ per-band `tax` = `calculateTaxFromBrackets`; empty for gross ≤ 0.
+- `calculateYearsToFI`: `r===0` simple division; already-at-target → 0; zero & negative savings → Infinity; known compound case (≈7.84273 yr).
+
+Expected values were independently verified in Python and every assertion traced against the JS source; all 19 pass. **Effort:** XS.
+
+---
+
+## Execution Order (Rev 4)
 
 ```
 Phase   Description                                  Depends on     Effort       Status
 ──────────────────────────────────────────────────────────────────────────────────────────────
 0       Correctness hotfixes                         —              S (1 s)      ✅ DONE
-          0.1 open-ended top bracket                                                  wrong numbers >$120k
-          0.2 off-by-one band boundaries                                              untaxed fractional cracks
-          0.3 remove broken HTML backup                                               produces broken file
-          0.4 What If income+persistence (was G.1/G.3)                                tab lies about being fixed
-          0.5 token-ise What If colours                                              breaks on dark themes
-R       Event-routing refactor (data-attrs)          0 (recommended) S–M (1 s)    TODO  ← de-risks D  ← NEXT
-B       Quick wins (B.1*/B.3/B.4/B.6/B.7)            —              S (1 s)      PARTIAL (B.2✅ B.5✅; B.1→0.4)
+          0.1 open-ended top bracket                                                  ✅ verified in source
+          0.2 off-by-one band boundaries                                             ✅ verified (half-open)
+          0.3 remove broken HTML backup                                              ✅ verified removed
+          0.4 What If income+persistence (was G.1/G.3)                               ✅ verified persistent
+          0.5 token-ise What If colours                                             ✅ verified token-only
+R       Event-routing refactor (data-collection)     0 (recommended) XS–S (½ s)   ✅ DONE ← de-risks D
+T       Minimal test harness (tests.html)            —              XS           ✅ DONE (19 assertions)
+B       Quick wins (B.1*/B.3/B.4/B.6/B.7)            —              S (1 s)      ✅ DONE (B.1→0.4; B.2–B.7 ✅)
 A       Sidebar nav + layout (DEMOTED)               R recommended  L (3–4 s)    TODO  (off critical path)
-C       Collapsible info sections                    A             S (<1 s)     TODO
+C       Collapsible info sections                    —             S (<1 s)     TODO  (Rev 4: no longer gated on A)
 D       Data entry into tabs + Settings rearchitect  R (mandatory)  L (3–4 s)    TODO
 E       Tax bracket calc (E.4 only)                  D             XS           PARTIAL (E.1–E.3✅)
 F       Dashboard improvements                       D, E          M (1–2 s)    TODO
-G       What If rebuild (G.2/G.4/G.5)                D, 0.4        M–L (2–3 s)  TODO
+G.2     What If full lever set                       D, 0.4        M (1–2 s)    TODO
+G.4/G.5 What If comparison + saved scenarios         0.4           M (1–2 s)    TODO  (Rev 4: no longer gated on D)
 H       Remaining tab improvements                   D, E          S–M (1 s)    TODO
 I       Visual polish + responsive audit             all above     M (1–2 s)    TODO
 ```
@@ -265,16 +298,20 @@ I       Visual polish + responsive audit             all above     M (1–2 s)  
 Size key: XS < 0.5 session, S < 1, M 1–2, L 3+.
 
 ### Recommended path
-1. ~~**Phase 0** — fix the wrong numbers (½–1 session).~~ ✅ **DONE** — all five items ship independently.
-2. **Phase R** — decouple event routing (1 session). Makes D safe. ← **NEXT**
-3. **Phase B** remaining quick wins (parallel-friendly, no deps).
-4. **Phase A** sidebar whenever convenient — it no longer blocks anything numeric.
-5. **C → D → E.4 → (F / G / H)** then **I** last.
+1. ~~**Phase 0** — fix the wrong numbers.~~ ✅ **DONE** — all five verified in source.
+2. ~~**Phase R** — decouple event routing.~~ ✅ **DONE** — makes D safe.
+3. ~~**Phase B** remaining quick wins.~~ ✅ **DONE** (B.3/B.4/B.6/B.7).
+4. ~~**Phase T** test harness before D churns the routing.~~ ✅ **DONE** (`tests.html`, 19 assertions).
+5. **Phase A** sidebar whenever convenient — it no longer blocks anything numeric. **← next candidate (L)**
+6. **C** any time (no longer waits on A) **→ D → E.4 → (F / G.2 / H)**; **G.4/G.5** can land independently; **I** last.
+
+> **State as of 2026-06-19:** everything off the critical path's "cheap + safe" bucket is done (0, R, B, T). What remains is the large, design-bearing work: **A** (sidebar/layout, L), **D** (data-entry relocation, L — now de-risked by R), and the feature phases on top. These each warrant their own session and a layout/UX decision before coding.
 
 ### Why this order (rationale)
 - **Correctness before chrome.** A tracker that taxes $200k like $120k is worse than one that looks plain. Phase 0 items each fix a *wrong output*.
 - **Refactor before relocate.** Phase R is cheap insurance that converts Phase D from "touches every handler" into "moves markup." Skipping R means debugging silent routing breaks for days.
-- **Sidebar is not a gate.** Rev 2's A-blocks-everything dependency was already violated successfully; Rev 3 makes that official.
+- **Sidebar is not a gate.** Rev 2's A-blocks-everything dependency was already violated successfully; Rev 3 made that official; **Rev 4 removes the two remaining stealth gates (C→A, G.4/G.5→D).**
+- **Test before churn.** Phase D rewrites the routing that feeds the pure calc functions; lock their behaviour with Phase T first.
 - **Estimates bumped ~1.5×** on D and G to account for re-testing every tab and the from-scratch What If comparison/saved-scenario work.
 
 ### Don't-trust-the-output list
