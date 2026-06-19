@@ -30,11 +30,13 @@ function renderIncomeSourcesSettings() {
         const taxRemovedValue = source.taxRemoved === null || source.taxRemoved === undefined ? '' : source.taxRemoved;
         const baseId = `income-${index}`;
 
-        // Salaried: gross is entered, tax/net derived from brackets (those fields disabled).
+        // Salaried: gross is entered; net/tax per cycle are OPTIONAL overrides (from a payslip) —
+        //   when filled they take precedence over the bracket estimate, otherwise tax is estimated.
         // Self-employed: net (+ optional tax) per cycle is entered, gross back-calculated (gross disabled).
         const grossDisabled = isSelfEmployed ? 'disabled' : '';
-        const netTaxDisabled = isSelfEmployed ? '' : 'disabled';
         const autoNote = '— auto —';
+        const netPlaceholder = isSelfEmployed ? 'Net Pay/Cycle' : 'Net/Cycle (opt)';
+        const taxPlaceholder = 'Tax/Cycle (opt)';
 
         itemDiv.innerHTML = `
             <span>
@@ -67,7 +69,7 @@ function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-netpay" class="visually-hidden">Net Pay Per Cycle ${index + 1}</label>
-                <input type="number" value="${invoicedPayValue}" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" name="${baseId}-netpay" placeholder="${isSelfEmployed ? 'Net Pay/Cycle' : autoNote}" step="0.01" ${netTaxDisabled}>
+                <input type="number" value="${invoicedPayValue}" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" name="${baseId}-netpay" placeholder="${netPlaceholder}" step="0.01">
             </span>
             <span>
                  <label for="${baseId}-hours" class="visually-hidden">Hours Per Cycle ${index + 1}</label>
@@ -75,7 +77,7 @@ function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-taxremoved" class="visually-hidden">Tax Removed Per Cycle ${index + 1}</label>
-                <input type="number" value="${taxRemovedValue}" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="${isSelfEmployed ? 'Tax/Cycle (opt)' : autoNote}" step="0.01" ${netTaxDisabled}>
+                <input type="number" value="${taxRemovedValue}" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="${taxPlaceholder}" step="0.01">
             </span>
             <button class="delete-btn" data-index="${index}" data-type="incomeSource" aria-label="Delete Income Source ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -258,6 +260,18 @@ function initializeGuiSettingsForm() {
 
 function applyGuiStylesToPage() {
     const root = document.documentElement;
+
+    // Apply the FULL active-theme base FIRST. The non-customisable tokens
+    // (--text-color-primary, --border-color, --content-bg-color, tints, tab colours) are
+    // derived from the preset, not from the customisable subset below. Doing this here — the
+    // single chokepoint every appearance change funnels through — means any base-changing
+    // action (theme reset, factory reset, JSON import, load) can't leave those tokens on the
+    // previous theme, which was the recurring "split/half-applied theme" bug. The picker subset
+    // is layered on top immediately after (and merged into the FOUC cache below).
+    if (typeof applyTheme === 'function' && typeof THEMES !== 'undefined') {
+        applyTheme(THEMES[guiSettingsData.theme] || THEMES.default);
+    }
+
     const pickerVars = {
         '--primary-bg-color-start': guiSettingsData.primaryBgStart,
         '--primary-bg-color-end':   guiSettingsData.primaryBgEnd,

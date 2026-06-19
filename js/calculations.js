@@ -11,20 +11,33 @@ function calculateTotals(currentData = financeData) {
 
         let sourceGrossAnnual, sourceAnnualNet, sourceAnnualTax;
 
+        // Actual per-cycle figures from a payslip, when the user has entered them.
+        // These are the source of truth in BOTH modes (they capture Medicare levy,
+        // HELP/HECS, etc. that the bracket estimate omits); brackets are the fallback.
+        const netPerCycle = parseFloat(source.invoicedPayPostTax);
+        const taxPerCycle = parseFloat(source.taxRemoved);
+        const hasNetOverride = !isNaN(netPerCycle) && source.invoicedPayPostTax !== null && source.invoicedPayPostTax !== '';
+        const hasTaxOverride = !isNaN(taxPerCycle) && source.taxRemoved !== null && source.taxRemoved !== '';
+
         if (type === 'selfEmployed') {
             // Path B — enter net pay per cycle (+ optional tax per cycle); gross is back-calculated.
-            const netPerCycle = parseFloat(source.invoicedPayPostTax);
-            const taxPerCycle = parseFloat(source.taxRemoved);
-            sourceAnnualNet = (!isNaN(netPerCycle) && source.invoicedPayPostTax !== null && source.invoicedPayPostTax !== '')
-                ? netPerCycle * payCycles : 0;
-            sourceAnnualTax = (!isNaN(taxPerCycle) && source.taxRemoved !== null && source.taxRemoved !== '')
-                ? Math.max(0, taxPerCycle * payCycles) : 0;
+            sourceAnnualNet = hasNetOverride ? netPerCycle * payCycles : 0;
+            sourceAnnualTax = hasTaxOverride ? Math.max(0, taxPerCycle * payCycles) : 0;
             sourceGrossAnnual = sourceAnnualNet + sourceAnnualTax;
         } else {
-            // Path A — salaried: enter gross, tax estimated from the progressive brackets, net derived.
+            // Path A — salaried: enter gross. Honour the actual net/tax override when given;
+            // otherwise estimate tax from the progressive brackets and derive net.
             sourceGrossAnnual = source.grossAnnual || 0;
-            sourceAnnualTax = calculateTaxFromBrackets(sourceGrossAnnual, currentData.taxBrackets);
-            sourceAnnualNet = Math.max(0, sourceGrossAnnual - sourceAnnualTax);
+            if (hasTaxOverride) {
+                sourceAnnualTax = Math.max(0, taxPerCycle * payCycles);
+                sourceAnnualNet = hasNetOverride ? netPerCycle * payCycles : Math.max(0, sourceGrossAnnual - sourceAnnualTax);
+            } else if (hasNetOverride) {
+                sourceAnnualNet = netPerCycle * payCycles;
+                sourceAnnualTax = Math.max(0, sourceGrossAnnual - sourceAnnualNet);
+            } else {
+                sourceAnnualTax = calculateTaxFromBrackets(sourceGrossAnnual, currentData.taxBrackets);
+                sourceAnnualNet = Math.max(0, sourceGrossAnnual - sourceAnnualTax);
+            }
         }
 
         totalGrossAnnualIncome += sourceGrossAnnual;

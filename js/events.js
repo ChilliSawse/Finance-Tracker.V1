@@ -40,12 +40,14 @@ function setupEventListeners() {
         });
     }
 
-    // Settings Tab: Dynamic Lists (Income, Tax Brackets, Assets, Liabilities, Allocation, Expenses)
-    const settingsContent = getElement('settings'); // Main settings tab container
-    if (settingsContent) {
-        settingsContent.addEventListener('click', handleSettingsClickEvents);
-        settingsContent.addEventListener('change', handleSettingsChangeEvents);
-    }
+    // Settings dynamic lists (Income, Tax Brackets, Assets, Liabilities, Allocation, Expenses).
+    // Phase D — delegated at the document level rather than on #settings, because these
+    // sections now live in per-page settings modals (body-level) as well as the Settings tab.
+    // Both handlers are fully guarded — they only act on elements carrying the settings
+    // add-button ids, a `.delete-btn` with a settings `data-type`, or a `data-field` +
+    // whitelisted `data-collection` — so What If / GUI inputs are never matched.
+    document.addEventListener('click', handleSettingsClickEvents);
+    document.addEventListener('change', handleSettingsChangeEvents);
     
     // What If Tab Events
     const whatIfContent = getElement('whatIf');
@@ -71,20 +73,15 @@ function setupEventListeners() {
     guiElementsToWatch.forEach(id => {
         const el = getElement(id);
         if (el) {
-            // B.6 — live preview on every input/change (colour pickers fire 'input' continuously
-            // while dragging). Preview only; Save persists via actionApplyGuiSettings.
+            // Appearance auto-saves: 'input' previews live while dragging/typing; 'change'
+            // commits + persists once the value settles (no "Save Appearance" button).
             el.addEventListener('input', applyGuiSettingsLivePreview);
-            el.addEventListener('change', applyGuiSettingsLivePreview);
+            el.addEventListener('change', commitGuiSettings);
         }
     });
-// --- JSON IMPORT LISTNER ---
-    const jsonImportSettingsInput = getElement('json-import-settings');
-    if (jsonImportSettingsInput) {
-        jsonImportSettingsInput.addEventListener('change', (event) => {
-            handleJSONImport(event, false); // Pass 'false' or remove if 'isGuiTabImport' isn't used
-        });
-    }
-
+// --- JSON IMPORT LISTENER ---
+    // (The former Settings-tab import input was removed with the tab in D.6; import now
+    //  goes solely through the appearance modal's #json-import-gui below.)
     const jsonImportGuiInput = getElement('json-import-gui');
     if (jsonImportGuiInput) {
         jsonImportGuiInput.addEventListener('change', (event) => {
@@ -121,11 +118,10 @@ function handleSettingsClickEvents(event) {
         else if (dataType === 'nonEssentialExpense') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('nonEssentialExpenses', index));
     }
 
-    // Action buttons
+    // Data action buttons (now live in the appearance/settings modal; D.6).
+    // Export/Import data is handled by the modal's own export-json-gui / import-json-gui-btn.
     else if (target.id === 'set-current-default') actionSetCurrentAsDefault();
     else if (target.id === 'reset-to-defaults') actionResetToAppDefaults();
-    else if (target.id === 'export-data-json') actionExportDataJSON();
-    else if (target.id === 'import-data-json-btn') getElement('json-import-settings').click();
 
 }
 
@@ -255,10 +251,7 @@ function handleWhatIfChangeEvents(event) {
 
 function handleGuiSettingsClickEvents(event) {
     const target = event.target;
-    if (target.id === 'apply-gui-settings') {
-        actionApplyGuiSettings();
-        return;
-    }
+    // (No "Save Appearance" button — appearance auto-saves on change; see commitGuiSettings.)
     if (target.id === 'reset-gui-settings') { actionResetGuiToDefaults(); return; }
     if (target.id === 'export-json-gui') { actionExportDataJSON(); return; }
     if (target.id === 'import-json-gui-btn') { getElement('json-import-gui').click(); return; }
@@ -281,6 +274,12 @@ function handleGuiSettingsClickEvents(event) {
         setValue('gui-card-bg-start',    preset.panel);
         setValue('gui-card-bg-end',      tokens['--card-bg-gradient-end']);
         setValue('gui-accent-color',     preset.accent);
+
+        // Commit those picker values into guiSettingsData so the per-colour fields match the
+        // preset. Without this, only `theme` changed while primaryBgStart/cardBgStart/… stayed
+        // stale; on reload loadTheme() applies the preset, then applyGuiStylesToPage() splatters
+        // the stale per-colour subset back over it → a split/half-applied theme. (Bug 2026-06-20.)
+        syncGuiSettingsFromInputs();
 
         // Persist theme name + semantic colours immediately
         guiSettingsData.theme = key;
@@ -573,24 +572,28 @@ function syncGuiSettingsFromInputs() {
 
 // B.6 — live preview while the user drags a colour picker / edits a field. Applies styles
 // immediately but does NOT persist; persistence happens on Save (or the debounced autosave).
+// Live preview while a control is being dragged/typed — no persistence (avoids spamming
+// autoSave on every 'input' tick as a colour picker drags).
 function applyGuiSettingsLivePreview() {
     syncGuiSettingsFromInputs();
     applyGuiStylesToPage();
 }
 
-function actionApplyGuiSettings() {
+// Commit + persist once a value settles ('change'). Appearance auto-saves (no Save button).
+function commitGuiSettings() {
     syncGuiSettingsFromInputs();
     applyGuiStylesToPage();
     if (autoSave) autoSave.onDataChange();
-    showCustomModal('Settings saved!', 'success');
 }
 
 function actionResetGuiToDefaults() {
-    if (confirmAction('Reset GUI settings to application defaults?')) {
+    if (confirmAction('Reset appearance to application defaults?')) {
         guiSettingsData = JSON.parse(JSON.stringify(defaultGuiSettings));
-        initializeGuiSettingsForm(); // This also calls applyGuiStylesToPage
+        // initializeGuiSettingsForm → applyGuiStylesToPage now applies the full theme base
+        // (not just the customisable subset), so the whole UI returns to default cleanly.
+        initializeGuiSettingsForm();
         if (autoSave) autoSave.onDataChange();
-        showCustomModal('GUI Settings reset.');
+        showCustomModal('Appearance reset.');
     }
 }
 

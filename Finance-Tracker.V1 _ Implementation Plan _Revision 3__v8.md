@@ -1,7 +1,18 @@
-# Finance-Tracker.V1 — Implementation Plan (Revision 4)
+# Finance-Tracker.V1 — Implementation Plan (Revision 5)
 
-Last updated: 2026-06-19 (Phase R + Phase B in progress)
-Supersedes Revision 3. Reflects completed work (orig. Phases 1–3, 5–7, plus B.2, B.5, E.1–E.3, all of Phase 0) and re-sequences all remaining work around a **correctness-first** philosophy.
+Last updated: 2026-06-20
+Supersedes Revision 4. Folds in the *Current and Proposed Features v2* document: a new correctness bug (salaried pay/tax), a re-cast Phase D (per-page settings modals instead of inline forms), and four new feature items (F.4, G.6, I.7, plus the allocation lever). Keeps the **correctness-first** philosophy.
+
+---
+
+## What changed in Rev 5 (read me first)
+
+The *Current and Proposed Features v2* doc was reconciled against this plan on 2026-06-20. ~70% of its "planned additions" already mapped onto existing phases (D, F, G); this revision absorbs the rest:
+
+1. **New correctness bug → Phase 0.6 (do first).** v2's ⚠ Bug Note reports salaried fortnightly income *and* per-cycle tax computed wrong. Per "correctness before chrome," this reopens the Phase 0 bucket ahead of all design work. See 0.6.
+2. **Phase D re-cast: per-page settings modals, not inline forms.** Decision locked with user (2026-06-20). Each tab shows **read-only display cards** with a gear button opening a **per-page settings modal** (reusing the A.4 focus-trapped modal pattern), rather than moving editable forms inline. Satisfies v2 Overall Idea #3. Phase R's `data-collection` routing makes this safe; the one remaining touch is **hoisting the delegated listeners off `#settings`** (they move with the forms into modals). See re-cast Phase D.
+3. **Four new feature items.** `F.4` dashboard essential/non-essential breakdown card; `G.6` "How much can I save in X time?" goal-seek; `I.7` softer essential-expense palette; an **allocation lever** added to `G.2`. `D.3` gains live allocation→savings recompute; `F.2` widens from "Edit →" affordances to whole-card linking.
+4. **Phase C content pass remains.** The collapsible info component shipped (C done); v2's "expanded info panels" is now a copy-authoring task, not engineering — tracked as a note under Phase C / D.5.
 
 ---
 
@@ -77,6 +88,22 @@ Self-contained, no layout dependency, each shippable independently. These fix wr
 **Bug:** Results HTML hardcodes hex colours (`#1976d2`, `#f0f8ff`, …), so the panel renders broken on dark themes — contradicting the whole token effort.
 **Fix:** Replace hardcoded hex with CSS variables (`--accent`, `--panel`, `--color-positive/negative`).
 *(Could live in Phase I, but it's cheap and prevents an obviously-broken screenshot now.)*
+
+### 0.6 — Salaried mode ignores the user's actual net/tax override (NEW — Rev 5) — ✅ DONE (2026-06-20)
+
+> **Implemented 2026-06-20.** `calculations.js`: salaried path now honours the per-cycle override — `taxRemoved` (and `invoicedPayPostTax`) take precedence when present; brackets are the fallback only when both are blank (one `hasNetOverride`/`hasTaxOverride` rule shared by both modes). `uiSettings.js`: removed the `disabled` attribute on Net Pay/Cycle + Tax Removed for salaried (now optional-override inputs with "(opt)" placeholders). `tests.html`: added 6 assertions — salaried-with-actuals reproduces $18,148 tax / $61,351.94 net and equals self-employed; blank net/tax falls back to the bracket estimate. HELP/HECS + Medicare estimate modelling deferred (optional follow-up, not in scope). *Not yet browser-run by me — math verified by hand and against the user's live figures.*
+
+**ROOT-CAUSED 2026-06-20 (against live screenshots + source). Not a math bug — the tax engine is correct.** `incomeType` silently switches between two calculation paths in `calculateTotals()` (`calculations.js:14–28`):
+- **Self-employed (Path B):** uses the user-entered `invoicedPayPostTax` (Net Pay/Cycle) and `taxRemoved` (Tax/Cycle) directly → accurate to real pay. *(Verified: 698 × 26 = $18,148 tax; 2359.69 × 26 = $61,351.94 net.)*
+- **Salaried (Path A):** **discards** those two fields and estimates tax from the brackets (`calculateTaxFromBrackets(grossAnnual)`); the UI even disables the inputs (`uiSettings.js:36`, `netTaxDisabled = isSelfEmployed ? '' : 'disabled'`). *(Verified: $14,638 est. on $79,500 → net $64,862 → $2,494.69/fortnight — vs the real $2,359.69.)*
+
+**Why the salaried estimate is ~$3,510/yr low:** bracket income tax $14,638 is *correct as income tax*, but omits **Medicare levy** (2% ≈ $1,590) and **HELP/HECS** (≈$1,920 at ~2.4% — the user has a study debt). Sum ≈ $18,148 = the user's real withholding, which their `taxRemoved` field already captures exactly. The `÷26` fortnightly factor is **fine** (79,500 ÷ 26 = 3,057.69; pay genuinely is fortnightly) — the earlier ÷26.0893 hypothesis was wrong.
+
+**The bug is behavioural:** salaried mode violates the app's own stated contract (Tax Brackets card: *"Used to estimate net income for any source where 'Net Pay/Cycle' and 'Tax Removed/Cycle' are left blank"*) by disabling and ignoring those fields.
+
+**Fix (chosen):** Make **salaried honour the Net Pay/Cycle + Tax Removed override when filled, falling back to the bracket estimate only when blank** — identical to self-employed. Stop disabling those inputs for salaried (`uiSettings.js:35–36`); collapse Path A/B into one "override-if-present, else estimate" rule in `calculateTotals()`. A PAYG employee knows their exact net/tax from a payslip and should be allowed to enter it.
+**Optional follow-up (not the fix):** add Medicare levy + HELP/HECS modelling to the *estimate* path for users who leave the fields blank. Still an estimate; keep the "estimate" label.
+**Test:** salaried source with net/tax filled reproduces the self-employed figures exactly (net/cycle $2,359.69, tax/yr $18,148); salaried source with those fields blank falls back to the bracket estimate; add both as assertions in `tests.html` (Phase T).
 
 ---
 
@@ -161,27 +188,53 @@ Every block rewritten to a 2–3 sentence intro + 3 "How to use" bullets + a nat
 
 ---
 
-## Phase D — Data Entry Into Tabs + Settings Rearchitecture
+## Phase D — Display Tabs + Per-Page Settings Modals (RE-CAST — Rev 5)
 
-The largest *markup* change. **Now low-risk** because Phase R decoupled handler routing. Depends on R (mandatory) and ideally C.
+**Decision (locked with user, 2026-06-20):** data-entry does **not** move inline into tabs. Instead each tab renders **read-only display cards** and gets a **gear button → per-page settings modal** for editing that section (v2 Overall Idea #3). Editing is deliberate; tabs stay scannable.
 
-### D.1 — Income tab
-Move source list + "Add income source" (prominent, top) + tax bracket table into the Income panel. Inline expand-to-edit per row.
+**Reuses A.4 infra.** Generalise A.4's GUI modal into a reusable shell — `openSettingsModal(section)` — with the focus trap, Escape/backdrop close, and restore-to-trigger already built. Default to **one modal shell, swapped content** (single stacking context), not one modal per section; treat that as a D implementation note, not a blocker.
 
-### D.2 — Expenses tab
-Move essential/non-essential lists in; group under collapsible category headers with category totals; per-category (or top-level) "Add expense".
+**Routing caveat (the one real risk).** Phase R made field→collection routing DOM-independent via `data-collection`, so the forms can move freely. BUT R left the delegated listeners attached to `#settings`. Moving the forms into modals takes them out of `#settings`, so **D must hoist those listeners to `document` (or re-attach on modal open)**. This is the single handler touch R flagged as still owed — budget for it explicitly.
 
-### D.3 — Savings tab
-Move allocation inputs in; enforce sum = 100% (auto-balance remainder or block save with clear message); benchmark label ("15% · aim for 20–30%").
+**Still low-risk** because R removed the dangerous part (silent per-field mis-routing). Depends on R (mandatory, done) and ideally C (done).
 
-### D.4 — Liabilities tab
-Move liabilities list in; add `interestRate` field per liability (`financeData.liabilities[n].interestRate`); cost badge (>10% red, 5–10% amber); simple years-to-zero debt projection (division, no amortisation).
+> **Foundation + D.1 implemented 2026-06-20** (first vertical slice; the rest of D replicates this exact pattern):
+> - **Reusable modal shell** — `setupGuiModal()` generalised into `setupModal(modalId, openBtnId, onOpen)` in `main.js` (focus trap / Escape / backdrop / restore-to-trigger unchanged; close button now found via `.modal-close`). GUI modal refactored onto it (behaviour-preserving). New `setupPageSettingsModals()` wires the per-page modals.
+> - **Listener hoist (the mandatory Phase D touch)** — `handleSettingsClickEvents`/`handleSettingsChangeEvents` moved from `#settings` to **`document`** (`events.js`). Verified both handlers are fully guarded (settings add-button ids / `.delete-btn` + settings `data-type` / `data-field` + whitelisted `data-collection`), so What If + GUI inputs are never matched and there's no double-fire with the dashboard-period or currency listeners.
+> - **CSS** — `.tab-settings-bar` + `.tab-edit-btn` gear-bar styles.
+> - **Not yet browser-run by me** — structurally verified (single-occurrence ids, render funcs still target the relocated containers by id, populated on load via `initializeSettingsUI()` and again on modal open).
 
-### D.5 — Settings tab (lightweight)
-After the move, Settings keeps only: FI params (multiple, return, current assets) + sensitivity hints; currency selector; display period; data buttons (Export/Import JSON, Clear, Save as My Defaults, Reset). Remove all data-entry sections.
+### ✅ D.1 — Income tab — DONE (2026-06-20)
+Income panel gets a right-aligned **"⚙ Edit income & tax"** gear bar (`#open-income-settings`) opening `#income-settings-modal`. The Income Sources + Tax Brackets sections (markup unchanged, same inner ids `income-sources-settings`/`tax-brackets-settings`) were moved out of the Settings tab into that modal. Display cards on the tab are untouched. *(Original spec: display cards + modal with Income Sources name/type/gross/cycle/hours/primary + Tax Brackets — delivered as a literal relocation; the bracket card's "used in calculations" relabel is E.4.)*
 
-### D.6 — GUI Settings → modal
-Remove from nav; gear button (A.4) opens it. No functional change, placement only.
+### ✅ D.2 — Expenses tab — DONE (2026-06-20)
+"⚙ Edit expenses" gear (`#open-expenses-settings`) → `#expenses-settings-modal` holding the Essential + Non-Essential Expenses sections (relocated; ids unchanged). *Category-grouping/totals polish deferred to H.2; this slice is the relocation.*
+
+### ✅ D.3 — Savings tab — DONE (2026-06-20)
+"⚙ Edit assets, allocation & FI" gear (`#open-savings-settings`) → `#savings-settings-modal` holding **Assets + Money Allocation + FI Settings** (allocation moved here per v2). **Live recompute already holds** — allocation/FI edits route through the document-level handler → `updateDataAndUI()`, so the Savings displays update immediately. *Sum-to-100 auto-balance + benchmark label deferred to H.3 (the existing "should equal 100%" total moved across as-is).*
+
+### ✅ D.4 — Liabilities tab — DONE (2026-06-20)
+"⚙ Edit liabilities" gear (`#open-liabilities-settings`) → `#liabilities-settings-modal` holding Liabilities Management incl. the existing `interestRate` field + Total Liabilities readout. *Cost badge + years-to-zero projection deferred to H.4.*
+
+### ✅ D.5 — Settings tab removed entirely — DONE (2026-06-20)
+Once the six data-entry sections relocated to per-tab modals and currency moved to the appearance modal (D.6), the Settings tab held nothing but data actions — so it was **removed completely** (panel + sidebar nav button). The two remaining unique actions (**Save as My Defaults**, **Reset to Factory Defaults**) moved into the appearance modal's new "💾 Data" section; Export/Import was already duplicated there as "Backup". `VALID_TABS` drops `settings` (legacy saved value falls back to dashboard); the obsolete `showTab('settings')` liabilities-total branch removed (the readout is kept fresh by `renderLiabilitiesSettings()`/`updateAllUI()`). Dead handlers for the removed Export/Import-data buttons cleaned up. *Info-panel content pass (copywriting) still outstanding.*
+
+### ✅ D.6 — Settings consolidated into one modal + Currency relocation — DONE (2026-06-20)
+Topbar gear opens `#gui-settings-modal`, now the single settings hub (title "⚙️ Settings", gear `aria-label` "Settings"): Appearance + Typography + **🌍 General (currency)** + one consolidated **💾 Save, Reset & Backup** section. **Currency moved into this modal** — what v2 explicitly asks for ("Currency Selector stays with GUI Settings", features doc §GUI Settings + Overall Idea #3). `#currency-select` id unchanged so its dedicated change listener + `setValue()` still bind.
+
+**Action consolidation (user review, 2026-06-20):** the old standalone bottom button row merged into the Data section. Remaining actions: **"🎨 Reset Appearance"** (`reset-gui-settings`), **"🌟 Save as My Defaults"** (`set-current-default`), **"🔄 Reset to Factory Defaults"** (`reset-to-defaults`), Export/Import Backup. A one-line `.settings-hint` explains Appearance vs Defaults vs Backup. *(Corrects an earlier Rev 5 draft that wrongly kept currency in the Settings tab.)*
+
+**Appearance auto-save (user decision, 2026-06-20):** to kill the two-different-save-behaviours inconsistency, **all appearance changes now persist automatically** and the **"Save Appearance" button was removed** (`apply-gui-settings` / `actionApplyGuiSettings` deleted). Theme swatches already auto-saved (after the theme-persistence bugfix); custom colour/typography controls now persist via a new `commitGuiSettings()` wired to each control's `change` event (`input` still drives no-persist live preview so dragging stays smooth). Net: pick a theme, drag a colour, or change a font → applied + saved; reload keeps it.
+
+### Theme "split look" root-cause fix (2026-06-20)
+The split/half-applied theme bug recurred across three triggers (swatch reload, then Reset Appearance) because the appearance system has **two token layers**: the *full* preset base (`applyTheme(THEMES[name])` — text/border/content-bg/tints/tab colours) and a *customisable subset* (`applyGuiStylesToPage` — bg/card/accent/semantic/typography). Any action that wrote only the subset left the base on the previous theme. **Fix:** `applyGuiStylesToPage()` now applies the full preset base **first** (single chokepoint every appearance change funnels through), then overlays the subset — so theme reset, factory reset, JSON import, load, and live preview are all consistent by construction. The earlier swatch-click `syncGuiSettingsFromInputs()` fix stays (keeps the per-colour fields matching the picked preset). Reset Appearance simplified to rely on the chokepoint.
+
+### Theme persistence bugfix (found during D review, 2026-06-20)
+**Bug:** save a theme as default, switch to another preset (e.g. Midnight) *without* "Save Appearance", reload → a split/half-applied theme (dark page, light cards, near-invisible text). **Root cause:** the preset-swatch handler (`events.js`) set `guiSettingsData.theme` + the picker *inputs* + persisted, but never wrote the preset colours into `guiSettingsData.primaryBgStart/cardBgStart/…`. On reload `loadTheme()` applies the preset by name, then `applyGuiStylesToPage()` overlays the **stale** per-colour subset (still the old theme) → conflict (the subset it overrides ≠ the tokens it doesn't, e.g. `--text-color-primary`). **Fix:** swatch click now calls `syncGuiSettingsFromInputs()` to commit the preset colours into `guiSettingsData`, keeping the name and per-colour representations consistent. *(Legacy already-divergent saves self-heal by re-picking a theme once.)*
+
+### Polish applied during D (from user review of D.1)
+- **Themed gear button** — `.tab-edit-btn` was rendering as hardcoded-grey `.btn-secondary`; re-styled as a themed outline (accent border/text, accent fill on hover) via two-class specificity. Dropped `btn-secondary` from the markup.
+- **Cramped rows / resizable** — data modals use `.modal--wide` (`min(1100px, 95vw)`) + `.modal--resizable` (`resize: both`, drag handle) so the 9-column income row has room and the user can resize; dynamic lists get a `min-width` + horizontal scroll fallback.
 
 ---
 
@@ -201,11 +254,14 @@ Move the bracket table to the Income tab (with D.1); final label "Tax Brackets (
 ### F.1 — Empty state
 No income + no expenses → welcome empty state with three action cards (Add income / Add expenses / Set FI goal) linking to tabs. Auto-hides once data exists.
 
-### F.2 — Quick-action links
-"Edit →" affordance on each stat card → relevant tab (income→Income, expenses→Expenses, net worth→Liabilities, FI→Settings).
+### F.2 — Card linking & interactivity (widened — Rev 5)
+v2 wants the **whole card clickable**, not just an "Edit →" affordance — each dashboard card becomes a link to its tab (Income Overview → Income, Outgoing vs Savings / new breakdown → Expenses, Net Worth → Savings/Liabilities, Income Allocation → Savings, FI → Savings). Keep a clear hover/focus affordance and `role`/keyboard semantics so it's accessible, not just a click target.
 
 ### F.3 — Upcoming bills
-New `financeData.upcomingBills[]` (`name`, `amount`, `dueDate`, `frequency`). Dashboard "Upcoming this month" card (due ≤30 days). Edited in a new Expenses "Bills" section; excluded from monthly totals unless due this period.
+New `financeData.upcomingBills[]` (`name`, `amount`, `dueDate`, `frequency`). Dashboard "Upcoming this month" card (due ≤30 days). Edited in the Expenses "Bills" section (D.2 modal); excluded from monthly totals unless due this period.
+
+### F.4 — Expense breakdown card (NEW — Rev 5)
+Dashboard card showing the **essential vs non-essential split** directly (mirrors the Expenses-tab stat, surfaced on the dashboard). Small bar/ratio + dollar figures per period; respects the active display period; clickable through to Expenses (F.2). Uses the softer essential palette from I.7. Effort XS–S.
 
 ---
 
@@ -217,8 +273,8 @@ New `financeData.upcomingBills[]` (`name`, `amount`, `dueDate`, `frequency`). Da
 
 ### G.1 — Scenario persistence — *moved to Phase 0.4*
 
-### G.2 — Full lever set
-Levers for income, essential expenses, non-essential expenses (% reduction), savings-rate boost (override), liabilities adjustment (total debt), funding allocation shift (per-goal %).
+### G.2 — Full lever set (v2: "full-setting access for scenarios")
+Expose **every** base-app setting as an adjustable lever, seeded from current state but fully overridable: income, essential expenses, non-essential expenses (% reduction), savings-rate boost (override), liabilities adjustment (total debt), FI assumptions (multiple/return/withdrawal), assets (±), and the **Income Allocation Strategy** (per-category %, sum-to-100 enforced — v2 explicitly wants the allocation slider as a scenario lever). All scenario-only; never mutate live data (already true since 0.4).
 
 ### G.3 — Income calculation fix — *moved to Phase 0.4*
 Operate on **totals**: apply income change directly to net; never touch per-source gross.
@@ -229,6 +285,12 @@ Operate on **totals**: apply income change directly to net; never touch per-sour
 ### G.5 — Save scenarios
 Name + store up to 3 in `localStorage` (`ft-what-if-scenarios`); dropdown/tabs at top; compare two side-by-side in delta-table format; store full lever state + name.
 
+### G.6 — "How much can I save in X time?" goal-seek (NEW — Rev 5)
+A target-driven mode on top of the G.2 lever set: user sets a **target timeframe** (and optionally a target amount / "by date") and adjusts every lever — income, expenses, allocation strategy — to see **how much accumulates in each account by that date**, fully interactive. Two framings, both useful:
+- **Forward:** given these levers, project the balance per allocation account at the target date.
+- **Inverse (goal-seek):** given a target amount by a date, surface what's required (e.g. needed monthly savings / allocation split) and how close the current levers get.
+Builds on the corrected, persistent 0.4 state and the G.2 levers. Helps users plan a split when they need $X by a date while still covering other expenses. **Decision needed at build time:** forward-projection only (simpler, M) vs full inverse solver (more math, M–L). Recommend shipping forward first, inverse as a follow-up. Depends on G.2.
+
 ---
 
 ## Phase H — Remaining Tab Improvements
@@ -236,6 +298,7 @@ Name + store up to 3 in `localStorage` (`ft-what-if-scenarios`); dropdown/tabs a
 ### H.1 — Income — top "Add income source" button; total Gross/Tax/Net summary row.
 ### H.2 — Expenses — name search filter; category grouping polish (with D.2).
 ### H.3 — Savings — collapsible allocation explainer; benchmark label; live sum enforcement.
+### H.6 — Savings — **Assets display card** (NEW, user request 2026-06-20). Assets are currently only surfaced on the Dashboard's Net Worth card; add a card on the Savings tab listing each asset (name + balance) with a total, matching the existing card style. Natural complement to D.3 (assets are *edited* in the Savings gear modal but not *shown* on the tab). Read-only display; reuse the dashboard's asset-render logic. Effort XS.
 ### H.4 — Liabilities — interest field + cost indicator; debt-free projection (with D.4).
 ### H.5 — Settings — replace reset `confirm()` with inline pattern (reuse B.4); FI sensitivity hints.
 
@@ -249,6 +312,7 @@ Name + store up to 3 in `localStorage` (`ft-what-if-scenarios`); dropdown/tabs a
 ### I.4 — Responsive audit @ 375/768/1024/1440 — no horizontal scroll, touch targets ≥44px, forms usable, cards reflow.
 ### I.5 — Motion — `prefers-reduced-motion` guard everywhere; sidebar `width 0.2s`; modal `opacity`+`scale(0.98)` `0.15s`; no tab-switch animation.
 ### I.6 — *(folded in from 0.5 if not already done)* token-only colours in What If results.
+### I.7 — Softer essential-expense palette (NEW — Rev 5) — gentler tones for essential expenses so spending on necessities doesn't read as "bad"; **non-essential stays orange** as the warning/discretionary cue. Token-only change (add an essential-expense semantic token; apply on the Expenses tab + the F.4 dashboard breakdown card). Effort XS. Can ship independently of the rest of I.
 
 ---
 
@@ -265,29 +329,31 @@ Expected values were independently verified in Python and every assertion traced
 
 ---
 
-## Execution Order (Rev 4)
+## Execution Order (Rev 5)
 
 ```
 Phase   Description                                  Depends on     Effort       Status
 ──────────────────────────────────────────────────────────────────────────────────────────────
-0       Correctness hotfixes                         —              S (1 s)      ✅ DONE
+0       Correctness hotfixes                         —              S (1 s)      ✅ DONE (0.1–0.5)
           0.1 open-ended top bracket                                                  ✅ verified in source
           0.2 off-by-one band boundaries                                             ✅ verified (half-open)
           0.3 remove broken HTML backup                                              ✅ verified removed
           0.4 What If income+persistence (was G.1/G.3)                               ✅ verified persistent
           0.5 token-ise What If colours                                             ✅ verified token-only
+0.6     Salaried net/tax override fix                —              S            ✅ DONE (2026-06-20)
 R       Event-routing refactor (data-collection)     0 (recommended) XS–S (½ s)   ✅ DONE ← de-risks D
 T       Minimal test harness (tests.html)            —              XS           ✅ DONE (19 assertions)
 B       Quick wins (B.1*/B.3/B.4/B.6/B.7)            —              S (1 s)      ✅ DONE (B.1→0.4; B.2–B.7 ✅)
 A       Sidebar nav + layout                         R recommended  L (3–4 s)    ✅ DONE PR1 (mobile bottom-nav → PR2)
 C       Collapsible info sections                    —             S (<1 s)     ✅ DONE (5 sections incl. What If)
-D       Data entry into tabs + Settings rearchitect  R (mandatory)  L (3–4 s)    TODO
+D       Display tabs + per-page settings modals      R (mandatory)  L (3–4 s)    ✅ DONE (D.1–D.6, 2026-06-20)
 E       Tax bracket calc (E.4 only)                  D             XS           PARTIAL (E.1–E.3✅)
-F       Dashboard improvements                       D, E          M (1–2 s)    TODO
-G.2     What If full lever set                       D, 0.4        M (1–2 s)    TODO
-G.4/G.5 What If comparison + saved scenarios         0.4           M (1–2 s)    TODO  (Rev 4: no longer gated on D)
+F       Dashboard improvements (incl. F.4 breakdown) D, E          M (1–2 s)    TODO
+G.2     What If full lever set (incl. allocation)    D, 0.4        M (1–2 s)    TODO
+G.4/G.5 What If comparison + saved scenarios         0.4           M (1–2 s)    TODO  (not gated on D)
+G.6     "How much can I save in X time?" goal-seek   G.2           M (–L)       TODO  (NEW)
 H       Remaining tab improvements                   D, E          S–M (1 s)    TODO
-I       Visual polish + responsive audit             all above     M (1–2 s)    TODO
+I       Visual polish + responsive (incl. I.7)       all above     M (1–2 s)    TODO  (I.7 can ship anytime)
 ```
 
 Size key: XS < 0.5 session, S < 1, M 1–2, L 3+.
@@ -298,9 +364,9 @@ Size key: XS < 0.5 session, S < 1, M 1–2, L 3+.
 3. ~~**Phase B** remaining quick wins.~~ ✅ **DONE** (B.3/B.4/B.6/B.7).
 4. ~~**Phase T** test harness before D churns the routing.~~ ✅ **DONE** (`tests.html`, 19 assertions).
 5. ~~**Phase A** sidebar~~ ✅ **DONE (PR1)** — app-shell + vertical sidebar + gear modal; mobile bottom-nav deferred to A-PR2.
-6. **C** any time (no longer waits on A) **→ D → E.4 → (F / G.2 / H)**; **G.4/G.5** can land independently; **I** last. **← next candidates**
+6. **0.6 first** (correctness — the user's own pay is wrong) **→ D** (display tabs + per-page modals; hoist listeners off `#settings`) **→ E.4 → (F incl. F.4 / G.2 incl. allocation / H) → G.6 → I incl. I.7**. **G.4/G.5** and **I.7** can land independently anytime. **← next candidates**
 
-> **State as of 2026-06-19:** everything off the critical path's "cheap + safe" bucket is done (0, R, B, T). What remains is the large, design-bearing work: **A** (sidebar/layout, L), **D** (data-entry relocation, L — now de-risked by R), and the feature phases on top. These each warrant their own session and a layout/UX decision before coding.
+> **State as of 2026-06-20:** the "cheap + safe" bucket is done (0.1–0.5, R, B, T, A-PR1, C). Remaining work: **0.6** (correctness bug, do first), then the large design-bearing **D** (now modals, de-risked by R), and the feature phases (F/G/H/I) on top. Each warrants its own session; D and G.6 carry a build-time decision noted in their sections.
 
 ### Why this order (rationale)
 - **Correctness before chrome.** A tracker that taxes $200k like $120k is worse than one that looks plain. Phase 0 items each fix a *wrong output*.
@@ -310,10 +376,11 @@ Size key: XS < 0.5 session, S < 1, M 1–2, L 3+.
 - **Estimates bumped ~1.5×** on D and G to account for re-testing every tab and the from-scratch What If comparison/saved-scenario work.
 
 ### Don't-trust-the-output list
-All four items resolved in Phase 0:
+Four items resolved in Phase 0; **one new (0.6) outstanding:**
 - ~~Tax for incomes above the top default band~~ → **fixed by 0.1** (top band now `max: Infinity`).
 - ~~Any income near a band boundary~~ → **fixed by 0.2** (half-open `[min, max)` intervals).
 - ~~"Save & Download HTML" backup~~ → **removed in 0.3** (JSON export/import is the supported path).
 - ~~What If income scenarios~~ → **fixed by 0.4** (direct net-override totals approach; persistence across tab switches).
+- ~~Salaried net/tax~~ → **fixed by 0.6** (Rev 5, 2026-06-20). Salaried now honours the actual Net Pay/Cycle + Tax Removed override (falls back to bracket estimate only when blank), matching self-employed. *(Optional later: model Medicare levy + HELP/HECS in the blank-field estimate.)*
 
 \* B.1 (What If persistence) is fast-tracked into Phase 0.4 as a correctness item.

@@ -32,7 +32,7 @@
             </div>
             <div class="topbar-actions">
                 <button class="btn btn-install" id="install-app-btn" style="display: none;">📥 Install App</button>
-                <button class="icon-btn" id="open-gui-settings" aria-label="Appearance settings" aria-haspopup="dialog">
+                <button class="icon-btn" id="open-gui-settings" aria-label="Settings" aria-haspopup="dialog">
                     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </button>
             </div>
@@ -62,10 +62,6 @@
             <button role="tab" class="tab" data-tab-target="whatIf" aria-controls="whatIf" aria-selected="false" tabindex="-1">
                 <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="20" cy="14" r="2"/></svg></span>
                 <span class="tab-label">What If?</span>
-            </button>
-            <button role="tab" class="tab" data-tab-target="settings" aria-controls="settings" aria-selected="false" tabindex="-1">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></span>
-                <span class="tab-label">Settings</span>
             </button>
         </nav>
 
@@ -186,6 +182,12 @@
                         <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
                     </div>
                 </div>
+                <div class="tab-settings-bar">
+                    <button class="btn tab-edit-btn" id="open-income-settings" aria-haspopup="dialog" aria-controls="income-settings-modal">
+                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Edit income &amp; tax
+                    </button>
+                </div>
                 <div id="income-streams-display"></div>
                 <div class="dashboard-grid">
                     <div class="card">
@@ -228,6 +230,12 @@
                         <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
                     </div>
                 </div>
+                <div class="tab-settings-bar">
+                    <button class="btn tab-edit-btn" id="open-expenses-settings" aria-haspopup="dialog" aria-controls="expenses-settings-modal">
+                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Edit expenses
+                    </button>
+                </div>
                 <div class="dashboard-grid">
                     <div class="card">
                         <div class="card-title">Essential Expenses</div>
@@ -269,6 +277,12 @@
                         </details>
                         <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
                     </div>
+                </div>
+                <div class="tab-settings-bar">
+                    <button class="btn tab-edit-btn" id="open-savings-settings" aria-haspopup="dialog" aria-controls="savings-settings-modal">
+                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Edit assets, allocation &amp; FI
+                    </button>
                 </div>
                 <div class="card">
                     <div class="card-title">Net Savings Capacity</div>
@@ -319,6 +333,12 @@
                         </details>
                         <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
                     </div>
+                </div>
+                <div class="tab-settings-bar">
+                    <button class="btn tab-edit-btn" id="open-liabilities-settings" aria-haspopup="dialog" aria-controls="liabilities-settings-modal">
+                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        Edit liabilities
+                    </button>
                 </div>
                 <div class="card">
                     <div class="card-title">Liability Summary</div>
@@ -407,139 +427,9 @@
                 </div>
             </div>
 
-            <div id="settings" role="tabpanel" aria-labelledby="tab-settings" class="tab-content">
-                <div class="settings-section">
-                    <div class="settings-title">🌍 General Settings</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="currency-select">Currency</label>
-                            <select class="form-select" id="currency-select">
-                                <option value="AUD">AUD - Australian Dollar</option>
-                                <option value="USD">USD - US Dollar</option>
-                                <option value="EUR">EUR - Euro</option>
-                                <option value="GBP">GBP - British Pound</option>
-                                <option value="CAD">CAD - Canadian Dollar</option>
-                                <option value="NZD">NZD - New Zealand Dollar</option>
-                                <option value="JPY">JPY - Japanese Yen</option>
-                                <option value="CHF">CHF - Swiss Franc</option>
-                                <option value="CNY">CNY - Chinese Yuan</option>
-                                <option value="INR">INR - Indian Rupee</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">💰 Income Sources
-                        <span class="info-icon">ⓘ<span class="tooltip">Tax is calculated based on 'Invoiced Pay' (Priority) or 'Tax Removed'. If neither, tax is 0. Clear 'Invoiced Pay' to use 'Tax Removed'.</span></span>
-                    </div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 0.4fr 0.9fr 1.2fr 0.8fr 0.8fr 1fr 0.6fr 0.8fr 0.5fr;">
-                            <span>Primary</span> <span>Type</span> <span>Name</span> <span>Annual Gross</span> <span>Schedule</span> <span>Net Pay / Cycle (Post Tax)</span> <span>Hours/Cycle</span> <span>Tax Removed / Cycle</span> <span>Action</span>
-                        </div>
-                        <div id="income-sources-settings"></div>
-                    </div>
-                    <button class="add-btn" id="add-income-source">+ Add Income Source</button>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">
-                        📊 Tax Brackets (used for estimates)
-                        <span id="tax-brackets-info">These progressive brackets estimate tax on gross income. They calculate net income for any source where 'Net Pay/Cycle' and 'Tax Removed/Cycle' are left blank. If you enter either of those, your manual value takes precedence.</span>
-                    </div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 1fr 1fr 1fr auto;">
-                            <span>Min Income</span> <span>Max Income</span> <span>Tax Rate %</span> <span>Action</span>
-                        </div>
-                        <div id="tax-brackets-settings"></div>
-                    </div>
-                    <button class="add-btn" id="add-tax-bracket">+ Add Tax Bracket</button>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">📈 Assets</div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 2fr 1.5fr auto;">
-                            <span>Asset Name</span> <span>Current Balance</span> <span>Action</span>
-                        </div>
-                        <div id="assets-settings"></div>
-                    </div>
-                    <button class="add-btn" id="add-asset">+ Add Asset</button>
-                </div>
-                 <div class="settings-section" style="border-left-color: #f44336;">
-                    <div class="settings-title">⚖️ Liabilities Management</div>
-                     <div class="dynamic-list">
-                         <div class="list-header" style="grid-template-columns: 2fr 1.5fr 1fr auto;">
-                            <span>Liability Name</span> <span>Current Balance</span> <span>Interest Rate (%)</span> <span>Action</span>
-                        </div>
-                        <div id="liabilities-settings"></div>
-                     </div>
-                     <button class="add-btn" id="add-liability">+ Add Liability</button>
-                     <div style="margin-top: 20px; text-align: right; font-size: 1.2em; font-weight: 600;">
-                         Total Liabilities: <span id="total-liabilities-settings" style="color: #f44336;"></span>
-                     </div>
-                </div>
-                 <div class="settings-section">
-                    <div class="settings-title">📊 Money Allocation Percentages</div>
-                     <div class="dynamic-list">
-                         <div class="list-header" style="grid-template-columns: 2fr 1fr auto;">
-                            <span>Allocation Name</span> <span>Percentage (%)</span> <span>Action</span>
-                        </div>
-                        <div id="allocation-settings"></div>
-                     </div>
-                     <button class="add-btn" id="add-allocation-category">+ Add Category</button>
-                    <p style="margin-top: 10px; color: #666; font-size: 0.9em;">
-                        Total: <span id="total-percent">0.0%</span> (should equal 100%)
-                    </p>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">💸 Essential Expenses</div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
-                            <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
-                        </div>
-                        <div id="essential-expenses-settings-list"></div>
-                    </div>
-                    <button class="add-btn" id="add-essential-expense-settings">+ Add Essential Expense</button>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">🎮 Non-Essential Expenses</div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
-                            <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
-                        </div>
-                        <div id="non-essential-expenses-settings-list"></div>
-                    </div>
-                    <button class="add-btn" id="add-non-essential-expense-settings">+ Add Non-Essential Expense</button>
-                </div>
-                <div class="settings-section">
-                   <div class="settings-title">
-                       🏦 Financial Independence Settings
-                       <span class="info-icon">
-                           ⓘ
-                           <span class="tooltip">
-                               This section helps estimate when you might reach Financial Independence (FI).
-                               <br>• <b>FI Multiple:</b> How many years of expenses you need saved (e.g., 25 means a 4% withdrawal rate).
-                               <br>• <b>Expected Return:</b> Your estimated average annual investment return after inflation.
-                           </span>
-                       </span>
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="fi-multiple">FI Multiple (e.g., 25 for 4% rule)</label>
-                            <input type="number" class="form-input" id="fi-multiple" step="0.1" min="1" autocomplete="off">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="expected-return">Expected Annual Return (%)</label>
-                            <input type="number" class="form-input" id="expected-return" step="0.1" min="0" autocomplete="off">
-                        </div>
-                    </div>
-                </div>
-                <div class="settings-actions">
-                    <button class="btn btn-secondary" id="set-current-default">🌟 Save as My Defaults</button>
-                    <button class="btn btn-secondary" id="reset-to-defaults">🔄 Reset to Factory Defaults</button>
-                    <button class="btn btn-secondary" id="export-data-json">📊 Export Data (JSON)</button>
-                     <input type="file" id="json-import-settings" accept=".json" style="display: none;">
-                    <button class="btn btn-secondary" id="import-data-json-btn">📥 Import Data (JSON)</button>
-                </div>
-            </div>
+            <!-- Phase D.6 — the Settings tab was removed once empty: data-entry lives in per-tab
+                 settings modals, and currency + Save/Reset Defaults + Export/Import moved into the
+                 appearance modal (#gui-settings-modal), opened by the topbar gear. -->
         </main>
     </div>
 
@@ -548,7 +438,7 @@
     <div class="modal-backdrop" id="gui-settings-modal" hidden>
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gui-settings-title">
             <div class="modal-header">
-                <h2 id="gui-settings-title">🎨 Appearance</h2>
+                <h2 id="gui-settings-title">⚙️ Settings</h2>
                 <button class="modal-close" id="close-gui-settings" aria-label="Close appearance settings">
                     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
                 </button>
@@ -616,12 +506,197 @@
                         </div>
                          </div>
                 </div>
-                <div class="settings-actions">
-                    <button class="btn" id="apply-gui-settings">💾 Save Settings</button>
-                    <button class="btn btn-secondary" id="reset-gui-settings">Reset GUI to Defaults</button>
-                    <button class="btn btn-secondary" id="export-json-gui">📊 Export Backup (JSON)</button>
-                    <input type="file" id="json-import-gui" accept=".json" style="display: none;">
-                    <button class="btn btn-secondary" id="import-json-gui-btn">📥 Import Backup (JSON)</button>
+                <div class="settings-section">
+                    <div class="settings-title">🌍 General</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="currency-select">Currency</label>
+                            <select class="form-select" id="currency-select">
+                                <option value="AUD">AUD - Australian Dollar</option>
+                                <option value="USD">USD - US Dollar</option>
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="GBP">GBP - British Pound</option>
+                                <option value="CAD">CAD - Canadian Dollar</option>
+                                <option value="NZD">NZD - New Zealand Dollar</option>
+                                <option value="JPY">JPY - Japanese Yen</option>
+                                <option value="CHF">CHF - Swiss Franc</option>
+                                <option value="CNY">CNY - Chinese Yuan</option>
+                                <option value="INR">INR - Indian Rupee</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">💾 Save, Reset &amp; Backup</div>
+                    <p class="settings-hint">Appearance changes (theme, colours, fonts) save automatically. Defaults = your whole setup (data + appearance) used as a reset point. Backup = a JSON file of everything.</p>
+                    <div class="settings-actions" style="margin-top: 12px; padding-top: 0; border-top: none;">
+                        <button class="btn btn-secondary" id="reset-gui-settings">🎨 Reset Appearance</button>
+                        <button class="btn btn-secondary" id="set-current-default">🌟 Save as My Defaults</button>
+                        <button class="btn btn-secondary" id="reset-to-defaults">🔄 Reset to Factory Defaults</button>
+                        <button class="btn btn-secondary" id="export-json-gui">📊 Export Backup (JSON)</button>
+                        <input type="file" id="json-import-gui" accept=".json" style="display: none;">
+                        <button class="btn btn-secondary" id="import-json-gui-btn">📥 Import Backup (JSON)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase D.1 — Income settings modal. Opened by the gear button on the Income tab.
+         Holds the Income Sources + Tax Brackets data entry relocated from the Settings tab.
+         The inner ids (income-sources-settings, tax-brackets-settings) are unchanged so the
+         existing render + document-level delegated handlers keep working. -->
+    <div class="modal-backdrop" id="income-settings-modal" hidden>
+        <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="income-settings-title">
+            <div class="modal-header">
+                <h2 id="income-settings-title">💰 Income &amp; Tax Settings</h2>
+                <button class="modal-close" id="close-income-settings" aria-label="Close income settings">
+                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <div class="settings-title">💰 Income Sources
+                        <span class="info-icon">ⓘ<span class="tooltip">Tax is calculated based on 'Invoiced Pay' (Priority) or 'Tax Removed'. If neither, tax is 0. Clear 'Invoiced Pay' to use 'Tax Removed'.</span></span>
+                    </div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 0.4fr 0.9fr 1.2fr 0.8fr 0.8fr 1fr 0.6fr 0.8fr 0.5fr;">
+                            <span>Primary</span> <span>Type</span> <span>Name</span> <span>Annual Gross</span> <span>Schedule</span> <span>Net Pay / Cycle (Post Tax)</span> <span>Hours/Cycle</span> <span>Tax Removed / Cycle</span> <span>Action</span>
+                        </div>
+                        <div id="income-sources-settings"></div>
+                    </div>
+                    <button class="add-btn" id="add-income-source">+ Add Income Source</button>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">
+                        📊 Tax Brackets (used for estimates)
+                        <span id="tax-brackets-info">These progressive brackets estimate tax on gross income. They calculate net income for any source where 'Net Pay/Cycle' and 'Tax Removed/Cycle' are left blank. If you enter either of those, your manual value takes precedence.</span>
+                    </div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 1fr 1fr 1fr auto;">
+                            <span>Min Income</span> <span>Max Income</span> <span>Tax Rate %</span> <span>Action</span>
+                        </div>
+                        <div id="tax-brackets-settings"></div>
+                    </div>
+                    <button class="add-btn" id="add-tax-bracket">+ Add Tax Bracket</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase D.2 — Expenses settings modal (gear button on the Expenses tab). -->
+    <div class="modal-backdrop" id="expenses-settings-modal" hidden>
+        <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="expenses-settings-title">
+            <div class="modal-header">
+                <h2 id="expenses-settings-title">💸 Expenses Settings</h2>
+                <button class="modal-close" aria-label="Close expenses settings">
+                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <div class="settings-title">💸 Essential Expenses</div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
+                            <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
+                        </div>
+                        <div id="essential-expenses-settings-list"></div>
+                    </div>
+                    <button class="add-btn" id="add-essential-expense-settings">+ Add Essential Expense</button>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">🎮 Non-Essential Expenses</div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
+                            <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
+                        </div>
+                        <div id="non-essential-expenses-settings-list"></div>
+                    </div>
+                    <button class="add-btn" id="add-non-essential-expense-settings">+ Add Non-Essential Expense</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase D.3 — Savings settings modal (gear button on the Savings tab): Assets + Allocation + FI. -->
+    <div class="modal-backdrop" id="savings-settings-modal" hidden>
+        <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="savings-settings-title">
+            <div class="modal-header">
+                <h2 id="savings-settings-title">🏦 Savings, Assets &amp; FI Settings</h2>
+                <button class="modal-close" aria-label="Close savings settings">
+                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <div class="settings-title">📈 Assets</div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 2fr 1.5fr auto;">
+                            <span>Asset Name</span> <span>Current Balance</span> <span>Action</span>
+                        </div>
+                        <div id="assets-settings"></div>
+                    </div>
+                    <button class="add-btn" id="add-asset">+ Add Asset</button>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">📊 Money Allocation Percentages</div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 2fr 1fr auto;">
+                            <span>Allocation Name</span> <span>Percentage (%)</span> <span>Action</span>
+                        </div>
+                        <div id="allocation-settings"></div>
+                    </div>
+                    <button class="add-btn" id="add-allocation-category">+ Add Category</button>
+                    <p style="margin-top: 10px; color: var(--text-color-muted, #666); font-size: 0.9em;">
+                        Total: <span id="total-percent">0.0%</span> (should equal 100%)
+                    </p>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">
+                        🏦 Financial Independence Settings
+                        <span class="info-icon">ⓘ<span class="tooltip">
+                            This section helps estimate when you might reach Financial Independence (FI).
+                            <br>• <b>FI Multiple:</b> How many years of expenses you need saved (e.g., 25 means a 4% withdrawal rate).
+                            <br>• <b>Expected Return:</b> Your estimated average annual investment return after inflation.
+                        </span></span>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="fi-multiple">FI Multiple (e.g., 25 for 4% rule)</label>
+                            <input type="number" class="form-input" id="fi-multiple" step="0.1" min="1" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="expected-return">Expected Annual Return (%)</label>
+                            <input type="number" class="form-input" id="expected-return" step="0.1" min="0" autocomplete="off">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase D.4 — Liabilities settings modal (gear button on the Liabilities tab). -->
+    <div class="modal-backdrop" id="liabilities-settings-modal" hidden>
+        <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="liabilities-settings-title">
+            <div class="modal-header">
+                <h2 id="liabilities-settings-title">⚖️ Liabilities Settings</h2>
+                <button class="modal-close" aria-label="Close liabilities settings">
+                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section" style="border-left-color: #f44336;">
+                    <div class="settings-title">⚖️ Liabilities Management</div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 2fr 1.5fr 1fr auto;">
+                            <span>Liability Name</span> <span>Current Balance</span> <span>Interest Rate (%)</span> <span>Action</span>
+                        </div>
+                        <div id="liabilities-settings"></div>
+                    </div>
+                    <button class="add-btn" id="add-liability">+ Add Liability</button>
+                    <div style="margin-top: 20px; text-align: right; font-size: 1.2em; font-weight: 600;">
+                        Total Liabilities: <span id="total-liabilities-settings" style="color: #f44336;"></span>
+                    </div>
                 </div>
             </div>
         </div>
