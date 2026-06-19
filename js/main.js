@@ -46,9 +46,91 @@ function showTab(tabName) {
     } else if (tabName === 'settings') {
         const totals = calculateTotals();
         setText('total-liabilities-settings', formatCurrency(totals.currentLiabilities));
-    } else if (tabName === 'guiSettings') {
-        initializeGuiSettingsForm();
     }
+    // Note: appearance/GUI settings is no longer a tab (Phase A) — it's a modal opened by
+    // the gear button; initializeGuiSettingsForm() runs when the modal opens (setupGuiModal).
+
+    // A.3 — remember the active section across reloads.
+    try { localStorage.setItem('ft-active-tab', tabName); } catch (_) {}
+}
+
+const VALID_TABS = ['dashboard', 'income', 'expenses', 'savings', 'liabilities', 'whatIf', 'settings'];
+
+// A.3 — restore the last-viewed section, falling back to the dashboard.
+function restoreActiveTab() {
+    let tab = 'dashboard';
+    try {
+        const saved = localStorage.getItem('ft-active-tab');
+        if (saved && VALID_TABS.includes(saved)) tab = saved;
+    } catch (_) {}
+    showTab(tab);
+}
+
+// A.3 — sidebar collapse toggle + persisted state.
+function setSidebarCollapsed(shell, toggle, collapsed) {
+    shell.classList.toggle('is-collapsed', collapsed);
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    toggle.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
+}
+
+function setupSidebar() {
+    const shell = getElement('app-shell');
+    const toggle = getElement('sidebar-toggle');
+    if (!shell || !toggle) return;
+
+    let collapsed = false;
+    try { collapsed = localStorage.getItem('ft-sidebar-collapsed') === '1'; } catch (_) {}
+    setSidebarCollapsed(shell, toggle, collapsed);
+
+    toggle.addEventListener('click', () => {
+        const now = !shell.classList.contains('is-collapsed');
+        setSidebarCollapsed(shell, toggle, now);
+        try { localStorage.setItem('ft-sidebar-collapsed', now ? '1' : '0'); } catch (_) {}
+    });
+}
+
+// A.4 — GUI/appearance settings modal: open/close, focus trap, focus restore.
+function getModalFocusables(modal) {
+    return Array.from(modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter(el => !el.disabled && el.offsetParent !== null);
+}
+
+function setupGuiModal() {
+    const modal = getElement('gui-settings-modal');
+    const openBtn = getElement('open-gui-settings');
+    const closeBtn = getElement('close-gui-settings');
+    if (!modal || !openBtn) return;
+
+    let lastFocused = null;
+
+    const onKey = (e) => {
+        if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+        if (e.key !== 'Tab') return;
+        const f = getModalFocusables(modal);
+        if (f.length === 0) return;
+        const first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+
+    function open() {
+        lastFocused = document.activeElement;
+        initializeGuiSettingsForm(); // populate pickers from current guiSettingsData
+        modal.hidden = false;
+        const f = getModalFocusables(modal);
+        (f[0] || modal).focus();
+        document.addEventListener('keydown', onKey, true);
+    }
+    function close() {
+        modal.hidden = true;
+        document.removeEventListener('keydown', onKey, true);
+        if (lastFocused && document.body.contains(lastFocused)) lastFocused.focus();
+    }
+
+    openBtn.addEventListener('click', open);
+    if (closeBtn) closeBtn.addEventListener('click', close);
+    modal.addEventListener('mousedown', (e) => { if (e.target === modal) close(); }); // backdrop click
 }
 
 function setupTabKeyboardNav() {
@@ -60,8 +142,9 @@ function setupTabKeyboardNav() {
         if (current === -1) return;
 
         let next = -1;
-        if (e.key === 'ArrowRight') next = (current + 1) % tabs.length;
-        else if (e.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
+        // Vertical sidebar (Phase A): Up/Down move between sections; Home/End jump to ends.
+        if (e.key === 'ArrowDown') next = (current + 1) % tabs.length;
+        else if (e.key === 'ArrowUp') next = (current - 1 + tabs.length) % tabs.length;
         else if (e.key === 'Home') next = 0;
         else if (e.key === 'End') next = tabs.length - 1;
 
@@ -228,9 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupPwaInstallListeners();
     setupTabKeyboardNav();
+    setupSidebar();   // A.3 — collapse toggle + restore
+    setupGuiModal();  // A.4 — appearance modal
 
     updateAllUI();
-    showTab('dashboard');
+    restoreActiveTab(); // A.3 — restore last-viewed section (defaults to dashboard)
 });
 
 // --- END OF: main.js ---

@@ -44,35 +44,91 @@ body {
     font-family: var(--font-family-main);
     background: linear-gradient(135deg, var(--primary-bg-color-start) 0%, var(--primary-bg-color-end) 100%);
     min-height: 100vh;
-    padding: 10px;
     font-size: var(--base-font-size);
     color: var(--text-color-primary);
     overflow-x: hidden;
 }
 
-.container {
-    max-width: 1400px;
-    margin: 0 auto;
-    width: 100%;
+/* --- App shell layout (Phase A) --- */
+/* grid-template-columns uses `auto 1fr` so the sidebar's own width drives the
+   first column; transitioning the sidebar width animates the collapse smoothly. */
+.app-shell {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+        "topbar  topbar"
+        "sidebar main";
+    min-height: 100vh;
 }
 
-.header {
-    text-align: center;
+.header.topbar {
+    grid-area: topbar;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
     color: var(--header-text-color);
-    margin-bottom: 20px;
-    position: relative; /* For save status indicator positioning */
 }
 
-.header h1 {
-    font-size: 2.2em;
-    font-weight: 300;
-    margin-bottom: 10px;
-    word-wrap: break-word;
+.topbar-titles {
+    flex: 1;
+    min-width: 0;
 }
 
-.header p {
-    font-size: 0.9em;
-    word-wrap: break-word;
+.topbar-titles h1 {
+    font-size: 1.4em;
+    font-weight: 400;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.topbar-titles p {
+    font-size: 0.8em;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Topbar icon buttons + the sidebar toggle */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: var(--tab-bg-color);
+    color: var(--header-text-color);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.icon-btn:hover {
+    background: var(--tab-active-bg-color);
+}
+
+.icon-btn:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+}
+
+.ic {
+    width: 20px;
+    height: 20px;
+    display: block;
 }
 
 /* Save Status Indicator */
@@ -110,35 +166,50 @@ body {
     background-color: var(--save-status-unsaved-bg);
 }
 
+/* In the app-shell top bar the indicator flows inline (it is appended into .header)
+   rather than absolutely positioned, so it can't overlap the action buttons. */
+.topbar #save-status-indicator {
+    position: static;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
 
-.tabs {
+
+/* --- Sidebar navigation (Phase A) --- */
+.sidebar {
+    grid-area: sidebar;
+    width: 240px;
     display: flex;
-    background: var(--tab-bg-color);
-    border-radius: 15px;
-    padding: 5px;
-    margin-bottom: 20px;
-    backdrop-filter: blur(10px);
-    flex-wrap: wrap;
-    gap: 2px;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: width 0.2s ease;
 }
 
 .tab {
-    flex: 1;
-    padding: 8px 12px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    text-align: left;
     color: var(--tab-text-color);
     cursor: pointer;
     border-radius: 10px;
-    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
-    font-weight: 500;
-    min-width: 80px;
-    font-size: 0.85em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    background: transparent;
     border: none;
+    border-left: 3px solid transparent;
+    background: transparent;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-weight: 500;
+    font-size: 0.9em;
     font-family: var(--font-family-main);
+    white-space: nowrap;
+}
+
+.tab:hover {
+    background: var(--tab-bg-color);
+    color: var(--tab-active-text-color);
 }
 
 .tab:focus-visible {
@@ -149,17 +220,118 @@ body {
 .tab.active {
     background: var(--tab-active-bg-color);
     color: var(--tab-active-text-color);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-left-color: var(--accent-color);
+}
+
+.tab-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.tab-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Collapsed sidebar — icon-only (also the small-screen fallback until the mobile
+   bottom-nav lands in a follow-up PR). */
+.app-shell.is-collapsed .sidebar {
+    width: 64px;
+}
+
+.app-shell.is-collapsed .tab-label {
+    display: none;
+}
+
+.app-shell.is-collapsed .tab {
+    justify-content: center;
+    gap: 0;
+    padding: 10px 0;
 }
 
 .content {
+    grid-area: main;
     background: var(--content-bg-color);
     border-radius: 20px;
     padding: 20px;
+    margin: 0 16px 16px;
     backdrop-filter: blur(20px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     min-height: 600px;
     overflow-x: auto;
+}
+
+/* --- Modal dialog (Phase A.4 — GUI/appearance settings) --- */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-backdrop[hidden] {
+    display: none;
+}
+
+.modal {
+    background: var(--content-bg-color);
+    color: var(--text-color-primary);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 760px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.modal-header {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    background: var(--content-bg-color);
+    border-bottom: 1px solid var(--info-border);
+}
+
+.modal-header h2 {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin: 0;
+}
+
+.modal-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-color-primary);
+}
+
+.modal-close:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.modal-body {
+    padding: 20px;
 }
 
 .dashboard-grid {
@@ -882,27 +1054,45 @@ body {
 
 /* Responsive Styles */
 @media (max-width: 768px) {
-    body {
-        padding: 5px;
+    /* Tablet: sidebar defaults to icon-only (64px) and expands on hover/focus. */
+    .topbar-titles p {
+        display: none;
     }
 
-    .header h1 {
-        font-size: 1.8em;
+    .sidebar {
+        width: 64px;
     }
 
-    .tabs {
-        padding: 3px;
-        gap: 1px;
+    .tab-label {
+        display: none;
     }
 
     .tab {
-        padding: 6px 8px;
-        font-size: 0.75em;
-        min-width: 60px;
+        justify-content: center;
+        gap: 0;
+        padding: 10px 0;
+    }
+
+    .sidebar:hover,
+    .sidebar:focus-within {
+        width: 240px;
+    }
+
+    .sidebar:hover .tab-label,
+    .sidebar:focus-within .tab-label {
+        display: inline;
+    }
+
+    .sidebar:hover .tab,
+    .sidebar:focus-within .tab {
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 10px 12px;
     }
 
     .content {
         padding: 15px;
+        margin: 0 10px 10px;
     }
 
     .dashboard-grid, .form-grid, .summary-stats {
@@ -1014,13 +1204,8 @@ body {
 }
 
 @media (max-width: 480px) {
-    .header h1 {
-        font-size: 1.5em;
-    }
-
-    .tab {
-        font-size: 0.7em;
-        padding: 5px 6px;
+    .topbar-titles h1 {
+        font-size: 1.15em;
     }
 
     .card-title {
