@@ -335,6 +335,66 @@ body {
     padding: 20px;
 }
 
+/* Phase D — per-page settings gear bar: right-aligned "Edit …" trigger atop a tab. */
+.tab-settings-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+}
+
+.tab-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-edit-btn .ic {
+    width: 18px;
+    height: 18px;
+}
+
+/* Themed outline look (two-class specificity beats .btn / .btn-secondary). */
+.tab-settings-bar .tab-edit-btn {
+    background: transparent;
+    color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+    box-shadow: none;
+}
+
+.tab-settings-bar .tab-edit-btn:hover {
+    background: var(--accent-color);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Phase D — data-entry modals: wider than the appearance modal and user-resizable,
+   since their dynamic lists (e.g. 9-column income rows) need horizontal room. */
+.modal--wide {
+    max-width: min(1100px, 95vw);
+}
+
+.modal--resizable {
+    resize: both;
+    overflow: auto;
+    min-width: 320px;
+    min-height: 240px;
+    max-width: 95vw;
+}
+
+/* Let cramped dynamic lists scroll horizontally instead of crushing inputs. */
+.modal--wide .dynamic-list,
+.modal--resizable .dynamic-list {
+    overflow: auto;
+}
+
+.modal--wide .list-header,
+.modal--wide .list-item,
+.modal--resizable .list-header,
+.modal--resizable .list-item {
+    min-width: 720px;
+}
+
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -1007,6 +1067,13 @@ body {
     padding-top: 30px;
     border-top: 2px solid var(--border-color);
     flex-wrap: wrap;
+}
+
+.settings-hint {
+    margin: 6px 0 0;
+    font-size: 0.85em;
+    color: var(--text-color-muted, #888);
+    line-height: 1.5;
 }
 
 .tax-bracket-item { /* This class was defined but not used in original HTML, now used for consistency */

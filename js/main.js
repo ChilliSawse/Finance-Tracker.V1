@@ -43,18 +43,17 @@ function showTab(tabName) {
         // explicit "Reset to current" click). Re-initialising on every switch wiped the user's
         // in-progress edits. initializeWhatIfTab() is a no-op once whatIfInitialized is true.
         initializeWhatIfTab();
-    } else if (tabName === 'settings') {
-        const totals = calculateTotals();
-        setText('total-liabilities-settings', formatCurrency(totals.currentLiabilities));
     }
-    // Note: appearance/GUI settings is no longer a tab (Phase A) — it's a modal opened by
-    // the gear button; initializeGuiSettingsForm() runs when the modal opens (setupGuiModal).
+    // Note: appearance/data settings is no longer a tab (Phase A + D.6) — it's the modal opened
+    // by the topbar gear; its form populates when the modal opens (setupGuiModal). The liabilities
+    // total readout is kept fresh by renderLiabilitiesSettings()/updateAllUI().
 
     // A.3 — remember the active section across reloads.
     try { localStorage.setItem('ft-active-tab', tabName); } catch (_) {}
 }
 
-const VALID_TABS = ['dashboard', 'income', 'expenses', 'savings', 'liabilities', 'whatIf', 'settings'];
+// 'settings' removed (Phase D.6) — it's a modal now, not a tab. Legacy saved value falls back to dashboard.
+const VALID_TABS = ['dashboard', 'income', 'expenses', 'savings', 'liabilities', 'whatIf'];
 
 // A.3 — restore the last-viewed section, falling back to the dashboard.
 function restoreActiveTab() {
@@ -89,17 +88,19 @@ function setupSidebar() {
     });
 }
 
-// A.4 — GUI/appearance settings modal: open/close, focus trap, focus restore.
+// A.4 / Phase D — reusable modal shell: open/close, focus trap, focus restore.
+// One generic wiring used by the appearance modal (A.4) and every per-page settings
+// modal (Phase D). `onOpen` runs each time the modal opens (e.g. to (re)populate it).
 function getModalFocusables(modal) {
     return Array.from(modal.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     )).filter(el => !el.disabled && el.offsetParent !== null);
 }
 
-function setupGuiModal() {
-    const modal = getElement('gui-settings-modal');
-    const openBtn = getElement('open-gui-settings');
-    const closeBtn = getElement('close-gui-settings');
+function setupModal(modalId, openBtnId, onOpen) {
+    const modal = getElement(modalId);
+    const openBtn = getElement(openBtnId);
+    const closeBtn = modal ? modal.querySelector('.modal-close') : null;
     if (!modal || !openBtn) return;
 
     let lastFocused = null;
@@ -116,7 +117,7 @@ function setupGuiModal() {
 
     function open() {
         lastFocused = document.activeElement;
-        initializeGuiSettingsForm(); // populate pickers from current guiSettingsData
+        if (typeof onOpen === 'function') onOpen(); // populate from current state
         modal.hidden = false;
         const f = getModalFocusables(modal);
         (f[0] || modal).focus();
@@ -131,6 +132,34 @@ function setupGuiModal() {
     openBtn.addEventListener('click', open);
     if (closeBtn) closeBtn.addEventListener('click', close);
     modal.addEventListener('mousedown', (e) => { if (e.target === modal) close(); }); // backdrop click
+}
+
+// A.4 — appearance modal populates its colour pickers/typography from guiSettingsData on open.
+function setupGuiModal() {
+    setupModal('gui-settings-modal', 'open-gui-settings', initializeGuiSettingsForm);
+}
+
+// Phase D — per-page settings modals. The data-entry sections were moved out of the
+// Settings tab into these; their inner lists are kept fresh by renderSettingsTab()/
+// updateDataAndUI(), so re-rendering on open just guarantees current values.
+function setupPageSettingsModals() {
+    const call = (fn) => { if (typeof window[fn] === 'function') window[fn](); };
+
+    setupModal('income-settings-modal', 'open-income-settings', () => {
+        call('renderIncomeSourcesSettings');
+        call('renderTaxBracketsSettings');
+    });
+    setupModal('expenses-settings-modal', 'open-expenses-settings', () => {
+        call('renderExpensesSettingsLists');
+    });
+    setupModal('savings-settings-modal', 'open-savings-settings', () => {
+        call('renderAssetsSettings');
+        call('renderAllocationSettings');
+        call('renderFISettings');
+    });
+    setupModal('liabilities-settings-modal', 'open-liabilities-settings', () => {
+        call('renderLiabilitiesSettings');
+    });
 }
 
 // C.1 — collapsible info sections. Per-tab collapsed state persists in localStorage.
@@ -355,6 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTabKeyboardNav();
     setupSidebar();   // A.3 — collapse toggle + restore
     setupGuiModal();  // A.4 — appearance modal
+    setupPageSettingsModals(); // Phase D — per-page settings modals (Income, …)
     setupInfoSections(); // C.1 — collapsible info guides
 
     updateAllUI();
