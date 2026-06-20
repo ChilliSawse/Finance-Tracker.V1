@@ -298,14 +298,11 @@ Operate on **totals**: apply income change directly to net; never touch per-sour
 ### ✅ G.4 — Baseline comparison — DONE (2026-06-20)
 The What If results already showed scenario-vs-current deltas (Net Income / Expenses / Savings / FI Timeline + Key Metrics, red/green) since 0.4/0.5. Added a **Net Worth** comparison card (scenario vs current + change) driven by the new liabilities lever, plus FI-multiple and scenario-liabilities lines in Key Metrics. *(A 10-yr net-worth projection line is a nice-to-have; the goal-seek in G.6 will cover forward projection more fully.)*
 
-### G.5 — Save scenarios
-Name + store up to 3 in `localStorage` (`ft-what-if-scenarios`); dropdown/tabs at top; compare two side-by-side in delta-table format; store full lever state + name.
+### ⏸ G.5 — Save scenarios — DEFERRED (user, 2026-06-20)
+Deferred at the user's request. Original scope: name + store up to 3 scenarios in `localStorage` (`ft-what-if-scenarios`); dropdown to reload/compare; store the full scenario (`whatIfFinanceData`) + name. The Stage-1–3 architecture makes this straightforward later (serialise/restore `whatIfFinanceData`). **Not started.**
 
-### G.6 — "How much can I save in X time?" goal-seek (NEW — Rev 5)
-A target-driven mode on top of the G.2 lever set: user sets a **target timeframe** (and optionally a target amount / "by date") and adjusts every lever — income, expenses, allocation strategy — to see **how much accumulates in each account by that date**, fully interactive. Two framings, both useful:
-- **Forward:** given these levers, project the balance per allocation account at the target date.
-- **Inverse (goal-seek):** given a target amount by a date, surface what's required (e.g. needed monthly savings / allocation split) and how close the current levers get.
-Builds on the corrected, persistent 0.4 state and the G.2 levers. Helps users plan a split when they need $X by a date while still covering other expenses. **Decision needed at build time:** forward-projection only (simpler, M) vs full inverse solver (more math, M–L). Recommend shipping forward first, inverse as a follow-up. Depends on G.2.
+### ✅ G.6 — "How much can I save in X time?" — DONE, reconceived as per-bucket goals (2026-06-20)
+Superseded by the **allocation bucket savings-goals** feature (Stage 0): each bucket has Current Funds + a Goal, and shows **time-to-reach = (goal − funds) ÷ contribution** — live on the main dashboard *and* in the What If simulated dashboard (Stage 3), per the user's redesign. This is the forward projection the original G.6 described, framed per-bucket (matches the Barefoot buckets). Inverse solver ("need $X by date → required split") remains an optional future follow-up.
 
 ---
 
@@ -375,9 +372,8 @@ C       Collapsible info sections                    —             S (<1 s)   
 D       Display tabs + per-page settings modals      R (mandatory)  L (3–4 s)    ✅ DONE (D.1–D.6, 2026-06-20)
 E       Tax bracket calc                             —             XS           ✅ DONE (E.1–E.4; E.4 resolved via D.1)
 F       Dashboard improvements                       D, E          M (1–2 s)    F.1/F.2/F.4 ✅; F.3 ⏸ DEFERRED (user)
-G.2     What If full lever set (incl. allocation)    D, 0.4        M (1–2 s)    TODO
-G.4/G.5 What If comparison + saved scenarios         0.4           M (1–2 s)    TODO  (not gated on D)
-G.6     "How much can I save in X time?" goal-seek   G.2           M (–L)       TODO  (NEW)
+G       What If redesign (sandbox + sim dashboard)   D             L (3+ s)     ✅ DONE — Stages 0–3 (G.2 full editable
+          sections, G.4 sim dashboard + deltas, G.6 per-bucket goals/time-to-reach); G.5 saved scenarios ⏸ DEFERRED
 H       Remaining tab improvements                   D, E          S–M (1 s)    ✅ DONE (H.1/H.3/H.5/H.6; H.2/H.4 partial — projection+grouping deferred)
 I       Visual polish + responsive                   all above     M (1–2 s)    ✅ DONE (I.1/I.2/I.3/I.5/I.6/I.7/I.8; I.4 needs browser verify)
 ```
@@ -392,9 +388,11 @@ Size key: XS < 0.5 session, S < 1, M 1–2, L 3+.
 5. ~~**Phase A** sidebar~~ ✅ **DONE (PR1)** — app-shell + vertical sidebar + gear modal; mobile bottom-nav deferred to A-PR2.
 6. ~~**0.6** salaried net/tax override fix~~ ✅ **DONE** (merged to `main`, PR #8).
 7. ~~**D** display tabs + per-page settings modals (Settings tab removed; appearance auto-save; theme split-look fix)~~ ✅ **DONE** (merged to `main`, PR #8).
-8. **Next candidates → E.4 → (F incl. F.4 / G.2 incl. allocation / H incl. H.6) → G.6 → I incl. I.7.** **G.4/G.5** and **I.7** can land independently anytime. **← we are here**
+8. ~~E.4 → F → G → H → I~~ ✅ **ALL DONE** (pushed direct to `main`).
 
-> **State as of 2026-06-20 (post-PR #7 + #8 merged to `main`):** Done — 0.1–0.5, **0.6**, R, B, T, A-PR1, C, **D (D.1–D.6)**, plus the theme split-look root-cause fix and appearance auto-save. **Remaining:** E.4 (bracket-table relocation/label), **F** (dashboard incl. F.4 + card linking), **G.2/G.4/G.5/G.6** (What If), **H** (tab polish incl. the new **H.6** Savings assets card), **I** (visual polish incl. I.7). Each warrants its own session; G.6 carries a build-time decision noted in its section. Outstanding non-phase item: the Phase C **info-panel copy** pass.
+> **State as of 2026-06-20 — implementation plan essentially COMPLETE.** Every phase done: 0.1–0.6, R, B, T, A-PR1, C, **D** (per-tab modals, Settings tab removed, appearance auto-save, theme fix), **E** (incl. E.4 resolved), **F** (F.1/F.2/F.4; F.3 ⏸), **G** (What If redesign Stages 0–3 — sandbox editor + simulated dashboard + per-bucket goals; G.5 ⏸), **H** (H.1/H.3/H.5/H.6; H.2 search done, H.4 badges done), **I** (incl. I.7 softer essentials, I.8 emoji→icons), plus the allocation goals/funds feature and many theme-consistency fixes (stat cards, liability cards, secondary buttons).
+>
+> **Intentionally deferred (await a decision / data-model pass):** F.3 upcoming bills, H.2 expense category grouping, H.4 debt-free years-to-zero projection, G.5 saved scenarios, the G.6 *inverse* solver, and the Phase C info-panel **copywriting** pass. **Verify-only:** I.4 responsive audit @ 375/768/1024/1440 (needs a browser).
 
 ### Why this order (rationale)
 - **Correctness before chrome.** A tracker that taxes $200k like $120k is worse than one that looks plain. Phase 0 items each fix a *wrong output*.
