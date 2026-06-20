@@ -232,6 +232,54 @@ function renderWhatIfAllocation() {
     updateAllocationTotalDisplay('whatif');
 }
 
+// What If redesign — scenario Income Sources editor (sandbox clone). Mirrors
+// renderIncomeSourcesSettings; primary radio uses a distinct name so it doesn't collide
+// with the live one, and incomeType re-renders the scenario list.
+function renderWhatIfIncomeSources() {
+    const container = getElement('whatif-income-sources-settings');
+    if (!container || !whatIfFinanceData) return;
+    container.innerHTML = '';
+    whatIfFinanceData.incomeSources.forEach((source, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'list-item';
+        itemDiv.style.gridTemplateColumns = '0.4fr 0.9fr 1.2fr 0.8fr 0.8fr 1fr 0.6fr 0.8fr 0.5fr';
+        const isPrimary = index === whatIfFinanceData.primaryIncomeIndex;
+        const isSelfEmployed = source.incomeType === 'selfEmployed';
+        const invoicedPayValue = source.invoicedPayPostTax == null ? '' : source.invoicedPayPostTax;
+        const taxRemovedValue = source.taxRemoved == null ? '' : source.taxRemoved;
+        const baseId = `whatif-income-${index}`;
+        const grossDisabled = isSelfEmployed ? 'disabled' : '';
+        const netPlaceholder = isSelfEmployed ? 'Net Pay/Cycle' : 'Net/Cycle (opt)';
+        itemDiv.innerHTML = `
+            <span><label for="${baseId}-primary" class="visually-hidden">Set Scenario Primary ${index + 1}</label>
+                <input type="radio" name="whatif-primary-income" ${isPrimary ? 'checked' : ''} data-scope="whatif" data-index="${index}" id="${baseId}-primary" style="justify-self: center;"></span>
+            <span><label for="${baseId}-type" class="visually-hidden">Scenario Income Type ${index + 1}</label>
+                <select data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="incomeType" id="${baseId}-type">
+                    <option value="salaried" ${!isSelfEmployed ? 'selected' : ''}>Salaried</option>
+                    <option value="selfEmployed" ${isSelfEmployed ? 'selected' : ''}>Self-employed</option>
+                </select></span>
+            <span><label for="${baseId}-name" class="visually-hidden">Scenario Income Name ${index + 1}</label>
+                <input type="text" value="${escapeHtml(source.name || '')}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Name"></span>
+            <span><label for="${baseId}-gross" class="visually-hidden">Scenario Gross ${index + 1}</label>
+                <input type="number" value="${source.grossAnnual || 0}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" placeholder="${isSelfEmployed ? '— auto —' : 'Gross Annual'}" step="0.01" ${grossDisabled}></span>
+            <span><label for="${baseId}-schedule" class="visually-hidden">Scenario Schedule ${index + 1}</label>
+                <select data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="paySchedule" id="${baseId}-schedule">
+                    <option value="weekly" ${source.paySchedule === 'weekly' ? 'selected' : ''}>Weekly</option>
+                    <option value="fortnightly" ${source.paySchedule === 'fortnightly' ? 'selected' : ''}>Fortnightly</option>
+                    <option value="monthly" ${source.paySchedule === 'monthly' ? 'selected' : ''}>Monthly</option>
+                    <option value="yearly" ${source.paySchedule === 'yearly' ? 'selected' : ''}>Yearly</option>
+                </select></span>
+            <span><label for="${baseId}-netpay" class="visually-hidden">Scenario Net Pay ${index + 1}</label>
+                <input type="number" value="${invoicedPayValue}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" placeholder="${netPlaceholder}" step="0.01"></span>
+            <span><label for="${baseId}-hours" class="visually-hidden">Scenario Hours ${index + 1}</label>
+                <input type="number" value="${source.hoursPerCycle || ''}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" placeholder="Hours" step="1"></span>
+            <span><label for="${baseId}-taxremoved" class="visually-hidden">Scenario Tax Removed ${index + 1}</label>
+                <input type="number" value="${taxRemovedValue}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" placeholder="Tax/Cycle (opt)" step="0.01"></span>
+            <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="incomeSource" aria-label="Delete Scenario Income Source ${index + 1}">Delete</button>`;
+        container.appendChild(itemDiv);
+    });
+}
+
 // What If redesign — scenario Assets editor (sandbox clone, data-scope="whatif").
 function renderWhatIfAssets() {
     const container = getElement('whatif-assets-settings');
@@ -310,6 +358,7 @@ function renderWhatIfFISettings() {
 
 // Render every scenario section from the sandbox clone.
 function renderWhatIfSections() {
+    renderWhatIfIncomeSources();
     if (typeof renderWhatIfAllocation === 'function') renderWhatIfAllocation();
     renderWhatIfAssets();
     renderWhatIfLiabilities();
@@ -441,7 +490,6 @@ function initializeWhatIfTab(force = false) {
     whatIfFinanceData = JSON.parse(JSON.stringify(financeData));
 
     renderWhatIfSections();
-    setValue('whatif-new-annual-income', calculateTotals(financeData).totalNetAnnualIncome.toFixed(0)); // income override seed
     setHTML('whatif-results-display', '<h3>Scenario Results</h3><p>Your "What If" results will appear here after calculation.</p>');
 
     whatIfInitialized = true;

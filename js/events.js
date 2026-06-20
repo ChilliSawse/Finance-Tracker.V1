@@ -97,6 +97,7 @@ function handleSettingsClickEvents(event) {
 
     // Add buttons
     if (target.id === 'add-income-source') addIncomeSource();
+    else if (target.id === 'whatif-add-income') addIncomeSource('whatif');
     else if (target.id === 'add-tax-bracket') addTaxBracket();
     else if (target.id === 'add-asset') addAsset();
     else if (target.id === 'add-liability') addLiability();
@@ -115,7 +116,7 @@ function handleSettingsClickEvents(event) {
     // keep their existing immediate delete plus their own "must keep at least one" guards.
     else if (target.classList.contains('delete-btn')) {
         const scope = target.dataset.scope; // 'whatif' for scenario rows, undefined for live
-        if (dataType === 'incomeSource') removeIncomeSource(index);
+        if (dataType === 'incomeSource') removeIncomeSource(index, scope);
         else if (dataType === 'taxBracket') removeTaxBracket(index);
         else if (dataType === 'asset') removeAsset(index, scope);
         else if (dataType === 'allocation') removeAllocationCategory(index, scope);
@@ -153,12 +154,19 @@ function handleSettingsChangeEvents(event) {
         updateDataAndUI();
         return;
     }
+    // What If scenario primary income (distinct radio name; writes to the sandbox).
+    else if (target.name === 'whatif-primary-income' && target.type === 'radio') {
+        if (whatIfFinanceData) { whatIfFinanceData.primaryIncomeIndex = index; renderWhatIfIncomeSources(); }
+        return;
+    }
     // Income source type (salaried / self-employed) — re-render to toggle which fields are active
     else if (field === 'incomeType' && target.dataset.collection === 'incomeSources') {
-        if (financeData.incomeSources[index] !== undefined) {
-            financeData.incomeSources[index].incomeType = value === 'selfEmployed' ? 'selfEmployed' : 'salaried';
-            renderIncomeSourcesSettings();
-            updateDataAndUI();
+        const scope = target.dataset.scope;
+        const data = scope === 'whatif' ? whatIfFinanceData : financeData;
+        if (data && data.incomeSources[index] !== undefined) {
+            data.incomeSources[index].incomeType = value === 'selfEmployed' ? 'selfEmployed' : 'salaried';
+            if (scope === 'whatif') renderWhatIfIncomeSources();
+            else { renderIncomeSourcesSettings(); updateDataAndUI(); }
         }
         return;
     }
@@ -324,21 +332,23 @@ function handleGuiSettingsClickEvents(event) {
 // --- Action Functions (called by event handlers) ---
 
 // Add/Remove for main settings
-function addIncomeSource() {
-    financeData.incomeSources.push({ name: "New Income", incomeType: "salaried", grossAnnual: 0, paySchedule: "monthly", hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null });
-    renderIncomeSourcesSettings();
-    updateDataAndUI();
+function addIncomeSource(scope) {
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    fd.incomeSources.push({ name: "New Income", incomeType: "salaried", grossAnnual: 0, paySchedule: "monthly", hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null });
+    if (scope === 'whatif') { renderWhatIfIncomeSources(); } else { renderIncomeSourcesSettings(); updateDataAndUI(); }
 }
-function removeIncomeSource(index) {
-    if (financeData.incomeSources.length <= 1) {
+function removeIncomeSource(index, scope) {
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    if (fd.incomeSources.length <= 1) {
         showCustomModal("You must have at least one income source.");
         return;
     }
-    financeData.incomeSources.splice(index, 1);
-    if (financeData.primaryIncomeIndex === index) financeData.primaryIncomeIndex = 0;
-    else if (financeData.primaryIncomeIndex > index) financeData.primaryIncomeIndex--;
-    renderIncomeSourcesSettings();
-    updateDataAndUI();
+    fd.incomeSources.splice(index, 1);
+    if (fd.primaryIncomeIndex === index) fd.primaryIncomeIndex = 0;
+    else if (fd.primaryIncomeIndex > index) fd.primaryIncomeIndex--;
+    if (scope === 'whatif') { renderWhatIfIncomeSources(); } else { renderIncomeSourcesSettings(); updateDataAndUI(); }
 }
 
 function addTaxBracket() {
@@ -635,26 +645,14 @@ function actionResetGuiToDefaults() {
 // What If Scenario Action
 function runWhatIfScenario() {
     if (!whatIfFinanceData) initializeWhatIfTab(true); // safety — seed the sandbox if missing
-    const newAnnualNetIncomeInput = getValue('whatif-new-annual-income', true);
 
-    if (isNaN(newAnnualNetIncomeInput) || newAnnualNetIncomeInput < 0) {
-        showCustomModal("Please enter a valid new annual net income for the scenario.", 'error');
-        return;
-    }
-
-    // What If redesign — the scenario IS the fully-edited sandbox clone (expenses, assets,
-    // liabilities, allocation, FI all come from whatIfFinanceData). Income is the one remaining
-    // override lever (a total net-annual-income override; full income-source editing is next).
+    // What If redesign — the scenario IS the fully-edited sandbox clone. Everything (income
+    // sources, expenses, assets, liabilities, allocation, FI) comes from whatIfFinanceData, so
+    // totals derive entirely from calculateTotals() with no overrides.
     const scenarioFinanceData = whatIfFinanceData;
-
     const scenarioTotals = calculateTotals(scenarioFinanceData);
-    const scenarioNetAnnualIncome = newAnnualNetIncomeInput;
-    scenarioTotals.totalNetAnnualIncome = scenarioNetAnnualIncome;
-    scenarioTotals.weeklySavings = (scenarioNetAnnualIncome / 52) - scenarioTotals.totalWeeklyExpenses;
-    scenarioTotals.annualSavings = scenarioTotals.weeklySavings * 52;
-    scenarioTotals.savingsRate = scenarioNetAnnualIncome > 0 ? (scenarioTotals.annualSavings / scenarioNetAnnualIncome) * 100 : 0;
-
-    const scenarioCurrentAssets = scenarioTotals.currentAssets; // from the sandbox assets
+    const scenarioNetAnnualIncome = scenarioTotals.totalNetAnnualIncome;
+    const scenarioCurrentAssets = scenarioTotals.currentAssets;
 
     const scenarioAnnualExpenses = scenarioTotals.totalWeeklyExpenses * 52;
     const scenarioFiTarget = scenarioAnnualExpenses * scenarioFinanceData.fiSettings.multiple;

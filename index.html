@@ -438,13 +438,16 @@
                     <p class="form-hint" style="margin: 0 0 15px; color: var(--text-color-secondary);">
                         Edit any section below to model a scenario — it only changes this sandbox, never your real data. Your edits persist across tabs; click <strong>Reset to current</strong> to reload every section from your live data, then <strong>Calculate Scenario</strong> to see the results.
                     </p>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="whatif-new-annual-income">New Annual Net Income (Total)</label>
-                            <input type="number" class="form-input" id="whatif-new-annual-income" placeholder="e.g., 65000" autocomplete="off">
+                    <div class="settings-section" style="margin-top: 4px;">
+                        <div class="settings-title">Scenario Income Sources</div>
+                        <div class="dynamic-list">
+                            <div class="list-header" style="grid-template-columns: 0.4fr 0.9fr 1.2fr 0.8fr 0.8fr 1fr 0.6fr 0.8fr 0.5fr;">
+                                <span>Primary</span> <span>Type</span> <span>Name</span> <span>Annual Gross</span> <span>Schedule</span> <span>Net Pay / Cycle</span> <span>Hours/Cycle</span> <span>Tax Removed / Cycle</span> <span>Action</span>
+                            </div>
+                            <div id="whatif-income-sources-settings"></div>
                         </div>
+                        <button class="add-btn" id="whatif-add-income">+ Add Income Source</button>
                     </div>
-                    <p class="form-hint" style="margin: 4px 0 0; color: var(--text-color-secondary); font-size: 0.85em;">Income override is temporary — full income-source editing arrives next. Everything below edits this scenario only.</p>
                     <div class="settings-section" style="margin-top: 20px;">
                         <div class="settings-title">Scenario Essential Expenses</div>
                         <div class="dynamic-list">
