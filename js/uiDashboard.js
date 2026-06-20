@@ -49,6 +49,20 @@ function updateDashboardUI(totals) {
     setText('dashboard-weekly-income', formatCurrency(totals.totalNetAnnualIncome / 52));
     setText('dashboard-daily-income', formatCurrency(totals.totalNetAnnualIncome / workingDaysPerYear));
 
+    // F.4 — Expense Breakdown card: essential vs non-essential split for the active period.
+    const weeklyToPeriod = { daily: 1 / 5, weekly: 1, fortnightly: 2, monthly: 52 / 12, yearly: 52 }[viewPeriod] || 2;
+    const essentialForPeriod = totals.essentialWeeklyTotal * weeklyToPeriod;
+    const nonEssentialForPeriod = totals.nonEssentialWeeklyTotal * weeklyToPeriod;
+    const totalExpForPeriod = essentialForPeriod + nonEssentialForPeriod;
+    const essentialPct = totalExpForPeriod > 0 ? (essentialForPeriod / totalExpForPeriod) * 100 : 0;
+    setText('dashboard-expense-breakdown-subtitle', `Essential vs Non-Essential (${incomePeriodLabel})`);
+    setText('dashboard-essential-expenses', formatCurrency(essentialForPeriod));
+    setText('dashboard-nonessential-expenses', formatCurrency(nonEssentialForPeriod));
+    setText('dashboard-essential-pct', totalExpForPeriod > 0 ? `${essentialPct.toFixed(0)}% of spend` : '—');
+    setText('dashboard-nonessential-pct', totalExpForPeriod > 0 ? `${(100 - essentialPct).toFixed(0)}% of spend` : '—');
+    const essentialSplitEl = getElement('dashboard-essential-split');
+    if (essentialSplitEl) essentialSplitEl.style.width = `${essentialPct}%`;
+
     // Outgoing vs Savings Card
     setText('dashboard-outgoing-savings-title', `${incomePeriodLabel} Overview`);
     setText('dashboard-period-expenses', formatCurrency(expensesForPeriod));

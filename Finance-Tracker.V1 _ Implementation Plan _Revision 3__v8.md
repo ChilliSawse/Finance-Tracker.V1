@@ -242,8 +242,8 @@ The split/half-applied theme bug recurred across three triggers (swatch reload, 
 
 ### ✅ E.1 / ✅ E.2 / ✅ E.3 — DONE (engine, type split, per-source breakdown)
 
-### E.4 — Bracket table relocation + label
-Move the bracket table to the Income tab (with D.1); final label "Tax Brackets (used in calculations)". Blocked on D.1.
+### ✅ E.4 — Bracket table relocation + label — DONE/RESOLVED (2026-06-20)
+Relocation done by **D.1**: the editable bracket table moved into the Income gear modal, and the read-only "Tax Brackets (Estimate)" reference card sits on the Income tab. The proposed "used in calculations" relabel is **superseded** — post-0.6 the brackets are only a *fallback estimate* (used when Net/Tax per cycle are blank), so the existing "Estimate" labels (tab card + modal "used for estimates") are more accurate. No code change needed.
 
 > **Data accuracy note (carried from Rev 2, partially resolved by Phase 0):** 0.1 + 0.2 fix the structural bracket bugs. Default brackets still omit Medicare levy / LITO and use stale ATO values — net remains labelled an **estimate**. Refreshing rates to a current schedule is optional follow-up, not a blocker.
 
@@ -260,8 +260,8 @@ v2 wants the **whole card clickable**, not just an "Edit →" affordance — eac
 ### F.3 — Upcoming bills
 New `financeData.upcomingBills[]` (`name`, `amount`, `dueDate`, `frequency`). Dashboard "Upcoming this month" card (due ≤30 days). Edited in the Expenses "Bills" section (D.2 modal); excluded from monthly totals unless due this period.
 
-### F.4 — Expense breakdown card (NEW — Rev 5)
-Dashboard card showing the **essential vs non-essential split** directly (mirrors the Expenses-tab stat, surfaced on the dashboard). Small bar/ratio + dollar figures per period; respects the active display period; clickable through to Expenses (F.2). Uses the softer essential palette from I.7. Effort XS–S.
+### ✅ F.4 — Expense breakdown card (NEW — Rev 5) — DONE (2026-06-20)
+Dashboard "Expense Breakdown" card (in the grid, next to Outgoing vs Savings): essential vs non-essential dollar figures + % of spend + an essential-share split bar, **respecting the active display period** (weekly→period factor mirrors the existing expense conversion). Empty state ("—") when no expenses. `updateDashboardUI()` renders it. *Deferred to their own phases: click-through to Expenses (lands with **F.2** card linking) and the softer essential colour (lands with **I.7**) — the card uses default tokens until then.*
 
 ---
 
@@ -348,8 +348,8 @@ B       Quick wins (B.1*/B.3/B.4/B.6/B.7)            —              S (1 s)   
 A       Sidebar nav + layout                         R recommended  L (3–4 s)    ✅ DONE PR1 (mobile bottom-nav → PR2)
 C       Collapsible info sections                    —             S (<1 s)     ✅ DONE (5 sections incl. What If)
 D       Display tabs + per-page settings modals      R (mandatory)  L (3–4 s)    ✅ DONE (D.1–D.6, 2026-06-20)
-E       Tax bracket calc (E.4 only)                  D             XS           PARTIAL (E.1–E.3✅)
-F       Dashboard improvements (incl. F.4 breakdown) D, E          M (1–2 s)    TODO
+E       Tax bracket calc                             —             XS           ✅ DONE (E.1–E.4; E.4 resolved via D.1)
+F       Dashboard improvements                       D, E          M (1–2 s)    PARTIAL (F.4 ✅; F.1/F.2/F.3 TODO)
 G.2     What If full lever set (incl. allocation)    D, 0.4        M (1–2 s)    TODO
 G.4/G.5 What If comparison + saved scenarios         0.4           M (1–2 s)    TODO  (not gated on D)
 G.6     "How much can I save in X time?" goal-seek   G.2           M (–L)       TODO  (NEW)
