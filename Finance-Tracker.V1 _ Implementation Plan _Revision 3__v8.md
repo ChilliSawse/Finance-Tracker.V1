@@ -364,9 +364,11 @@ Size key: XS < 0.5 session, S < 1, M 1–2, L 3+.
 3. ~~**Phase B** remaining quick wins.~~ ✅ **DONE** (B.3/B.4/B.6/B.7).
 4. ~~**Phase T** test harness before D churns the routing.~~ ✅ **DONE** (`tests.html`, 19 assertions).
 5. ~~**Phase A** sidebar~~ ✅ **DONE (PR1)** — app-shell + vertical sidebar + gear modal; mobile bottom-nav deferred to A-PR2.
-6. **0.6 first** (correctness — the user's own pay is wrong) **→ D** (display tabs + per-page modals; hoist listeners off `#settings`) **→ E.4 → (F incl. F.4 / G.2 incl. allocation / H) → G.6 → I incl. I.7**. **G.4/G.5** and **I.7** can land independently anytime. **← next candidates**
+6. ~~**0.6** salaried net/tax override fix~~ ✅ **DONE** (merged to `main`, PR #8).
+7. ~~**D** display tabs + per-page settings modals (Settings tab removed; appearance auto-save; theme split-look fix)~~ ✅ **DONE** (merged to `main`, PR #8).
+8. **Next candidates → E.4 → (F incl. F.4 / G.2 incl. allocation / H incl. H.6) → G.6 → I incl. I.7.** **G.4/G.5** and **I.7** can land independently anytime. **← we are here**
 
-> **State as of 2026-06-20:** the "cheap + safe" bucket is done (0.1–0.5, R, B, T, A-PR1, C). Remaining work: **0.6** (correctness bug, do first), then the large design-bearing **D** (now modals, de-risked by R), and the feature phases (F/G/H/I) on top. Each warrants its own session; D and G.6 carry a build-time decision noted in their sections.
+> **State as of 2026-06-20 (post-PR #7 + #8 merged to `main`):** Done — 0.1–0.5, **0.6**, R, B, T, A-PR1, C, **D (D.1–D.6)**, plus the theme split-look root-cause fix and appearance auto-save. **Remaining:** E.4 (bracket-table relocation/label), **F** (dashboard incl. F.4 + card linking), **G.2/G.4/G.5/G.6** (What If), **H** (tab polish incl. the new **H.6** Savings assets card), **I** (visual polish incl. I.7). Each warrants its own session; G.6 carries a build-time decision noted in its section. Outstanding non-phase item: the Phase C **info-panel copy** pass.
 
 ### Why this order (rationale)
 - **Correctness before chrome.** A tracker that taxes $200k like $120k is worse than one that looks plain. Phase 0 items each fix a *wrong output*.
@@ -376,7 +378,7 @@ Size key: XS < 0.5 session, S < 1, M 1–2, L 3+.
 - **Estimates bumped ~1.5×** on D and G to account for re-testing every tab and the from-scratch What If comparison/saved-scenario work.
 
 ### Don't-trust-the-output list
-Four items resolved in Phase 0; **one new (0.6) outstanding:**
+**All five items resolved** (Phase 0 + 0.6):
 - ~~Tax for incomes above the top default band~~ → **fixed by 0.1** (top band now `max: Infinity`).
 - ~~Any income near a band boundary~~ → **fixed by 0.2** (half-open `[min, max)` intervals).
 - ~~"Save & Download HTML" backup~~ → **removed in 0.3** (JSON export/import is the supported path).
