@@ -259,6 +259,12 @@ function handleWhatIfClickEvents(event) {
 
 function handleWhatIfChangeEvents(event) {
     const target = event.target;
+    // Stage 3 — simulated-dashboard period switcher: re-render the results in the new period.
+    if (target.id === 'whatif-view-period') {
+        whatIfViewPeriod = target.value;
+        runWhatIfScenario();
+        return;
+    }
     const index = parseInt(target.dataset.index, 10);
     const field = target.dataset.field;
     const arrayPrefix = target.dataset.arrayPrefix; // 'whatIfEssential' or 'whatIfNonEssential'
@@ -689,8 +695,19 @@ function runWhatIfScenario() {
         const fmtYears = (y) => (y === 0 ? 'Reached' : (!isFinite(y) ? '∞' : y.toFixed(1) + ' yr'));
         const scenarioNetAnnual = scenarioTotals.totalNetAnnualIncome;
 
-        // Allocation cards mirror the dashboard — per-fortnight split + bucket goal/time-to-reach,
-        // computed from the scenario's net income, funds and goals (Stage 0 logic on scenario data).
+        // Stage 3 — period switcher reflows the cash-flow figures (Net Worth + FI are absolute).
+        const period = whatIfViewPeriod || 'fortnightly';
+        const periodLabel = { daily: 'day', weekly: 'week', fortnightly: 'fortnight', monthly: 'month', yearly: 'year' }[period];
+        const incomeF = { daily: 1 / 260, weekly: 1 / 52, fortnightly: 1 / 26, monthly: 1 / 12, yearly: 1 }[period];
+        const weeklyF = { daily: 1 / 5, weekly: 1, fortnightly: 2, monthly: 52 / 12, yearly: 52 }[period];
+        const sInc = scenarioNetAnnual * incomeF,        cInc = currentTotals.totalNetAnnualIncome * incomeF;
+        const sExp = scenarioTotals.totalWeeklyExpenses * weeklyF, cExp = currentTotals.totalWeeklyExpenses * weeklyF;
+        const sSav = scenarioTotals.weeklySavings * weeklyF,      cSav = currentTotals.weeklySavings * weeklyF;
+        const sEss = scenarioTotals.essentialWeeklyTotal * weeklyF,    cEss = currentTotals.essentialWeeklyTotal * weeklyF;
+        const sNon = scenarioTotals.nonEssentialWeeklyTotal * weeklyF, cNon = currentTotals.nonEssentialWeeklyTotal * weeklyF;
+        const periodOptions = ['daily', 'weekly', 'fortnightly', 'monthly', 'yearly']
+            .map(p => `<option value="${p}" ${p === period ? 'selected' : ''}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`).join('');
+
         const allocItems = (scenarioFinanceData.allocation || []).map(alloc => {
             const annualContribution = scenarioNetAnnual * (alloc.percentage / 100);
             let goalLine = '';
@@ -705,31 +722,38 @@ function runWhatIfScenario() {
                 const pct = Math.min(100, Math.max(0, (current / goal) * 100));
                 goalLine = `<div class="savings-goal"><div class="savings-goal-bar"><div class="savings-goal-fill" style="width:${pct}%;"></div></div><div class="savings-goal-meta">${formatCurrency(current)} / ${formatCurrency(goal)} · ${t}</div></div>`;
             }
-            return `<div class="savings-item"><div class="savings-label">${escapeHtml(alloc.name)} (${alloc.percentage}%)</div><div class="savings-amount">${formatCurrency(annualContribution / 26)}/fortnight</div>${goalLine}</div>`;
+            return `<div class="savings-item"><div class="savings-label">${escapeHtml(alloc.name)} (${alloc.percentage}%)</div><div class="savings-amount">${formatCurrency(annualContribution * incomeF)}/${periodLabel}</div>${goalLine}</div>`;
         }).join('');
         const allocBlock = allocItems
-            ? `<div class="card" style="margin-top: 16px;"><div class="card-title">Income Allocation Strategy</div><div class="card-subtitle">Per-fortnight split of scenario net income, with goal progress</div><div class="savings-breakdown">${allocItems}</div></div>`
+            ? `<div class="card" style="margin-top: 16px;"><div class="card-title">Income Allocation Strategy</div><div class="card-subtitle">Per-${periodLabel} split of scenario net income, with goal progress</div><div class="savings-breakdown">${allocItems}</div></div>`
             : '';
 
         const fiDelta = yearsDifference === 'N/A'
             ? '<span class="wi-delta wi-delta-flat">vs now: N/A</span>'
             : `<span class="wi-delta ${yearsDifference < -0.05 ? 'wi-delta-good' : (yearsDifference > 0.05 ? 'wi-delta-bad' : 'wi-delta-flat')}">${yearsDifference < 0 ? '↓' : (yearsDifference > 0 ? '↑' : '')} ${Math.abs(yearsDifference).toFixed(1)} yr vs now</span>`;
-        const srDelta = `<span class="wi-delta ${savingsRateDifference >= 0 ? 'wi-delta-good' : 'wi-delta-bad'}">${savingsRateDifference >= 0 ? '↑' : '↓'} ${Math.abs(savingsRateDifference).toFixed(1)}%</span>`;
+        const srDelta = Math.abs(savingsRateDifference) < 0.05
+            ? '<span class="wi-delta wi-delta-flat">no change</span>'
+            : `<span class="wi-delta ${savingsRateDifference >= 0 ? 'wi-delta-good' : 'wi-delta-bad'}">${savingsRateDifference >= 0 ? '↑' : '↓'} ${Math.abs(savingsRateDifference).toFixed(1)}%</span>`;
 
         resultsDiv.innerHTML = `
-            <h3>Simulated Dashboard <span class="wi-results-sub">scenario vs your current plan</span></h3>
+            <div class="wi-results-head">
+                <h3>Simulated Dashboard <span class="wi-results-sub">scenario vs your current plan</span></h3>
+                <label class="wi-period-label">View period:
+                    <select id="whatif-view-period">${periodOptions}</select>
+                </label>
+            </div>
             <div class="dashboard-grid" style="margin-top: 16px;">
                 <div class="card">
                     <div class="card-title">Income</div>
                     <div class="card-subtitle">Net, after tax</div>
-                    <div class="amount neutral">${formatCurrency(scenarioNetAnnual / 26)}</div>
-                    <p class="wi-line">${formatCurrency(scenarioNetAnnual)}/yr ${whatIfDelta(scenarioNetAnnual, currentTotals.totalNetAnnualIncome, true)}</p>
+                    <div class="amount neutral">${formatCurrency(sInc)}<span class="wi-period-suffix"> /${periodLabel}</span></div>
+                    <p class="wi-line">${whatIfDelta(sInc, cInc, true)} <span style="color: var(--text-color-secondary);">· ${formatCurrency(scenarioNetAnnual)}/yr</span></p>
                 </div>
                 <div class="card">
                     <div class="card-title">Outgoing vs Savings</div>
-                    <div class="card-subtitle">Annual</div>
-                    <p class="wi-line">Expenses: <strong>${formatCurrency(scenarioAnnualExpenses)}</strong> ${whatIfDelta(scenarioAnnualExpenses, currentAnnualExpenses, false)}</p>
-                    <p class="wi-line">Savings: <strong>${formatCurrency(scenarioTotals.annualSavings)}</strong> ${whatIfDelta(scenarioTotals.annualSavings, currentTotals.annualSavings, true)}</p>
+                    <div class="card-subtitle">Per ${periodLabel}</div>
+                    <p class="wi-line">Expenses: <strong>${formatCurrency(sExp)}</strong> ${whatIfDelta(sExp, cExp, false)}</p>
+                    <p class="wi-line">Savings: <strong>${formatCurrency(sSav)}</strong> ${whatIfDelta(sSav, cSav, true)}</p>
                     <p class="wi-line">Savings rate: <strong>${scenarioTotals.savingsRate.toFixed(1)}%</strong> ${srDelta}</p>
                 </div>
                 <div class="card">
@@ -741,9 +765,9 @@ function runWhatIfScenario() {
                 </div>
                 <div class="card">
                     <div class="card-title">Expense Breakdown</div>
-                    <div class="card-subtitle">Essential vs Non-Essential (annual)</div>
-                    <p class="wi-line">Essential: <strong style="color: var(--color-essential);">${formatCurrency(scenarioTotals.essentialWeeklyTotal * 52)}</strong></p>
-                    <p class="wi-line">Non-Essential: <strong style="color: var(--color-warning);">${formatCurrency(scenarioTotals.nonEssentialWeeklyTotal * 52)}</strong></p>
+                    <div class="card-subtitle">Essential vs Non-Essential, per ${periodLabel}</div>
+                    <p class="wi-line">Essential: <strong style="color: var(--color-essential);">${formatCurrency(sEss)}</strong> ${whatIfDelta(sEss, cEss, false)}</p>
+                    <p class="wi-line">Non-Essential: <strong style="color: var(--color-warning);">${formatCurrency(sNon)}</strong> ${whatIfDelta(sNon, cNon, false)}</p>
                 </div>
                 <div class="card">
                     <div class="card-title">Financial Independence</div>

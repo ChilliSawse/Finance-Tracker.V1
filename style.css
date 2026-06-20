@@ -489,6 +489,29 @@ body {
 .wi-delta-good { background: var(--positive-tint); color: var(--color-positive); }
 .wi-delta-bad { background: var(--negative-tint); color: var(--color-negative); }
 .wi-delta-flat { background: var(--tab-bg-color); color: var(--text-color-secondary); }
+.wi-results-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.wi-period-label {
+    font-size: 0.85em;
+    color: var(--text-color-secondary);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.wi-period-label select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--card-bg-gradient-start);
+    color: var(--text-color-primary);
+    font: inherit;
+}
+.wi-period-suffix { font-size: 0.5em; font-weight: 400; color: var(--text-color-secondary); }
 
 .dashboard-grid {
     display: grid;
