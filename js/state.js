@@ -59,8 +59,6 @@ let defaultGuiSettings = {
 // Application State
 let financeData = JSON.parse(JSON.stringify(defaultFinanceData));
 let guiSettingsData = JSON.parse(JSON.stringify(defaultGuiSettings));
-let whatIfEssentialExpenses = [];
-let whatIfNonEssentialExpenses = [];
 // What If redesign — a full sandboxed clone of financeData. Editable What If sections write
 // here (via data-scope="whatif" routing), never to live data. Seeded in initializeWhatIfTab.
 let whatIfFinanceData = null;

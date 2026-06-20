@@ -187,7 +187,7 @@
                                 <div class="amount expense" id="total-liabilities-display"></div>
                             </div>
                         </div>
-                        <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+                        <hr style="margin: 15px 0; border: 0; border-top: 1px solid var(--border-color);">
                         <div class="card-subtitle" style="text-align: center; margin-bottom: 10px;">Breakdown</div>
                         <div class="accounts-grid" id="assets-display"></div>
                         <div class="accounts-grid" id="liabilities-display"></div>
@@ -346,11 +346,11 @@
                     <div class="card">
                         <div class="card-title">Savings Rate</div>
                         <div class="card-subtitle">Percentage of net income saved</div>
-                        <div class="amount" style="color: #4CAF50;" id="savings-rate">0.0%</div>
+                        <div class="amount" style="color: var(--color-positive);" id="savings-rate">0.0%</div>
                         <div class="progress-bar">
                             <div class="progress-fill" id="savings-rate-progress" style="width: 0%;"></div>
                         </div>
-                        <p style="margin-top: 15px; color: #666; font-size: 0.9em;" id="savings-message"></p>
+                        <p style="margin-top: 15px; color: var(--text-color-secondary); font-size: 0.9em;" id="savings-message"></p>
                         <p class="benchmark-hint">Benchmark: aim for 20%+ — the higher your savings rate, the sooner you reach financial independence.</p>
                     </div>
                     <div class="card">
@@ -773,7 +773,7 @@
                         <div id="allocation-settings"></div>
                     </div>
                     <button class="add-btn" id="add-allocation-category">+ Add Category</button>
-                    <p style="margin-top: 10px; color: var(--text-color-muted, #666); font-size: 0.9em;">
+                    <p style="margin-top: 10px; color: var(--text-color-secondary); font-size: 0.9em;">
                         Total: <span id="total-percent">0.0%</span> (should equal 100%)
                     </p>
                 </div>
@@ -812,7 +812,7 @@
                 </button>
             </div>
             <div class="modal-body">
-                <div class="settings-section" style="border-left-color: #f44336;">
+                <div class="settings-section" style="border-left-color: var(--color-negative);">
                     <div class="settings-title">Liabilities Management</div>
                     <div class="dynamic-list">
                         <div class="list-header" style="grid-template-columns: 2fr 1.5fr 1fr auto;">
@@ -822,7 +822,7 @@
                     </div>
                     <button class="add-btn" id="add-liability">+ Add Liability</button>
                     <div style="margin-top: 20px; text-align: right; font-size: 1.2em; font-weight: 600;">
-                        Total Liabilities: <span id="total-liabilities-settings" style="color: #f44336;"></span>
+                        Total Liabilities: <span id="total-liabilities-settings" style="color: var(--color-negative);"></span>
                     </div>
                 </div>
             </div>

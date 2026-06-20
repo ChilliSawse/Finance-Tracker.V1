@@ -259,30 +259,12 @@ function handleWhatIfClickEvents(event) {
 
 function handleWhatIfChangeEvents(event) {
     const target = event.target;
-    // Stage 3 — simulated-dashboard period switcher: re-render the results in the new period.
+    // Simulated-dashboard period switcher: re-render the results in the new period.
+    // (Scenario section field edits route through the document-level settings handlers
+    // via data-scope="whatif"; nothing else What-If-specific happens on change.)
     if (target.id === 'whatif-view-period') {
         whatIfViewPeriod = target.value;
         runWhatIfScenario();
-        return;
-    }
-    const index = parseInt(target.dataset.index, 10);
-    const field = target.dataset.field;
-    const arrayPrefix = target.dataset.arrayPrefix; // 'whatIfEssential' or 'whatIfNonEssential'
-    let value = target.value;
-
-    if (field && arrayPrefix) {
-        let arrayToUpdate;
-        if (arrayPrefix === 'whatIfEssential') arrayToUpdate = whatIfEssentialExpenses;
-        else if (arrayPrefix === 'whatIfNonEssential') arrayToUpdate = whatIfNonEssentialExpenses;
-
-        if (arrayToUpdate && arrayToUpdate[index] !== undefined) {
-            if (field === 'amount') {
-                value = parseFloat(value) || 0;
-            }
-            arrayToUpdate[index][field] = value;
-            // No need to call updateDataAndUI() here as WhatIf changes are temporary
-            // and only applied when "Calculate Scenario" is clicked.
-        }
     }
 }
 
@@ -427,27 +409,6 @@ function removeExpenseFromList(arrayName, index, scope) {
     fd[arrayName].splice(index, 1);
     if (scope === 'whatif') { renderWhatIfExpensesList(arrayName, `whatif-${arrayName === 'essentialExpenses' ? 'essential' : 'non-essential'}-expenses-settings`); }
     else { renderExpensesSettingsLists(); updateDataAndUI(); }
-}
-
-// Add/Remove for What If tab
-function addWhatIfExpenseItem(type) { // type is 'essential' or 'nonEssential'
-    const newExpense = { name: "Test Expense", amount: 0, frequency: "monthly" };
-    if (type === 'essential') {
-        whatIfEssentialExpenses.push(newExpense);
-        renderWhatIfExpenseSettingsList('whatif-essential-expenses-settings', whatIfEssentialExpenses, 'whatIfEssential');
-    } else {
-        whatIfNonEssentialExpenses.push(newExpense);
-        renderWhatIfExpenseSettingsList('whatif-non-essential-expenses-settings', whatIfNonEssentialExpenses, 'whatIfNonEssential');
-    }
-}
-function removeWhatIfExpenseItem(type, index) {
-    if (type === 'essential') {
-        whatIfEssentialExpenses.splice(index, 1);
-        renderWhatIfExpenseSettingsList('whatif-essential-expenses-settings', whatIfEssentialExpenses, 'whatIfEssential');
-    } else {
-        whatIfNonEssentialExpenses.splice(index, 1);
-        renderWhatIfExpenseSettingsList('whatif-non-essential-expenses-settings', whatIfNonEssentialExpenses, 'whatIfNonEssential');
-    }
 }
 
 

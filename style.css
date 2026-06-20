@@ -605,7 +605,7 @@ body {
 }
 
 .progress-bar {
-    background: #e0e0e0;
+    background: var(--border-color);
     border-radius: 10px;
     height: 8px;
     margin: 10px 0;
@@ -713,7 +713,7 @@ body {
     justify-content: space-between;
     align-items: flex-start;
     padding: 12px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-color);
     gap: 10px;
 }
 
@@ -1120,7 +1120,7 @@ body {
     border-bottom: 2px solid var(--border-color);
     font-weight: 600;
     font-size: 0.75em;
-    color: #555;
+    color: var(--text-color-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     position: sticky;
@@ -1240,7 +1240,7 @@ body {
 .settings-hint {
     margin: 6px 0 0;
     font-size: 0.85em;
-    color: var(--text-color-muted, #888);
+    color: var(--text-color-secondary);
     line-height: 1.5;
 }
 
@@ -1323,8 +1323,9 @@ body {
 .dashboard-controls select {
     padding: 6px 10px;
     border-radius: 6px;
-    border: 1px solid #ddd;
-    background-color: white;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg-gradient-start);
+    color: var(--text-color-primary);
     font-size: 0.85em;
 }
 
@@ -1693,7 +1694,7 @@ body {
     padding: 16px;
     background: var(--card-bg-gradient-start);
     border-radius: 12px;
-    border: 1px solid var(--border, #e0e0e0);
+    border: 1px solid var(--border-color);
     margin-bottom: 20px;
 }
 

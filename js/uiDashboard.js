@@ -215,7 +215,7 @@ function updateIncomeTabUI(totals) {
             <span>Total Tax Paid (All Sources):</span>
             <span style="font-weight: 600; color: var(--color-negative);">${formatCurrency(totals.totalAnnualTax)}</span>
         </div>
-        <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px solid #e0e0e0; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px solid var(--border-color); flex-wrap: wrap; gap: 10px;">
             <span style="font-weight: 600;">Total Net Income (All Sources):</span>
             <span style="font-weight: 700; color: var(--color-positive); font-size: 1.2em;">${formatCurrency(totals.totalNetAnnualIncome)}</span>
         </div>`);
@@ -378,7 +378,7 @@ function updateSavingsTabUI(totals) {
             <span>Annual expenses:</span>
             <span style="font-weight: 600; color: var(--color-negative);">${formatCurrency(annualExpenses)}</span>
         </div>
-        <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid #e0e0e0; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px;">
             <span>Current progress:</span>
             <span style="font-weight: 600; color: var(--color-warning);">${currentProgress.toFixed(1)}%</span>
         </div>
@@ -456,7 +456,7 @@ function updateLiabilitiesTabUI(totals) {
                 <span>Average Interest Rate:</span>
                 <span style="font-weight: 600; color: var(--color-warning);">${averageInterestRate.toFixed(2)}%</span>
             </div>
-            <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px solid #e0e0e0; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px solid var(--border-color); flex-wrap: wrap; gap: 10px;">
                 <span style="font-weight: 600;">Net Worth if Debt-Free:</span>
                 <span style="font-weight: 700; color: var(--color-positive); font-size: 1.2em;">${formatCurrency(netWorthWithoutDebt)}</span>
             </div>`;

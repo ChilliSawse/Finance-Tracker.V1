@@ -495,37 +495,4 @@ function initializeWhatIfTab(force = false) {
     whatIfInitialized = true;
 }
 
-function renderWhatIfExpenseSettingsList(containerId, expensesArray, typePrefix) {
-    const container = getElement(containerId);
-    if (!container) return;
-    container.innerHTML = '';
-    expensesArray.forEach((expense, index) => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'list-item';
-        itemDiv.style.gridTemplateColumns = '2fr 1fr 1fr auto';
-        const baseId = `whatif-${typePrefix}-${index}`;
-        const typeLabel = typePrefix === 'whatIfEssential' ? 'Test Essential' : 'Test Non-Essential';
-        itemDiv.innerHTML = `
-            <span>
-                <label for="${baseId}-name" class="visually-hidden">${typeLabel} Expense Name ${index + 1}</label>
-                <input type="text" value="${escapeHtml(expense.name)}" data-index="${index}" data-field="name" data-array-prefix="${typePrefix}" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
-            </span>
-            <span>
-                <label for="${baseId}-amount" class="visually-hidden">${typeLabel} Expense Amount ${index + 1}</label>
-                <input type="number" value="${expense.amount}" data-index="${index}" data-field="amount" data-array-prefix="${typePrefix}" id="${baseId}-amount" name="${baseId}-amount" placeholder="Amount" step="0.01">
-            </span>
-            <span>
-                <label for="${baseId}-frequency" class="visually-hidden">${typeLabel} Expense Frequency ${index + 1}</label>
-                <select data-index="${index}" data-field="frequency" data-array-prefix="${typePrefix}" id="${baseId}-frequency" name="${baseId}-frequency">
-                    <option value="weekly" ${expense.frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
-                    <option value="fortnightly" ${expense.frequency === 'fortnightly' ? 'selected' : ''}>Fortnightly</option>
-                    <option value="monthly" ${expense.frequency === 'monthly' ? 'selected' : ''}>Monthly</option>
-                    <option value="yearly" ${expense.frequency === 'yearly' ? 'selected' : ''}>Yearly</option>
-                </select>
-            </span>
-            <button class="delete-btn" data-index="${index}" data-type="${typePrefix}" aria-label="Delete ${typeLabel} Expense ${index + 1}">Delete</button>`;
-        container.appendChild(itemDiv);
-    });
-}
-
 // --- END OF: uiSettings.js ---
