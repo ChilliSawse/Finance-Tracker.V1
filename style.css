@@ -1023,11 +1023,16 @@ body {
     box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
 }
 
+/* Themed secondary button (was a hardcoded grey gradient on every theme):
+   a subtle translucent surface over the theme with a border + primary text. */
 .btn-secondary {
-    background: linear-gradient(145deg, #6c757d, #495057);
+    background: var(--tab-bg-color);
+    color: var(--text-color-primary);
+    border: 1px solid var(--border-color);
 }
 .btn-secondary:hover {
-    box-shadow: 0 8px 20px rgba(73, 80, 87, 0.3);
+    background: var(--tab-active-bg-color);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 
