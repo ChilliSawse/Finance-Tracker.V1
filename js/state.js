@@ -95,7 +95,7 @@ class FinanceAutoSave {
 
         this.statusIndicator = document.createElement('div');
         this.statusIndicator.id = 'save-status-indicator';
-        this.statusIndicator.textContent = '✓ All changes saved';
+        this.statusIndicator.textContent = 'All changes saved';
         this.statusIndicator.setAttribute('aria-live', 'polite');
         this.statusIndicator.setAttribute('aria-atomic', 'true');
         this.statusIndicator.classList.add('saved', 'visible');
@@ -111,12 +111,12 @@ class FinanceAutoSave {
         this.statusIndicator.classList.add(status, 'visible');
 
         const statusText = {
-            saving: '💾 Saving...',
-            saved: '✓ All changes saved',
-            error: '⚠ Save failed',
-            unsaved: '● Unsaved changes'
+            saving: 'Saving...',
+            saved: 'All changes saved',
+            error: 'Save failed',
+            unsaved: 'Unsaved changes'
         };
-        this.statusIndicator.textContent = statusText[status] || '✓ All changes saved';
+        this.statusIndicator.textContent = statusText[status] || 'All changes saved';
 
         // Hide "saved" message after a few seconds
         if (status === 'saved') {

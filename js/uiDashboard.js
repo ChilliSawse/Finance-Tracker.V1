@@ -312,7 +312,7 @@ function updateSavingsTabUI(totals) {
 
 
     let message = '';
-    if (totals.savingsRate < 0) message = "⚠ Spending exceeds income";
+    if (totals.savingsRate < 0) message = "Spending exceeds income";
     else if (totals.savingsRate >= 70) message = "Outstanding!";
     else if (totals.savingsRate >= 50) message = "Excellent!";
     else if (totals.savingsRate >= 30) message = "Great job!";
@@ -330,7 +330,7 @@ function updateSavingsTabUI(totals) {
     // Build a human-readable label — Infinity is a number in JS so typeof isn't enough
     let yearsLabel;
     if (yearsToFIValue === 0) {
-        yearsLabel = '🎉 Already reached!';
+        yearsLabel = 'Already reached!';
     } else if (!Number.isFinite(yearsToFIValue)) {
         yearsLabel = totals.annualSavings <= 0 ? 'Needs positive savings' : '∞ years';
     } else {
@@ -380,7 +380,7 @@ function updateLiabilitiesTabUI(totals) {
     if (summaryContainer) {
         summaryContainer.innerHTML = '';
         if (financeData.liabilities.length === 0) {
-            summaryContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--color-positive); font-size: 1.2em;">🎉 No liabilities tracked - Great job!</div>';
+            summaryContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--color-positive); font-size: 1.2em;">No liabilities tracked - Great job!</div>';
         } else {
             financeData.liabilities.forEach(debt => {
                 const debtCard = document.createElement('div');

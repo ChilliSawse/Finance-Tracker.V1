@@ -439,8 +439,8 @@ function updateDefaultsButtonLabels() {
     const resetBtn = getElement('reset-to-defaults');
     if (resetBtn) {
         resetBtn.textContent = getUserDefaults()
-            ? '🔄 Reset to My Defaults'
-            : '🔄 Reset to Factory Defaults';
+            ? 'Reset to My Defaults'
+            : 'Reset to Factory Defaults';
     }
 }
 
@@ -667,7 +667,7 @@ function runWhatIfScenario() {
             <h3>Scenario Results vs Current Situation</h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0;">
                 <div style="${cardStyle}">
-                    <h4 style="${headingStyle}">💰 Net Income (Annual)</h4>
+                    <h4 style="${headingStyle}">Net Income (Annual)</h4>
                     <p><strong>Scenario:</strong> ${formatCurrency(scenarioNetAnnualIncome)}</p>
                     <p><strong>Current:</strong> ${formatCurrency(currentTotals.totalNetAnnualIncome)}</p>
                     <p style="color: ${scenarioNetAnnualIncome >= currentTotals.totalNetAnnualIncome ? POS : NEG};">
@@ -675,7 +675,7 @@ function runWhatIfScenario() {
                     </p>
                 </div>
                 <div style="${cardStyle}">
-                    <h4 style="${headingStyle}">💸 Expenses (Annual)</h4>
+                    <h4 style="${headingStyle}">Expenses (Annual)</h4>
                     <p><strong>Scenario:</strong> ${formatCurrency(scenarioAnnualExpenses)}</p>
                     <p><strong>Current:</strong> ${formatCurrency(currentAnnualExpenses)}</p>
                     <p style="color: ${scenarioAnnualExpenses <= currentAnnualExpenses ? POS : NEG};">
@@ -683,7 +683,7 @@ function runWhatIfScenario() {
                     </p>
                 </div>
                 <div style="${cardStyle}">
-                    <h4 style="${headingStyle}">📈 Savings (Annual)</h4>
+                    <h4 style="${headingStyle}">Savings (Annual)</h4>
                     <p><strong>Scenario:</strong> ${formatCurrency(scenarioTotals.annualSavings)}</p>
                     <p><strong>Current:</strong> ${formatCurrency(currentTotals.annualSavings)}</p>
                     <p style="color: ${scenarioTotals.annualSavings >= currentTotals.annualSavings ? POS : NEG};">
@@ -691,7 +691,7 @@ function runWhatIfScenario() {
                     </p>
                 </div>
                 <div style="${cardStyle}">
-                    <h4 style="${headingStyle}">🎯 FI Timeline (Years)</h4>
+                    <h4 style="${headingStyle}">FI Timeline (Years)</h4>
                     <p><strong>Scenario:</strong> ${typeof scenarioYearsToFI === 'number' ? scenarioYearsToFI.toFixed(1) : '∞'}</p>
                     <p><strong>Current:</strong> ${typeof currentYearsToFI === 'number' ? currentYearsToFI.toFixed(1) : '∞'}</p>
                     <p style="color: ${yearsDifference !== 'N/A' && yearsDifference < 0 ? POS : (yearsDifference !== 'N/A' && yearsDifference > 0 ? NEG : MUTED)};">
@@ -700,7 +700,7 @@ function runWhatIfScenario() {
                 </div>
             </div>
             <div style="margin-top: 20px; padding: 15px; background: var(--content-bg-color); border: 1px solid var(--info-border); border-radius: 8px;">
-                <h4>📊 Key Metrics (Scenario)</h4>
+                <h4>Key Metrics (Scenario)</h4>
                 <p><strong>Savings Rate:</strong> ${scenarioTotals.savingsRate.toFixed(1)}% (Current: ${currentTotals.savingsRate.toFixed(1)}%, Change: ${savingsRateDifference > 0 ? '+' : ''}${savingsRateDifference.toFixed(1)}%)</p>
                 <p><strong>FI Target Amount:</strong> ${formatCurrency(scenarioFiTarget)}</p>
                 <p><strong>Assets After Change:</strong> ${formatCurrency(scenarioCurrentAssets)}</p>

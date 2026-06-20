@@ -31,7 +31,7 @@
                 <p id="sub-heading-display">Track your income, expenses, and savings with style</p>
             </div>
             <div class="topbar-actions">
-                <button class="btn btn-install" id="install-app-btn" style="display: none;">📥 Install App</button>
+                <button class="btn btn-install" id="install-app-btn" style="display: none;">Install App</button>
                 <button class="icon-btn" id="open-gui-settings" aria-label="Settings" aria-haspopup="dialog">
                     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                 </button>
@@ -68,21 +68,21 @@
         <main class="content main-content" id="main-content">
             <div id="dashboard" role="tabpanel" aria-labelledby="tab-dashboard" class="tab-content active">
                 <div id="dashboard-empty-state" class="dashboard-empty" hidden>
-                    <h2>Welcome to your Finance Tracker 👋</h2>
+                    <h2>Welcome to your Finance Tracker</h2>
                     <p>Add a few details and your income, spending, and savings come to life. Start here:</p>
                     <div class="empty-actions">
                         <button type="button" class="empty-action-card" data-empty-action="income">
-                            <span class="empty-action-icon" aria-hidden="true">💰</span>
+                            <span class="empty-action-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg></span>
                             <span class="empty-action-title">Add income</span>
                             <span class="empty-action-desc">Your salary or self-employed pay</span>
                         </button>
                         <button type="button" class="empty-action-card" data-empty-action="expenses">
-                            <span class="empty-action-icon" aria-hidden="true">💸</span>
+                            <span class="empty-action-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/></svg></span>
                             <span class="empty-action-title">Add expenses</span>
                             <span class="empty-action-desc">Essential and non-essential</span>
                         </button>
                         <button type="button" class="empty-action-card" data-empty-action="fi">
-                            <span class="empty-action-icon" aria-hidden="true">🎯</span>
+                            <span class="empty-action-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>
                             <span class="empty-action-title">Set your FI goal</span>
                             <span class="empty-action-desc">Assets, allocation &amp; FI settings</span>
                         </button>
@@ -429,7 +429,7 @@
                     </div>
                 </div>
                 <div class="settings-section" style="border-left-color: var(--color-neutral);">
-                    <div class="settings-title">🤔 "What If" Scenario Planner</div>
+                    <div class="settings-title">"What If" Scenario Planner</div>
                     <p class="form-hint" style="margin: 0 0 15px; color: var(--text-color-secondary);">
                         Your scenario edits stay put when you switch tabs. Click <strong>Reset to current</strong> to reload the levers from your live data.
                     </p>
@@ -448,7 +448,7 @@
                         </div>
                     </div>
                     <div class="settings-section" style="margin-top: 20px;">
-                        <div class="settings-title">💸 Test Essential Expenses</div>
+                        <div class="settings-title">Test Essential Expenses</div>
                         <div class="dynamic-list">
                             <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
                                 <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
@@ -458,7 +458,7 @@
                         <button class="add-btn" id="add-whatif-essential-expense">+ Add Test Essential</button>
                     </div>
                     <div class="settings-section" style="margin-top: 20px;">
-                        <div class="settings-title">🎮 Test Non-Essential Expenses</div>
+                        <div class="settings-title">Test Non-Essential Expenses</div>
                         <div class="dynamic-list">
                             <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
                                 <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
@@ -469,7 +469,7 @@
                     </div>
                     <div style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 25px 0;">
                         <button class="btn" id="run-whatif-calculation">Calculate Scenario</button>
-                        <button class="btn btn-secondary" id="reset-whatif-to-current">🔄 Reset to current</button>
+                        <button class="btn btn-secondary" id="reset-whatif-to-current">Reset to current</button>
                     </div>
                     <div class="scenario-results" id="whatif-results-display">
                         <h3>Scenario Results</h3>
@@ -489,14 +489,14 @@
     <div class="modal-backdrop" id="gui-settings-modal" hidden>
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gui-settings-title">
             <div class="modal-header">
-                <h2 id="gui-settings-title">⚙️ Settings</h2>
+                <h2 id="gui-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</h2>
                 <button class="modal-close" id="close-gui-settings" aria-label="Close appearance settings">
                     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
                 </button>
             </div>
             <div class="modal-body" id="guiSettings">
                 <div class="settings-section">
-                    <div class="settings-title">🎨 Appearance Customization</div>
+                    <div class="settings-title">Appearance Customization</div>
                     <p class="theme-section-title">Theme Presets</p>
                     <div id="theme-switcher-container" class="theme-switcher" role="group" aria-label="Theme presets"></div>
                     <p class="theme-section-title">Customise Colours</p>
@@ -528,7 +528,7 @@
                     </div>
                 </div>
                  <div class="settings-section">
-                    <div class="settings-title">✒️ Typography &amp; Text</div>
+                    <div class="settings-title">Typography &amp; Text</div>
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label" for="gui-font-family">Font Family</label>
@@ -558,7 +558,7 @@
                          </div>
                 </div>
                 <div class="settings-section">
-                    <div class="settings-title">🌍 General</div>
+                    <div class="settings-title">General</div>
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label" for="currency-select">Currency</label>
@@ -578,15 +578,15 @@
                     </div>
                 </div>
                 <div class="settings-section">
-                    <div class="settings-title">💾 Save, Reset &amp; Backup</div>
+                    <div class="settings-title">Save, Reset &amp; Backup</div>
                     <p class="settings-hint">Appearance changes (theme, colours, fonts) save automatically. Defaults = your whole setup (data + appearance) used as a reset point. Backup = a JSON file of everything.</p>
                     <div class="settings-actions" style="margin-top: 12px; padding-top: 0; border-top: none;">
-                        <button class="btn btn-secondary" id="reset-gui-settings">🎨 Reset Appearance</button>
-                        <button class="btn btn-secondary" id="set-current-default">🌟 Save as My Defaults</button>
-                        <button class="btn btn-secondary" id="reset-to-defaults">🔄 Reset to Factory Defaults</button>
-                        <button class="btn btn-secondary" id="export-json-gui">📊 Export Backup (JSON)</button>
+                        <button class="btn btn-secondary" id="reset-gui-settings">Reset Appearance</button>
+                        <button class="btn btn-secondary" id="set-current-default">Save as My Defaults</button>
+                        <button class="btn btn-secondary" id="reset-to-defaults">Reset to Factory Defaults</button>
+                        <button class="btn btn-secondary" id="export-json-gui">Export Backup (JSON)</button>
                         <input type="file" id="json-import-gui" accept=".json" style="display: none;">
-                        <button class="btn btn-secondary" id="import-json-gui-btn">📥 Import Backup (JSON)</button>
+                        <button class="btn btn-secondary" id="import-json-gui-btn">Import Backup (JSON)</button>
                     </div>
                 </div>
             </div>
@@ -600,14 +600,14 @@
     <div class="modal-backdrop" id="income-settings-modal" hidden>
         <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="income-settings-title">
             <div class="modal-header">
-                <h2 id="income-settings-title">💰 Income &amp; Tax Settings</h2>
+                <h2 id="income-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg> Income &amp; Tax Settings</h2>
                 <button class="modal-close" id="close-income-settings" aria-label="Close income settings">
                     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="settings-section">
-                    <div class="settings-title">💰 Income Sources
+                    <div class="settings-title">Income Sources
                         <span class="info-icon">ⓘ<span class="tooltip">Tax is calculated based on 'Invoiced Pay' (Priority) or 'Tax Removed'. If neither, tax is 0. Clear 'Invoiced Pay' to use 'Tax Removed'.</span></span>
                     </div>
                     <div class="dynamic-list">
@@ -620,7 +620,7 @@
                 </div>
                 <div class="settings-section">
                     <div class="settings-title">
-                        📊 Tax Brackets (used for estimates)
+                        Tax Brackets (used for estimates)
                         <span id="tax-brackets-info">These progressive brackets estimate tax on gross income. They calculate net income for any source where 'Net Pay/Cycle' and 'Tax Removed/Cycle' are left blank. If you enter either of those, your manual value takes precedence.</span>
                     </div>
                     <div class="dynamic-list">
@@ -639,14 +639,14 @@
     <div class="modal-backdrop" id="expenses-settings-modal" hidden>
         <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="expenses-settings-title">
             <div class="modal-header">
-                <h2 id="expenses-settings-title">💸 Expenses Settings</h2>
+                <h2 id="expenses-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/></svg> Expenses Settings</h2>
                 <button class="modal-close" aria-label="Close expenses settings">
                     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="settings-section">
-                    <div class="settings-title">💸 Essential Expenses</div>
+                    <div class="settings-title">Essential Expenses</div>
                     <div class="dynamic-list">
                         <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
                             <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
@@ -656,7 +656,7 @@
                     <button class="add-btn" id="add-essential-expense-settings">+ Add Essential Expense</button>
                 </div>
                 <div class="settings-section">
-                    <div class="settings-title">🎮 Non-Essential Expenses</div>
+                    <div class="settings-title">Non-Essential Expenses</div>
                     <div class="dynamic-list">
                         <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
                             <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
@@ -673,14 +673,14 @@
     <div class="modal-backdrop" id="savings-settings-modal" hidden>
         <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="savings-settings-title">
             <div class="modal-header">
-                <h2 id="savings-settings-title">🏦 Savings, Assets &amp; FI Settings</h2>
+                <h2 id="savings-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg> Savings, Assets &amp; FI Settings</h2>
                 <button class="modal-close" aria-label="Close savings settings">
                     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="settings-section">
-                    <div class="settings-title">📈 Assets</div>
+                    <div class="settings-title">Assets</div>
                     <div class="dynamic-list">
                         <div class="list-header" style="grid-template-columns: 2fr 1.5fr auto;">
                             <span>Asset Name</span> <span>Current Balance</span> <span>Action</span>
@@ -690,7 +690,7 @@
                     <button class="add-btn" id="add-asset">+ Add Asset</button>
                 </div>
                 <div class="settings-section">
-                    <div class="settings-title">📊 Money Allocation Percentages</div>
+                    <div class="settings-title">Money Allocation Percentages</div>
                     <div class="dynamic-list">
                         <div class="list-header" style="grid-template-columns: 2fr 1fr auto;">
                             <span>Allocation Name</span> <span>Percentage (%)</span> <span>Action</span>
@@ -704,7 +704,7 @@
                 </div>
                 <div class="settings-section">
                     <div class="settings-title">
-                        🏦 Financial Independence Settings
+                        Financial Independence Settings
                         <span class="info-icon">ⓘ<span class="tooltip">
                             This section helps estimate when you might reach Financial Independence (FI).
                             <br>• <b>FI Multiple:</b> How many years of expenses you need saved (e.g., 25 means a 4% withdrawal rate).
@@ -730,14 +730,14 @@
     <div class="modal-backdrop" id="liabilities-settings-modal" hidden>
         <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="liabilities-settings-title">
             <div class="modal-header">
-                <h2 id="liabilities-settings-title">⚖️ Liabilities Settings</h2>
+                <h2 id="liabilities-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Liabilities Settings</h2>
                 <button class="modal-close" aria-label="Close liabilities settings">
                     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="settings-section" style="border-left-color: #f44336;">
-                    <div class="settings-title">⚖️ Liabilities Management</div>
+                    <div class="settings-title">Liabilities Management</div>
                     <div class="dynamic-list">
                         <div class="list-header" style="grid-template-columns: 2fr 1.5fr 1fr auto;">
                             <span>Liability Name</span> <span>Current Balance</span> <span>Interest Rate (%)</span> <span>Action</span>

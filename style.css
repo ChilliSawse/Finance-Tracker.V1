@@ -305,6 +305,9 @@ body {
     font-size: 1.2em;
     font-weight: 600;
     margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .modal-close {
@@ -447,7 +450,8 @@ body {
     outline: 2px solid var(--accent-color);
     outline-offset: 2px;
 }
-.empty-action-icon { font-size: 2rem; }
+.empty-action-icon { color: var(--accent-color); line-height: 0; }
+.empty-action-icon svg { width: 32px; height: 32px; }
 .empty-action-title { font-weight: 600; font-size: 1.05rem; }
 .empty-action-desc { font-size: 0.85rem; color: var(--text-color-secondary); }
 
