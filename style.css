@@ -474,6 +474,22 @@ body {
 /* I.7 — F.4 breakdown bar shows the essential share in the calm essential tone. */
 #dashboard-essential-split { background: var(--color-essential); }
 
+/* Stage 3 — What If simulated dashboard: delta badges + result lines. */
+.wi-line { margin: 6px 0; font-size: 0.9em; line-height: 1.4; }
+.wi-results-sub { font-size: 0.6em; font-weight: 400; color: var(--text-color-secondary); text-transform: none; }
+.wi-delta {
+    display: inline-block;
+    font-size: 0.78em;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.wi-delta-good { background: var(--positive-tint); color: var(--color-positive); }
+.wi-delta-bad { background: var(--negative-tint); color: var(--color-negative); }
+.wi-delta-flat { background: var(--tab-bg-color); color: var(--text-color-secondary); }
+
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

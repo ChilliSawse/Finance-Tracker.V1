@@ -642,6 +642,15 @@ function actionResetGuiToDefaults() {
     showCustomModal('Appearance reset.');
 }
 
+// Stage 3 — ↑/↓ delta badge vs current (good direction shows in the positive colour).
+function whatIfDelta(scenarioVal, currentVal, goodIsHigher = true) {
+    const diff = scenarioVal - currentVal;
+    if (!isFinite(diff) || Math.abs(diff) < 0.005) return '<span class="wi-delta wi-delta-flat">no change</span>';
+    const good = goodIsHigher ? diff > 0 : diff < 0;
+    const arrow = diff > 0 ? '↑' : '↓';
+    return `<span class="wi-delta ${good ? 'wi-delta-good' : 'wi-delta-bad'}">${arrow} ${formatCurrency(Math.abs(diff))}</span>`;
+}
+
 // What If Scenario Action
 function runWhatIfScenario() {
     if (!whatIfFinanceData) initializeWhatIfTab(true); // safety — seed the sandbox if missing
@@ -677,65 +686,74 @@ function runWhatIfScenario() {
 
     const resultsDiv = getElement('whatif-results-display');
     if (resultsDiv) {
-        // Phase 0.5 — token-ised colours. All colours below resolve to theme CSS variables so the
-        // panel renders correctly on every theme (incl. dark) instead of hardcoded light-mode hex.
-        const POS = 'var(--color-positive)';
-        const NEG = 'var(--color-negative)';
-        const MUTED = 'var(--text-color-secondary)';
-        const cardStyle = 'background: var(--info-bg); border: 1px solid var(--info-border); padding: 15px; border-radius: 8px;';
-        const headingStyle = 'color: var(--accent-color); margin-bottom: 10px;';
+        const fmtYears = (y) => (y === 0 ? 'Reached' : (!isFinite(y) ? '∞' : y.toFixed(1) + ' yr'));
+        const scenarioNetAnnual = scenarioTotals.totalNetAnnualIncome;
+
+        // Allocation cards mirror the dashboard — per-fortnight split + bucket goal/time-to-reach,
+        // computed from the scenario's net income, funds and goals (Stage 0 logic on scenario data).
+        const allocItems = (scenarioFinanceData.allocation || []).map(alloc => {
+            const annualContribution = scenarioNetAnnual * (alloc.percentage / 100);
+            let goalLine = '';
+            const goal = alloc.savingsGoal || 0;
+            if (goal > 0) {
+                const current = alloc.currentBalance || 0;
+                const remaining = goal - current;
+                let t;
+                if (remaining <= 0) t = 'Goal reached';
+                else if (annualContribution <= 0) t = 'needs allocation';
+                else t = formatTimeToGoal(remaining / annualContribution);
+                const pct = Math.min(100, Math.max(0, (current / goal) * 100));
+                goalLine = `<div class="savings-goal"><div class="savings-goal-bar"><div class="savings-goal-fill" style="width:${pct}%;"></div></div><div class="savings-goal-meta">${formatCurrency(current)} / ${formatCurrency(goal)} · ${t}</div></div>`;
+            }
+            return `<div class="savings-item"><div class="savings-label">${escapeHtml(alloc.name)} (${alloc.percentage}%)</div><div class="savings-amount">${formatCurrency(annualContribution / 26)}/fortnight</div>${goalLine}</div>`;
+        }).join('');
+        const allocBlock = allocItems
+            ? `<div class="card" style="margin-top: 16px;"><div class="card-title">Income Allocation Strategy</div><div class="card-subtitle">Per-fortnight split of scenario net income, with goal progress</div><div class="savings-breakdown">${allocItems}</div></div>`
+            : '';
+
+        const fiDelta = yearsDifference === 'N/A'
+            ? '<span class="wi-delta wi-delta-flat">vs now: N/A</span>'
+            : `<span class="wi-delta ${yearsDifference < -0.05 ? 'wi-delta-good' : (yearsDifference > 0.05 ? 'wi-delta-bad' : 'wi-delta-flat')}">${yearsDifference < 0 ? '↓' : (yearsDifference > 0 ? '↑' : '')} ${Math.abs(yearsDifference).toFixed(1)} yr vs now</span>`;
+        const srDelta = `<span class="wi-delta ${savingsRateDifference >= 0 ? 'wi-delta-good' : 'wi-delta-bad'}">${savingsRateDifference >= 0 ? '↑' : '↓'} ${Math.abs(savingsRateDifference).toFixed(1)}%</span>`;
+
         resultsDiv.innerHTML = `
-            <h3>Scenario Results vs Current Situation</h3>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0;">
-                <div style="${cardStyle}">
-                    <h4 style="${headingStyle}">Net Income (Annual)</h4>
-                    <p><strong>Scenario:</strong> ${formatCurrency(scenarioNetAnnualIncome)}</p>
-                    <p><strong>Current:</strong> ${formatCurrency(currentTotals.totalNetAnnualIncome)}</p>
-                    <p style="color: ${scenarioNetAnnualIncome >= currentTotals.totalNetAnnualIncome ? POS : NEG};">
-                        <strong>Change:</strong> ${scenarioNetAnnualIncome >= currentTotals.totalNetAnnualIncome ? '+' : ''}${formatCurrency(scenarioNetAnnualIncome - currentTotals.totalNetAnnualIncome)}
-                    </p>
+            <h3>Simulated Dashboard <span class="wi-results-sub">scenario vs your current plan</span></h3>
+            <div class="dashboard-grid" style="margin-top: 16px;">
+                <div class="card">
+                    <div class="card-title">Income</div>
+                    <div class="card-subtitle">Net, after tax</div>
+                    <div class="amount neutral">${formatCurrency(scenarioNetAnnual / 26)}</div>
+                    <p class="wi-line">${formatCurrency(scenarioNetAnnual)}/yr ${whatIfDelta(scenarioNetAnnual, currentTotals.totalNetAnnualIncome, true)}</p>
                 </div>
-                <div style="${cardStyle}">
-                    <h4 style="${headingStyle}">Expenses (Annual)</h4>
-                    <p><strong>Scenario:</strong> ${formatCurrency(scenarioAnnualExpenses)}</p>
-                    <p><strong>Current:</strong> ${formatCurrency(currentAnnualExpenses)}</p>
-                    <p style="color: ${scenarioAnnualExpenses <= currentAnnualExpenses ? POS : NEG};">
-                        <strong>Change:</strong> ${scenarioAnnualExpenses <= currentAnnualExpenses ? '' : '+'}${formatCurrency(scenarioAnnualExpenses - currentAnnualExpenses)}
-                    </p>
+                <div class="card">
+                    <div class="card-title">Outgoing vs Savings</div>
+                    <div class="card-subtitle">Annual</div>
+                    <p class="wi-line">Expenses: <strong>${formatCurrency(scenarioAnnualExpenses)}</strong> ${whatIfDelta(scenarioAnnualExpenses, currentAnnualExpenses, false)}</p>
+                    <p class="wi-line">Savings: <strong>${formatCurrency(scenarioTotals.annualSavings)}</strong> ${whatIfDelta(scenarioTotals.annualSavings, currentTotals.annualSavings, true)}</p>
+                    <p class="wi-line">Savings rate: <strong>${scenarioTotals.savingsRate.toFixed(1)}%</strong> ${srDelta}</p>
                 </div>
-                <div style="${cardStyle}">
-                    <h4 style="${headingStyle}">Savings (Annual)</h4>
-                    <p><strong>Scenario:</strong> ${formatCurrency(scenarioTotals.annualSavings)}</p>
-                    <p><strong>Current:</strong> ${formatCurrency(currentTotals.annualSavings)}</p>
-                    <p style="color: ${scenarioTotals.annualSavings >= currentTotals.annualSavings ? POS : NEG};">
-                        <strong>Change:</strong> ${scenarioTotals.annualSavings >= currentTotals.annualSavings ? '+' : ''}${formatCurrency(scenarioTotals.annualSavings - currentTotals.annualSavings)}
-                    </p>
+                <div class="card">
+                    <div class="card-title">Net Worth</div>
+                    <div class="card-subtitle">Assets − Liabilities</div>
+                    <div class="amount net-worth">${formatCurrency(scenarioNetWorth)}</div>
+                    <p class="wi-line">${whatIfDelta(scenarioNetWorth, currentNetWorth, true)}</p>
+                    <p class="wi-line">Assets ${formatCurrency(scenarioCurrentAssets)} · Liabilities ${formatCurrency(scenarioLiabilities)}</p>
                 </div>
-                <div style="${cardStyle}">
-                    <h4 style="${headingStyle}">FI Timeline (Years)</h4>
-                    <p><strong>Scenario:</strong> ${typeof scenarioYearsToFI === 'number' ? scenarioYearsToFI.toFixed(1) : '∞'}</p>
-                    <p><strong>Current:</strong> ${typeof currentYearsToFI === 'number' ? currentYearsToFI.toFixed(1) : '∞'}</p>
-                    <p style="color: ${yearsDifference !== 'N/A' && yearsDifference < 0 ? POS : (yearsDifference !== 'N/A' && yearsDifference > 0 ? NEG : MUTED)};">
-                        <strong>Difference:</strong> ${yearsDifference !== 'N/A' ? (yearsDifference > 0 ? '+' : '') + yearsDifference.toFixed(1) : 'N/A'} years
-                    </p>
+                <div class="card">
+                    <div class="card-title">Expense Breakdown</div>
+                    <div class="card-subtitle">Essential vs Non-Essential (annual)</div>
+                    <p class="wi-line">Essential: <strong style="color: var(--color-essential);">${formatCurrency(scenarioTotals.essentialWeeklyTotal * 52)}</strong></p>
+                    <p class="wi-line">Non-Essential: <strong style="color: var(--color-warning);">${formatCurrency(scenarioTotals.nonEssentialWeeklyTotal * 52)}</strong></p>
                 </div>
-                <div style="${cardStyle}">
-                    <h4 style="${headingStyle}">Net Worth</h4>
-                    <p><strong>Scenario:</strong> ${formatCurrency(scenarioNetWorth)}</p>
-                    <p><strong>Current:</strong> ${formatCurrency(currentNetWorth)}</p>
-                    <p style="color: ${netWorthDifference >= 0 ? POS : NEG};">
-                        <strong>Change:</strong> ${netWorthDifference >= 0 ? '+' : ''}${formatCurrency(netWorthDifference)}
-                    </p>
+                <div class="card">
+                    <div class="card-title">Financial Independence</div>
+                    <div class="card-subtitle">${scenarioFinanceData.fiSettings.multiple}× expenses @ ${scenarioFinanceData.fiSettings.expectedReturn}%</div>
+                    <div class="amount">${fmtYears(scenarioYearsToFI)}</div>
+                    <p class="wi-line">${fiDelta}</p>
+                    <p class="wi-line">Target ${formatCurrency(scenarioFiTarget)}</p>
                 </div>
             </div>
-            <div style="margin-top: 20px; padding: 15px; background: var(--content-bg-color); border: 1px solid var(--info-border); border-radius: 8px;">
-                <h4>Key Metrics (Scenario)</h4>
-                <p><strong>Savings Rate:</strong> ${scenarioTotals.savingsRate.toFixed(1)}% (Current: ${currentTotals.savingsRate.toFixed(1)}%, Change: ${savingsRateDifference > 0 ? '+' : ''}${savingsRateDifference.toFixed(1)}%)</p>
-                <p><strong>FI Target Amount:</strong> ${formatCurrency(scenarioFiTarget)} (${scenarioFinanceData.fiSettings.multiple}× expenses)</p>
-                <p><strong>Assets After Change:</strong> ${formatCurrency(scenarioCurrentAssets)}</p>
-                <p><strong>Liabilities (Scenario):</strong> ${formatCurrency(scenarioLiabilities)}</p>
-                <p><strong>Expected Annual Return:</strong> ${scenarioFinanceData.fiSettings.expectedReturn}%</p>
-            </div>
+            ${allocBlock}
         `;
     }
 }
