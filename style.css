@@ -894,6 +894,10 @@ body {
     margin-bottom: 8px;
     line-height: 1.5;
 }
+.info-more ul ul {
+    list-style: circle;
+    margin: 8px 0 4px;
+}
 .info-more > :last-child {
     margin-bottom: 0;
 }
