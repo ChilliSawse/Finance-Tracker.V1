@@ -370,7 +370,7 @@ function updateSavingsTabUI(totals) {
     if (savingsAssetsContainer) {
         savingsAssetsContainer.innerHTML = '';
         if (financeData.assets.length === 0) {
-            savingsAssetsContainer.innerHTML = `<p style="text-align:center; font-size:0.9em; color: var(--text-color-secondary);">No assets added yet — add them via "Edit assets, allocation &amp; FI" above.</p>`;
+            savingsAssetsContainer.innerHTML = `<p style="grid-column: 1 / -1; text-align:center; font-size:0.9em; color: var(--text-color-secondary);">No assets added yet — add them via "Edit assets, allocation &amp; FI" above.</p>`;
         } else {
             financeData.assets.forEach(asset => {
                 const assetDiv = document.createElement('div');
