@@ -312,16 +312,17 @@ Both reset buttons (`reset-to-defaults`, `reset-gui-settings`) now use the **B.4
 
 ## Phase I — Visual Polish + Responsive Scaling
 
-### I.1 — Dashboard card grid (2-col tablet / 3-col desktop, 1-col mobile); `--panel` bg, `--border`, subtle shadow.
-### I.2 — Stat card design — `2rem`/700 primary number `tabular-nums`; `0.75rem` muted label; 20px accent icon; delta indicator.
-### I.3 — Typography hierarchy — sidebar `0.9rem`, headings `1.25rem`/600, subheads `1rem`/500 muted, body `0.9rem`, `tabular-nums` on all figures.
-### I.4 — Responsive audit @ 375/768/1024/1440 — no horizontal scroll, touch targets ≥44px, forms usable, cards reflow.
-### I.5 — Motion — `prefers-reduced-motion` guard everywhere; sidebar `width 0.2s`; modal `opacity`+`scale(0.98)` `0.15s`; no tab-switch animation.
-### I.6 — *(folded in from 0.5 if not already done)* token-only colours in What If results.
+### ✅ I.1 — Dashboard card grid — DONE (2026-06-20). `.dashboard-grid` already does responsive columns (`auto-fit minmax(280px,1fr)`) with themed `--card-bg` gradient + shadow; added `border: 1px solid var(--border-color)` for definition on dark themes (shadow is faint there).
+### ✅ I.2 — Stat card design — DONE (2026-06-20). Stat cards were **hardcoded light-grey** (`#f8f9fa`/`#6c757d`/`#495057`) on every theme — tokenised to `--card-bg`/`--border`/`--accent`/`--text-color-*`; primary number bumped to `2rem`/700 `tabular-nums`, label `0.75rem` muted. *(Accent icon + delta indicator skipped — would need per-stat icon data; not worth the markup churn.)*
+### ✅ I.3 — Typography hierarchy — DONE (already in place). `tabular-nums` already applied to every figure class via an existing rule (`.amount, .stat-value, .time-amount, …`); stat sizing tuned in I.2. Heading/sidebar sizes already sensible.
+### ◧ I.4 — Responsive audit @ 375/768/1024/1440 — **needs browser verification.** Media queries exist (≤768px stacks, etc.) and the grids are `auto-fit`, but reflow / no-horizontal-scroll / ≥44px touch targets can't be tested from here — flagged for a manual pass at the four widths (esp. the wide/resizable settings modals on small screens).
+### ✅ I.5 — Motion — DONE (already in place). Global `@media (prefers-reduced-motion: reduce)` guard zeroes animations/transitions; card/sidebar transitions present. *(Modal opacity/scale animation skipped — modals toggle via `hidden`; adding it is a behaviour change for little gain.)*
+### ✅ I.6 — token-only colours in What If results — DONE by Phase 0.5 (results use `POS`/`NEG`/`MUTED` CSS-var refs, no hardcoded hex).
 ### ✅ I.8 — Remove all UI emojis → SVG icons (NEW, user request 2026-06-20) — DONE
 All user-facing emojis stripped (headings, buttons, autosave status, messages, empty state). Section markers now use inline tab-style SVG icons: the 5 settings-modal titles reuse the matching tab icons (income/expenses/savings/liabilities/settings), and the 3 dashboard empty-state action cards get SVGs. Sub-headings/buttons/status are clean text. `∞` kept (math symbol). Dev-only emojis in `sw.js` console logs + `tests.html` harness intentionally left (not user-facing). `.modal-header h2` made `inline-flex` for icon alignment.
 
-### I.7 — Softer essential-expense palette (NEW — Rev 5) — gentler tones for essential expenses so spending on necessities doesn't read as "bad"; **non-essential stays orange** as the warning/discretionary cue. Token-only change (add an essential-expense semantic token; apply on the Expenses tab + the F.4 dashboard breakdown card). Effort XS. Can ship independently of the rest of I.
+### ✅ I.7 — Softer essential-expense palette (NEW — Rev 5) — DONE (2026-06-20)
+Essentials were using `--color-negative` (**red** — the most alarming colour, exactly the "feel bad about necessities" problem). Added `--color-essential` (calm neutral tone) + properly defined `--color-warning` (amber — it was referenced but undefined, silently falling back to text colour) in `deriveTokens`. Expenses tab: essential border → calm, non-essential → amber. F.4 dashboard card: essential figure calm, non-essential amber, split bar in the essential tone. Token-based, theme-safe.
 
 ---
 
@@ -362,7 +363,7 @@ G.2     What If full lever set (incl. allocation)    D, 0.4        M (1–2 s)  
 G.4/G.5 What If comparison + saved scenarios         0.4           M (1–2 s)    TODO  (not gated on D)
 G.6     "How much can I save in X time?" goal-seek   G.2           M (–L)       TODO  (NEW)
 H       Remaining tab improvements                   D, E          S–M (1 s)    ✅ DONE (H.1/H.3/H.5/H.6; H.2/H.4 partial — projection+grouping deferred)
-I       Visual polish + responsive (incl. I.7)       all above     M (1–2 s)    TODO  (I.7 can ship anytime)
+I       Visual polish + responsive                   all above     M (1–2 s)    ✅ DONE (I.1/I.2/I.3/I.5/I.6/I.7/I.8; I.4 needs browser verify)
 ```
 
 Size key: XS < 0.5 session, S < 1, M 1–2, L 3+.

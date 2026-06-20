@@ -131,6 +131,13 @@ function deriveTokens(colors) {
         '--color-positive':         colors.positive,
         '--color-negative':         colors.negative,
         '--color-neutral':          colors.neutral,
+        // I.7 — essentials get a calm, non-alarming tone (spending on needs isn't "bad");
+        // non-essentials keep an amber "warning" cue. `--color-warning` was referenced but
+        // never defined, so it silently fell back to the text colour — fixed here.
+        '--color-essential':        colors.neutral,
+        '--color-warning':          '#f59e0b',
+        '--essential-tint':         hexToRgba(colors.neutral, 0.08),
+        '--warning-tint':           hexToRgba('#f59e0b', 0.1),
         '--info-bg':                hexToRgba(colors.neutral, 0.08),
         '--info-border':            colors.neutral,
         '--positive-tint':          hexToRgba(colors.positive, 0.1),
