@@ -295,13 +295,16 @@ Builds on the corrected, persistent 0.4 state and the G.2 levers. Helps users pl
 
 ## Phase H — Remaining Tab Improvements
 
-### H.1 — Income — top "Add income source" button; total Gross/Tax/Net summary row.
-### H.2 — Expenses — name search filter; category grouping polish (with D.2).
-### H.3 — Savings — collapsible allocation explainer; benchmark label; live sum enforcement.
+### ✅ H.1 — Income — DONE/RESOLVED (2026-06-20)
+The "total Gross/Tax/Net summary row" already exists (Income tab "Income Breakdown (Total)" card). Adding income sources is the gear modal (D.1) plus the F.1 empty-state "Add income" card, so a separate top add-button is redundant. No code needed.
+### H.2 — Expenses — name search filter; category grouping polish (with D.2). **(TODO — next)**
+### ✅ H.3 — Savings — DONE (2026-06-20)
+Collapsible **Barefoot Investor buckets** explainer (`<details>`) added to the Savings modal's allocation section (Blow/Mojo/Grow with the Daily/Splurge/Smile/Fire-Extinguisher split; framed as starting points, user tunes them). **Live sum enforcement** enhanced — `updateAllocationTotalDisplay()` now shows the exact over/under (e.g. "95.0% — 5.0% under") in red until it hits 100%. **Benchmark** hint added to the Savings Rate card ("aim for 20%+ …"). *(Allocation method is the Barefoot bucket system — see memory.)*
 ### ✅ H.6 — Savings — Assets display card — DONE (2026-06-20)
 Read-only "Assets" card added to the Savings tab (after the Savings Rate / FI grid): each asset as name + balance, with `Total:` in the subtitle and an empty state. `updateSavingsTabUI()` renders it (called every `updateAllUI()`), reusing the dashboard Net Worth card's exact `.account-item.asset` markup and `escapeHtml`/`formatCurrency`. Container ids `savings-total-assets` / `savings-assets-display` (distinct from the dashboard's). Complements D.3 (assets edited in the Savings gear modal, now also shown on the tab).
-### H.4 — Liabilities — interest field + cost indicator; debt-free projection (with D.4).
-### H.5 — Settings — replace reset `confirm()` with inline pattern (reuse B.4); FI sensitivity hints.
+### ◧ H.4 — Liabilities — cost indicator DONE; debt-free projection deferred (2026-06-20)
+Interest field already present (D.4). **Cost indicator badge** added to each liability card — `High interest` (>10%, red), `Moderate interest` (5–10%, amber), `Low interest` (<5%, green) via `.cost-badge`. **Debt-free / years-to-zero projection deferred** — it needs a per-liability repayment amount in the data model (none exists yet), same as F.3's bills; flag for a future data-model pass. The existing "Net Worth if Debt-Free" card already covers the debt-free framing.
+### H.5 — Settings — replace reset `confirm()` with inline pattern (reuse B.4); FI sensitivity hints. **(TODO — next)**
 
 ---
 
@@ -356,7 +359,7 @@ F       Dashboard improvements                       D, E          M (1–2 s)  
 G.2     What If full lever set (incl. allocation)    D, 0.4        M (1–2 s)    TODO
 G.4/G.5 What If comparison + saved scenarios         0.4           M (1–2 s)    TODO  (not gated on D)
 G.6     "How much can I save in X time?" goal-seek   G.2           M (–L)       TODO  (NEW)
-H       Remaining tab improvements                   D, E          S–M (1 s)    TODO
+H       Remaining tab improvements                   D, E          S–M (1 s)    H.1/H.3/H.6 ✅, H.4 ◧; H.2/H.5 TODO
 I       Visual polish + responsive (incl. I.7)       all above     M (1–2 s)    TODO  (I.7 can ship anytime)
 ```
 

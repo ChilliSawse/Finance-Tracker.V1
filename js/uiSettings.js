@@ -194,10 +194,13 @@ function updateAllocationTotalDisplay() {
     const total = financeData.allocation.reduce((sum, alloc) => sum + (parseFloat(alloc.percentage) || 0), 0);
     const totalSpan = getElement('total-percent');
     if (totalSpan) {
-        totalSpan.textContent = `${total.toFixed(1)}%`;
-        totalSpan.style.color = Math.abs(total - 100) < 0.11
-            ? 'var(--color-positive)'
-            : 'var(--color-negative)';
+        // H.3 — live sum enforcement: show the exact over/under so it's easy to balance to 100%.
+        const ok = Math.abs(total - 100) < 0.11;
+        const diff = total - 100;
+        let label = `${total.toFixed(1)}%`;
+        if (!ok) label += diff > 0 ? ` — ${diff.toFixed(1)}% over` : ` — ${Math.abs(diff).toFixed(1)}% under`;
+        totalSpan.textContent = label;
+        totalSpan.style.color = ok ? 'var(--color-positive)' : 'var(--color-negative)';
     }
 }
 

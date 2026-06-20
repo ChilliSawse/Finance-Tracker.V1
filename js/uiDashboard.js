@@ -387,8 +387,13 @@ function updateLiabilitiesTabUI(totals) {
                 debtCard.className = 'liability-card';
                 const monthlyInterest = (debt.balance * (debt.interestRate / 100)) / 12;
                 const yearlyInterest = debt.balance * (debt.interestRate / 100);
+                // H.4 — cost indicator: flag high-interest debt (the priority to attack).
+                const rate = debt.interestRate || 0;
+                const cost = rate > 10 ? { label: 'High interest', cls: 'cost-high' }
+                          : rate >= 5  ? { label: 'Moderate interest', cls: 'cost-moderate' }
+                          : { label: 'Low interest', cls: 'cost-low' };
                 debtCard.innerHTML = `
-                    <div class="liability-card-title">${escapeHtml(debt.name)}</div>
+                    <div class="liability-card-title">${escapeHtml(debt.name)} <span class="cost-badge ${cost.cls}">${cost.label}</span></div>
                     <div class="liability-details">
                         <div class="liability-balance">${formatCurrency(debt.balance)}</div>
                         <div class="liability-rate">Interest Rate: ${debt.interestRate}% annually</div>

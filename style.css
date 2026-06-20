@@ -455,6 +455,22 @@ body {
 .empty-action-title { font-weight: 600; font-size: 1.05rem; }
 .empty-action-desc { font-size: 0.85rem; color: var(--text-color-secondary); }
 
+/* H.4 — liability cost indicator badge (colour-coded by interest rate). */
+.cost-badge {
+    display: inline-block;
+    font-size: 0.62em;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    vertical-align: middle;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.cost-badge.cost-high { background: var(--negative-tint); color: var(--color-negative); }
+.cost-badge.cost-moderate { background: rgba(217, 119, 6, 0.16); color: #d97706; }
+.cost-badge.cost-low { background: var(--positive-tint); color: var(--color-positive); }
+
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -1135,6 +1151,16 @@ body {
     color: var(--text-color-muted, #888);
     line-height: 1.5;
 }
+
+/* H.3 — savings-rate benchmark hint + allocation (buckets) explainer spacing. */
+.benchmark-hint {
+    margin-top: 10px;
+    padding-top: 10px;
+    font-size: 0.8em;
+    color: var(--text-color-secondary);
+    border-top: 1px dashed var(--border-color);
+}
+.allocation-explainer { margin: 8px 0 14px; }
 
 .tax-bracket-item { /* This class was defined but not used in original HTML, now used for consistency */
     display: grid;
