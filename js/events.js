@@ -194,7 +194,7 @@ function handleSettingsChangeEvents(event) {
 
         if (arrayToUpdate && arrayToUpdate[index] !== undefined) {
             // Type conversions
-            if (['grossAnnual', 'balance', 'interestRate', 'percentage', 'amount', 'min', 'max', 'rate', 'hoursPerCycle', 'taxRemoved', 'invoicedPayPostTax'].includes(field)) {
+            if (['grossAnnual', 'balance', 'interestRate', 'percentage', 'amount', 'min', 'max', 'rate', 'hoursPerCycle', 'taxRemoved', 'invoicedPayPostTax', 'currentBalance', 'savingsGoal'].includes(field)) {
                 if (field === 'invoicedPayPostTax' || field === 'taxRemoved' || field === 'hoursPerCycle') {
                      value = value === '' ? null : parseFloat(value);
                 } else if (field === 'max' && value === '') {
@@ -363,7 +363,7 @@ function removeLiability(index) {
 }
 
 function addAllocationCategory() {
-    financeData.allocation.push({ name: "New Category", percentage: 0 });
+    financeData.allocation.push({ name: "New Category", percentage: 0, currentBalance: 0, savingsGoal: 0 });
     renderAllocationSettings();
     updateDataAndUI();
 }
@@ -544,6 +544,7 @@ function handleJSONImport(event, isGuiTabImport = false) {
                 financeData = importedBundle.financeData;
                 guiSettingsData = importedBundle.guiSettings;
                 migrateIncomeSourceTypes(financeData); // Backfill incomeType on imported legacy data
+                migrateAllocationFields(financeData); // Stage 0 — backfill allocation goal/funds
                 initializeSettingsUI();
                 initializeGuiSettingsForm();
                 updateDataAndUI();

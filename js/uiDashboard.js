@@ -133,7 +133,28 @@ function updateDashboardUI(totals) {
             itemDiv.className = 'savings-item';
             let periodSuffix = viewPeriod.replace('ly', '').replace('y', '');
             if (periodSuffix === 'dai') periodSuffix = 'day';
-            itemDiv.innerHTML = `<div class="savings-label">${escapeHtml(alloc.name)} (${alloc.percentage}%)</div><div class="savings-amount">${formatCurrency(amountForPeriod)}/${periodSuffix}</div>`;
+
+            // Stage 0 — per-bucket savings goal + live time-to-reach (uses current funds +
+            // this bucket's annual contribution = % of total net annual income).
+            const goal = alloc.savingsGoal || 0;
+            let goalLine = '';
+            if (goal > 0) {
+                const current = alloc.currentBalance || 0;
+                const annualContribution = totals.totalNetAnnualIncome * (alloc.percentage / 100);
+                const remaining = goal - current;
+                let timeLabel;
+                if (remaining <= 0) timeLabel = 'Goal reached';
+                else if (annualContribution <= 0) timeLabel = 'needs allocation';
+                else timeLabel = formatTimeToGoal(remaining / annualContribution);
+                const pct = Math.min(100, Math.max(0, (current / goal) * 100));
+                goalLine = `
+                    <div class="savings-goal">
+                        <div class="savings-goal-bar"><div class="savings-goal-fill" style="width:${pct}%;"></div></div>
+                        <div class="savings-goal-meta">${formatCurrency(current)} / ${formatCurrency(goal)} · ${timeLabel}</div>
+                    </div>`;
+            }
+
+            itemDiv.innerHTML = `<div class="savings-label">${escapeHtml(alloc.name)} (${alloc.percentage}%)</div><div class="savings-amount">${formatCurrency(amountForPeriod)}/${periodSuffix}</div>${goalLine}`;
             allocationDisplayContainer.appendChild(itemDiv);
         });
         if (financeData.allocation.length === 0) {

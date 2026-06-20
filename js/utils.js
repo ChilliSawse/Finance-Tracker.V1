@@ -43,6 +43,22 @@ function getWeeklyAmount(amount, frequency) {
 }
 
 /**
+ * Human-readable time to reach a savings goal (Stage 0 — allocation bucket goals).
+ * @param {number} years - decimal years until the goal is reached.
+ * @returns {string}
+ */
+function formatTimeToGoal(years) {
+    if (!isFinite(years) || years < 0) return '—';
+    const months = years * 12;
+    if (months < 1) return '< 1 month';
+    if (months < 24) {
+        const m = Math.round(months);
+        return `~${m} month${m === 1 ? '' : 's'}`;
+    }
+    return `~${years.toFixed(1)} years`;
+}
+
+/**
  * Formats a number as currency according to the global settings.
  * @param {number} amount - The number to format.
  * @param {string} [currencyCode=financeData.currency] - The currency code.

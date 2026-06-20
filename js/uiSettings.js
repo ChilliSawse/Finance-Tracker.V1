@@ -173,7 +173,7 @@ function renderAllocationSettings() {
     financeData.allocation.forEach((alloc, index) => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'list-item';
-        itemDiv.style.gridTemplateColumns = '2fr 1fr auto';
+        itemDiv.style.gridTemplateColumns = '2fr 0.8fr 1fr 1fr auto';
         const baseId = `alloc-${index}`;
         itemDiv.innerHTML = `
             <span>
@@ -183,6 +183,14 @@ function renderAllocationSettings() {
             <span>
                 <label for="${baseId}-percentage" class="visually-hidden">Allocation Percentage ${index + 1}</label>
                 <input type="number" value="${alloc.percentage}" data-collection="allocation" data-index="${index}" data-field="percentage" id="${baseId}-percentage" name="${baseId}-percentage" placeholder="%" step="0.1" min="0">
+            </span>
+            <span>
+                <label for="${baseId}-current" class="visually-hidden">Current Funds ${index + 1}</label>
+                <input type="number" value="${alloc.currentBalance != null ? alloc.currentBalance : 0}" data-collection="allocation" data-index="${index}" data-field="currentBalance" id="${baseId}-current" name="${baseId}-current" placeholder="Funds $" step="0.01" min="0">
+            </span>
+            <span>
+                <label for="${baseId}-goal" class="visually-hidden">Savings Goal ${index + 1}</label>
+                <input type="number" value="${alloc.savingsGoal != null ? alloc.savingsGoal : 0}" data-collection="allocation" data-index="${index}" data-field="savingsGoal" id="${baseId}-goal" name="${baseId}-goal" placeholder="Goal $ (opt)" step="0.01" min="0">
             </span>
             <button class="delete-btn" data-index="${index}" data-type="allocation" aria-label="Delete Allocation Category ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);

@@ -267,6 +267,13 @@ Dashboard "Expense Breakdown" card (in the grid, next to Outgoing vs Savings): e
 
 ## Phase G — What If Tab Rebuild
 
+> **Redesign locked with user 2026-06-20 (supersedes the piecemeal-levers approach).** What If becomes a **sandboxed second instance of the app**: editable inline sections on top (Income Sources, Expenses, Assets, Liabilities, Allocation, FI — **all except Tax Brackets**, which uses live brackets), operating on a `whatIfFinanceData` clone (edits never touch live data). "Simulate" renders a **full dashboard below** (same layout as the main one) populated from the scenario, with ↑/↓ delta badges vs current. **Bucket savings goals** (below) replace the single global "save in X time" idea (G.6).
+>
+> **Staged build:** **Stage 0** allocation goals + current funds in the *main* system (standalone) → **Stage 1** What If scenario-clone scaffold (`data-scope="whatif"` routing) → **Stage 2** editable sections inline → **Stage 3** simulated dashboard + delta badges → **Stage 4** polish.
+
+### ✅ Stage 0 — Allocation savings goals + current funds (main system) — DONE (2026-06-20)
+Each allocation bucket gains **`currentBalance`** (current funds) + **`savingsGoal`** (optional). Data model updated (default + `migrateAllocationFields()` on load *and* JSON import + `addAllocationCategory`). Savings-modal allocation rows get Current Funds + Goal inputs (5-col); `currentBalance`/`savingsGoal` added to the numeric-field whitelist. Dashboard allocation cards now show, per bucket with a goal: a progress bar + `current / goal · time-to-reach`, where **time = (goal − current funds) ÷ annual contribution** (contribution = % × total net annual income). Updates live as funds/income/%/expenses change. Edge cases: funds ≥ goal → "Goal reached"; contribution ≤ 0 → "needs allocation". New `formatTimeToGoal()` in utils. *(Reused by the What If sim dashboard in Stage 3.)*
+
 > G.1 + G.3 fast-tracked into **Phase 0.4** (correctness). Phase G now covers the value-add levers, comparison, and saved scenarios on top of the corrected, persistent state.
 >
 > **Rev 4:** G.4 (comparison) and G.5 (saved scenarios) are pure What-If-tab work built on the corrected, persistent 0.4 state — they do **not** depend on Phase D's data-entry relocation and can ship independently. Only G.2's full lever set benefits from D's richer per-tab inputs.

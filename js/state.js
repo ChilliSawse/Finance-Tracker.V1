@@ -23,8 +23,8 @@ let defaultFinanceData = {
         { name: "New Liability", balance: 0, interestRate: 0 }
     ],
     allocation: [
-        { name: "New Allocation", percentage: 100 },
-       
+        { name: "New Allocation", percentage: 100, currentBalance: 0, savingsGoal: 0 },
+
     ],
     essentialExpenses: [
         { name: "New Expense", amount: 0, frequency: "weekly" },
@@ -190,6 +190,7 @@ class FinanceAutoSave {
                     if (!guiSettingsData.colorNegative) guiSettingsData.colorNegative = defaultGuiSettings.colorNegative;
                     if (!guiSettingsData.colorNeutral) guiSettingsData.colorNeutral = defaultGuiSettings.colorNeutral;
                     migrateIncomeSourceTypes(financeData); // Backfill incomeType on legacy saves
+                    migrateAllocationFields(financeData); // Stage 0 — backfill allocation goal/funds
                     this.lastSaveHash = this.getDataHash();
                     this.updateSaveStatus('saved');
                     return true;
@@ -285,6 +286,16 @@ function migrateIncomeSourceTypes(data) {
             source.invoicedPayPostTax = cycles > 0 ? +(grossAnnual / cycles).toFixed(2) : 0;
             source.taxRemoved = null;
         }
+    });
+}
+
+// Stage 0 — backfill per-bucket savings goal + current funds on allocation categories
+// saved before those fields existed.
+function migrateAllocationFields(data) {
+    if (!data || !Array.isArray(data.allocation)) return;
+    data.allocation.forEach(alloc => {
+        if (typeof alloc.currentBalance !== 'number') alloc.currentBalance = 0;
+        if (typeof alloc.savingsGoal !== 'number') alloc.savingsGoal = 0;
     });
 }
 
