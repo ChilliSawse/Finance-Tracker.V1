@@ -5,7 +5,7 @@
 // never changed between deploys — so the browser (which detects SW updates by byte-comparing
 // sw.js) never re-installed and kept serving stale CSS/JS. A static, manually-bumped string
 // changes the file bytes, which is what actually triggers the update → re-cache → activate flow.
-const VERSION = '2026-06-20-audit-theme-consistency';
+const VERSION = '2026-06-21-offline-navigation-fix';
 const CACHE_NAME = `finance-tracker-${VERSION}`;
 
 console.log('🚀 Service Worker Loading - Auto Version:', VERSION);
@@ -85,7 +85,17 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('./index.html'))
+      fetch(event.request)
+        .then(response => {
+          // A reachable-but-dead host (e.g. a removed GitHub Pages site) returns a
+          // real 404 response, which does NOT reject fetch(). Treat any non-OK
+          // response as a failure so we fall back to the cached app shell.
+          if (!response || !response.ok) {
+            return caches.match('./index.html').then(cached => cached || response);
+          }
+          return response;
+        })
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }
