@@ -101,6 +101,7 @@ function handleSettingsClickEvents(event) {
     else if (target.id === 'add-asset') addAsset();
     else if (target.id === 'add-liability') addLiability();
     else if (target.id === 'add-allocation-category') addAllocationCategory();
+    else if (target.id === 'whatif-add-allocation') addAllocationCategory('whatif'); // What If sandbox
     else if (target.id === 'add-essential-expense-settings') addExpenseToList('essentialExpenses');
     else if (target.id === 'add-non-essential-expense-settings') addExpenseToList('nonEssentialExpenses');
 
@@ -112,7 +113,7 @@ function handleSettingsClickEvents(event) {
         if (dataType === 'incomeSource') removeIncomeSource(index);
         else if (dataType === 'taxBracket') removeTaxBracket(index);
         else if (dataType === 'asset') removeAsset(index);
-        else if (dataType === 'allocation') removeAllocationCategory(index);
+        else if (dataType === 'allocation') removeAllocationCategory(index, target.dataset.scope);
         else if (dataType === 'liability') inlineConfirm(target, 'Delete this liability?', () => removeLiability(index));
         else if (dataType === 'essentialExpense') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('essentialExpenses', index));
         else if (dataType === 'nonEssentialExpense') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('nonEssentialExpenses', index));
@@ -189,8 +190,12 @@ function handleSettingsChangeEvents(event) {
         // `data-collection` (set in uiSettings.js) rather than DOM ancestry (`.closest()`),
         // so these inputs keep routing correctly no matter where Phase D relocates them.
         // The whitelist guards against writing to arbitrary financeData keys.
+        // What If redesign — `data-scope="whatif"` routes the edit to the sandbox clone
+        // (whatIfFinanceData) instead of live data; results refresh on "Simulate".
+        const scope = target.dataset.scope;
+        const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
         const collection = target.dataset.collection;
-        const arrayToUpdate = SETTINGS_COLLECTIONS.includes(collection) ? financeData[collection] : undefined;
+        const arrayToUpdate = (fd && SETTINGS_COLLECTIONS.includes(collection)) ? fd[collection] : undefined;
 
         if (arrayToUpdate && arrayToUpdate[index] !== undefined) {
             // Type conversions
@@ -209,9 +214,9 @@ function handleSettingsChangeEvents(event) {
             arrayToUpdate[index][field] = value;
 
             if (field === 'percentage' && collection === 'allocation') {
-                 updateAllocationTotalDisplay(); // Special update for allocation total
+                 updateAllocationTotalDisplay(scope); // Special update for allocation total
             }
-            updateDataAndUI();
+            if (scope !== 'whatif') updateDataAndUI(); // sandbox edits only touch the clone
         }
     }
 }
@@ -362,15 +367,19 @@ function removeLiability(index) {
     updateDataAndUI();
 }
 
-function addAllocationCategory() {
-    financeData.allocation.push({ name: "New Category", percentage: 0, currentBalance: 0, savingsGoal: 0 });
-    renderAllocationSettings();
-    updateDataAndUI();
+function addAllocationCategory(scope) {
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    fd.allocation.push({ name: "New Category", percentage: 0, currentBalance: 0, savingsGoal: 0 });
+    if (scope === 'whatif') { renderWhatIfAllocation(); }
+    else { renderAllocationSettings(); updateDataAndUI(); }
 }
-function removeAllocationCategory(index) {
-    financeData.allocation.splice(index, 1);
-    renderAllocationSettings();
-    updateDataAndUI();
+function removeAllocationCategory(index, scope) {
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    fd.allocation.splice(index, 1);
+    if (scope === 'whatif') { renderWhatIfAllocation(); }
+    else { renderAllocationSettings(); updateDataAndUI(); }
 }
 
 function addExpenseToList(arrayName) { // arrayName is 'essentialExpenses' or 'nonEssentialExpenses'

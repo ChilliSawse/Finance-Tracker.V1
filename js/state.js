@@ -61,6 +61,9 @@ let financeData = JSON.parse(JSON.stringify(defaultFinanceData));
 let guiSettingsData = JSON.parse(JSON.stringify(defaultGuiSettings));
 let whatIfEssentialExpenses = [];
 let whatIfNonEssentialExpenses = [];
+// What If redesign — a full sandboxed clone of financeData. Editable What If sections write
+// here (via data-scope="whatif" routing), never to live data. Seeded in initializeWhatIfTab.
+let whatIfFinanceData = null;
 // Phase 0.4: tracks whether the What If tab has been seeded from live data yet, so tab
 // switches don't clobber in-progress edits. Reset to false by "Reset to current".
 let whatIfInitialized = false;

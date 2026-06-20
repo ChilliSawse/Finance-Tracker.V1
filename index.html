@@ -480,6 +480,22 @@
                         </div>
                         <button class="add-btn" id="add-whatif-non-essential-expense">+ Add Test Non-Essential</button>
                     </div>
+                    <div class="settings-section" style="margin-top: 20px;">
+                        <div class="settings-title">Scenario Allocation (Buckets)</div>
+                        <p class="form-hint" style="margin: 0 0 12px; color: var(--text-color-secondary); font-size: 0.9em;">
+                            Edits here only affect this scenario, not your real allocation. Set a current balance + goal on a bucket to project its time-to-reach in the results.
+                        </p>
+                        <div class="dynamic-list">
+                            <div class="list-header" style="grid-template-columns: 2fr 0.8fr 1fr 1fr auto;">
+                                <span>Allocation Name</span> <span>%</span> <span>Current Funds</span> <span>Goal (opt)</span> <span>Action</span>
+                            </div>
+                            <div id="whatif-allocation-settings"></div>
+                        </div>
+                        <button class="add-btn" id="whatif-add-allocation">+ Add Bucket</button>
+                        <p style="margin-top: 10px; color: var(--text-color-secondary); font-size: 0.9em;">
+                            Total: <span id="whatif-total-percent">0.0%</span> (should equal 100%)
+                        </p>
+                    </div>
                     <div style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 25px 0;">
                         <button class="btn" id="run-whatif-calculation">Calculate Scenario</button>
                         <button class="btn btn-secondary" id="reset-whatif-to-current">Reset to current</button>

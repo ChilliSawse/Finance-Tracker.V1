@@ -198,9 +198,45 @@ function renderAllocationSettings() {
     updateAllocationTotalDisplay();
 }
 
-function updateAllocationTotalDisplay() {
-    const total = financeData.allocation.reduce((sum, alloc) => sum + (parseFloat(alloc.percentage) || 0), 0);
-    const totalSpan = getElement('total-percent');
+// What If redesign — scenario allocation editor. Mirrors renderAllocationSettings but reads
+// the sandbox clone and tags inputs with data-scope="whatif" so edits route to whatIfFinanceData.
+function renderWhatIfAllocation() {
+    const container = getElement('whatif-allocation-settings');
+    if (!container || !whatIfFinanceData) return;
+    container.innerHTML = '';
+    whatIfFinanceData.allocation.forEach((alloc, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'list-item';
+        itemDiv.style.gridTemplateColumns = '2fr 0.8fr 1fr 1fr auto';
+        const baseId = `whatif-alloc-${index}`;
+        itemDiv.innerHTML = `
+            <span>
+                <label for="${baseId}-name" class="visually-hidden">Scenario Allocation Name ${index + 1}</label>
+                <input type="text" value="${escapeHtml(alloc.name)}" data-scope="whatif" data-collection="allocation" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Category Name">
+            </span>
+            <span>
+                <label for="${baseId}-percentage" class="visually-hidden">Scenario Allocation Percentage ${index + 1}</label>
+                <input type="number" value="${alloc.percentage}" data-scope="whatif" data-collection="allocation" data-index="${index}" data-field="percentage" id="${baseId}-percentage" placeholder="%" step="0.1" min="0">
+            </span>
+            <span>
+                <label for="${baseId}-current" class="visually-hidden">Scenario Current Funds ${index + 1}</label>
+                <input type="number" value="${alloc.currentBalance != null ? alloc.currentBalance : 0}" data-scope="whatif" data-collection="allocation" data-index="${index}" data-field="currentBalance" id="${baseId}-current" placeholder="Funds $" step="0.01" min="0">
+            </span>
+            <span>
+                <label for="${baseId}-goal" class="visually-hidden">Scenario Savings Goal ${index + 1}</label>
+                <input type="number" value="${alloc.savingsGoal != null ? alloc.savingsGoal : 0}" data-scope="whatif" data-collection="allocation" data-index="${index}" data-field="savingsGoal" id="${baseId}-goal" placeholder="Goal $ (opt)" step="0.01" min="0">
+            </span>
+            <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="allocation" aria-label="Delete Scenario Allocation ${index + 1}">Delete</button>`;
+        container.appendChild(itemDiv);
+    });
+    updateAllocationTotalDisplay('whatif');
+}
+
+function updateAllocationTotalDisplay(scope) {
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    const totalSpan = getElement(scope === 'whatif' ? 'whatif-total-percent' : 'total-percent');
+    const total = (fd.allocation || []).reduce((sum, alloc) => sum + (parseFloat(alloc.percentage) || 0), 0);
     if (totalSpan) {
         // H.3 — live sum enforcement: show the exact over/under so it's easy to balance to 100%.
         const ok = Math.abs(total - 100) < 0.11;
@@ -318,8 +354,12 @@ function initializeWhatIfTab(force = false) {
     whatIfEssentialExpenses = JSON.parse(JSON.stringify(financeData.essentialExpenses));
     whatIfNonEssentialExpenses = JSON.parse(JSON.stringify(financeData.nonEssentialExpenses));
 
+    // What If redesign — seed the full sandbox clone (sections edit this, not live data).
+    whatIfFinanceData = JSON.parse(JSON.stringify(financeData));
+
     renderWhatIfExpenseSettingsList('whatif-essential-expenses-settings', whatIfEssentialExpenses, 'whatIfEssential');
     renderWhatIfExpenseSettingsList('whatif-non-essential-expenses-settings', whatIfNonEssentialExpenses, 'whatIfNonEssential');
+    if (typeof renderWhatIfAllocation === 'function') renderWhatIfAllocation();
 
     const currentTotals = calculateTotals();
     setValue('whatif-new-annual-income', currentTotals.totalNetAnnualIncome.toFixed(0));
