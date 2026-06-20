@@ -162,6 +162,16 @@ function setupPageSettingsModals() {
     });
 }
 
+// H.2 — expense name search: filter the Expenses lists live as you type.
+function setupExpenseSearch() {
+    const input = getElement('expense-search');
+    if (!input) return;
+    input.addEventListener('input', () => {
+        expenseSearchQuery = input.value || '';
+        updateAllUI();
+    });
+}
+
 // F.2 — dashboard cards are links to their tab (whole card clickable + keyboard accessible).
 function setupCardLinks() {
     const dash = getElement('dashboard');
@@ -423,6 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPageSettingsModals(); // Phase D — per-page settings modals (Income, …)
     setupDashboardEmptyActions(); // F.1 — welcome empty-state action cards
     setupCardLinks(); // F.2 — dashboard cards link to their tab
+    setupExpenseSearch(); // H.2 — expense name filter
     setupInfoSections(); // C.1 — collapsible info guides
 
     updateAllUI();

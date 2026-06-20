@@ -248,12 +248,17 @@ function updateIncomeTabUI(totals) {
     `);
 }
 
+// H.2 — live name filter for the Expenses tab lists (display-only; totals stay full).
+let expenseSearchQuery = '';
+
 function updateExpensesTabUI(totals) {
     const renderExpenseList = (containerId, expenses, typeClass) => {
         const container = getElement(containerId);
         if (!container) return;
+        const q = expenseSearchQuery.trim().toLowerCase();
+        const list = q ? expenses.filter(e => (e.name || '').toLowerCase().includes(q)) : expenses;
         container.innerHTML = '';
-        expenses.forEach(expense => {
+        list.forEach(expense => {
             const weeklyAmount = getWeeklyAmount(expense.amount, expense.frequency);
             const monthlyAmount = weeklyAmount * 52 / 12;
             const fortnightlyAmount = weeklyAmount * 2;
@@ -270,8 +275,10 @@ function updateExpensesTabUI(totals) {
                 </div>`;
             container.appendChild(expenseDiv);
         });
-        if (expenses.length === 0) {
-            container.innerHTML = `<p style="text-align:center; padding: 20px 0; font-size:0.9em; color: var(--text-color-secondary);">No ${typeClass} expenses added yet.</p>`;
+        if (list.length === 0) {
+            container.innerHTML = q
+                ? `<p style="text-align:center; padding: 20px 0; font-size:0.9em; color: var(--text-color-secondary);">No ${typeClass} expenses match "${escapeHtml(expenseSearchQuery.trim())}".</p>`
+                : `<p style="text-align:center; padding: 20px 0; font-size:0.9em; color: var(--text-color-secondary);">No ${typeClass} expenses added yet.</p>`;
         }
     };
 

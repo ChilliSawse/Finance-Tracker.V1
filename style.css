@@ -1079,7 +1079,7 @@ body {
 /* B.4 — Inline confirmation popover (non-blocking replacement for window.confirm) */
 .inline-confirm {
     position: fixed;
-    z-index: 1000;
+    z-index: 2500; /* above modal-backdrop (2000) — the delete/reset lists live inside modals (Phase D) */
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1161,6 +1161,10 @@ body {
     border-top: 1px dashed var(--border-color);
 }
 .allocation-explainer { margin: 8px 0 14px; }
+
+/* H.2 — expense search bar. */
+.expense-search-bar { margin-bottom: 16px; }
+.expense-search-bar .form-input { max-width: 360px; }
 
 .tax-bracket-item { /* This class was defined but not used in original HTML, now used for consistency */
     display: grid;

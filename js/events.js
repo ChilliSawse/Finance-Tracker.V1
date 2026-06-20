@@ -121,7 +121,14 @@ function handleSettingsClickEvents(event) {
     // Data action buttons (now live in the appearance/settings modal; D.6).
     // Export/Import data is handled by the modal's own export-json-gui / import-json-gui-btn.
     else if (target.id === 'set-current-default') actionSetCurrentAsDefault();
-    else if (target.id === 'reset-to-defaults') actionResetToAppDefaults();
+    else if (target.id === 'reset-to-defaults') {
+        // H.5 — non-blocking inline confirm (reuse B.4) instead of window.confirm.
+        const ud = getUserDefaults();
+        const msg = ud
+            ? 'Reset all data to your saved defaults? Your current changes will be lost.'
+            : 'Reset all finance data to the factory defaults? All your current data will be lost.';
+        inlineConfirm(target, msg, actionResetToAppDefaults);
+    }
 
 }
 
@@ -252,7 +259,10 @@ function handleWhatIfChangeEvents(event) {
 function handleGuiSettingsClickEvents(event) {
     const target = event.target;
     // (No "Save Appearance" button — appearance auto-saves on change; see commitGuiSettings.)
-    if (target.id === 'reset-gui-settings') { actionResetGuiToDefaults(); return; }
+    if (target.id === 'reset-gui-settings') {
+        inlineConfirm(target, 'Reset appearance to application defaults?', actionResetGuiToDefaults); // H.5
+        return;
+    }
     if (target.id === 'export-json-gui') { actionExportDataJSON(); return; }
     if (target.id === 'import-json-gui-btn') { getElement('json-import-gui').click(); return; }
 
@@ -466,12 +476,8 @@ function actionSetCurrentAsDefault() {
 }
 
 function actionResetToAppDefaults() {
+    // Confirmation handled by the caller's inlineConfirm (H.5).
     const userDefaults = getUserDefaults();
-    const message = userDefaults
-        ? 'Reset all data to your saved defaults? Your current changes will be lost.'
-        : 'Reset all finance data to the factory defaults? All your current data will be lost.';
-    if (!confirmAction(message)) return;
-
     if (userDefaults) {
         financeData = JSON.parse(JSON.stringify(userDefaults.financeData));
         if (userDefaults.guiSettings) {
@@ -587,14 +593,13 @@ function commitGuiSettings() {
 }
 
 function actionResetGuiToDefaults() {
-    if (confirmAction('Reset appearance to application defaults?')) {
-        guiSettingsData = JSON.parse(JSON.stringify(defaultGuiSettings));
-        // initializeGuiSettingsForm → applyGuiStylesToPage now applies the full theme base
-        // (not just the customisable subset), so the whole UI returns to default cleanly.
-        initializeGuiSettingsForm();
-        if (autoSave) autoSave.onDataChange();
-        showCustomModal('Appearance reset.');
-    }
+    // Confirmation handled by the caller's inlineConfirm (H.5).
+    guiSettingsData = JSON.parse(JSON.stringify(defaultGuiSettings));
+    // initializeGuiSettingsForm → applyGuiStylesToPage now applies the full theme base
+    // (not just the customisable subset), so the whole UI returns to default cleanly.
+    initializeGuiSettingsForm();
+    if (autoSave) autoSave.onDataChange();
+    showCustomModal('Appearance reset.');
 }
 
 // What If Scenario Action
