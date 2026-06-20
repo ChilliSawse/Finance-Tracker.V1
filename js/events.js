@@ -607,6 +607,8 @@ function runWhatIfScenario() {
     const newAnnualNetIncomeInput = getValue('whatif-new-annual-income', true);
     const assetsChange = getValue('whatif-assets-change', true);
     const newExpectedReturn = getValue('whatif-return-change', true);
+    const newFiMultiple = getValue('whatif-fi-multiple', true);       // G.2
+    const liabilitiesChange = getValue('whatif-liabilities-change', true); // G.2
 
     if (isNaN(newAnnualNetIncomeInput) || newAnnualNetIncomeInput < 0) {
         showCustomModal("Please enter a valid new annual net income for the scenario.", 'error');
@@ -627,8 +629,9 @@ function runWhatIfScenario() {
     scenarioFinanceData.essentialExpenses = JSON.parse(JSON.stringify(whatIfEssentialExpenses));
     scenarioFinanceData.nonEssentialExpenses = JSON.parse(JSON.stringify(whatIfNonEssentialExpenses));
 
-    // Apply new expected return for FI calculation in scenario
+    // Apply new expected return + FI multiple for the scenario's FI calculation (G.2).
     scenarioFinanceData.fiSettings.expectedReturn = isNaN(newExpectedReturn) ? financeData.fiSettings.expectedReturn : newExpectedReturn;
+    scenarioFinanceData.fiSettings.multiple = (isNaN(newFiMultiple) || newFiMultiple <= 0) ? financeData.fiSettings.multiple : newFiMultiple;
 
     // Derive scenario totals from the (expense-adjusted) scenario data, then override the
     // income directly with the user's net-income lever.
@@ -658,6 +661,12 @@ function runWhatIfScenario() {
         ? (scenarioYearsToFI - currentYearsToFI)
         : 'N/A';
     const savingsRateDifference = scenarioTotals.savingsRate - currentTotals.savingsRate;
+
+    // G.2 — scenario liabilities + net worth (liabilities lever adjusts total debt).
+    const scenarioLiabilities = Math.max(0, currentTotals.currentLiabilities + (isNaN(liabilitiesChange) ? 0 : liabilitiesChange));
+    const scenarioNetWorth = scenarioCurrentAssets - scenarioLiabilities;
+    const currentNetWorth = currentTotals.netWorth;
+    const netWorthDifference = scenarioNetWorth - currentNetWorth;
 
     const resultsDiv = getElement('whatif-results-display');
     if (resultsDiv) {
@@ -703,12 +712,21 @@ function runWhatIfScenario() {
                         <strong>Difference:</strong> ${yearsDifference !== 'N/A' ? (yearsDifference > 0 ? '+' : '') + yearsDifference.toFixed(1) : 'N/A'} years
                     </p>
                 </div>
+                <div style="${cardStyle}">
+                    <h4 style="${headingStyle}">Net Worth</h4>
+                    <p><strong>Scenario:</strong> ${formatCurrency(scenarioNetWorth)}</p>
+                    <p><strong>Current:</strong> ${formatCurrency(currentNetWorth)}</p>
+                    <p style="color: ${netWorthDifference >= 0 ? POS : NEG};">
+                        <strong>Change:</strong> ${netWorthDifference >= 0 ? '+' : ''}${formatCurrency(netWorthDifference)}
+                    </p>
+                </div>
             </div>
             <div style="margin-top: 20px; padding: 15px; background: var(--content-bg-color); border: 1px solid var(--info-border); border-radius: 8px;">
                 <h4>Key Metrics (Scenario)</h4>
                 <p><strong>Savings Rate:</strong> ${scenarioTotals.savingsRate.toFixed(1)}% (Current: ${currentTotals.savingsRate.toFixed(1)}%, Change: ${savingsRateDifference > 0 ? '+' : ''}${savingsRateDifference.toFixed(1)}%)</p>
-                <p><strong>FI Target Amount:</strong> ${formatCurrency(scenarioFiTarget)}</p>
+                <p><strong>FI Target Amount:</strong> ${formatCurrency(scenarioFiTarget)} (${scenarioFinanceData.fiSettings.multiple}× expenses)</p>
                 <p><strong>Assets After Change:</strong> ${formatCurrency(scenarioCurrentAssets)}</p>
+                <p><strong>Liabilities (Scenario):</strong> ${formatCurrency(scenarioLiabilities)}</p>
                 <p><strong>Expected Annual Return:</strong> ${scenarioFinanceData.fiSettings.expectedReturn}%</p>
             </div>
         `;

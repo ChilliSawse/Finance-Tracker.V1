@@ -273,14 +273,14 @@ Dashboard "Expense Breakdown" card (in the grid, next to Outgoing vs Savings): e
 
 ### G.1 — Scenario persistence — *moved to Phase 0.4*
 
-### G.2 — Full lever set (v2: "full-setting access for scenarios")
-Expose **every** base-app setting as an adjustable lever, seeded from current state but fully overridable: income, essential expenses, non-essential expenses (% reduction), savings-rate boost (override), liabilities adjustment (total debt), FI assumptions (multiple/return/withdrawal), assets (±), and the **Income Allocation Strategy** (per-category %, sum-to-100 enforced — v2 explicitly wants the allocation slider as a scenario lever). All scenario-only; never mutate live data (already true since 0.4).
+### ◧ G.2 — Full lever set — IN PROGRESS (2026-06-20)
+Levers seeded from current state, scenario-only (never mutate live data). **Done:** income (net total override, 0.4), essential + non-essential expenses (full editable lists), assets (±), expected return, **FI multiple** (new), **liabilities change (±)** (new). **Still TODO:** the **Income Allocation Strategy** lever (per-category %, sum-to-100; shows per-bucket scenario amounts — ties into G.6) and an optional withdrawal-rate lever. *(v2: "full-setting access for scenarios".)*
 
 ### G.3 — Income calculation fix — *moved to Phase 0.4*
 Operate on **totals**: apply income change directly to net; never touch per-source gross.
 
-### G.4 — Baseline comparison
-"vs. current plan" delta table (FI date, annual savings, savings rate, 10-yr net worth) with red/green direction colouring.
+### ✅ G.4 — Baseline comparison — DONE (2026-06-20)
+The What If results already showed scenario-vs-current deltas (Net Income / Expenses / Savings / FI Timeline + Key Metrics, red/green) since 0.4/0.5. Added a **Net Worth** comparison card (scenario vs current + change) driven by the new liabilities lever, plus FI-multiple and scenario-liabilities lines in Key Metrics. *(A 10-yr net-worth projection line is a nice-to-have; the goal-seek in G.6 will cover forward projection more fully.)*
 
 ### G.5 — Save scenarios
 Name + store up to 3 in `localStorage` (`ft-what-if-scenarios`); dropdown/tabs at top; compare two side-by-side in delta-table format; store full lever state + name.

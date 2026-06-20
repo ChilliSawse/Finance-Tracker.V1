@@ -317,6 +317,8 @@ function initializeWhatIfTab(force = false) {
     setValue('whatif-new-annual-income', currentTotals.totalNetAnnualIncome.toFixed(0));
     setValue('whatif-assets-change', 0);
     setValue('whatif-return-change', financeData.fiSettings.expectedReturn);
+    setValue('whatif-fi-multiple', financeData.fiSettings.multiple); // G.2
+    setValue('whatif-liabilities-change', 0); // G.2
     setHTML('whatif-results-display', '<h3>Scenario Results</h3><p>Your "What If" results will appear here after calculation.</p>');
 
     whatIfInitialized = true;
