@@ -881,7 +881,21 @@ body {
 }
 
 .info-more ul {
-    margin-top: 8px;
+    margin: 10px 0;
+    padding-left: 22px;
+}
+
+/* Readable spacing for expander content (allocation buckets explainer, "Learn more", …). */
+.info-more p {
+    margin: 10px 0;
+    line-height: 1.55;
+}
+.info-more li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+.info-more > :last-child {
+    margin-bottom: 0;
 }
 
 .info-dismiss {
