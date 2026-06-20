@@ -404,7 +404,7 @@ function updateLiabilitiesTabUI(totals) {
                     <div class="liability-details">
                         <div class="liability-balance">${formatCurrency(debt.balance)}</div>
                         <div class="liability-rate">Interest Rate: ${debt.interestRate}% annually</div>
-                        <div style="font-size: 0.85em; color: #666; margin-top: 8px;">
+                        <div style="font-size: 0.85em; color: var(--text-color-secondary); margin-top: 8px;">
                             Monthly Interest: ~${formatCurrency(monthlyInterest)}<br>
                             Annual Interest: ~${formatCurrency(yearlyInterest)}
                         </div>
