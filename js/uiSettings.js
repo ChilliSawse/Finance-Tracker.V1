@@ -232,6 +232,92 @@ function renderWhatIfAllocation() {
     updateAllocationTotalDisplay('whatif');
 }
 
+// What If redesign — scenario Assets editor (sandbox clone, data-scope="whatif").
+function renderWhatIfAssets() {
+    const container = getElement('whatif-assets-settings');
+    if (!container || !whatIfFinanceData) return;
+    container.innerHTML = '';
+    whatIfFinanceData.assets.forEach((asset, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'list-item';
+        itemDiv.style.gridTemplateColumns = '2fr 1.5fr auto';
+        const baseId = `whatif-asset-${index}`;
+        itemDiv.innerHTML = `
+            <span><label for="${baseId}-name" class="visually-hidden">Scenario Asset Name ${index + 1}</label>
+                <input type="text" value="${escapeHtml(asset.name)}" data-scope="whatif" data-collection="assets" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Asset name"></span>
+            <span><label for="${baseId}-balance" class="visually-hidden">Scenario Asset Balance ${index + 1}</label>
+                <input type="number" value="${asset.balance}" data-scope="whatif" data-collection="assets" data-index="${index}" data-field="balance" id="${baseId}-balance" placeholder="Balance" step="0.01"></span>
+            <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="asset" aria-label="Delete Scenario Asset ${index + 1}">Delete</button>`;
+        container.appendChild(itemDiv);
+    });
+}
+
+// What If redesign — scenario Liabilities editor.
+function renderWhatIfLiabilities() {
+    const container = getElement('whatif-liabilities-settings');
+    if (!container || !whatIfFinanceData) return;
+    container.innerHTML = '';
+    whatIfFinanceData.liabilities.forEach((liability, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'list-item';
+        itemDiv.style.gridTemplateColumns = '2fr 1.5fr 1fr auto';
+        const baseId = `whatif-liability-${index}`;
+        itemDiv.innerHTML = `
+            <span><label for="${baseId}-name" class="visually-hidden">Scenario Liability Name ${index + 1}</label>
+                <input type="text" value="${escapeHtml(liability.name)}" data-scope="whatif" data-collection="liabilities" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Liability name"></span>
+            <span><label for="${baseId}-balance" class="visually-hidden">Scenario Liability Balance ${index + 1}</label>
+                <input type="number" value="${liability.balance}" data-scope="whatif" data-collection="liabilities" data-index="${index}" data-field="balance" id="${baseId}-balance" placeholder="Balance" step="0.01"></span>
+            <span><label for="${baseId}-rate" class="visually-hidden">Scenario Interest Rate ${index + 1}</label>
+                <input type="number" value="${liability.interestRate || 0}" data-scope="whatif" data-collection="liabilities" data-index="${index}" data-field="interestRate" id="${baseId}-rate" placeholder="Interest %" step="0.01"></span>
+            <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="liability" aria-label="Delete Scenario Liability ${index + 1}">Delete</button>`;
+        container.appendChild(itemDiv);
+    });
+}
+
+// What If redesign — scenario Expenses editor (essential or non-essential collection).
+function renderWhatIfExpensesList(collection, containerId) {
+    const container = getElement(containerId);
+    if (!container || !whatIfFinanceData) return;
+    container.innerHTML = '';
+    whatIfFinanceData[collection].forEach((expense, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'list-item';
+        itemDiv.style.gridTemplateColumns = '2fr 1fr 1fr auto';
+        const baseId = `whatif-${collection}-${index}`;
+        itemDiv.innerHTML = `
+            <span><label for="${baseId}-name" class="visually-hidden">Scenario Expense Name ${index + 1}</label>
+                <input type="text" value="${escapeHtml(expense.name)}" data-scope="whatif" data-collection="${collection}" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Name"></span>
+            <span><label for="${baseId}-amount" class="visually-hidden">Scenario Expense Amount ${index + 1}</label>
+                <input type="number" value="${expense.amount}" data-scope="whatif" data-collection="${collection}" data-index="${index}" data-field="amount" id="${baseId}-amount" placeholder="Amount" step="0.01"></span>
+            <span><label for="${baseId}-frequency" class="visually-hidden">Scenario Expense Frequency ${index + 1}</label>
+                <select data-scope="whatif" data-collection="${collection}" data-index="${index}" data-field="frequency" id="${baseId}-frequency">
+                    <option value="weekly" ${expense.frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
+                    <option value="fortnightly" ${expense.frequency === 'fortnightly' ? 'selected' : ''}>Fortnightly</option>
+                    <option value="monthly" ${expense.frequency === 'monthly' ? 'selected' : ''}>Monthly</option>
+                    <option value="yearly" ${expense.frequency === 'yearly' ? 'selected' : ''}>Yearly</option>
+                </select></span>
+            <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="${collection}" aria-label="Delete Scenario Expense ${index + 1}">Delete</button>`;
+        container.appendChild(itemDiv);
+    });
+}
+
+// What If redesign — scenario FI settings (inputs write to whatIfFinanceData.fiSettings).
+function renderWhatIfFISettings() {
+    if (!whatIfFinanceData) return;
+    setValue('whatif-fi-multiple-set', whatIfFinanceData.fiSettings.multiple);
+    setValue('whatif-expected-return-set', whatIfFinanceData.fiSettings.expectedReturn);
+}
+
+// Render every scenario section from the sandbox clone.
+function renderWhatIfSections() {
+    if (typeof renderWhatIfAllocation === 'function') renderWhatIfAllocation();
+    renderWhatIfAssets();
+    renderWhatIfLiabilities();
+    renderWhatIfExpensesList('essentialExpenses', 'whatif-essential-expenses-settings');
+    renderWhatIfExpensesList('nonEssentialExpenses', 'whatif-non-essential-expenses-settings');
+    renderWhatIfFISettings();
+}
+
 function updateAllocationTotalDisplay(scope) {
     const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
     if (!fd) return;
@@ -351,22 +437,11 @@ function applyGuiStylesToPage() {
 function initializeWhatIfTab(force = false) {
     if (whatIfInitialized && !force) return;
 
-    whatIfEssentialExpenses = JSON.parse(JSON.stringify(financeData.essentialExpenses));
-    whatIfNonEssentialExpenses = JSON.parse(JSON.stringify(financeData.nonEssentialExpenses));
-
-    // What If redesign — seed the full sandbox clone (sections edit this, not live data).
+    // What If redesign — seed the full sandbox clone; every scenario section edits this, not live data.
     whatIfFinanceData = JSON.parse(JSON.stringify(financeData));
 
-    renderWhatIfExpenseSettingsList('whatif-essential-expenses-settings', whatIfEssentialExpenses, 'whatIfEssential');
-    renderWhatIfExpenseSettingsList('whatif-non-essential-expenses-settings', whatIfNonEssentialExpenses, 'whatIfNonEssential');
-    if (typeof renderWhatIfAllocation === 'function') renderWhatIfAllocation();
-
-    const currentTotals = calculateTotals();
-    setValue('whatif-new-annual-income', currentTotals.totalNetAnnualIncome.toFixed(0));
-    setValue('whatif-assets-change', 0);
-    setValue('whatif-return-change', financeData.fiSettings.expectedReturn);
-    setValue('whatif-fi-multiple', financeData.fiSettings.multiple); // G.2
-    setValue('whatif-liabilities-change', 0); // G.2
+    renderWhatIfSections();
+    setValue('whatif-new-annual-income', calculateTotals(financeData).totalNetAnnualIncome.toFixed(0)); // income override seed
     setHTML('whatif-results-display', '<h3>Scenario Results</h3><p>Your "What If" results will appear here after calculation.</p>');
 
     whatIfInitialized = true;

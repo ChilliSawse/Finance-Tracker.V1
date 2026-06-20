@@ -102,6 +102,10 @@ function handleSettingsClickEvents(event) {
     else if (target.id === 'add-liability') addLiability();
     else if (target.id === 'add-allocation-category') addAllocationCategory();
     else if (target.id === 'whatif-add-allocation') addAllocationCategory('whatif'); // What If sandbox
+    else if (target.id === 'whatif-add-asset') addAsset('whatif');
+    else if (target.id === 'whatif-add-liability') addLiability('whatif');
+    else if (target.id === 'whatif-add-essential') addExpenseToList('essentialExpenses', 'whatif');
+    else if (target.id === 'whatif-add-nonessential') addExpenseToList('nonEssentialExpenses', 'whatif');
     else if (target.id === 'add-essential-expense-settings') addExpenseToList('essentialExpenses');
     else if (target.id === 'add-non-essential-expense-settings') addExpenseToList('nonEssentialExpenses');
 
@@ -110,13 +114,17 @@ function handleSettingsClickEvents(event) {
     // (the rows users edit most and are most likely to delete by accident). The other lists
     // keep their existing immediate delete plus their own "must keep at least one" guards.
     else if (target.classList.contains('delete-btn')) {
+        const scope = target.dataset.scope; // 'whatif' for scenario rows, undefined for live
         if (dataType === 'incomeSource') removeIncomeSource(index);
         else if (dataType === 'taxBracket') removeTaxBracket(index);
-        else if (dataType === 'asset') removeAsset(index);
-        else if (dataType === 'allocation') removeAllocationCategory(index, target.dataset.scope);
-        else if (dataType === 'liability') inlineConfirm(target, 'Delete this liability?', () => removeLiability(index));
+        else if (dataType === 'asset') removeAsset(index, scope);
+        else if (dataType === 'allocation') removeAllocationCategory(index, scope);
+        else if (dataType === 'liability') inlineConfirm(target, 'Delete this liability?', () => removeLiability(index, scope));
         else if (dataType === 'essentialExpense') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('essentialExpenses', index));
         else if (dataType === 'nonEssentialExpense') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('nonEssentialExpenses', index));
+        // What If scenario expenses tag data-type with the collection name (plural).
+        else if (dataType === 'essentialExpenses') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('essentialExpenses', index, scope));
+        else if (dataType === 'nonEssentialExpenses') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('nonEssentialExpenses', index, scope));
     }
 
     // Data action buttons (now live in the appearance/settings modal; D.6).
@@ -152,6 +160,17 @@ function handleSettingsChangeEvents(event) {
             renderIncomeSourcesSettings();
             updateDataAndUI();
         }
+        return;
+    }
+    // What If scenario FI settings — write to the sandbox clone, no live update.
+    else if (target.id === 'whatif-fi-multiple-set') {
+        const val = parseFloat(value);
+        if (whatIfFinanceData && !isNaN(val) && val > 0) whatIfFinanceData.fiSettings.multiple = val;
+        return;
+    }
+    else if (target.id === 'whatif-expected-return-set') {
+        const val = parseFloat(value);
+        if (whatIfFinanceData && !isNaN(val) && val >= 0) whatIfFinanceData.fiSettings.expectedReturn = val;
         return;
     }
     else if (target.id === 'fi-multiple') {
@@ -224,17 +243,10 @@ function handleSettingsChangeEvents(event) {
 
 function handleWhatIfClickEvents(event) {
     const target = event.target;
-    const dataType = target.dataset.type; // e.g., 'whatIfEssential'
-    const index = parseInt(target.dataset.index, 10);
-
-    if (target.id === 'add-whatif-essential-expense') addWhatIfExpenseItem('essential');
-    else if (target.id === 'add-whatif-non-essential-expense') addWhatIfExpenseItem('nonEssential');
-    else if (target.id === 'run-whatif-calculation') runWhatIfScenario();
-    else if (target.id === 'reset-whatif-to-current') initializeWhatIfTab(true); // Phase 0.4: force-reseed from live data
-    else if (target.classList.contains('delete-btn')) {
-        if (dataType === 'whatIfEssential') removeWhatIfExpenseItem('essential', index);
-        else if (dataType === 'whatIfNonEssential') removeWhatIfExpenseItem('nonEssential', index);
-    }
+    // Scenario section add/delete now route through the document-level settings handlers
+    // (data-scope="whatif"); only Calculate + Reset remain What-If-specific.
+    if (target.id === 'run-whatif-calculation') runWhatIfScenario();
+    else if (target.id === 'reset-whatif-to-current') initializeWhatIfTab(true); // force-reseed from live data
 }
 
 function handleWhatIfChangeEvents(event) {
@@ -345,26 +357,30 @@ function removeTaxBracket(index) {
     updateDataAndUI();
 }
 
-function addAsset() {
-    financeData.assets.push({ name: "New Asset", balance: 0 });
-    renderAssetsSettings();
-    updateDataAndUI();
+function addAsset(scope) {
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    fd.assets.push({ name: "New Asset", balance: 0 });
+    if (scope === 'whatif') { renderWhatIfAssets(); } else { renderAssetsSettings(); updateDataAndUI(); }
 }
-function removeAsset(index) {
-    financeData.assets.splice(index, 1);
-    renderAssetsSettings();
-    updateDataAndUI();
+function removeAsset(index, scope) {
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    fd.assets.splice(index, 1);
+    if (scope === 'whatif') { renderWhatIfAssets(); } else { renderAssetsSettings(); updateDataAndUI(); }
 }
 
-function addLiability() {
-    financeData.liabilities.push({ name: "New Liability", balance: 0, interestRate: 0 });
-    renderLiabilitiesSettings();
-    updateDataAndUI();
+function addLiability(scope) {
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    fd.liabilities.push({ name: "New Liability", balance: 0, interestRate: 0 });
+    if (scope === 'whatif') { renderWhatIfLiabilities(); } else { renderLiabilitiesSettings(); updateDataAndUI(); }
 }
-function removeLiability(index) {
-    financeData.liabilities.splice(index, 1);
-    renderLiabilitiesSettings();
-    updateDataAndUI();
+function removeLiability(index, scope) {
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    fd.liabilities.splice(index, 1);
+    if (scope === 'whatif') { renderWhatIfLiabilities(); } else { renderLiabilitiesSettings(); updateDataAndUI(); }
 }
 
 function addAllocationCategory(scope) {
@@ -382,15 +398,19 @@ function removeAllocationCategory(index, scope) {
     else { renderAllocationSettings(); updateDataAndUI(); }
 }
 
-function addExpenseToList(arrayName) { // arrayName is 'essentialExpenses' or 'nonEssentialExpenses'
-    financeData[arrayName].push({ name: "New Expense", amount: 0, frequency: "monthly" });
-    renderExpensesSettingsLists();
-    updateDataAndUI();
+function addExpenseToList(arrayName, scope) { // arrayName is 'essentialExpenses' or 'nonEssentialExpenses'
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    fd[arrayName].push({ name: "New Expense", amount: 0, frequency: "monthly" });
+    if (scope === 'whatif') { renderWhatIfExpensesList(arrayName, `whatif-${arrayName === 'essentialExpenses' ? 'essential' : 'non-essential'}-expenses-settings`); }
+    else { renderExpensesSettingsLists(); updateDataAndUI(); }
 }
-function removeExpenseFromList(arrayName, index) {
-    financeData[arrayName].splice(index, 1);
-    renderExpensesSettingsLists();
-    updateDataAndUI();
+function removeExpenseFromList(arrayName, index, scope) {
+    const fd = scope === 'whatif' ? whatIfFinanceData : financeData;
+    if (!fd) return;
+    fd[arrayName].splice(index, 1);
+    if (scope === 'whatif') { renderWhatIfExpensesList(arrayName, `whatif-${arrayName === 'essentialExpenses' ? 'essential' : 'non-essential'}-expenses-settings`); }
+    else { renderExpensesSettingsLists(); updateDataAndUI(); }
 }
 
 // Add/Remove for What If tab
@@ -614,37 +634,19 @@ function actionResetGuiToDefaults() {
 
 // What If Scenario Action
 function runWhatIfScenario() {
+    if (!whatIfFinanceData) initializeWhatIfTab(true); // safety — seed the sandbox if missing
     const newAnnualNetIncomeInput = getValue('whatif-new-annual-income', true);
-    const assetsChange = getValue('whatif-assets-change', true);
-    const newExpectedReturn = getValue('whatif-return-change', true);
-    const newFiMultiple = getValue('whatif-fi-multiple', true);       // G.2
-    const liabilitiesChange = getValue('whatif-liabilities-change', true); // G.2
 
     if (isNaN(newAnnualNetIncomeInput) || newAnnualNetIncomeInput < 0) {
         showCustomModal("Please enter a valid new annual net income for the scenario.", 'error');
         return;
     }
 
-    // Create a deep copy of the current financeData for scenario planning
-    let scenarioFinanceData = JSON.parse(JSON.stringify(financeData));
+    // What If redesign — the scenario IS the fully-edited sandbox clone (expenses, assets,
+    // liabilities, allocation, FI all come from whatIfFinanceData). Income is the one remaining
+    // override lever (a total net-annual-income override; full income-source editing is next).
+    const scenarioFinanceData = whatIfFinanceData;
 
-    // Phase 0.4 (G.3) — Income math fix.
-    // The What If income lever is a *total net annual income* override. We apply it directly
-    // to the scenario's net income and let savings/FI derive from that. We deliberately do NOT
-    // scale per-source grossAnnual: the old multiplier/ratio approach was circular (it scaled
-    // gross, then overrode net with the raw input anyway, so the gross-scaling did nothing) and
-    // broke whenever current net was 0. Operating on totals keeps the scenario honest and simple.
-
-    // Use the temporary what-if expenses
-    scenarioFinanceData.essentialExpenses = JSON.parse(JSON.stringify(whatIfEssentialExpenses));
-    scenarioFinanceData.nonEssentialExpenses = JSON.parse(JSON.stringify(whatIfNonEssentialExpenses));
-
-    // Apply new expected return + FI multiple for the scenario's FI calculation (G.2).
-    scenarioFinanceData.fiSettings.expectedReturn = isNaN(newExpectedReturn) ? financeData.fiSettings.expectedReturn : newExpectedReturn;
-    scenarioFinanceData.fiSettings.multiple = (isNaN(newFiMultiple) || newFiMultiple <= 0) ? financeData.fiSettings.multiple : newFiMultiple;
-
-    // Derive scenario totals from the (expense-adjusted) scenario data, then override the
-    // income directly with the user's net-income lever.
     const scenarioTotals = calculateTotals(scenarioFinanceData);
     const scenarioNetAnnualIncome = newAnnualNetIncomeInput;
     scenarioTotals.totalNetAnnualIncome = scenarioNetAnnualIncome;
@@ -652,10 +654,7 @@ function runWhatIfScenario() {
     scenarioTotals.annualSavings = scenarioTotals.weeklySavings * 52;
     scenarioTotals.savingsRate = scenarioNetAnnualIncome > 0 ? (scenarioTotals.annualSavings / scenarioNetAnnualIncome) * 100 : 0;
 
-
-    // Adjust assets for the scenario
-    let scenarioCurrentAssets = calculateTotals(financeData).currentAssets + assetsChange;
-    scenarioTotals.currentAssets = scenarioCurrentAssets; // Update scenario totals with asset change
+    const scenarioCurrentAssets = scenarioTotals.currentAssets; // from the sandbox assets
 
     const scenarioAnnualExpenses = scenarioTotals.totalWeeklyExpenses * 52;
     const scenarioFiTarget = scenarioAnnualExpenses * scenarioFinanceData.fiSettings.multiple;
@@ -672,8 +671,8 @@ function runWhatIfScenario() {
         : 'N/A';
     const savingsRateDifference = scenarioTotals.savingsRate - currentTotals.savingsRate;
 
-    // G.2 — scenario liabilities + net worth (liabilities lever adjusts total debt).
-    const scenarioLiabilities = Math.max(0, currentTotals.currentLiabilities + (isNaN(liabilitiesChange) ? 0 : liabilitiesChange));
+    // Scenario liabilities + net worth — both from the sandbox.
+    const scenarioLiabilities = scenarioTotals.currentLiabilities;
     const scenarioNetWorth = scenarioCurrentAssets - scenarioLiabilities;
     const currentNetWorth = currentTotals.netWorth;
     const netWorthDifference = scenarioNetWorth - currentNetWorth;
