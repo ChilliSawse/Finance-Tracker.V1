@@ -333,6 +333,24 @@ function updateSavingsTabUI(totals) {
             <span style="font-weight: 600; color: var(--color-warning);">${currentProgress.toFixed(1)}%</span>
         </div>
     `);
+
+    // H.6 — Assets card on the Savings tab. Assets are edited in the Savings gear modal but
+    // were only *shown* on the Dashboard's Net Worth card; mirror that list here.
+    setText('savings-total-assets', formatCurrency(totals.currentAssets));
+    const savingsAssetsContainer = getElement('savings-assets-display');
+    if (savingsAssetsContainer) {
+        savingsAssetsContainer.innerHTML = '';
+        if (financeData.assets.length === 0) {
+            savingsAssetsContainer.innerHTML = `<p style="text-align:center; font-size:0.9em; color: var(--text-color-secondary);">No assets added yet — add them via "Edit assets, allocation &amp; FI" above.</p>`;
+        } else {
+            financeData.assets.forEach(asset => {
+                const assetDiv = document.createElement('div');
+                assetDiv.className = 'account-item asset';
+                assetDiv.innerHTML = `<div class="account-name">${escapeHtml(asset.name)}</div><div class="account-balance">${formatCurrency(asset.balance)}</div>`;
+                savingsAssetsContainer.appendChild(assetDiv);
+            });
+        }
+    }
 }
 
 function updateLiabilitiesTabUI(totals) {
