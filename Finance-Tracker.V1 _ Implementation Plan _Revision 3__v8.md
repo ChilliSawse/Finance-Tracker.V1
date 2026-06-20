@@ -313,6 +313,9 @@ Read-only "Assets" card added to the Savings tab (after the Savings Rate / FI gr
 ### I.4 — Responsive audit @ 375/768/1024/1440 — no horizontal scroll, touch targets ≥44px, forms usable, cards reflow.
 ### I.5 — Motion — `prefers-reduced-motion` guard everywhere; sidebar `width 0.2s`; modal `opacity`+`scale(0.98)` `0.15s`; no tab-switch animation.
 ### I.6 — *(folded in from 0.5 if not already done)* token-only colours in What If results.
+### ✅ I.8 — Remove all UI emojis → SVG icons (NEW, user request 2026-06-20) — DONE
+All user-facing emojis stripped (headings, buttons, autosave status, messages, empty state). Section markers now use inline tab-style SVG icons: the 5 settings-modal titles reuse the matching tab icons (income/expenses/savings/liabilities/settings), and the 3 dashboard empty-state action cards get SVGs. Sub-headings/buttons/status are clean text. `∞` kept (math symbol). Dev-only emojis in `sw.js` console logs + `tests.html` harness intentionally left (not user-facing). `.modal-header h2` made `inline-flex` for icon alignment.
+
 ### I.7 — Softer essential-expense palette (NEW — Rev 5) — gentler tones for essential expenses so spending on necessities doesn't read as "bad"; **non-essential stays orange** as the warning/discretionary cue. Token-only change (add an essential-expense semantic token; apply on the Expenses tab + the F.4 dashboard breakdown card). Effort XS. Can ship independently of the rest of I.
 
 ---
