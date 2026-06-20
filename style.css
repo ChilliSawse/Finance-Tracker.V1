@@ -395,6 +395,62 @@ body {
     min-width: 720px;
 }
 
+/* F.2 — clickable dashboard cards (whole card links to its tab). */
+.card--link {
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.card--link:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+    border-color: var(--accent-color);
+}
+.card--link:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* F.1 — dashboard welcome empty state. */
+.dashboard-empty {
+    text-align: center;
+    padding: 48px 20px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+.dashboard-empty h2 { margin: 0 0 8px; font-size: 1.6rem; }
+.dashboard-empty > p { margin: 0 auto 28px; color: var(--text-color-secondary); max-width: 540px; }
+.empty-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+.empty-action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 24px 16px;
+    background: var(--card-bg-gradient-start);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    color: var(--text-color-primary);
+    font: inherit;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.empty-action-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+    border-color: var(--accent-color);
+}
+.empty-action-card:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+.empty-action-icon { font-size: 2rem; }
+.empty-action-title { font-weight: 600; font-size: 1.05rem; }
+.empty-action-desc { font-size: 0.85rem; color: var(--text-color-secondary); }
+
 .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

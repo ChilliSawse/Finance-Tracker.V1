@@ -162,6 +162,42 @@ function setupPageSettingsModals() {
     });
 }
 
+// F.2 — dashboard cards are links to their tab (whole card clickable + keyboard accessible).
+function setupCardLinks() {
+    const dash = getElement('dashboard');
+    if (!dash) return;
+    const go = (card) => { const t = card.dataset.cardLink; if (t) showTab(t); };
+    dash.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-card-link]');
+        if (card) go(card);
+    });
+    dash.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        const card = e.target.closest('[data-card-link]');
+        if (card && e.target === card) { e.preventDefault(); go(card); }
+    });
+}
+
+// F.1 — dashboard empty-state action cards: jump to the relevant tab and open its settings modal.
+function setupDashboardEmptyActions() {
+    const empty = getElement('dashboard-empty-state');
+    if (!empty) return;
+    const map = {
+        income:   ['income',   'open-income-settings'],
+        expenses: ['expenses', 'open-expenses-settings'],
+        fi:       ['savings',  'open-savings-settings'],
+    };
+    empty.addEventListener('click', (e) => {
+        const card = e.target.closest('[data-empty-action]');
+        if (!card) return;
+        const entry = map[card.dataset.emptyAction];
+        if (!entry) return;
+        showTab(entry[0]);
+        const btn = getElement(entry[1]);
+        if (btn) btn.click();
+    });
+}
+
 // C.1 — collapsible info sections. Per-tab collapsed state persists in localStorage.
 const INFO_STATE_KEY = 'ft-info-collapsed';
 
@@ -385,6 +421,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupSidebar();   // A.3 — collapse toggle + restore
     setupGuiModal();  // A.4 — appearance modal
     setupPageSettingsModals(); // Phase D — per-page settings modals (Income, …)
+    setupDashboardEmptyActions(); // F.1 — welcome empty-state action cards
+    setupCardLinks(); // F.2 — dashboard cards link to their tab
     setupInfoSections(); // C.1 — collapsible info guides
 
     updateAllUI();

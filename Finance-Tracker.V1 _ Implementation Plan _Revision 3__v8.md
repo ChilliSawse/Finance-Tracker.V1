@@ -251,14 +251,14 @@ Relocation done by **D.1**: the editable bracket table moved into the Income gea
 
 ## Phase F — Dashboard Improvements
 
-### F.1 — Empty state
-No income + no expenses → welcome empty state with three action cards (Add income / Add expenses / Set FI goal) linking to tabs. Auto-hides once data exists.
+### ✅ F.1 — Empty state — DONE (2026-06-20)
+`#dashboard-empty-state` (welcome message + three `.empty-action-card`s: Add income / Add expenses / Set FI goal) shows when there's no income, expenses, assets, or liabilities; the normal dashboard is wrapped in `#dashboard-populated` and the two toggle in `updateDashboardUI()`. Each action card jumps to the relevant tab **and opens its settings modal** (`setupDashboardEmptyActions()`), since data entry now lives in the gear modals.
 
-### F.2 — Card linking & interactivity (widened — Rev 5)
-v2 wants the **whole card clickable**, not just an "Edit →" affordance — each dashboard card becomes a link to its tab (Income Overview → Income, Outgoing vs Savings / new breakdown → Expenses, Net Worth → Savings/Liabilities, Income Allocation → Savings, FI → Savings). Keep a clear hover/focus affordance and `role`/keyboard semantics so it's accessible, not just a click target.
+### ✅ F.2 — Card linking & interactivity (widened — Rev 5) — DONE (2026-06-20)
+Whole dashboard cards are now links to their tab: Income Overview → Income, Outgoing vs Savings → Expenses, Expense Breakdown → Expenses, Net Worth → Savings, Income Allocation → Savings. Each card carries `data-card-link` + `role="link"` + `tabindex="0"` + an `aria-label`; `setupCardLinks()` handles click and Enter/Space. `.card--link` gives a hover-lift + accent border + focus ring. (This also delivers F.4's "click-through to Expenses".)
 
-### F.3 — Upcoming bills
-New `financeData.upcomingBills[]` (`name`, `amount`, `dueDate`, `frequency`). Dashboard "Upcoming this month" card (due ≤30 days). Edited in the Expenses "Bills" section (D.2 modal); excluded from monthly totals unless due this period.
+### ⏸ F.3 — Upcoming bills — DEFERRED (user, 2026-06-20)
+Deferred at the user's request — wants to think more about the design before it's built (it introduces a new `upcomingBills[]` data model + an Expenses-modal "Bills" section + a dashboard "Upcoming this month" card, and how it interacts with the existing expense totals). Original scope: new `financeData.upcomingBills[]` (`name`, `amount`, `dueDate`, `frequency`); due ≤30 days; excluded from monthly totals unless due this period. **Not started.**
 
 ### ✅ F.4 — Expense breakdown card (NEW — Rev 5) — DONE (2026-06-20)
 Dashboard "Expense Breakdown" card (in the grid, next to Outgoing vs Savings): essential vs non-essential dollar figures + % of spend + an essential-share split bar, **respecting the active display period** (weekly→period factor mirrors the existing expense conversion). Empty state ("—") when no expenses. `updateDashboardUI()` renders it. *Deferred to their own phases: click-through to Expenses (lands with **F.2** card linking) and the softer essential colour (lands with **I.7**) — the card uses default tokens until then.*
@@ -349,7 +349,7 @@ A       Sidebar nav + layout                         R recommended  L (3–4 s) 
 C       Collapsible info sections                    —             S (<1 s)     ✅ DONE (5 sections incl. What If)
 D       Display tabs + per-page settings modals      R (mandatory)  L (3–4 s)    ✅ DONE (D.1–D.6, 2026-06-20)
 E       Tax bracket calc                             —             XS           ✅ DONE (E.1–E.4; E.4 resolved via D.1)
-F       Dashboard improvements                       D, E          M (1–2 s)    PARTIAL (F.4 ✅; F.1/F.2/F.3 TODO)
+F       Dashboard improvements                       D, E          M (1–2 s)    F.1/F.2/F.4 ✅; F.3 ⏸ DEFERRED (user)
 G.2     What If full lever set (incl. allocation)    D, 0.4        M (1–2 s)    TODO
 G.4/G.5 What If comparison + saved scenarios         0.4           M (1–2 s)    TODO  (not gated on D)
 G.6     "How much can I save in X time?" goal-seek   G.2           M (–L)       TODO  (NEW)

@@ -67,6 +67,28 @@
 
         <main class="content main-content" id="main-content">
             <div id="dashboard" role="tabpanel" aria-labelledby="tab-dashboard" class="tab-content active">
+                <div id="dashboard-empty-state" class="dashboard-empty" hidden>
+                    <h2>Welcome to your Finance Tracker 👋</h2>
+                    <p>Add a few details and your income, spending, and savings come to life. Start here:</p>
+                    <div class="empty-actions">
+                        <button type="button" class="empty-action-card" data-empty-action="income">
+                            <span class="empty-action-icon" aria-hidden="true">💰</span>
+                            <span class="empty-action-title">Add income</span>
+                            <span class="empty-action-desc">Your salary or self-employed pay</span>
+                        </button>
+                        <button type="button" class="empty-action-card" data-empty-action="expenses">
+                            <span class="empty-action-icon" aria-hidden="true">💸</span>
+                            <span class="empty-action-title">Add expenses</span>
+                            <span class="empty-action-desc">Essential and non-essential</span>
+                        </button>
+                        <button type="button" class="empty-action-card" data-empty-action="fi">
+                            <span class="empty-action-icon" aria-hidden="true">🎯</span>
+                            <span class="empty-action-title">Set your FI goal</span>
+                            <span class="empty-action-desc">Assets, allocation &amp; FI settings</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="dashboard-populated">
                 <div class="dashboard-controls">
                     <label for="dashboard-view-period">View Period:</label>
                     <select id="dashboard-view-period">
@@ -78,7 +100,7 @@
                     </select>
                 </div>
                 <div class="dashboard-grid">
-                    <div class="card">
+                    <div class="card card--link" data-card-link="income" role="link" tabindex="0" aria-label="Income Overview — go to Income tab">
                         <div class="card-header">
                             <div>
                                 <div class="card-title">Income Overview</div>
@@ -103,7 +125,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="card">
+                    <div class="card card--link" data-card-link="expenses" role="link" tabindex="0" aria-label="Outgoing vs Savings — go to Expenses tab">
                         <div class="card-header">
                             <div>
                                 <div class="card-title" id="dashboard-outgoing-savings-title">Fortnightly Overview</div>
@@ -124,7 +146,7 @@
                             <div class="progress-fill" id="savings-progress" style="width: 0%;"></div>
                         </div>
                     </div>
-                    <div class="card">
+                    <div class="card card--link" data-card-link="expenses" role="link" tabindex="0" aria-label="Expense Breakdown — go to Expenses tab">
                         <div class="card-header">
                             <div>
                                 <div class="card-title">Expense Breakdown</div>
@@ -147,7 +169,7 @@
                             <div class="progress-fill" id="dashboard-essential-split" style="width: 0%;"></div>
                         </div>
                     </div>
-                    <div class="card">
+                    <div class="card card--link" data-card-link="savings" role="link" tabindex="0" aria-label="Net Worth — go to Savings tab">
                         <div class="card-header">
                             <div>
                                 <div class="card-title">Net Worth</div>
@@ -171,11 +193,12 @@
                         <div class="accounts-grid" id="liabilities-display"></div>
                     </div>
                 </div>
-                <div class="card">
+                <div class="card card--link" data-card-link="savings" role="link" tabindex="0" aria-label="Income Allocation Strategy — go to Savings tab">
                     <div class="card-title" id="allocation-title">Income Allocation Strategy</div>
                     <div class="card-subtitle" id="allocation-period-subtitle">Based on Net Income (Fortnightly)</div>
                     <div class="savings-breakdown" id="allocation-display"></div>
                 </div>
+                </div><!-- /#dashboard-populated -->
             </div>
 
             <div id="income" role="tabpanel" aria-labelledby="tab-income" class="tab-content">

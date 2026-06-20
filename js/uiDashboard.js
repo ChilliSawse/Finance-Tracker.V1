@@ -1,6 +1,14 @@
 // --- START OF: uiDashboard.js ---
 
 function updateDashboardUI(totals) {
+    // F.1 — show a welcome empty state (instead of zero-filled cards) until there's any data.
+    const dashIsEmpty = totals.totalGrossAnnualIncome === 0 && totals.totalNetAnnualIncome === 0
+        && totals.totalWeeklyExpenses === 0 && financeData.assets.length === 0 && financeData.liabilities.length === 0;
+    const emptyStateEl = getElement('dashboard-empty-state');
+    const populatedEl = getElement('dashboard-populated');
+    if (emptyStateEl) emptyStateEl.hidden = !dashIsEmpty;
+    if (populatedEl) populatedEl.hidden = dashIsEmpty;
+
     const viewPeriod = financeData.dashboardViewPeriod || 'fortnightly';
     setValue('dashboard-view-period', viewPeriod);
 
