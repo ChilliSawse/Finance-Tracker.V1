@@ -1794,6 +1794,16 @@ body {
 
 /* --- Mobile display polish (phones, on-device follow-up) --- */
 @media (max-width: 640px) {
+    /* Allocation buckets ("$1,389.63/fortnight") are too long to fit a 2-up cell
+       even at the auto-fit floor — and iOS renders the font wider than desktop
+       Chrome, so they overflow on-device. Give each its own full-width row so the
+       figure shows at a comfortable size. Auto-fit (fitAllAmounts) still applies
+       as the universal backstop for every other card. Covers the dashboard
+       Income Allocation card and the What If simulated dashboard (same class). */
+    .savings-breakdown {
+        grid-template-columns: 1fr;
+    }
+
     /* "All changes saved" pushed the gear cog over the title. Collapse the save
        status to a small colour-coded dot on phones (green=saved, amber=saving,
        red=error, orange=unsaved) so the title + gear get their space back. */

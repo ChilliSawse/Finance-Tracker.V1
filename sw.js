@@ -5,7 +5,7 @@
 // never changed between deploys — so the browser (which detects SW updates by byte-comparing
 // sw.js) never re-installed and kept serving stale CSS/JS. A static, manually-bumped string
 // changes the file bytes, which is what actually triggers the update → re-cache → activate flow.
-const VERSION = '2026-06-21-inline-info-whatif-fit';
+const VERSION = '2026-06-21-allocation-single-col';
 const CACHE_NAME = `finance-tracker-${VERSION}`;
 
 console.log('🚀 Service Worker Loading - Auto Version:', VERSION);
