@@ -23,7 +23,7 @@ Guiding principle throughout: **correctness before chrome** — fix wrong number
 | R | Event-routing refactor (`data-collection`) | ✅ Done |
 | T | Minimal test harness (`tests.html`) | ✅ Done |
 | B | Quick wins (B.1–B.7) | ✅ Done |
-| A | Sidebar nav + layout | ✅ Done (mobile bottom-nav ⏸) |
+| A | Sidebar nav + layout | ✅ Done (incl. mobile bottom-nav) |
 | C | Collapsible info sections | ✅ Done (expanded copy ⏸) |
 | D | Per-tab settings modals; Settings tab removed | ✅ Done |
 | E | Tax bracket calculation (E.1–E.4) | ✅ Done |
@@ -48,7 +48,7 @@ Nothing below is broken or half-finished; each is a deliberate stop, mostly beca
 - **G.6 (inverse solver).** The "set a target amount + date → back-solve the required savings/allocation split" direction. *Optional follow-up — the **forward** projection the original G.6 described already shipped as per-bucket savings goals (see Phase G / Stage 0).*
 - ~~**Phase C — expanded info-panel copy.**~~ ✅ **DONE (2026-06-20)** — user-supplied expanded copy applied to all five info sections (Income / Expenses / Savings / Liabilities + new What If copy written to match). Intro body paragraphs dropped, "Learn more" expanders enriched. *(Two references to a non-existent year-by-year forecast chart in the Savings copy were trimmed — see the Possible-next-feature note below.)*
 - **0.6 follow-up — Medicare levy + HELP/HECS in the estimate path.** When a salaried source leaves Net/Tax-per-cycle blank, the bracket estimate omits Medicare levy + HELP/HECS. *Optional; the estimate stays labelled an "estimate". The override path (the actual fix) is done.*
-- **Phase A — mobile (<640px) bottom-nav.** Deferred to a future "A-PR2"; small screens currently fall back to the icon-only sidebar (usable, not broken).
+- ~~**Phase A — mobile (<640px) bottom-nav.**~~ ✅ **DONE (2026-06-21)** — under 640px the existing `<nav role="tablist">` sidebar is restyled (CSS-only) into a fixed bottom tab bar (icon-over-label, accent top-border on the active tab, iOS safe-area inset). Reuses `showTab()` + the click/keyboard wiring unchanged; keyboard nav extended to accept Left/Right as aliases of Up/Down for the horizontal orientation. Selectors are doubled with `.is-collapsed` so the bottom bar wins over the persisted collapsed-sidebar state.
 - **FI net-worth forecast chart (possible next feature).** The user-supplied Phase C Savings copy referenced a "year-by-year forecast of your projected net worth" chart — which doesn't exist yet, so those two references were trimmed. A small line/area chart projecting net worth over time (compound growth from current assets + annual savings at the expected return) would make that copy accurate and is a natural Savings-tab addition. Not started.
 
 ### Verify-only (not a build item)
@@ -90,7 +90,7 @@ Standalone `tests.html` (no framework) loads `utils.js` + `calculations.js` and 
 - **B.7** "Daily (5-day week)" relabel + tooltip explaining the 260-day basis.
 
 ### Phase A — Sidebar nav + layout
-`.app-shell` CSS grid (topbar row + sidebar/main row), vertical `role="tablist"` sidebar (↑/↓ + Home/End), collapse toggle (persisted `ft-sidebar-collapsed`), active-tab persistence (`ft-active-tab`), GUI settings extracted to a body-level **gear-button modal** (`#gui-settings-modal`, focus-trapped). Inline 20×20 `currentColor` SVG icons. *(Mobile bottom-nav ⏸ — see Deferred.)*
+`.app-shell` CSS grid (topbar row + sidebar/main row), vertical `role="tablist"` sidebar (↑/↓ + Home/End), collapse toggle (persisted `ft-sidebar-collapsed`), active-tab persistence (`ft-active-tab`), GUI settings extracted to a body-level **gear-button modal** (`#gui-settings-modal`, focus-trapped). Inline 20×20 `currentColor` SVG icons. *(Mobile bottom-nav now shipped — see the Deferred section's DONE note: under 640px the same tablist renders as a fixed bottom bar, CSS-only.)*
 
 ### Phase C — Collapsible info sections
 `.info-section[data-info-key]` with a chevron toggle + "Don't show again" checkbox; collapsed state persists per key (`ft-info-collapsed`). Content rewritten to intro + "How to use" bullets + a `<details>` "Learn more". *(Longer per-section copy ⏸ — see Deferred.)*

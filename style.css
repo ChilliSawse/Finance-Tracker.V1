@@ -1605,6 +1605,93 @@ body {
         grid-template-columns: 1fr; /* Stack all elements */
     }
 }
+
+/* --- Mobile bottom navigation (Phase A — deferred item) --- */
+/* Under 640px the sidebar becomes a fixed bottom tab bar. This reuses the SAME
+   <nav role="tablist"> markup, so showTab(), the click delegation, the roving
+   tabindex and keyboard nav all keep working — no duplicate DOM or JS.
+   Selectors are doubled with `.is-collapsed` so they also win over the persisted
+   collapsed-sidebar state (media queries add no specificity, so the bare
+   `.sidebar` rules would otherwise lose to `.app-shell.is-collapsed .sidebar`). */
+@media (max-width: 640px) {
+    .app-shell {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "topbar"
+            "main";
+    }
+
+    /* Collapse toggle is meaningless for a bottom bar. */
+    .sidebar-toggle {
+        display: none;
+    }
+
+    .app-shell .sidebar,
+    .app-shell.is-collapsed .sidebar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1500;
+        width: auto;
+        flex-direction: row;
+        gap: 2px;
+        padding: 6px 4px;
+        padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+        /* Match the body gradient the desktop sidebar floats over, so the tabs'
+           existing white icon/label colours (--tab-text-color) stay readable.
+           A white background here would render white-on-white. */
+        background: linear-gradient(135deg, var(--primary-bg-color-start) 0%, var(--primary-bg-color-end) 100%);
+        border-top: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.18);
+        overflow: visible;
+    }
+
+    /* Neutralise the tablet hover-to-expand rule on touch screens. */
+    .sidebar:hover,
+    .sidebar:focus-within {
+        width: auto;
+    }
+
+    .app-shell .sidebar .tab,
+    .app-shell.is-collapsed .sidebar .tab {
+        flex: 1 1 0;
+        min-width: 0;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        padding: 6px 2px;
+        border-left: none;
+        border-top: 3px solid transparent;
+        border-radius: 8px;
+        font-size: 0.58rem;
+    }
+
+    .app-shell .sidebar .tab.active,
+    .app-shell.is-collapsed .sidebar .tab.active {
+        border-left-color: transparent;
+        border-top-color: var(--accent-color);
+        background: var(--tab-active-bg-color);
+    }
+
+    .app-shell .sidebar .tab-label,
+    .app-shell.is-collapsed .sidebar .tab-label {
+        display: block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        line-height: 1.1;
+    }
+
+    /* Keep scrollable content clear of the fixed bar (+ iOS home-bar inset). */
+    .content {
+        margin-bottom: 0;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
 .visually-hidden {
     position: absolute;
     width: 1px;

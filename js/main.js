@@ -259,9 +259,10 @@ function setupTabKeyboardNav() {
         if (current === -1) return;
 
         let next = -1;
-        // Vertical sidebar (Phase A): Up/Down move between sections; Home/End jump to ends.
-        if (e.key === 'ArrowDown') next = (current + 1) % tabs.length;
-        else if (e.key === 'ArrowUp') next = (current - 1 + tabs.length) % tabs.length;
+        // Vertical sidebar (Phase A) uses Up/Down; the mobile bottom bar is horizontal,
+        // so Left/Right are accepted as aliases. Home/End jump to the ends either way.
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') next = (current + 1) % tabs.length;
+        else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') next = (current - 1 + tabs.length) % tabs.length;
         else if (e.key === 'Home') next = 0;
         else if (e.key === 'End') next = tabs.length - 1;
 
