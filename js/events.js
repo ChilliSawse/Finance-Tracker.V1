@@ -720,7 +720,7 @@ function runWhatIfScenario() {
                 <div class="card">
                     <div class="card-title">Net Worth</div>
                     <div class="card-subtitle">Assets − Liabilities</div>
-                    <div class="amount net-worth">${formatCurrency(scenarioNetWorth)}</div>
+                    <div class="amount net-worth${scenarioNetWorth < 0 ? ' is-negative' : ''}">${formatCurrency(scenarioNetWorth)}</div>
                     <p class="wi-line">${whatIfDelta(scenarioNetWorth, currentNetWorth, true)}</p>
                     <p class="wi-line">Assets ${formatCurrency(scenarioCurrentAssets)} · Liabilities ${formatCurrency(scenarioLiabilities)}</p>
                 </div>

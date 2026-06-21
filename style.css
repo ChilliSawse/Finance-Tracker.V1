@@ -583,11 +583,19 @@ body {
     color: var(--color-neutral);
 }
 
+/* J0 — Net Worth is a signed figure, so it's coloured by sign, not the brand
+   accent. Positive (the common case) inherits the green from .amount; negative
+   flips to red via .is-negative (toggled in JS). This fixes a positive net worth
+   rendering in the accent (red on midnight, orange on copper) — i.e. looking
+   like a warning. */
 .amount.net-worth {
     font-size: 2.2em;
-    color: var(--accent-color);
     text-align: center;
     margin: 15px 0;
+}
+
+.amount.net-worth.is-negative {
+    color: var(--color-negative);
 }
 
 .net-worth-breakdown {

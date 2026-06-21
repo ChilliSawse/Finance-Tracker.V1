@@ -31,7 +31,7 @@ Guiding principle throughout: **correctness before chrome** — fix wrong number
 | G | What If redesign (sandbox editor + simulated dashboard) | ✅ Stages 0–3 (G.5 ⏸) |
 | H | Remaining tab improvements | ✅ H.1/H.3/H.5/H.6 (H.2/H.4 partial) |
 | I | Visual polish + responsive | ✅ I.1/I.2/I.3/I.5/I.6/I.7/I.8 (I.4 verify-only) |
-| J | Theme & appearance redesign (Odysseus-derived) | 🚧 In progress (J1 building; J0/J2–J4 planned) |
+| J | Theme & appearance redesign (Odysseus-derived) | 🚧 In progress (✅ J0/J1 on branch; J2–J4 planned) |
 
 ---
 
@@ -90,7 +90,7 @@ Visible tier stays tight (the theme's *identity*); everything else hides under *
 - **Stays derived (not exposed):** all tints (`positive-tint`, `info-bg`…), `tab-text` contrast, `content-bg` opacity — change a base colour and its tint follows automatically.
 
 ### Sub-phases
-- **J0 — Net Worth semantic fix** *(independent, shippable alone).* Signed figures paint by sign (`--color-positive` ≥ 0 / `--color-negative` < 0), **not** `--accent-color`. Root cause of motivating issue #1; `.amount.net-worth` currently hardcodes the brand accent (`style.css`).
+- **J0 — Net Worth semantic fix** ✅ *(on branch).* Net Worth paints by sign — green when ≥ 0 (inherits `.amount`), red via `.amount.net-worth.is-negative` when < 0 — **not** `--accent-color`. The sign class is toggled in `uiDashboard.js` (live dashboard) and the What If sim markup (`events.js`). Fixes motivating issue #1.
 - **J1 — Port the 12 palettes.** `light, midnight, paper, retrowave, forest, ocean, ume, copper, terminal, organs, lavender, cute` (rename `red`→`accent`), each given a **locked semantic trio** (green/red/blue, tuned per light/dark for contrast) so positives always read green. Verify `deriveTokens` on the light presets (light/paper/lavender/cute).
 - **J2 — Two-tab panel.** Rebuild `#gui-settings-modal` into **Themes** (swatch grid with 4-circle previews + a "Your Themes" grid) | **Customize** (the surface above), keeping the single chokepoint. Round colour swatches.
 - **J3 — Custom themes, Import/Export, Harmony, Fonts.** Save named custom themes → `localStorage` (capped, with delete); JSON import/export (FT schema, no server); a Color Harmony generator (accent → derived palette, kept only if it earns its place); browser-side custom-font upload via the `FontFace` API + `localStorage` (FT has no `static/fonts/custom/` folder to scan — the one behavioural divergence from Odysseus).

@@ -86,8 +86,12 @@ function updateDashboardUI(totals) {
     }
 
 
-    // Net Worth Card
+    // Net Worth Card — J0: colour by sign, not the brand accent. A positive net
+    // worth must read green (it was painting in --accent-color, so a *positive*
+    // figure looked like a warning on themes whose accent is red/orange).
     setText('net-worth-display', formatCurrency(totals.netWorth));
+    const netWorthEl = getElement('net-worth-display');
+    if (netWorthEl) netWorthEl.classList.toggle('is-negative', totals.netWorth < 0);
     setText('total-assets-display', formatCurrency(totals.currentAssets));
     setText('total-liabilities-display', formatCurrency(totals.currentLiabilities));
 
