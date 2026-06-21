@@ -59,7 +59,12 @@ Following the Phase A bottom-nav, real-device testing surfaced four issues, all 
 - **iOS focus-zoom** — form controls were `<16px`, so iOS zoomed in on every field tap. All text-entry controls forced to `16px` on phones (no `user-scalable` disable).
 - **Horizontal scroll in data-entry forms** — the dynamic-list rows set `grid-template-columns` inline (per row, in JS), which beat the responsive CSS; and `.modal--wide/.modal--resizable .list-item` pinned a `min-width: 720px`. On phones the rows now stack one field per line with their (normally `.visually-hidden`) labels revealed and the header row hidden; the 720px floor is dropped. Applies to Income/Tax/Assets/Liabilities/Allocation/Expenses **and** the What If scenario tables (same classes).
 - **Page wider than the screen ("zoom out on first load")** — the mobile `.app-shell` used `grid-template-columns: 1fr`, whose `min-content` floor pushed the shell to ~456px. Changed to `minmax(0, 1fr)`; every tab now fits the viewport exactly.
-- **Currency figures breaking mid-number** — `overflow-wrap/word-break: normal` on the figure classes at phone widths.
+- **Currency figures breaking mid-number** — superseded by the auto-fit pass below.
+
+### Mobile usability fixes — round 2 (2026-06-21, second on-device pass)
+- **Currency figures overflowing cards** (large numbers, `/fortnight` suffixes, clipping/overlap) — replaced per-card hacks with a **universal auto-fit**: figures are `white-space: nowrap` (so overflow is detectable) and `fitAllAmounts()` (`utils.js`) shrinks any over-long figure's font just enough to fit its card, down to an 11px floor. Hooked into `updateAllUI()`, `showTab()` (figures can't be measured while their tab is hidden) and a debounced `resize`. Applies at all widths.
+- **Info "ⓘ" tooltips shoved off-screen** — were absolutely positioned (`left:50%; margin-left:-125px`), clipping near screen edges. On phones they now float as a fixed, full-width readable panel above the bottom nav. Required dropping `backdrop-filter` on `.content` at phone widths (it was a containing block that trapped the `position:fixed` tooltip — same gotcha as the bottom nav; the blur is invisible at the ~95%-opaque content bg anyway).
+- **Topbar crowding** — the "All changes saved" pill pushed the gear cog over the title. On phones the save-status indicator collapses to a small colour-coded **dot** (green/amber/red/orange), giving the title + gear their space back. Desktop keeps the full text pill.
 
 ---
 

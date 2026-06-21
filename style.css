@@ -1770,11 +1770,50 @@ body {
         font-size: 0.85em;
     }
 
-    /* Stop large currency figures breaking mid-number (e.g. "$100,000,000.0⏎0"). */
-    .amount, .stat-value, .time-amount, .savings-amount, .account-balance,
-    .liability-balance, .expense-amount {
-        overflow-wrap: normal;
-        word-break: normal;
+}
+
+/* --- Mobile display polish (phones, on-device follow-up) --- */
+@media (max-width: 640px) {
+    /* backdrop-filter makes .content a containing block for position:fixed
+       descendants, which broke the fixed tooltip below (it anchored to the tall
+       content, not the viewport). The blur is invisible anyway (content bg is
+       ~95% opaque), so drop it on phones. */
+    .content {
+        backdrop-filter: none;
+    }
+
+    /* Info "ⓘ" tooltips were absolutely positioned (left:50% / margin-left:-125px),
+       so near a screen edge they were shoved off-screen and clipped. On phones
+       float the tooltip as a fixed, full-width readable panel just above the
+       bottom nav instead — always fully on-screen, regardless of the icon. */
+    .tooltip {
+        position: fixed;
+        left: 12px;
+        right: 12px;
+        bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+        top: auto;
+        width: auto;
+        max-width: none;
+        margin-left: 0;
+        max-height: 45vh;
+        overflow-y: auto;
+        font-size: 0.9rem;
+        line-height: 1.45;
+        box-shadow: 0 10px 36px rgba(0, 0, 0, 0.4);
+        z-index: 3000; /* above modals (2000) and inline-confirm (2500) */
+    }
+
+    /* "All changes saved" pushed the gear cog over the title. Collapse the save
+       status to a small colour-coded dot on phones (green=saved, amber=saving,
+       red=error, orange=unsaved) so the title + gear get their space back. */
+    .topbar #save-status-indicator {
+        width: 14px;
+        height: 14px;
+        padding: 0;
+        border-radius: 50%;
+        font-size: 0; /* hide the text; the colour conveys state */
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.5);
     }
 }
 
@@ -1825,6 +1864,10 @@ body {
 .amount, .stat-value, .time-amount, .savings-amount, .account-balance,
 .liability-balance, .expense-amount {
     font-variant-numeric: tabular-nums;
+    /* Keep figures on one line so overflow is detectable; fitAllAmounts() (utils.js)
+       then shrinks the font just enough to fit the card, down to a readable floor.
+       This replaces per-card layout hacks — any over-long figure auto-fits. */
+    white-space: nowrap;
 }
 
 /* Reduced motion */

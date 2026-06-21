@@ -122,6 +122,32 @@ function updateDataAndUI(callback) {
 }
 
 
+// --- Auto-fit currency figures ---
+// Large numbers or long suffixes ("/fortnight") can be wider than their card.
+// Rather than wrap mid-number or clip, shrink the figure's font just enough to
+// fit, down to a readable floor. Runs after every render + on resize. The figure
+// classes are white-space:nowrap (style.css) so horizontal overflow is detectable.
+const FIT_SELECTOR = '.amount, .stat-value, .time-amount, .savings-amount, ' +
+    '.account-balance, .liability-balance, .expense-amount';
+const FIT_MIN_PX = 11;
+
+function fitTextToWidth(el) {
+    el.style.fontSize = '';                          // reset to the CSS-defined size
+    if (el.clientWidth === 0) return;                // hidden (inactive tab) — skip
+    if (el.scrollWidth <= el.clientWidth) return;    // already fits
+    const base = parseFloat(getComputedStyle(el).fontSize);
+    let size = Math.max(FIT_MIN_PX, Math.floor(base * el.clientWidth / el.scrollWidth));
+    el.style.fontSize = size + 'px';
+    // one corrective step for rounding
+    if (el.scrollWidth > el.clientWidth && size > FIT_MIN_PX) {
+        el.style.fontSize = (size - 1) + 'px';
+    }
+}
+
+function fitAllAmounts(root) {
+    (root || document).querySelectorAll(FIT_SELECTOR).forEach(fitTextToWidth);
+}
+
 // --- Inline Field Validation ---
 
 function showFieldError(input, message) {

@@ -16,6 +16,7 @@ function updateAllUI() {
     updateSavingsTabUI(totals);
     updateLiabilitiesTabUI(totals);
     setText('total-liabilities-settings', formatCurrency(totals.currentLiabilities));
+    fitAllAmounts(); // shrink any over-long currency figure to fit its card
 }
 
 function showTab(tabName) {
@@ -50,6 +51,9 @@ function showTab(tabName) {
 
     // A.3 — remember the active section across reloads.
     try { localStorage.setItem('ft-active-tab', tabName); } catch (_) {}
+
+    // Figures in a just-revealed tab couldn't be measured while hidden — fit now.
+    fitAllAmounts();
 }
 
 // 'settings' removed (Phase D.6) — it's a modal now, not a tab. Legacy saved value falls back to dashboard.
@@ -439,6 +443,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateAllUI();
     restoreActiveTab(); // A.3 — restore last-viewed section (defaults to dashboard)
+
+    // Re-fit currency figures when the viewport changes (rotate / resize).
+    let fitRaf;
+    window.addEventListener('resize', () => {
+        cancelAnimationFrame(fitRaf);
+        fitRaf = requestAnimationFrame(() => fitAllAmounts());
+    });
 });
 
 // --- END OF: main.js ---
