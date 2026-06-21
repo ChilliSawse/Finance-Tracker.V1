@@ -630,20 +630,6 @@
                         </div>
                     </div>
                     <div class="settings-section">
-                        <div class="settings-title">Dashboard labels</div>
-                        <p class="settings-hint">The title and subtitle shown at the top of the dashboard.</p>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="gui-main-heading">Main heading</label>
-                                <input type="text" class="form-input" id="gui-main-heading">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="gui-sub-heading">Sub-heading</label>
-                                <input type="text" class="form-input" id="gui-sub-heading">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="settings-section">
                         <div class="settings-title">General</div>
                         <div class="form-grid">
                             <div class="form-group">
@@ -661,6 +647,21 @@
                                     <option value="INR">INR - Indian Rupee</option>
                                 </select>
                             </div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-title">Save / Share theme</div>
+                        <p class="settings-hint">Save your current colours + font as a reusable theme (it appears under “Your Themes”), or share it as a file.</p>
+                        <div class="theme-save-row">
+                            <label class="visually-hidden" for="theme-save-name">Theme name</label>
+                            <input type="text" class="form-input" id="theme-save-name" placeholder="Theme name…" maxlength="32">
+                            <button class="btn btn-secondary" id="theme-save-btn">Save theme</button>
+                        </div>
+                        <p class="theme-save-error" id="theme-save-error" role="alert" hidden></p>
+                        <div class="settings-actions" style="margin-top: 12px; padding-top: 0; border-top: none;">
+                            <button class="btn btn-secondary" id="theme-export-btn">Export theme (JSON)</button>
+                            <input type="file" id="theme-import-file" accept=".json" style="display: none;">
+                            <button class="btn btn-secondary" id="theme-import-btn">Import theme (JSON)</button>
                         </div>
                     </div>
                     <div class="settings-section">

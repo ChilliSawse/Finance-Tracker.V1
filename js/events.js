@@ -74,7 +74,7 @@ function setupEventListeners() {
         el.addEventListener('input',  () => commitGuiColor(field, false));
         el.addEventListener('change', () => commitGuiColor(field, true));
     });
-    ['gui-font-family', 'gui-base-font-size', 'gui-main-heading', 'gui-sub-heading'].forEach(id => {
+    ['gui-font-family', 'gui-base-font-size'].forEach(id => {
         const el = getElement(id);
         if (!el) return;
         el.addEventListener('input',  () => commitGuiText(false));
@@ -89,6 +89,9 @@ function setupEventListeners() {
             handleJSONImport(event, true); // Pass 'true' or remove if 'isGuiTabImport' isn't used
         });
     }
+    // J3 — theme JSON import (separate from the full-data backup import above).
+    const themeImportInput = getElement('theme-import-file');
+    if (themeImportInput) themeImportInput.addEventListener('change', handleThemeImport);
 }
 
 function handleSettingsClickEvents(event) {
@@ -280,10 +283,37 @@ function handleGuiSettingsClickEvents(event) {
     if (target.id === 'export-json-gui') { actionExportDataJSON(); return; }
     if (target.id === 'import-json-gui-btn') { getElement('json-import-gui').click(); return; }
 
-    // Theme preset swatch click
+    // J3 — Save / Share theme
+    if (target.id === 'theme-save-btn')   { actionSaveCustomTheme(); return; }
+    if (target.id === 'theme-export-btn') { actionExportTheme(); return; }
+    if (target.id === 'theme-import-btn') { getElement('theme-import-file').click(); return; }
+
+    // J3 — delete a custom theme (the ✕ lives inside its swatch, so check it first)
+    const delBtn = target.closest('[data-delete]');
+    if (delBtn) {
+        deleteCustomTheme(delBtn.dataset.delete);
+        renderCustomThemes(document.getElementById('your-themes-container'));
+        if (autoSave) autoSave.onDataChange();
+        return;
+    }
+
+    // Theme swatch click (built-in preset OR a saved custom theme)
     const swatch = target.closest('[data-theme]');
     if (swatch && typeof THEMES !== 'undefined') {
         const key = swatch.dataset.theme;
+
+        if (swatch.dataset.custom) {
+            // J3 — apply a saved custom theme (its full colour/font snapshot).
+            if (applyCustomTheme(key)) {
+                applyGuiStylesToPage();
+                syncGuiColorInputs();
+                renderThemeSwitcher(document.getElementById('theme-switcher-container'));
+                renderCustomThemes(document.getElementById('your-themes-container'));
+                if (autoSave) autoSave.onDataChange();
+            }
+            return;
+        }
+
         const preset = THEMES[key];
         if (!preset) return;
 
@@ -308,9 +338,76 @@ function handleGuiSettingsClickEvents(event) {
         applyGuiStylesToPage();
         syncGuiColorInputs(); // refresh the Customize pickers to the new colours
         renderThemeSwitcher(document.getElementById('theme-switcher-container'));
+        renderCustomThemes(document.getElementById('your-themes-container')); // clear custom highlight
 
         if (autoSave) autoSave.onDataChange();
     }
+}
+
+// J3 — Save the current appearance as a named custom theme.
+function actionSaveCustomTheme() {
+    const input = getElement('theme-save-name');
+    const errEl = getElement('theme-save-error');
+    const showErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.hidden = false; } };
+    if (errEl) errEl.hidden = true;
+    const name = (input ? input.value : '').trim();
+    if (!name) { showErr('Enter a name for your theme.'); return; }
+    if (typeof THEMES !== 'undefined' && THEMES[name]) { showErr('That name is a built-in theme — pick another.'); return; }
+    const res = saveCustomTheme(name, snapshotAppearance());
+    if (res === 'limit') { showErr('You have the maximum ' + MAX_CUSTOM_THEMES + ' custom themes. Delete one first.'); return; }
+    guiSettingsData.theme = name; // the saved theme is now the active one
+    if (input) input.value = '';
+    renderThemeSwitcher(document.getElementById('theme-switcher-container'));
+    renderCustomThemes(document.getElementById('your-themes-container'));
+    if (autoSave) autoSave.onDataChange();
+}
+
+// J3 — Export the current appearance as a shareable JSON file.
+function actionExportTheme() {
+    const input = getElement('theme-save-name');
+    const nm = (input && input.value.trim())
+        || (typeof THEMES !== 'undefined' && THEMES[guiSettingsData.theme] ? guiSettingsData.theme : 'custom');
+    const payload = { name: nm, colors: snapshotAppearance() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ft-theme-' + nm.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+}
+
+// J3 — Import a theme JSON file → save as a custom theme + apply it.
+function handleThemeImport(event) {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    const errEl = getElement('theme-save-error');
+    const showErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.hidden = false; } };
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        let parsed;
+        try { parsed = JSON.parse(e.target.result); }
+        catch (_) { showErr("That file isn't valid JSON."); return; }
+        const { data, name, error } = parseThemeImport(parsed);
+        if (error) { showErr(error); return; }
+        let saveName = name;
+        if (typeof THEMES !== 'undefined' && THEMES[saveName]) saveName += ' (imported)';
+        if (saveCustomTheme(saveName, data) === 'limit') {
+            showErr('You have the maximum ' + MAX_CUSTOM_THEMES + ' custom themes. Delete one first.');
+            return;
+        }
+        if (errEl) errEl.hidden = true;
+        applyCustomTheme(saveName);
+        applyGuiStylesToPage();
+        syncGuiColorInputs();
+        renderThemeSwitcher(document.getElementById('theme-switcher-container'));
+        renderCustomThemes(document.getElementById('your-themes-container'));
+        if (autoSave) autoSave.onDataChange();
+    };
+    reader.readAsText(file);
 }
 
 // --- Action Functions (called by event handlers) ---
@@ -619,12 +716,11 @@ function commitGuiColor(field, persist) {
     if (persist && autoSave) autoSave.onDataChange();
 }
 
-// Font / base size / dashboard-label text changed — gather them and apply.
+// Font / base size changed — gather them and apply. (The dashboard title/subtitle text
+// is no longer user-editable; it stays at its stored default, applied in applyGuiStylesToPage.)
 function commitGuiText(persist) {
     guiSettingsData.fontFamily   = getValue('gui-font-family');
     guiSettingsData.baseFontSize = getValue('gui-base-font-size');
-    guiSettingsData.mainHeading  = getValue('gui-main-heading');
-    guiSettingsData.subHeading   = getValue('gui-sub-heading');
     applyGuiStylesToPage();
     if (persist && autoSave) autoSave.onDataChange();
 }

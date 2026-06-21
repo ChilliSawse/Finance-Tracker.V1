@@ -262,7 +262,10 @@ function loadTheme() {
 // Render preset swatch buttons into a container element
 function renderThemeSwitcher(container) {
     if (!container) return;
-    const activeName = resolveTheme((typeof guiSettingsData !== 'undefined' && guiSettingsData.theme) || DEFAULT_THEME);
+    // Highlight a preset only when the active theme IS one. A custom theme highlights in
+    // the Your Themes grid instead, so no preset should look selected in that case.
+    const raw = (typeof guiSettingsData !== 'undefined' && guiSettingsData.theme) || DEFAULT_THEME;
+    const activeName = THEMES[raw] ? raw : '';
     container.innerHTML = '';
     container.className = 'theme-switcher';
 
@@ -291,6 +294,134 @@ function renderThemeSwitcher(container) {
         btn.appendChild(colors);
         btn.appendChild(label);
         container.appendChild(btn);
+    });
+}
+
+// --- J3 — custom themes (save / load / delete / import / export) ---
+// Offline-only: stored in localStorage (no server, unlike Odysseus). A custom theme is a
+// snapshot of the customisable appearance state (base + override colours + font/size).
+const CUSTOM_THEMES_KEY = 'ft-custom-themes';
+const MAX_CUSTOM_THEMES = 12;
+
+// The appearance fields a custom theme captures (everything the Customize tab edits).
+const THEME_SNAPSHOT_KEYS = [
+    'primaryBgStart', 'cardBgStart', 'textColor', 'borderColor', 'accentColor',
+    'colorPositive', 'colorNegative', 'colorNeutral',
+    'headingColor', 'mutedColor', 'headerTextColor', 'colorEssential', 'colorWarning',
+    'fontFamily', 'baseFontSize',
+];
+// The base colours that must be present + valid for an imported theme to be usable.
+const THEME_REQUIRED_KEYS = [
+    'primaryBgStart', 'cardBgStart', 'textColor', 'borderColor', 'accentColor',
+    'colorPositive', 'colorNegative', 'colorNeutral',
+];
+
+function snapshotAppearance() {
+    const snap = {};
+    THEME_SNAPSHOT_KEYS.forEach(k => { snap[k] = guiSettingsData[k]; });
+    return snap;
+}
+
+function loadCustomThemes() {
+    try { return JSON.parse(localStorage.getItem(CUSTOM_THEMES_KEY)) || {}; }
+    catch (_) { return {}; }
+}
+function _saveCustomThemesObj(obj) {
+    try { localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(obj)); } catch (_) {}
+}
+
+// Returns 'ok' | 'limit' (cap reached for a NEW name) | 'empty' (no name).
+function saveCustomTheme(name, data) {
+    name = (name || '').trim();
+    if (!name) return 'empty';
+    const ct = loadCustomThemes();
+    if (!ct[name] && Object.keys(ct).length >= MAX_CUSTOM_THEMES) return 'limit';
+    ct[name] = data || snapshotAppearance();
+    _saveCustomThemesObj(ct);
+    return 'ok';
+}
+
+function deleteCustomTheme(name) {
+    const ct = loadCustomThemes();
+    delete ct[name];
+    _saveCustomThemesObj(ct);
+}
+
+// Copy a saved custom theme's fields into guiSettingsData and mark it active.
+function applyCustomTheme(name) {
+    const data = loadCustomThemes()[name];
+    if (!data) return false;
+    guiSettingsData.theme = name; // active = this custom name (not a preset)
+    THEME_SNAPSHOT_KEYS.forEach(k => { if (data[k] !== undefined) guiSettingsData[k] = data[k]; });
+    return true;
+}
+
+// Validate a parsed import payload (its own export shape, or a raw snapshot).
+// Returns { data, name } on success or { error } on failure.
+function parseThemeImport(parsed) {
+    if (!parsed || typeof parsed !== 'object') return { error: 'Not a theme file.' };
+    const data = parsed.colors && typeof parsed.colors === 'object' ? parsed.colors : parsed;
+    const missing = THEME_REQUIRED_KEYS.filter(k => !data[k]);
+    if (missing.length) return { error: 'Missing colours: ' + missing.join(', ') };
+    const hexRe = /^#[0-9a-fA-F]{6}$/;
+    const bad = THEME_REQUIRED_KEYS.find(k => !hexRe.test(data[k]));
+    if (bad) return { error: 'Invalid colour for ' + bad };
+    const clean = {};
+    THEME_SNAPSHOT_KEYS.forEach(k => { if (data[k] !== undefined) clean[k] = data[k]; });
+    return { data: clean, name: (parsed.name || 'imported').toString().slice(0, 32) };
+}
+
+// Render saved custom themes into the "Your Themes" grid (toggles the card's visibility).
+function renderCustomThemes(container) {
+    if (!container) return;
+    const card = document.getElementById('your-themes-card');
+    const ct = loadCustomThemes();
+    const names = Object.keys(ct);
+    container.innerHTML = '';
+    if (!names.length) { if (card) card.hidden = true; return; }
+    if (card) card.hidden = false;
+    const active = (typeof guiSettingsData !== 'undefined') ? guiSettingsData.theme : '';
+
+    names.forEach(name => {
+        const data = ct[name];
+        // Wrapper holds the swatch button + a sibling delete button (a <button> can't be
+        // nested inside another <button>).
+        const wrap = document.createElement('div');
+        wrap.className = 'theme-swatch-wrap';
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'theme-swatch' + (name === active ? ' active' : '');
+        btn.dataset.theme = name;
+        btn.dataset.custom = '1';
+        btn.title = name;
+
+        const colors = document.createElement('span');
+        colors.className = 'theme-swatch-colors';
+        [data.primaryBgStart, data.cardBgStart, data.textColor, data.accentColor].forEach(c => {
+            const dot = document.createElement('span');
+            dot.style.background = c || '#000000';
+            colors.appendChild(dot);
+        });
+
+        const label = document.createElement('span');
+        label.className = 'swatch-label';
+        label.textContent = name;
+
+        btn.appendChild(colors);
+        btn.appendChild(label);
+
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'theme-delete-btn';
+        del.dataset.delete = name;
+        del.title = 'Delete theme';
+        del.setAttribute('aria-label', 'Delete theme ' + name);
+        del.innerHTML = "<svg viewBox='0 0 24 24' width='12' height='12' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' aria-hidden='true'><line x1='6' y1='6' x2='18' y2='18'/><line x1='18' y1='6' x2='6' y2='18'/></svg>";
+
+        wrap.appendChild(btn);
+        wrap.appendChild(del);
+        container.appendChild(wrap);
     });
 }
 

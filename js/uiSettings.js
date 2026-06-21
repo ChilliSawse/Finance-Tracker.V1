@@ -428,14 +428,13 @@ function renderFISettings() {
 function initializeGuiSettingsForm() {
     if (typeof setupAppearanceTabs === 'function') setupAppearanceTabs();
     renderThemeSwitcher(document.getElementById('theme-switcher-container'));
+    if (typeof renderCustomThemes === 'function') renderCustomThemes(document.getElementById('your-themes-container'));
     // Apply first so the computed tokens are current, then read them back into the
     // override pickers (base pickers read straight from guiSettings).
     applyGuiStylesToPage();
     if (typeof syncGuiColorInputs === 'function') syncGuiColorInputs();
     setValue('gui-font-family', guiSettingsData.fontFamily);
     setValue('gui-base-font-size', guiSettingsData.baseFontSize);
-    setValue('gui-main-heading', guiSettingsData.mainHeading);
-    setValue('gui-sub-heading', guiSettingsData.subHeading);
 }
 
 // J2 — single chokepoint. BASE colours (user value, else active preset) feed deriveTokens,

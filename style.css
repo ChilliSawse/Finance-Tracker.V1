@@ -2036,6 +2036,23 @@ body {
 
 .more-colours .color-grid { margin-top: 16px; }
 
+/* J3 — Save / Share theme */
+.theme-save-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.theme-save-row .form-input { flex: 1; min-width: 0; }
+
+.theme-save-row .btn { flex-shrink: 0; }
+
+.theme-save-error {
+    margin-top: 8px;
+    font-size: 0.82em;
+    color: var(--color-negative);
+}
+
 /* J2 — Odysseus-style swatch grid: each preset is a small card with a row of
    overlapping colour circles (bg / surface / text / accent) over its name. */
 .theme-switcher {
@@ -2057,6 +2074,37 @@ body {
     cursor: pointer;
     font-family: var(--font-family-main);
     transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+/* J3 — saved custom theme: swatch + sibling delete button in a positioned wrapper */
+.theme-swatch-wrap { position: relative; display: flex; }
+.theme-swatch-wrap .theme-swatch { width: 100%; }
+
+.theme-delete-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--card-bg-gradient-end);
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s, background-color 0.15s;
+}
+
+.theme-swatch-wrap:hover .theme-delete-btn,
+.theme-delete-btn:focus-visible { opacity: 1; }
+
+.theme-delete-btn:hover {
+    color: var(--color-negative);
+    background: var(--negative-tint);
 }
 
 .theme-swatch:hover {
