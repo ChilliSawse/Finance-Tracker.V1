@@ -435,6 +435,7 @@ function initializeGuiSettingsForm() {
     if (typeof syncGuiColorInputs === 'function') syncGuiColorInputs();
     setValue('gui-font-family', guiSettingsData.fontFamily);
     setValue('gui-base-font-size', guiSettingsData.baseFontSize);
+    if (typeof initHarmonyControls === 'function') initHarmonyControls(); // J3 — seed + preview
 }
 
 // J2 — single chokepoint. BASE colours (user value, else active preset) feed deriveTokens,

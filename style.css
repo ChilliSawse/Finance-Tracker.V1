@@ -2053,6 +2053,32 @@ body {
     color: var(--color-negative);
 }
 
+/* J3 — Colour Harmony generator */
+.harmony-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 14px 18px;
+}
+
+.harmony-controls .color-field { align-self: center; }
+
+.harmony-controls .form-group { flex: 1; min-width: 130px; }
+
+.harmony-preview {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    min-height: 30px;
+}
+
+.harmony-preview span {
+    flex: 1;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
 /* J2 — Odysseus-style swatch grid: each preset is a small card with a row of
    overlapping colour circles (bg / surface / text / accent) over its name. */
 .theme-switcher {

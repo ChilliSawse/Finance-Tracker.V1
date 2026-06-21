@@ -159,6 +159,11 @@ function resolveTheme(name) {
 // overlay customisations are then left untouched).
 function migrateGuiTheme(gs) {
     if (!gs || THEMES[gs.theme]) return;
+    // J3 — a saved custom theme (or a freshly-applied, not-yet-saved 'custom' harmony
+    // palette) carries its OWN inline base colours; don't clobber them with a fallback
+    // preset's. Only legacy/removed preset names (e.g. 'default'/'dark') fall through.
+    if (gs.theme === 'custom' ||
+        (typeof loadCustomThemes === 'function' && loadCustomThemes()[gs.theme])) return;
     const preset = THEMES[resolveTheme(gs.theme)];
     const tokens = deriveTokens(preset);
     gs.theme = resolveTheme(gs.theme);
@@ -423,6 +428,60 @@ function renderCustomThemes(container) {
         wrap.appendChild(del);
         container.appendChild(wrap);
     });
+}
+
+// --- J3 — Colour Harmony generator ---
+// Ported from Odysseus's generateHarmonyColors(accentHex, harmonyType, mode): a chosen
+// accent + a harmony rule auto-derive a full STRUCTURAL palette (bg / surface / text /
+// border) around it. Adapted to FT's base fields. The finance SEMANTIC trio is NOT derived
+// from the accent hue (that's the J0 bug — a red accent would paint positives red); it uses
+// a mode-tuned locked green/red/blue, matching the J1 presets, so positives always read
+// green. Returns the 8 base fields applyGuiStylesToPage feeds to deriveTokens.
+const HARMONY_SEMANTICS = {
+    dark:  { positive: '#3fb950', negative: '#f85149', neutral: '#58a6ff' },
+    light: { positive: '#2e7d32', negative: '#c62828', neutral: '#1565c0' },
+};
+
+function generateHarmonyBase(accentHex, harmonyType, mode) {
+    accentHex = accentHex || '#f85149';
+    const [h, s] = hexToHSL(accentHex);
+    const isDark = mode !== 'light';
+
+    let bgH, bgS, bgL, fgS, fgL, panelL, borderH, borderS, borderL;
+
+    if (harmonyType === 'complementary') {
+        bgH = h; bgS = Math.max(s * 0.15, 3);
+        bgL = isDark ? 13 : 95; fgL = isDark ? 85 : 15; fgS = Math.max(s * 0.2, 5);
+        panelL = isDark ? 8 : 98;
+        borderH = h; borderS = Math.max(s * 0.25, 8); borderL = isDark ? 28 : 75;
+    } else if (harmonyType === 'analogous') {
+        bgH = (h - 30 + 360) % 360; bgS = Math.max(s * 0.12, 3);
+        bgL = isDark ? 14 : 95; fgL = isDark ? 84 : 18; fgS = Math.max(s * 0.15, 5);
+        panelL = isDark ? 9 : 97;
+        borderH = (h + 30) % 360; borderS = Math.max(s * 0.3, 10); borderL = isDark ? 30 : 72;
+    } else if (harmonyType === 'triadic') {
+        bgH = (h + 240) % 360; bgS = Math.max(s * 0.1, 2);
+        bgL = isDark ? 13 : 96; fgL = isDark ? 86 : 14; fgS = Math.max(s * 0.18, 5);
+        panelL = isDark ? 8 : 99;
+        borderH = (h + 120) % 360; borderS = Math.max(s * 0.2, 8); borderL = isDark ? 28 : 74;
+    } else { // monochromatic
+        bgH = h; bgS = Math.max(s * 0.08, 2);
+        bgL = isDark ? 12 : 96; fgL = isDark ? 87 : 13; fgS = Math.max(s * 0.15, 5);
+        panelL = isDark ? 7 : 99;
+        borderH = h; borderS = Math.max(s * 0.2, 6); borderL = isDark ? 26 : 76;
+    }
+
+    const sem = HARMONY_SEMANTICS[isDark ? 'dark' : 'light'];
+    return {
+        primaryBgStart: hslToHex(bgH, bgS, bgL),
+        cardBgStart:    hslToHex(bgH, bgS * 0.6, panelL),
+        textColor:      hslToHex(h, fgS, fgL),
+        borderColor:    hslToHex(borderH, borderS, borderL),
+        accentColor:    accentHex,
+        colorPositive:  sem.positive,
+        colorNegative:  sem.negative,
+        colorNeutral:   sem.neutral,
+    };
 }
 
 // --- END OF: theme.js ---

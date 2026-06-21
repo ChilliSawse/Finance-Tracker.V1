@@ -608,6 +608,36 @@
                         </details>
                     </div>
                     <div class="settings-section">
+                        <div class="settings-title">Colour Harmony</div>
+                        <!-- J3 — pick an accent + a harmony rule → auto-derive a full base
+                             palette (generateHarmonyBase in theme.js) and apply it through the
+                             one applyGuiStylesToPage chokepoint. Save it under "Your Themes" to keep. -->
+                        <p class="settings-hint">Pick an accent and a harmony rule to auto-generate a matching palette, preview it, then apply it as your base colours.</p>
+                        <div class="harmony-controls">
+                            <label class="color-field"><input type="color" class="color-dot" id="harmony-accent"><span>Accent</span></label>
+                            <div class="form-group">
+                                <label class="form-label" for="harmony-type">Harmony</label>
+                                <select class="form-select" id="harmony-type">
+                                    <option value="complementary">Complementary</option>
+                                    <option value="analogous">Analogous</option>
+                                    <option value="triadic">Triadic</option>
+                                    <option value="monochromatic">Monochromatic</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="harmony-mode">Mode</label>
+                                <select class="form-select" id="harmony-mode">
+                                    <option value="dark">Dark</option>
+                                    <option value="light">Light</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="harmony-preview" id="harmony-preview" aria-hidden="true"></div>
+                        <div class="settings-actions" style="margin-top: 12px; padding-top: 0; border-top: none;">
+                            <button class="btn btn-secondary" id="harmony-apply-btn">Apply palette</button>
+                        </div>
+                    </div>
+                    <div class="settings-section">
                         <div class="settings-title">Typography</div>
                         <div class="form-grid">
                             <div class="form-group">

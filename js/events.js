@@ -80,6 +80,14 @@ function setupEventListeners() {
         el.addEventListener('input',  () => commitGuiText(false));
         el.addEventListener('change', () => commitGuiText(true));
     });
+    // J3 — Colour Harmony: changing any control re-renders the live preview (no apply
+    // until the button). Bound once here; idempotent because setupEventListeners runs once.
+    ['harmony-accent', 'harmony-type', 'harmony-mode'].forEach(id => {
+        const el = getElement(id);
+        if (!el) return;
+        el.addEventListener('input',  updateHarmonyPreview);
+        el.addEventListener('change', updateHarmonyPreview);
+    });
 // --- JSON IMPORT LISTENER ---
     // (The former Settings-tab import input was removed with the tab in D.6; import now
     //  goes solely through the appearance modal's #json-import-gui below.)
@@ -287,6 +295,7 @@ function handleGuiSettingsClickEvents(event) {
     if (target.id === 'theme-save-btn')   { actionSaveCustomTheme(); return; }
     if (target.id === 'theme-export-btn') { actionExportTheme(); return; }
     if (target.id === 'theme-import-btn') { getElement('theme-import-file').click(); return; }
+    if (target.id === 'harmony-apply-btn') { actionApplyHarmony(); return; }
 
     // J3 — delete a custom theme (the ✕ lives inside its swatch, so check it first)
     const delBtn = target.closest('[data-delete]');
@@ -357,6 +366,59 @@ function actionSaveCustomTheme() {
     if (res === 'limit') { showErr('You have the maximum ' + MAX_CUSTOM_THEMES + ' custom themes. Delete one first.'); return; }
     guiSettingsData.theme = name; // the saved theme is now the active one
     if (input) input.value = '';
+    renderThemeSwitcher(document.getElementById('theme-switcher-container'));
+    renderCustomThemes(document.getElementById('your-themes-container'));
+    if (autoSave) autoSave.onDataChange();
+}
+
+// J3 — Colour Harmony. Seed the controls from the current appearance when the form opens:
+// accent = current accent, mode inferred from the current page-background luminance.
+function initHarmonyControls() {
+    const acc = getElement('harmony-accent');
+    if (acc && guiSettingsData.accentColor) acc.value = guiSettingsData.accentColor;
+    const modeEl = getElement('harmony-mode');
+    if (modeEl) {
+        const bg = guiSettingsData.primaryBgStart || '#0d1117';
+        const dark = (typeof perceivedLuminance === 'function') ? perceivedLuminance(bg) < 0.4 : true;
+        modeEl.value = dark ? 'dark' : 'light';
+    }
+    updateHarmonyPreview();
+}
+
+// J3 — render the live preview row (bg / surface / text / border / accent) for the current
+// harmony selection, without touching the page (Apply commits it).
+function updateHarmonyPreview() {
+    const prev = getElement('harmony-preview');
+    if (!prev || typeof generateHarmonyBase !== 'function') return;
+    const base = generateHarmonyBase(getValue('harmony-accent'), getValue('harmony-type'), getValue('harmony-mode'));
+    prev.innerHTML = [base.primaryBgStart, base.cardBgStart, base.textColor, base.borderColor, base.accentColor]
+        .map(c => `<span style="background:${c}"></span>`).join('');
+}
+
+// J3 — Apply the generated harmony palette. Mirrors the preset-click path: it writes all 8
+// base colours and CLEARS every override (so the new base drives the whole page — no split
+// look), then funnels through the one applyGuiStylesToPage chokepoint. theme = 'custom' so no
+// preset highlights; the user Saves it under "Your Themes" to keep it.
+function actionApplyHarmony() {
+    if (typeof generateHarmonyBase !== 'function') return;
+    const base = generateHarmonyBase(getValue('harmony-accent'), getValue('harmony-type'), getValue('harmony-mode'));
+    guiSettingsData.theme           = 'custom';
+    guiSettingsData.primaryBgStart  = base.primaryBgStart;
+    guiSettingsData.cardBgStart     = base.cardBgStart;
+    guiSettingsData.textColor       = base.textColor;
+    guiSettingsData.borderColor     = base.borderColor;
+    guiSettingsData.accentColor     = base.accentColor;
+    guiSettingsData.colorPositive   = base.colorPositive;
+    guiSettingsData.colorNegative   = base.colorNegative;
+    guiSettingsData.colorNeutral    = base.colorNeutral;
+    guiSettingsData.headingColor    = '';
+    guiSettingsData.mutedColor      = '';
+    guiSettingsData.headerTextColor = '';
+    guiSettingsData.colorEssential  = '';
+    guiSettingsData.colorWarning    = '';
+
+    applyGuiStylesToPage();
+    syncGuiColorInputs(); // refresh the Customize base/override pickers to the new palette
     renderThemeSwitcher(document.getElementById('theme-switcher-container'));
     renderCustomThemes(document.getElementById('your-themes-container'));
     if (autoSave) autoSave.onDataChange();
