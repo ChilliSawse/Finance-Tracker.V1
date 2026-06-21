@@ -3,36 +3,40 @@
     --font-body: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --font-mono: 'Fira Code', 'Consolas', monospace;
     --font-display: var(--font-body);
-    --primary-bg-color-start: #667eea;
-    --primary-bg-color-end: #764ba2;
-    --header-text-color: white;
+    /* J1 — fallbacks mirror DEFAULT_THEME (midnight) so a brand-new install
+       doesn't flash the old purple before theme.js runs. Returning users get
+       their exact tokens replayed from the FOUC cache (see index.html head). */
+    --primary-bg-color-start: #0d1117;
+    --primary-bg-color-end: #161d27;
+    --header-text-color: #ffffff;
     --tab-bg-color: rgba(255, 255, 255, 0.1);
     --tab-active-bg-color: rgba(255, 255, 255, 0.2);
     --tab-text-color: rgba(255, 255, 255, 0.7);
     --tab-active-text-color: white;
-    --content-bg-color: rgba(255, 255, 255, 0.95);
-    --card-bg-gradient-start: #ffffff;
-    --card-bg-gradient-end: #f0f0f0;
-    --border-color: #e0e0e0;
-    --text-color-primary: #333;
-    --text-color-secondary: #666;
-    --accent-color: #667eea;
+    --content-bg-color: rgba(22, 27, 34, 0.95);
+    --card-bg-gradient-start: #161b22;
+    --card-bg-gradient-end: #1e252e;
+    --border-color: #30363d;
+    --text-color-primary: #c9d1d9;
+    --text-color-secondary: rgba(201, 209, 217, 0.6);
+    --accent-color: #f85149;
     --font-family-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --base-font-size: 16px;
     --save-status-saving-bg: rgba(255, 193, 7, 0.9); /* Amber */
     --save-status-saved-bg: rgba(76, 175, 80, 0.9); /* Green */
     --save-status-error-bg: rgba(244, 67, 54, 0.9); /* Red */
     --save-status-unsaved-bg: rgba(255, 152, 0, 0.9); /* Orange */
-    /* Finance semantic colour tokens — overwritten by applyTheme() / loadTheme() */
-    --color-positive: #4CAF50;
-    --color-negative: #f44336;
-    --color-neutral: #2196F3;
+    /* Finance semantic colour tokens — overwritten by applyTheme() / loadTheme().
+       J1 fallbacks match DEFAULT_THEME (midnight). */
+    --color-positive: #3fb950;
+    --color-negative: #f85149;
+    --color-neutral: #58a6ff;
     --color-warning: #ff9800;
-    --info-bg: rgba(33, 150, 243, 0.08);
-    --info-border: #2196F3;
-    --positive-tint: rgba(76, 175, 80, 0.1);
-    --neutral-tint: rgba(33, 150, 243, 0.1);
-    --negative-tint: rgba(244, 67, 54, 0.1);
+    --info-bg: rgba(88, 166, 255, 0.08);
+    --info-border: #58a6ff;
+    --positive-tint: rgba(63, 185, 80, 0.1);
+    --neutral-tint: rgba(88, 166, 255, 0.1);
+    --negative-tint: rgba(248, 81, 73, 0.1);
 }
 
 * {

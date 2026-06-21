@@ -292,7 +292,7 @@ function handleGuiSettingsClickEvents(event) {
         // Update colour pickers to reflect the preset so clicking Apply saves them
         const tokens = deriveTokens(preset);
         setValue('gui-primary-bg-start', preset.bg);
-        setValue('gui-primary-bg-end',   preset.accent);
+        setValue('gui-primary-bg-end',   tokens['--primary-bg-color-end']);
         setValue('gui-header-text-color', tokens['--header-text-color']);
         setValue('gui-card-bg-start',    preset.panel);
         setValue('gui-card-bg-end',      tokens['--card-bg-gradient-end']);

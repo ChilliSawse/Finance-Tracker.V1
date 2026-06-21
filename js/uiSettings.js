@@ -451,7 +451,7 @@ function applyGuiStylesToPage() {
     // previous theme, which was the recurring "split/half-applied theme" bug. The picker subset
     // is layered on top immediately after (and merged into the FOUC cache below).
     if (typeof applyTheme === 'function' && typeof THEMES !== 'undefined') {
-        applyTheme(THEMES[guiSettingsData.theme] || THEMES.default);
+        applyTheme(THEMES[resolveTheme(guiSettingsData.theme)]);
     }
 
     const pickerVars = {
