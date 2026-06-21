@@ -740,6 +740,7 @@ function runWhatIfScenario() {
             </div>
             ${allocBlock}
         `;
+        fitAllAmounts(resultsDiv); // shrink any over-long scenario figure to fit its card
     }
 }
 

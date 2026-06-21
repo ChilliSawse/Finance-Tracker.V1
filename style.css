@@ -1271,39 +1271,59 @@ body {
     border-bottom: none;
 }
 
-.info-icon {
-    cursor: help;
+/* Info "ⓘ" disclosures — native <details> that expand INLINE (like the
+   "How the buckets work" .info-more expander), instead of a floating tooltip
+   that clipped off-screen on phones. Closed: an inline ⓘ next to the heading.
+   Open: the whole control becomes a full-width block so the body reads cleanly
+   below it. */
+.info-tip {
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.info-tip[open] {
+    display: block;
+    margin: 8px 0 0;
+    /* .settings-title is a wrapping flexbox — full basis drops the open panel
+       onto its own full-width line below the heading. Ignored in block parents. */
+    flex-basis: 100%;
+}
+
+.info-tip > summary {
+    cursor: pointer;
     color: var(--accent-color);
     font-weight: bold;
     font-size: 1.1em;
-    position: relative;
+    list-style: none;        /* hide the default disclosure triangle */
+    width: fit-content;
 }
 
-.tooltip {
-    visibility: hidden;
-    width: 250px;
-    background-color: #555;
-    color: #fff;
-    text-align: left;
-    border-radius: 6px;
-    padding: 10px;
-    position: absolute;
-    z-index: 100;
-    bottom: 125%; /* Position above the icon */
-    left: 50%;
-    margin-left: -125px; /* Center the tooltip */
-    opacity: 0;
-    transition: opacity 0.3s;
-    font-size: 0.8em;
+.info-tip > summary::-webkit-details-marker {
+    display: none;
+}
+
+.info-tip > summary:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.info-tip-body {
+    margin-top: 8px;
+    padding: 12px 14px;
+    background: var(--info-bg);
+    border: 1px solid var(--info-border);
+    border-radius: 8px;
+    /* Reset inherited heading styling (.settings-title / .time-label are bold,
+       large, sometimes uppercase) so the explanation reads as body text. */
+    font-size: 0.9rem;
     font-weight: normal;
-    line-height: 1.4;
-}
-
-.info-icon:hover .tooltip,
-.info-icon:focus .tooltip,
-.info-icon:focus-within .tooltip {
-    visibility: visible;
-    opacity: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    line-height: 1.5;
+    color: var(--text-color-primary);
+    text-align: left;
 }
 
 .dashboard-controls {
@@ -1774,35 +1794,6 @@ body {
 
 /* --- Mobile display polish (phones, on-device follow-up) --- */
 @media (max-width: 640px) {
-    /* backdrop-filter makes .content a containing block for position:fixed
-       descendants, which broke the fixed tooltip below (it anchored to the tall
-       content, not the viewport). The blur is invisible anyway (content bg is
-       ~95% opaque), so drop it on phones. */
-    .content {
-        backdrop-filter: none;
-    }
-
-    /* Info "ⓘ" tooltips were absolutely positioned (left:50% / margin-left:-125px),
-       so near a screen edge they were shoved off-screen and clipped. On phones
-       float the tooltip as a fixed, full-width readable panel just above the
-       bottom nav instead — always fully on-screen, regardless of the icon. */
-    .tooltip {
-        position: fixed;
-        left: 12px;
-        right: 12px;
-        bottom: calc(74px + env(safe-area-inset-bottom, 0px));
-        top: auto;
-        width: auto;
-        max-width: none;
-        margin-left: 0;
-        max-height: 45vh;
-        overflow-y: auto;
-        font-size: 0.9rem;
-        line-height: 1.45;
-        box-shadow: 0 10px 36px rgba(0, 0, 0, 0.4);
-        z-index: 3000; /* above modals (2000) and inline-confirm (2500) */
-    }
-
     /* "All changes saved" pushed the gear cog over the title. Collapse the save
        status to a small colour-coded dot on phones (green=saved, amber=saving,
        red=error, orange=unsaved) so the title + gear get their space back. */
