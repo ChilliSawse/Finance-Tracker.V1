@@ -173,6 +173,20 @@ function migrateGuiTheme(gs) {
     gs.colorNeutral    = preset.neutral;
 }
 
+// J2 step 2 — backfill the colour fields introduced with the base/override split,
+// and neutralise the legacy hardcoded header-text default so topbar text derives its
+// own contrast (the old "#ffffff" default was the invisible-on-light-themes bug).
+function migrateGuiColorFields(gs) {
+    if (!gs) return;
+    const preset = THEMES[resolveTheme(gs.theme)] || THEMES[DEFAULT_THEME];
+    if (!gs.textColor)   gs.textColor   = preset.fg;
+    if (!gs.borderColor) gs.borderColor = preset.border;
+    if (gs.headerTextColor === '#ffffff' || gs.headerTextColor === 'white') gs.headerTextColor = '';
+    ['headingColor', 'mutedColor', 'headerTextColor', 'colorEssential', 'colorWarning'].forEach(k => {
+        if (typeof gs[k] !== 'string') gs[k] = '';
+    });
+}
+
 // Compute every CSS custom property value from 8 core colours
 function deriveTokens(colors) {
     const lum = perceivedLuminance(colors.bg);
@@ -203,6 +217,9 @@ function deriveTokens(colors) {
         '--border-color':           colors.border,
         '--text-color-primary':     colors.fg,
         '--text-color-secondary':   hexToRgba(colors.fg, 0.6),
+        // J2 — headings get their own token (card/section titles), defaulting to the
+        // primary text colour so there's no visual change until the user customises it.
+        '--heading-color':          colors.fg,
         '--accent-color':           colors.accent,
         '--color-positive':         colors.positive,
         '--color-negative':         colors.negative,
@@ -256,18 +273,22 @@ function renderThemeSwitcher(container) {
         btn.dataset.theme = key;
         btn.title = theme.name;
         btn.setAttribute('aria-pressed', key === activeName ? 'true' : 'false');
-        btn.style.background = `linear-gradient(135deg, ${theme.bg} 0%, ${theme.accent} 100%)`;
 
-        const dot = document.createElement('span');
-        dot.className = 'swatch-dot';
-        dot.style.background = theme.panel;
-        dot.style.borderColor = theme.accent;
+        // J2 — Odysseus-style preview: a row of overlapping circles showing the
+        // four colours that define the theme's feel (bg / surface / text / accent).
+        const colors = document.createElement('span');
+        colors.className = 'theme-swatch-colors';
+        [theme.bg, theme.panel, theme.fg, theme.accent].forEach(c => {
+            const dot = document.createElement('span');
+            dot.style.background = c;
+            colors.appendChild(dot);
+        });
 
         const label = document.createElement('span');
         label.className = 'swatch-label';
         label.textContent = theme.name;
 
-        btn.appendChild(dot);
+        btn.appendChild(colors);
         btn.appendChild(label);
         container.appendChild(btn);
     });
