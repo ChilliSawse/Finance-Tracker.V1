@@ -600,4 +600,220 @@ function renderCustomFontList(container) {
     });
 }
 
+// --- J4 — decorative background effects (curated 3, ported from Odysseus) ---
+// constellations / petals / rain. Each is a full-viewport <canvas> prepended behind the app
+// shell (z-index 0; .app-shell sits at z-index 1). Self-terminating: the draw loop bails the
+// moment the body's bg-effect-<name> class is gone, so switching/clearing tears the canvas
+// down. Gated behind prefers-reduced-motion + a small-viewport perf guard (bgEffectsAllowed).
+const BG_EFFECT_NAMES = ['constellations', 'petals', 'rain'];
+
+// Respect the user's motion preference and skip on small/mobile viewports (the canvas loops
+// are pure decoration and not worth the battery/jank there).
+function bgEffectsAllowed() {
+    try {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    } catch (_) {}
+    return window.innerWidth >= 700;
+}
+
+// Effect tint: an explicit --bg-effect-color, else the accent, else primary text.
+function _bgEffectColor() {
+    const s = getComputedStyle(document.documentElement);
+    return (s.getPropertyValue('--bg-effect-color').trim()
+        || s.getPropertyValue('--accent-color').trim()
+        || s.getPropertyValue('--text-color-primary').trim()
+        || '#9cdef2');
+}
+
+function _makeEffectCanvas(name) {
+    const canvas = document.createElement('canvas');
+    canvas.id = name + '-canvas';
+    canvas.className = 'ft-bg-effect-canvas';
+    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;';
+    canvas.setAttribute('aria-hidden', 'true'); // decorative — keep it out of the a11y tree
+    document.body.prepend(canvas);
+    return canvas;
+}
+
+// ── Rain — thin falling streaks ──
+function _ftRain() {
+    if (document.getElementById('rain-canvas')) return;
+    const canvas = _makeEffectCanvas('rain');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let W, H;
+    const drops = [];
+    const MAX_DROPS = 130;
+    function resize() {
+        W = window.innerWidth; H = window.innerHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    const _onResize = () => resize();
+    window.addEventListener('resize', _onResize);
+    function spawn() {
+        const len = 20 + Math.random() * 40;
+        drops.push({ x: Math.random() * W, y: -len, len, speed: 4 + Math.random() * 8, alpha: 0.32 + Math.random() * 0.28 });
+    }
+    function draw() {
+        if (!document.body.classList.contains('bg-effect-rain')) { window.removeEventListener('resize', _onResize); canvas.remove(); return; }
+        requestAnimationFrame(draw);
+        ctx.clearRect(0, 0, W, H);
+        const c = _bgEffectColor();
+        if (drops.length < MAX_DROPS && Math.random() < 0.6) spawn();
+        for (let i = drops.length - 1; i >= 0; i--) {
+            const d = drops[i];
+            d.y += d.speed;
+            if (d.y > H + d.len) { drops.splice(i, 1); continue; }
+            const grad = ctx.createLinearGradient(d.x, d.y - d.len, d.x, d.y);
+            grad.addColorStop(0, 'transparent');
+            grad.addColorStop(1, c);
+            ctx.strokeStyle = grad;
+            ctx.globalAlpha = d.alpha;
+            ctx.lineWidth = 1.3;
+            ctx.beginPath();
+            ctx.moveTo(d.x, d.y - d.len);
+            ctx.lineTo(d.x, d.y);
+            ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+    }
+    draw();
+}
+
+// ── Constellations — drifting stars that link when close + twinkle ──
+function _ftConstellations() {
+    if (document.getElementById('constellations-canvas')) return;
+    const canvas = _makeEffectCanvas('constellations');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let W, H;
+    const STAR_COUNT = 50, CONNECT_DIST = 120;
+    let stars = [];
+    function initStars() {
+        stars = [];
+        for (let i = 0; i < STAR_COUNT; i++) {
+            stars.push({
+                x: Math.random() * W, y: Math.random() * H,
+                vx: (Math.random() - 0.5) * 0.15, vy: (Math.random() - 0.5) * 0.15,
+                r: 0.8 + Math.random() * 0.8, phase: Math.random() * Math.PI * 2,
+            });
+        }
+    }
+    function resize() {
+        W = window.innerWidth; H = window.innerHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (stars.length === 0) initStars();
+    }
+    resize();
+    const _onResize = () => { resize(); initStars(); };
+    window.addEventListener('resize', _onResize);
+    let t = 0;
+    function draw() {
+        if (!document.body.classList.contains('bg-effect-constellations')) { window.removeEventListener('resize', _onResize); canvas.remove(); return; }
+        requestAnimationFrame(draw);
+        t += 0.01;
+        ctx.clearRect(0, 0, W, H);
+        const c = _bgEffectColor();
+        for (const s of stars) {
+            s.x += s.vx; s.y += s.vy;
+            if (s.x < 0) s.x = W; if (s.x > W) s.x = 0;
+            if (s.y < 0) s.y = H; if (s.y > H) s.y = 0;
+        }
+        ctx.strokeStyle = c; ctx.lineWidth = 0.5;
+        for (let i = 0; i < stars.length; i++) {
+            for (let j = i + 1; j < stars.length; j++) {
+                const dx = stars[i].x - stars[j].x, dy = stars[i].y - stars[j].y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < CONNECT_DIST) {
+                    ctx.globalAlpha = (1 - dist / CONNECT_DIST) * 0.15;
+                    ctx.beginPath();
+                    ctx.moveTo(stars[i].x, stars[i].y);
+                    ctx.lineTo(stars[j].x, stars[j].y);
+                    ctx.stroke();
+                }
+            }
+        }
+        ctx.fillStyle = c;
+        for (const s of stars) {
+            const twinkle = 0.5 + 0.5 * Math.sin(t * 2 + s.phase);
+            ctx.globalAlpha = 0.15 + twinkle * 0.25;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+    draw();
+}
+
+// ── Petals — gentle drifting, wobbling petals ──
+function _ftPetals() {
+    if (document.getElementById('petals-canvas')) return;
+    const canvas = _makeEffectCanvas('petals');
+    const ctx = canvas.getContext('2d');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let W, H;
+    const petals = [];
+    function makePetal() {
+        return {
+            x: Math.random() * W, y: -10 - Math.random() * 40,
+            size: 3 + Math.random() * 5, rot: Math.random() * Math.PI * 2,
+            vr: (Math.random() - 0.5) * 0.03, vy: 0.3 + Math.random() * 0.6,
+            drift: Math.random() * Math.PI * 2, driftSpeed: 0.008 + Math.random() * 0.012,
+            wobble: 0.3 + Math.random() * 0.8,
+        };
+    }
+    function resize() {
+        W = window.innerWidth; H = window.innerHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (petals.length === 0) for (let i = 0; i < 30; i++) { const p = makePetal(); p.y = Math.random() * H; petals.push(p); }
+    }
+    resize();
+    const _onResize = () => resize();
+    window.addEventListener('resize', _onResize);
+    function draw() {
+        if (!document.body.classList.contains('bg-effect-petals')) { window.removeEventListener('resize', _onResize); canvas.remove(); return; }
+        requestAnimationFrame(draw);
+        ctx.clearRect(0, 0, W, H);
+        const c = _bgEffectColor();
+        petals.forEach(p => {
+            p.y += p.vy; p.rot += p.vr; p.drift += p.driftSpeed;
+            p.x += Math.sin(p.drift) * p.wobble;
+            if (p.y > H + 15) Object.assign(p, makePetal());
+            ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+            ctx.fillStyle = c;
+            ctx.globalAlpha = 0.2;
+            ctx.beginPath(); ctx.ellipse(-p.size * 0.2, 0, p.size * 0.6, p.size * 0.3, 0.3, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 0.15;
+            ctx.beginPath(); ctx.ellipse(p.size * 0.2, 0, p.size * 0.6, p.size * 0.3, -0.3, 0, Math.PI * 2); ctx.fill();
+            ctx.restore();
+        });
+        ctx.globalAlpha = 1;
+    }
+    draw();
+}
+
+const BG_EFFECTS = { constellations: _ftConstellations, petals: _ftPetals, rain: _ftRain };
+
+// The one entry point: switch to the requested effect (or none). Honours the perf/motion
+// guard — the stored preference is kept either way, so an effect a desktop user picked simply
+// lies dormant on a phone or with reduced-motion on. Idempotent: when the wanted state already
+// matches what's running it does nothing, so it's safe to call on every modal open (no flicker).
+function applyBackgroundEffect(name) {
+    if (typeof document === 'undefined' || !document.body) return;
+    const body = document.body;
+    const current = BG_EFFECT_NAMES.find(n => body.classList.contains('bg-effect-' + n)) || 'none';
+    const wanted = (name && BG_EFFECTS[name] && bgEffectsAllowed()) ? name : 'none';
+    if (current === wanted) return;
+    BG_EFFECT_NAMES.forEach(n => body.classList.remove('bg-effect-' + n));
+    document.querySelectorAll('.ft-bg-effect-canvas').forEach(c => c.remove());
+    if (wanted === 'none') return;
+    body.classList.add('bg-effect-' + wanted);
+    BG_EFFECTS[wanted]();
+}
+
 // --- END OF: theme.js ---

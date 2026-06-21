@@ -425,6 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
     autoSave.loadData();
     loadTheme(); // apply full preset (tab colours, tints, etc.) before UI renders
     if (typeof registerStoredCustomFonts === 'function') registerStoredCustomFonts(); // J3 — re-register uploaded fonts
+    if (typeof applyBackgroundEffect === 'function') applyBackgroundEffect(guiSettingsData.bgEffect); // J4 — restore saved effect
 
     initializeSettingsUI();
     initializeGuiSettingsForm();

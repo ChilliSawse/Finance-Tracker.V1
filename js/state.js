@@ -74,6 +74,9 @@ let defaultGuiSettings = {
     // typography + dashboard labels
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     baseFontSize: "16",
+    // J4 — decorative background effect ('none' | 'constellations' | 'petals' | 'rain'),
+    // gated at runtime behind prefers-reduced-motion + a mobile perf guard.
+    bgEffect: "none",
     mainHeading: "Personal Finance Dashboard",
     subHeading: "Track your income, expenses, and savings with style"
 };

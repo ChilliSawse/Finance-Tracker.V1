@@ -80,6 +80,9 @@ function setupEventListeners() {
         el.addEventListener('input',  () => commitGuiText(false));
         el.addEventListener('change', () => commitGuiText(true));
     });
+    // J4 — background effect selector (persists + applies immediately).
+    const bgEffectSel = getElement('gui-bg-effect');
+    if (bgEffectSel) bgEffectSel.addEventListener('change', () => commitGuiEffect(true));
     // J3 — Colour Harmony: changing any control re-renders the live preview (no apply
     // until the button). Bound once here; idempotent because setupEventListeners runs once.
     ['harmony-accent', 'harmony-type', 'harmony-mode'].forEach(id => {
@@ -836,6 +839,14 @@ function commitGuiText(persist) {
     guiSettingsData.fontFamily   = getValue('gui-font-family');
     guiSettingsData.baseFontSize = getValue('gui-base-font-size');
     applyGuiStylesToPage();
+    if (persist && autoSave) autoSave.onDataChange();
+}
+
+// J4 — background effect changed: store it + (re)start it. Decorative only, so it doesn't
+// go through the colour-token chokepoint — applyBackgroundEffect is its own entry point.
+function commitGuiEffect(persist) {
+    guiSettingsData.bgEffect = getValue('gui-bg-effect');
+    if (typeof applyBackgroundEffect === 'function') applyBackgroundEffect(guiSettingsData.bgEffect);
     if (persist && autoSave) autoSave.onDataChange();
 }
 

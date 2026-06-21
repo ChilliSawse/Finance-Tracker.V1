@@ -438,6 +438,10 @@ function initializeGuiSettingsForm() {
     if (typeof renderCustomFontList === 'function') renderCustomFontList(getElement('custom-fonts-list'));
     setValue('gui-font-family', guiSettingsData.fontFamily);
     setValue('gui-base-font-size', guiSettingsData.baseFontSize);
+    setValue('gui-bg-effect', guiSettingsData.bgEffect || 'none'); // J4 — background effect
+    // Re-sync the running effect to the current settings (idempotent — no-op if unchanged),
+    // so reset / factory-reset / JSON import all restore the right backdrop via this one path.
+    if (typeof applyBackgroundEffect === 'function') applyBackgroundEffect(guiSettingsData.bgEffect);
     if (typeof initHarmonyControls === 'function') initHarmonyControls(); // J3 — seed + preview
 }
 

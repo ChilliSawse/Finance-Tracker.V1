@@ -66,6 +66,23 @@ body {
         "topbar  topbar"
         "sidebar main";
     min-height: 100vh;
+    /* J4 — keep the app above any decorative background-effect canvas (z-index 0). */
+    position: relative;
+    z-index: 1;
+}
+
+/* J4 — decorative background-effect canvas: full-viewport, behind the shell, inert. */
+.ft-bg-effect-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* J4 — never animate a background effect when the user asked for reduced motion. The JS
+   guard (bgEffectsAllowed) already skips it; this also hides any canvas that slipped in. */
+@media (prefers-reduced-motion: reduce) {
+    .ft-bg-effect-canvas { display: none !important; }
 }
 
 .header.topbar {

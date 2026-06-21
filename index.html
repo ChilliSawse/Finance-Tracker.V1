@@ -670,6 +670,24 @@
                         </div>
                     </div>
                     <div class="settings-section">
+                        <div class="settings-title">Background effect</div>
+                        <!-- J4 — curated 3 decorative canvas effects. Runtime-gated behind
+                             prefers-reduced-motion + a small-viewport perf guard (bgEffectsAllowed);
+                             the preference is still stored when guarded off. -->
+                        <p class="settings-hint">A subtle animated backdrop. Off on phones and when your system prefers reduced motion.</p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="gui-bg-effect">Effect</label>
+                                <select class="form-select" id="gui-bg-effect">
+                                    <option value="none">None</option>
+                                    <option value="constellations">Constellations</option>
+                                    <option value="petals">Petals</option>
+                                    <option value="rain">Rain</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
                         <div class="settings-title">General</div>
                         <div class="form-grid">
                             <div class="form-group">
