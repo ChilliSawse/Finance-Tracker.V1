@@ -599,6 +599,41 @@ function commitGuiSettings() {
     if (autoSave) autoSave.onDataChange();
 }
 
+// J2 — Themes / Customize tab switching in the appearance modal. Idempotent
+// (guarded), so repeated initializeGuiSettingsForm() calls don't double-bind.
+function activateAppearanceTab(btn) {
+    const tabs = btn.closest('.appearance-tabs');
+    if (!tabs) return;
+    tabs.querySelectorAll('.appearance-tab').forEach(b => {
+        const on = b === btn;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+        b.tabIndex = on ? 0 : -1;
+        const panel = document.getElementById(b.getAttribute('aria-controls'));
+        if (panel) panel.hidden = !on;
+    });
+}
+
+function setupAppearanceTabs() {
+    const tabs = document.querySelector('#guiSettings .appearance-tabs');
+    if (!tabs || tabs.dataset.wired) return;
+    tabs.dataset.wired = '1';
+    const buttons = [...tabs.querySelectorAll('.appearance-tab')];
+    buttons.forEach(btn => btn.addEventListener('click', () => activateAppearanceTab(btn)));
+    // Roving Left/Right arrow keys across the tabs (matches the sidebar tablist pattern).
+    tabs.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        const i = buttons.indexOf(document.activeElement);
+        if (i < 0) return;
+        const next = e.key === 'ArrowRight'
+            ? (i + 1) % buttons.length
+            : (i - 1 + buttons.length) % buttons.length;
+        buttons[next].focus();
+        activateAppearanceTab(buttons[next]);
+        e.preventDefault();
+    });
+}
+
 function actionResetGuiToDefaults() {
     // Confirmation handled by the caller's inlineConfirm (H.5).
     guiSettingsData = JSON.parse(JSON.stringify(defaultGuiSettings));

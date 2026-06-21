@@ -256,18 +256,22 @@ function renderThemeSwitcher(container) {
         btn.dataset.theme = key;
         btn.title = theme.name;
         btn.setAttribute('aria-pressed', key === activeName ? 'true' : 'false');
-        btn.style.background = `linear-gradient(135deg, ${theme.bg} 0%, ${theme.accent} 100%)`;
 
-        const dot = document.createElement('span');
-        dot.className = 'swatch-dot';
-        dot.style.background = theme.panel;
-        dot.style.borderColor = theme.accent;
+        // J2 — Odysseus-style preview: a row of overlapping circles showing the
+        // four colours that define the theme's feel (bg / surface / text / accent).
+        const colors = document.createElement('span');
+        colors.className = 'theme-swatch-colors';
+        [theme.bg, theme.panel, theme.fg, theme.accent].forEach(c => {
+            const dot = document.createElement('span');
+            dot.style.background = c;
+            colors.appendChild(dot);
+        });
 
         const label = document.createElement('span');
         label.className = 'swatch-label';
         label.textContent = theme.name;
 
-        btn.appendChild(dot);
+        btn.appendChild(colors);
         btn.appendChild(label);
         container.appendChild(btn);
     });

@@ -553,98 +553,131 @@
                 </button>
             </div>
             <div class="modal-body" id="guiSettings">
-                <div class="settings-section">
-                    <div class="settings-title">Appearance Customization</div>
-                    <p class="theme-section-title">Theme Presets</p>
+                <!-- J2 — two-tab appearance panel (Themes | Customize), modelled on Odysseus.
+                     Existing input ids are preserved so the colour/typography wiring,
+                     swatch delegation and live-preview listeners keep working unchanged. -->
+                <div class="appearance-tabs" role="tablist" aria-label="Appearance sections">
+                    <button type="button" class="appearance-tab active" role="tab" id="atab-themes" data-atab="themes" aria-selected="true" aria-controls="apanel-themes">
+                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="19" cy="13" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="10" cy="20" r="2.5"/></svg>
+                        Themes
+                    </button>
+                    <button type="button" class="appearance-tab" role="tab" id="atab-customize" data-atab="customize" aria-selected="false" aria-controls="apanel-customize" tabindex="-1">
+                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.06 11.9l-3.5 3.5a2.85 2.85 0 1 0 4.03 4.03l8.49-8.49a4.5 4.5 0 1 0-6.36-6.36L3.18 12.62"/><path d="M14 7l3 3"/></svg>
+                        Customize
+                    </button>
+                </div>
+
+                <!-- Tab: Themes -->
+                <div class="appearance-panel" id="apanel-themes" role="tabpanel" aria-labelledby="atab-themes">
+                    <p class="theme-section-title">Default Themes</p>
                     <div id="theme-switcher-container" class="theme-switcher" role="group" aria-label="Theme presets"></div>
-                    <p class="theme-section-title">Customise Colours</p>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="gui-primary-bg-start">Primary Background Start</label>
-                            <input type="color" class="form-color-picker" id="gui-primary-bg-start">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-primary-bg-end">Primary Background End</label>
-                            <input type="color" class="form-color-picker" id="gui-primary-bg-end">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-header-text-color">Header Text Color</label>
-                            <input type="color" class="form-color-picker" id="gui-header-text-color">
-                        </div>
-                         <div class="form-group">
-                            <label class="form-label" for="gui-card-bg-start">Card Background Start</label>
-                            <input type="color" class="form-color-picker" id="gui-card-bg-start">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-card-bg-end">Card Background End</label>
-                            <input type="color" class="form-color-picker" id="gui-card-bg-end">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-accent-color">Accent Color</label>
-                            <input type="color" class="form-color-picker" id="gui-accent-color">
-                        </div>
+                    <!-- Your Themes — saved custom themes (populated in J3). -->
+                    <div id="your-themes-card" hidden>
+                        <p class="theme-section-title">Your Themes</p>
+                        <div id="your-themes-container" class="theme-switcher" role="group" aria-label="Your saved themes"></div>
                     </div>
                 </div>
-                 <div class="settings-section">
-                    <div class="settings-title">Typography &amp; Text</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="gui-font-family">Font Family</label>
-                            <select class="form-select" id="gui-font-family">
-                                <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI (Default)</option>
-                                <option value="Arial, Helvetica, sans-serif">Arial</option>
-                                <option value="Verdana, Geneva, sans-serif">Verdana</option>
-                                <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                                <option value="'Courier New', Courier, monospace">Courier New</option>
-                                <option value="Georgia, serif">Georgia</option>
-                                <option value="'Lucida Sans Unicode', 'Lucida Grande', sans-serif">Lucida Sans Unicode</option>
-                                <option value="'Trebuchet MS', Helvetica, sans-serif">Trebuchet MS</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-base-font-size">Base Font Size (px)</label>
-                            <input type="number" class="form-input" id="gui-base-font-size" min="10" max="24" step="1">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-main-heading">Main Heading Text</label>
-                            <input type="text" class="form-input" id="gui-main-heading">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="gui-sub-heading">Sub-Heading Text</label>
-                            <input type="text" class="form-input" id="gui-sub-heading">
-                        </div>
-                         </div>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">General</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="currency-select">Currency</label>
-                            <select class="form-select" id="currency-select">
-                                <option value="AUD">AUD - Australian Dollar</option>
-                                <option value="USD">USD - US Dollar</option>
-                                <option value="EUR">EUR - Euro</option>
-                                <option value="GBP">GBP - British Pound</option>
-                                <option value="CAD">CAD - Canadian Dollar</option>
-                                <option value="NZD">NZD - New Zealand Dollar</option>
-                                <option value="JPY">JPY - Japanese Yen</option>
-                                <option value="CHF">CHF - Swiss Franc</option>
-                                <option value="CNY">CNY - Chinese Yuan</option>
-                                <option value="INR">INR - Indian Rupee</option>
-                            </select>
+
+                <!-- Tab: Customize -->
+                <div class="appearance-panel" id="apanel-customize" role="tabpanel" aria-labelledby="atab-customize" hidden>
+                    <div class="settings-section">
+                        <div class="settings-title">Colours</div>
+                        <!-- J2 step 2 will replace this grid with a tight base tier + a
+                             "More Colours" expander over the full surface. -->
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="gui-primary-bg-start">Background</label>
+                                <input type="color" class="form-color-picker" id="gui-primary-bg-start">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="gui-card-bg-start">Surface (cards)</label>
+                                <input type="color" class="form-color-picker" id="gui-card-bg-start">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="gui-accent-color">Accent</label>
+                                <input type="color" class="form-color-picker" id="gui-accent-color">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="gui-primary-bg-end">Background (2nd stop)</label>
+                                <input type="color" class="form-color-picker" id="gui-primary-bg-end">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="gui-card-bg-end">Surface (2nd stop)</label>
+                                <input type="color" class="form-color-picker" id="gui-card-bg-end">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="gui-header-text-color">Topbar text</label>
+                                <input type="color" class="form-color-picker" id="gui-header-text-color">
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">Save, Reset &amp; Backup</div>
-                    <p class="settings-hint">Appearance changes (theme, colours, fonts) save automatically. Defaults = your whole setup (data + appearance) used as a reset point. Backup = a JSON file of everything.</p>
-                    <div class="settings-actions" style="margin-top: 12px; padding-top: 0; border-top: none;">
-                        <button class="btn btn-secondary" id="reset-gui-settings">Reset Appearance</button>
-                        <button class="btn btn-secondary" id="set-current-default">Save as My Defaults</button>
-                        <button class="btn btn-secondary" id="reset-to-defaults">Reset to Factory Defaults</button>
-                        <button class="btn btn-secondary" id="export-json-gui">Export Backup (JSON)</button>
-                        <input type="file" id="json-import-gui" accept=".json" style="display: none;">
-                        <button class="btn btn-secondary" id="import-json-gui-btn">Import Backup (JSON)</button>
+                    <div class="settings-section">
+                        <div class="settings-title">Typography</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="gui-font-family">Font Family</label>
+                                <select class="form-select" id="gui-font-family">
+                                    <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI (Default)</option>
+                                    <option value="Arial, Helvetica, sans-serif">Arial</option>
+                                    <option value="Verdana, Geneva, sans-serif">Verdana</option>
+                                    <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                                    <option value="'Courier New', Courier, monospace">Courier New</option>
+                                    <option value="Georgia, serif">Georgia</option>
+                                    <option value="'Lucida Sans Unicode', 'Lucida Grande', sans-serif">Lucida Sans Unicode</option>
+                                    <option value="'Trebuchet MS', Helvetica, sans-serif">Trebuchet MS</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="gui-base-font-size">Base Font Size (px)</label>
+                                <input type="number" class="form-input" id="gui-base-font-size" min="10" max="24" step="1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-title">Dashboard labels</div>
+                        <p class="settings-hint">The title and subtitle shown at the top of the dashboard.</p>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="gui-main-heading">Main heading</label>
+                                <input type="text" class="form-input" id="gui-main-heading">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="gui-sub-heading">Sub-heading</label>
+                                <input type="text" class="form-input" id="gui-sub-heading">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-title">General</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="currency-select">Currency</label>
+                                <select class="form-select" id="currency-select">
+                                    <option value="AUD">AUD - Australian Dollar</option>
+                                    <option value="USD">USD - US Dollar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                    <option value="GBP">GBP - British Pound</option>
+                                    <option value="CAD">CAD - Canadian Dollar</option>
+                                    <option value="NZD">NZD - New Zealand Dollar</option>
+                                    <option value="JPY">JPY - Japanese Yen</option>
+                                    <option value="CHF">CHF - Swiss Franc</option>
+                                    <option value="CNY">CNY - Chinese Yuan</option>
+                                    <option value="INR">INR - Indian Rupee</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <div class="settings-title">Save, Reset &amp; Backup</div>
+                        <p class="settings-hint">Appearance changes (theme, colours, fonts) save automatically. Defaults = your whole setup (data + appearance) used as a reset point. Backup = a JSON file of everything.</p>
+                        <div class="settings-actions" style="margin-top: 12px; padding-top: 0; border-top: none;">
+                            <button class="btn btn-secondary" id="reset-gui-settings">Reset Appearance</button>
+                            <button class="btn btn-secondary" id="set-current-default">Save as My Defaults</button>
+                            <button class="btn btn-secondary" id="reset-to-defaults">Reset to Factory Defaults</button>
+                            <button class="btn btn-secondary" id="export-json-gui">Export Backup (JSON)</button>
+                            <input type="file" id="json-import-gui" accept=".json" style="display: none;">
+                            <button class="btn btn-secondary" id="import-json-gui-btn">Import Backup (JSON)</button>
+                        </div>
                     </div>
                 </div>
             </div>

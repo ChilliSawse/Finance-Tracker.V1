@@ -426,6 +426,7 @@ function renderFISettings() {
 }
 
 function initializeGuiSettingsForm() {
+    if (typeof setupAppearanceTabs === 'function') setupAppearanceTabs();
     renderThemeSwitcher(document.getElementById('theme-switcher-container'));
     setValue('gui-primary-bg-start', guiSettingsData.primaryBgStart);
     setValue('gui-primary-bg-end', guiSettingsData.primaryBgEnd);
