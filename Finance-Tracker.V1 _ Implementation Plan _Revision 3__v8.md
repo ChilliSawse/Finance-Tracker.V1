@@ -52,7 +52,14 @@ Nothing below is broken or half-finished; each is a deliberate stop, mostly beca
 - **FI net-worth forecast chart (possible next feature).** The user-supplied Phase C Savings copy referenced a "year-by-year forecast of your projected net worth" chart — which doesn't exist yet, so those two references were trimmed. A small line/area chart projecting net worth over time (compound growth from current assets + annual savings at the expected return) would make that copy accurate and is a natural Savings-tab addition. Not started.
 
 ### Verify-only (not a build item)
-- **I.4 — Responsive audit @ 375 / 768 / 1024 / 1440.** Media queries exist and the grids are `auto-fit`; a manual pass at those widths (no horizontal scroll, ≥44px touch targets, the wide/resizable settings modals on small screens) is the last check. Can only be done in a browser.
+- **I.4 — Responsive audit @ 375 / 768 / 1024 / 1440.** Media queries exist and the grids are `auto-fit`; a manual pass at those widths (no horizontal scroll, ≥44px touch targets, the wide/resizable settings modals on small screens) is the last check. Can only be done in a browser. *(2026-06-21: a real iPhone 13 Pro pass surfaced + fixed a cluster of phone issues — see below.)*
+
+### Mobile usability fixes (2026-06-21, from on-device iPhone testing)
+Following the Phase A bottom-nav, real-device testing surfaced four issues, all now fixed (CSS-only, in the `≤640px` media queries; verified headless at 390px):
+- **iOS focus-zoom** — form controls were `<16px`, so iOS zoomed in on every field tap. All text-entry controls forced to `16px` on phones (no `user-scalable` disable).
+- **Horizontal scroll in data-entry forms** — the dynamic-list rows set `grid-template-columns` inline (per row, in JS), which beat the responsive CSS; and `.modal--wide/.modal--resizable .list-item` pinned a `min-width: 720px`. On phones the rows now stack one field per line with their (normally `.visually-hidden`) labels revealed and the header row hidden; the 720px floor is dropped. Applies to Income/Tax/Assets/Liabilities/Allocation/Expenses **and** the What If scenario tables (same classes).
+- **Page wider than the screen ("zoom out on first load")** — the mobile `.app-shell` used `grid-template-columns: 1fr`, whose `min-content` floor pushed the shell to ~456px. Changed to `minmax(0, 1fr)`; every tab now fits the viewport exactly.
+- **Currency figures breaking mid-number** — `overflow-wrap/word-break: normal` on the figure classes at phone widths.
 
 ---
 

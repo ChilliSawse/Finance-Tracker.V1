@@ -1615,7 +1615,10 @@ body {
    `.sidebar` rules would otherwise lose to `.app-shell.is-collapsed .sidebar`). */
 @media (max-width: 640px) {
     .app-shell {
-        grid-template-columns: 1fr;
+        /* minmax(0,1fr), not 1fr: a plain 1fr keeps a min-content floor, so the
+           topbar/main pushed the whole shell to ~456px (page wider than the
+           screen → the "zoom out on first load"). minmax(0,…) lets it fit. */
+        grid-template-columns: minmax(0, 1fr);
         grid-template-areas:
             "topbar"
             "main";
@@ -1689,6 +1692,89 @@ body {
     .content {
         margin-bottom: 0;
         padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* --- Mobile form & data-entry fixes (phones, Phase A follow-up) --- */
+@media (max-width: 640px) {
+    /* iOS Safari zooms into any focused control whose font-size is < 16px (then
+       the user has to pinch back out). Force 16px on every text-entry control so
+       tapping a field no longer zooms — without disabling user zoom. */
+    input, select, textarea,
+    .form-input, .form-select,
+    .list-item input, .list-item select,
+    .tax-bracket-item input, .tax-bracket-item select,
+    .dashboard-controls select {
+        font-size: 16px;
+    }
+
+    /* The dynamic lists set grid-template-columns INLINE (per row, from JS), which
+       beats any media-query CSS — so rows never stacked, overflowed sideways, and
+       the sticky header scrolled independently of the fields. Force every row to a
+       single stacked column (only !important can override the inline style). */
+    .list-item,
+    .tax-bracket-item {
+        /* minmax(0,1fr) (not 1fr) + min-width:0 on the items defeats the grid
+           "blowout": a plain 1fr track keeps a min-content floor, so the row
+           grew to ~696px (hidden horizontal scroll) instead of fitting. */
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 12px;
+        padding: 14px 12px;
+    }
+
+    .list-item > *,
+    .tax-bracket-item > * {
+        min-width: 0;
+    }
+
+    /* Desktop forces a 720px min-width on rows inside wide/resizable modals so
+       inputs aren't crushed (it scrolls horizontally instead). On a phone that
+       IS the horizontal scroll — drop the floor so rows fit the screen. */
+    .modal--wide .list-item,
+    .modal--resizable .list-item,
+    .modal--wide .list-header,
+    .modal--resizable .list-header {
+        min-width: 0;
+    }
+
+    /* Column headers are redundant once each stacked field shows its own label. */
+    .dynamic-list .list-header {
+        display: none;
+    }
+
+    /* Reveal the per-field labels that are .visually-hidden on desktop, so each
+       stacked field is identified (Name / Gross Annual / Net Pay / Cycle, …). */
+    .list-item span > label,
+    .tax-bracket-item span > label {
+        position: static;
+        width: auto;
+        height: auto;
+        margin: 0 0 4px;
+        clip: auto;
+        overflow: visible;
+        white-space: normal;
+        display: block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        color: var(--text-color-secondary);
+    }
+
+    /* Full-width, easily-tappable delete button at the foot of each stacked row. */
+    .list-item .delete-btn,
+    .tax-bracket-item .delete-btn {
+        justify-self: stretch;
+        width: 100%;
+        padding: 10px;
+        font-size: 0.85em;
+    }
+
+    /* Stop large currency figures breaking mid-number (e.g. "$100,000,000.0⏎0"). */
+    .amount, .stat-value, .time-amount, .savings-amount, .account-balance,
+    .liability-balance, .expense-amount {
+        overflow-wrap: normal;
+        word-break: normal;
     }
 }
 
