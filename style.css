@@ -2079,6 +2079,43 @@ body {
     border: 1px solid var(--border-color);
 }
 
+/* J3 — uploaded custom fonts list */
+.custom-fonts-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.custom-font-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 10px;
+    background: var(--content-bg-color, rgba(0, 0, 0, 0.12));
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+.custom-font-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* The shared delete ✕ is absolute + hover-revealed for theme swatches; in the font row it
+   sits inline and stays visible. */
+.custom-font-row .theme-delete-btn {
+    position: static;
+    opacity: 1;
+    flex-shrink: 0;
+    background: transparent;
+}
+
+.custom-font-row .theme-delete-btn:hover { color: var(--color-negative); }
+
 /* J2 — Odysseus-style swatch grid: each preset is a small card with a row of
    overlapping colour circles (bg / surface / text / accent) over its name. */
 .theme-switcher {

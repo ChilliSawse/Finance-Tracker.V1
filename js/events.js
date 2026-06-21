@@ -100,6 +100,9 @@ function setupEventListeners() {
     // J3 — theme JSON import (separate from the full-data backup import above).
     const themeImportInput = getElement('theme-import-file');
     if (themeImportInput) themeImportInput.addEventListener('change', handleThemeImport);
+    // J3 — custom font upload (FontFace + localStorage).
+    const fontFileInput = getElement('gui-font-file');
+    if (fontFileInput) fontFileInput.addEventListener('change', handleCustomFontUpload);
 }
 
 function handleSettingsClickEvents(event) {
@@ -296,6 +299,11 @@ function handleGuiSettingsClickEvents(event) {
     if (target.id === 'theme-export-btn') { actionExportTheme(); return; }
     if (target.id === 'theme-import-btn') { getElement('theme-import-file').click(); return; }
     if (target.id === 'harmony-apply-btn') { actionApplyHarmony(); return; }
+    if (target.id === 'gui-font-upload-btn') { getElement('gui-font-file').click(); return; }
+
+    // J3 — remove an uploaded custom font (the ✕ beside its name in the fonts list)
+    const fontDelBtn = target.closest('[data-font]');
+    if (fontDelBtn) { actionDeleteCustomFont(fontDelBtn.dataset.font); return; }
 
     // J3 — delete a custom theme (the ✕ lives inside its swatch, so check it first)
     const delBtn = target.closest('[data-delete]');
@@ -422,6 +430,50 @@ function actionApplyHarmony() {
     renderThemeSwitcher(document.getElementById('theme-switcher-container'));
     renderCustomThemes(document.getElementById('your-themes-container'));
     if (autoSave) autoSave.onDataChange();
+}
+
+// J3 — Upload a custom font file: validate, store (base64), register (FontFace), add it to
+// the dropdown, select + apply it. Stays offline (no server / font folder).
+function handleCustomFontUpload(event) {
+    const file = event.target.files && event.target.files[0];
+    event.target.value = '';
+    const errEl = getElement('gui-font-error');
+    const showErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.hidden = false; } };
+    if (errEl) errEl.hidden = true;
+    if (!file) return;
+    if (typeof FontFace === 'undefined') { showErr("This browser can't load custom fonts."); return; }
+    if (!/\.(ttf|otf|woff2?|woff)$/i.test(file.name)) { showErr('Use a .ttf, .otf, .woff or .woff2 file.'); return; }
+    if (file.size > MAX_FONT_BYTES) { showErr('Font is too large (max 2 MB).'); return; }
+    const name = file.name.replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9 _-]/g, '').trim().slice(0, 32) || 'Custom Font';
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const res = addCustomFont(name, e.target.result);
+        if (res === 'limit') { showErr('You have the maximum ' + MAX_CUSTOM_FONTS + ' custom fonts. Remove one first.'); return; }
+        if (res === 'quota') { showErr('Not enough storage space for this font. Remove one first.'); return; }
+        if (res === 'empty') { showErr("Couldn't read that font file."); return; }
+        const sel = getElement('gui-font-family');
+        populateCustomFontOptions(sel);
+        if (sel) sel.value = customFontStack(name);
+        commitGuiText(true); // applies + persists the new font via the chokepoint
+        renderCustomFontList(getElement('custom-fonts-list'));
+    };
+    reader.onerror = () => showErr("Couldn't read that font file.");
+    reader.readAsDataURL(file);
+}
+
+// J3 — Remove an uploaded font. If it was the active font, fall back to the default.
+function actionDeleteCustomFont(name) {
+    const stack = customFontStack(name);
+    deleteCustomFont(name);
+    const sel = getElement('gui-font-family');
+    if (guiSettingsData.fontFamily === stack) {
+        guiSettingsData.fontFamily = defaultGuiSettings.fontFamily;
+    }
+    populateCustomFontOptions(sel);
+    if (sel) sel.value = guiSettingsData.fontFamily;
+    commitGuiText(true);
+    renderCustomFontList(getElement('custom-fonts-list'));
 }
 
 // J3 — Export the current appearance as a shareable JSON file.

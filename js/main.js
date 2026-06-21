@@ -424,6 +424,7 @@ document.addEventListener('DOMContentLoaded', () => {
     autoSave = new FinanceAutoSave();
     autoSave.loadData();
     loadTheme(); // apply full preset (tab colours, tints, etc.) before UI renders
+    if (typeof registerStoredCustomFonts === 'function') registerStoredCustomFonts(); // J3 — re-register uploaded fonts
 
     initializeSettingsUI();
     initializeGuiSettingsForm();

@@ -484,4 +484,120 @@ function generateHarmonyBase(accentHex, harmonyType, mode) {
     };
 }
 
+// --- J3 — custom font upload (offline: FontFace API + localStorage) ---
+// FT has no static/fonts/custom/ folder to scan (the one behavioural divergence from
+// Odysseus), so uploaded fonts are base64-encoded into localStorage and registered with the
+// browser via the FontFace API. Each becomes an <option> in the font dropdown; its CSS value
+// is a quoted family + a safe fallback. Capped + size-limited to stay inside the quota.
+const CUSTOM_FONTS_KEY = 'ft-custom-fonts';
+const MAX_CUSTOM_FONTS = 4;
+const MAX_FONT_BYTES = 2 * 1024 * 1024; // 2 MB per font — localStorage quota guard
+
+function loadCustomFontStore() {
+    try { return JSON.parse(localStorage.getItem(CUSTOM_FONTS_KEY)) || {}; }
+    catch (_) { return {}; }
+}
+function _saveCustomFontStore(obj) {
+    try { localStorage.setItem(CUSTOM_FONTS_KEY, JSON.stringify(obj)); return true; }
+    catch (_) { return false; } // quota exceeded
+}
+
+// The CSS font-family value for a custom font (quoted name + a safe generic fallback).
+function customFontStack(name) {
+    return "'" + String(name).replace(/'/g, '') + "', sans-serif";
+}
+
+// Register one font with the browser. dataUrl is a base64 data: URL. Async (FontFace.load).
+function registerCustomFont(name, dataUrl) {
+    if (!name || !dataUrl || typeof FontFace === 'undefined') return Promise.resolve(false);
+    try {
+        const ff = new FontFace(name, 'url(' + dataUrl + ')');
+        return ff.load().then(loaded => { document.fonts.add(loaded); return true; })
+                        .catch(() => false);
+    } catch (_) { return Promise.resolve(false); }
+}
+
+// Drop a font's live registration (so a removed font stops resolving without a reload).
+function unregisterCustomFont(name) {
+    if (typeof document === 'undefined' || !document.fonts) return;
+    try {
+        const dead = [];
+        document.fonts.forEach(ff => { if (ff.family === name) dead.push(ff); });
+        dead.forEach(ff => document.fonts.delete(ff));
+    } catch (_) {}
+}
+
+// Register every stored custom font at startup, so a saved selection actually renders.
+function registerStoredCustomFonts() {
+    const store = loadCustomFontStore();
+    Object.keys(store).forEach(name => registerCustomFont(name, store[name]));
+}
+
+// Save + register an uploaded font. Returns 'ok' | 'empty' | 'limit' | 'quota'.
+function addCustomFont(name, dataUrl) {
+    name = (name || '').trim();
+    if (!name || !dataUrl) return 'empty';
+    const store = loadCustomFontStore();
+    if (!store[name] && Object.keys(store).length >= MAX_CUSTOM_FONTS) return 'limit';
+    const prev = store[name];
+    store[name] = dataUrl;
+    if (!_saveCustomFontStore(store)) {
+        if (prev === undefined) delete store[name]; else store[name] = prev; // roll back the in-memory copy
+        return 'quota';
+    }
+    registerCustomFont(name, dataUrl);
+    return 'ok';
+}
+
+function deleteCustomFont(name) {
+    const store = loadCustomFontStore();
+    delete store[name];
+    _saveCustomFontStore(store);
+    unregisterCustomFont(name);
+}
+
+// Append an <optgroup> of stored custom fonts to the font <select> (rebuilt each call).
+function populateCustomFontOptions(selectEl) {
+    if (!selectEl) return;
+    const existing = selectEl.querySelector('optgroup.custom-fonts');
+    if (existing) existing.remove();
+    const names = Object.keys(loadCustomFontStore());
+    if (!names.length) return;
+    const group = document.createElement('optgroup');
+    group.label = 'Your fonts';
+    group.className = 'custom-fonts';
+    names.forEach(name => {
+        const opt = document.createElement('option');
+        opt.value = customFontStack(name);
+        opt.textContent = name;
+        group.appendChild(opt);
+    });
+    selectEl.appendChild(group);
+}
+
+// Render the removable list of uploaded fonts under the upload control.
+function renderCustomFontList(container) {
+    if (!container) return;
+    const names = Object.keys(loadCustomFontStore());
+    container.innerHTML = '';
+    names.forEach(name => {
+        const row = document.createElement('div');
+        row.className = 'custom-font-row';
+        const label = document.createElement('span');
+        label.className = 'custom-font-name';
+        label.style.fontFamily = customFontStack(name);
+        label.textContent = name;
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'theme-delete-btn';
+        del.dataset.font = name;
+        del.title = 'Remove font';
+        del.setAttribute('aria-label', 'Remove font ' + name);
+        del.innerHTML = "<svg viewBox='0 0 24 24' width='12' height='12' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' aria-hidden='true'><line x1='6' y1='6' x2='18' y2='18'/><line x1='18' y1='6' x2='6' y2='18'/></svg>";
+        row.appendChild(label);
+        row.appendChild(del);
+        container.appendChild(row);
+    });
+}
+
 // --- END OF: theme.js ---

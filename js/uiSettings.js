@@ -433,6 +433,9 @@ function initializeGuiSettingsForm() {
     // override pickers (base pickers read straight from guiSettings).
     applyGuiStylesToPage();
     if (typeof syncGuiColorInputs === 'function') syncGuiColorInputs();
+    // J3 — fold uploaded custom fonts into the dropdown before selecting the saved value.
+    if (typeof populateCustomFontOptions === 'function') populateCustomFontOptions(getElement('gui-font-family'));
+    if (typeof renderCustomFontList === 'function') renderCustomFontList(getElement('custom-fonts-list'));
     setValue('gui-font-family', guiSettingsData.fontFamily);
     setValue('gui-base-font-size', guiSettingsData.baseFontSize);
     if (typeof initHarmonyControls === 'function') initHarmonyControls(); // J3 — seed + preview

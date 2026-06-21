@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-ft-fouc-init'; style-src 'self' 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-ft-fouc-init'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;">
     <title>Finance Tracker</title>
     <script nonce="ft-fouc-init">
     /* FOUC prevention — replays the last-applied theme before CSS loads */
@@ -657,6 +657,16 @@
                                 <label class="form-label" for="gui-base-font-size">Base Font Size (px)</label>
                                 <input type="number" class="form-input" id="gui-base-font-size" min="10" max="24" step="1">
                             </div>
+                        </div>
+                        <!-- J3 — custom font upload (browser-side: FontFace + localStorage; no
+                             server/font folder). Uploaded fonts join the dropdown above. -->
+                        <div class="form-group" style="margin-top: 14px;">
+                            <label class="form-label">Custom font</label>
+                            <input type="file" id="gui-font-file" accept=".ttf,.otf,.woff,.woff2" style="display: none;">
+                            <button type="button" class="btn btn-secondary" id="gui-font-upload-btn">Upload font…</button>
+                            <p class="settings-hint">Add a .ttf / .otf / .woff / .woff2 file (max 2&nbsp;MB). Stored on this device only; it joins the Font Family list above.</p>
+                            <p class="theme-save-error" id="gui-font-error" role="alert" hidden></p>
+                            <div id="custom-fonts-list" class="custom-fonts-list"></div>
                         </div>
                     </div>
                     <div class="settings-section">
