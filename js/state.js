@@ -42,17 +42,36 @@ let defaultFinanceData = {
 // J1 — defaults mirror the new DEFAULT_THEME (midnight) so a fresh load's
 // customisable overlay matches its derived base (no split look on first paint).
 // Values are midnight's derived tokens (see deriveTokens / migrateGuiTheme).
+// J2 step 2 — colours split into two kinds:
+//   BASE (always set): feed deriveTokens — bg / text / surface / border / accent /
+//     positive / negative / neutral. Everything else (2nd-stop gradients, content
+//     bg, tints, tab + muted + header-text colours) is *derived* from these.
+//   OVERRIDE (empty unless the user pins one): heading / muted / topbar text /
+//     essential / warning — overlaid on top of the derived set only when non-empty,
+//     so they default to the derived value and follow the base colours.
+// primaryBgEnd / cardBgEnd are retained for back-compat but no longer drive anything
+// (the gradients' 2nd stops are derived).
 let defaultGuiSettings = {
     theme: 'midnight',
+    // base
     primaryBgStart: "#0d1117",
-    primaryBgEnd: "#161d27",
-    headerTextColor: "#ffffff",
     cardBgStart: "#161b22",
-    cardBgEnd: "#1e252e",
+    textColor: "#c9d1d9",
+    borderColor: "#30363d",
     accentColor: "#f85149",
     colorPositive: "#3fb950",
     colorNegative: "#f85149",
     colorNeutral: "#58a6ff",
+    // override (empty = derive)
+    headingColor: "",
+    mutedColor: "",
+    headerTextColor: "",
+    colorEssential: "",
+    colorWarning: "",
+    // derived 2nd stops, kept for back-compat (unused)
+    primaryBgEnd: "#161d27",
+    cardBgEnd: "#1e252e",
+    // typography + dashboard labels
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     baseFontSize: "16",
     mainHeading: "Personal Finance Dashboard",
@@ -197,6 +216,7 @@ class FinanceAutoSave {
                     // J1 — repoint saves on removed presets ('default'/'dark') to the closest
                     // survivor and refresh the colour overlay so the old palette can't bleed through.
                     if (typeof migrateGuiTheme === 'function') migrateGuiTheme(guiSettingsData);
+                    if (typeof migrateGuiColorFields === 'function') migrateGuiColorFields(guiSettingsData);
                     migrateIncomeSourceTypes(financeData); // Backfill incomeType on legacy saves
                     migrateAllocationFields(financeData); // Stage 0 — backfill allocation goal/funds
                     this.lastSaveHash = this.getDataHash();

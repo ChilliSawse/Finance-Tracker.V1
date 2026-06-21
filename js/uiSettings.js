@@ -428,57 +428,65 @@ function renderFISettings() {
 function initializeGuiSettingsForm() {
     if (typeof setupAppearanceTabs === 'function') setupAppearanceTabs();
     renderThemeSwitcher(document.getElementById('theme-switcher-container'));
-    setValue('gui-primary-bg-start', guiSettingsData.primaryBgStart);
-    setValue('gui-primary-bg-end', guiSettingsData.primaryBgEnd);
-    setValue('gui-header-text-color', guiSettingsData.headerTextColor);
-    setValue('gui-card-bg-start', guiSettingsData.cardBgStart);
-    setValue('gui-card-bg-end', guiSettingsData.cardBgEnd);
-    setValue('gui-accent-color', guiSettingsData.accentColor);
+    // Apply first so the computed tokens are current, then read them back into the
+    // override pickers (base pickers read straight from guiSettings).
+    applyGuiStylesToPage();
+    if (typeof syncGuiColorInputs === 'function') syncGuiColorInputs();
     setValue('gui-font-family', guiSettingsData.fontFamily);
     setValue('gui-base-font-size', guiSettingsData.baseFontSize);
     setValue('gui-main-heading', guiSettingsData.mainHeading);
     setValue('gui-sub-heading', guiSettingsData.subHeading);
-    applyGuiStylesToPage();
 }
 
+// J2 — single chokepoint. BASE colours (user value, else active preset) feed deriveTokens,
+// which produces the FULL token set (2nd-stop gradients, content bg, tab/muted/header-text
+// colours, tints, semantics). applyTheme() applies + replaces the FOUC cache, so no stale
+// token can survive a base change (the old "split look" bug). OVERRIDE colours are overlaid
+// on top only when the user has pinned one, and merged into the cache.
 function applyGuiStylesToPage() {
     const root = document.documentElement;
+    const g = guiSettingsData;
+    const preset = (typeof THEMES !== 'undefined')
+        ? (THEMES[resolveTheme(g.theme)] || THEMES[DEFAULT_THEME])
+        : null;
+    if (!preset) return;
 
-    // Apply the FULL active-theme base FIRST. The non-customisable tokens
-    // (--text-color-primary, --border-color, --content-bg-color, tints, tab colours) are
-    // derived from the preset, not from the customisable subset below. Doing this here — the
-    // single chokepoint every appearance change funnels through — means any base-changing
-    // action (theme reset, factory reset, JSON import, load) can't leave those tokens on the
-    // previous theme, which was the recurring "split/half-applied theme" bug. The picker subset
-    // is layered on top immediately after (and merged into the FOUC cache below).
-    if (typeof applyTheme === 'function' && typeof THEMES !== 'undefined') {
-        applyTheme(THEMES[resolveTheme(guiSettingsData.theme)]);
-    }
-
-    const pickerVars = {
-        '--primary-bg-color-start': guiSettingsData.primaryBgStart,
-        '--primary-bg-color-end':   guiSettingsData.primaryBgEnd,
-        '--header-text-color':      guiSettingsData.headerTextColor,
-        '--card-bg-gradient-start': guiSettingsData.cardBgStart,
-        '--card-bg-gradient-end':   guiSettingsData.cardBgEnd,
-        '--accent-color':           guiSettingsData.accentColor,
-        '--color-positive':         guiSettingsData.colorPositive || '#4CAF50',
-        '--color-negative':         guiSettingsData.colorNegative || '#f44336',
-        '--color-neutral':          guiSettingsData.colorNeutral  || '#2196F3',
+    const base = {
+        bg:       g.primaryBgStart || preset.bg,
+        fg:       g.textColor      || preset.fg,
+        panel:    g.cardBgStart    || preset.panel,
+        border:   g.borderColor    || preset.border,
+        accent:   g.accentColor    || preset.accent,
+        positive: g.colorPositive  || preset.positive,
+        negative: g.colorNegative  || preset.negative,
+        neutral:  g.colorNeutral   || preset.neutral,
     };
-    for (const [k, v] of Object.entries(pickerVars)) root.style.setProperty(k, v);
-    root.style.setProperty('--font-family-main', guiSettingsData.fontFamily);
-    root.style.setProperty('--base-font-size', guiSettingsData.baseFontSize + 'px');
+    if (typeof applyTheme === 'function') applyTheme(base);
 
-    setText('main-heading-display', guiSettingsData.mainHeading);
-    setText('sub-heading-display', guiSettingsData.subHeading);
+    // Override-only surfaces — overlaid only when pinned (empty = keep the derived value).
+    const overrides = {};
+    if (g.headingColor)    overrides['--heading-color']        = g.headingColor;
+    if (g.mutedColor)      overrides['--text-color-secondary'] = g.mutedColor;
+    if (g.headerTextColor) overrides['--header-text-color']    = g.headerTextColor;
+    if (g.colorEssential)  overrides['--color-essential']      = g.colorEssential;
+    if (g.colorWarning)    overrides['--color-warning']        = g.colorWarning;
+    for (const [k, v] of Object.entries(overrides)) root.style.setProperty(k, v);
 
-    // Merge picker-based values into the FOUC cache so the bg is correct on next load
-    try {
-        const fouc = JSON.parse(localStorage.getItem('ft-theme-fouc') || '{}');
-        Object.assign(fouc, pickerVars);
-        localStorage.setItem('ft-theme-fouc', JSON.stringify(fouc));
-    } catch (_) {}
+    root.style.setProperty('--font-family-main', g.fontFamily);
+    root.style.setProperty('--base-font-size', g.baseFontSize + 'px');
+
+    setText('main-heading-display', g.mainHeading);
+    setText('sub-heading-display', g.subHeading);
+
+    // applyTheme() just rewrote the FOUC cache to the derived set; merge any overrides in
+    // so the next first-paint matches (when there are none, the cache stays pure-derived).
+    if (Object.keys(overrides).length) {
+        try {
+            const fouc = JSON.parse(localStorage.getItem('ft-theme-fouc') || '{}');
+            Object.assign(fouc, overrides);
+            localStorage.setItem('ft-theme-fouc', JSON.stringify(fouc));
+        } catch (_) {}
+    }
 }
 
 // Phase 0.4: Seed the What If tab from live data ONLY on first show (or when the user

@@ -173,6 +173,20 @@ function migrateGuiTheme(gs) {
     gs.colorNeutral    = preset.neutral;
 }
 
+// J2 step 2 — backfill the colour fields introduced with the base/override split,
+// and neutralise the legacy hardcoded header-text default so topbar text derives its
+// own contrast (the old "#ffffff" default was the invisible-on-light-themes bug).
+function migrateGuiColorFields(gs) {
+    if (!gs) return;
+    const preset = THEMES[resolveTheme(gs.theme)] || THEMES[DEFAULT_THEME];
+    if (!gs.textColor)   gs.textColor   = preset.fg;
+    if (!gs.borderColor) gs.borderColor = preset.border;
+    if (gs.headerTextColor === '#ffffff' || gs.headerTextColor === 'white') gs.headerTextColor = '';
+    ['headingColor', 'mutedColor', 'headerTextColor', 'colorEssential', 'colorWarning'].forEach(k => {
+        if (typeof gs[k] !== 'string') gs[k] = '';
+    });
+}
+
 // Compute every CSS custom property value from 8 core colours
 function deriveTokens(colors) {
     const lum = perceivedLuminance(colors.bg);
@@ -203,6 +217,9 @@ function deriveTokens(colors) {
         '--border-color':           colors.border,
         '--text-color-primary':     colors.fg,
         '--text-color-secondary':   hexToRgba(colors.fg, 0.6),
+        // J2 — headings get their own token (card/section titles), defaulting to the
+        // primary text colour so there's no visual change until the user customises it.
+        '--heading-color':          colors.fg,
         '--accent-color':           colors.accent,
         '--color-positive':         colors.positive,
         '--color-negative':         colors.negative,

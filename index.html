@@ -582,34 +582,30 @@
                 <div class="appearance-panel" id="apanel-customize" role="tabpanel" aria-labelledby="atab-customize" hidden>
                     <div class="settings-section">
                         <div class="settings-title">Colours</div>
-                        <!-- J2 step 2 will replace this grid with a tight base tier + a
-                             "More Colours" expander over the full surface. -->
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="gui-primary-bg-start">Background</label>
-                                <input type="color" class="form-color-picker" id="gui-primary-bg-start">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="gui-card-bg-start">Surface (cards)</label>
-                                <input type="color" class="form-color-picker" id="gui-card-bg-start">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="gui-accent-color">Accent</label>
-                                <input type="color" class="form-color-picker" id="gui-accent-color">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="gui-primary-bg-end">Background (2nd stop)</label>
-                                <input type="color" class="form-color-picker" id="gui-primary-bg-end">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="gui-card-bg-end">Surface (2nd stop)</label>
-                                <input type="color" class="form-color-picker" id="gui-card-bg-end">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="gui-header-text-color">Topbar text</label>
-                                <input type="color" class="form-color-picker" id="gui-header-text-color">
-                            </div>
+                        <!-- J2 — tight base tier; everything else (2nd-stop gradients, content
+                             bg, tab/muted/header-text, tints) is derived from these. Power users
+                             open "More colours" to pin the rest. Round swatches = native colour
+                             inputs (.color-dot). Ids map to GUI_COLOR_FIELDS in events.js. -->
+                        <div class="color-grid">
+                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-bg"><span>Background</span></label>
+                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-surface"><span>Surface (cards)</span></label>
+                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-text"><span>Text</span></label>
+                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-heading"><span>Headings</span></label>
+                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-accent"><span>Accent</span></label>
+                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-border"><span>Border</span></label>
                         </div>
+                        <details class="more-colours">
+                            <summary>More colours</summary>
+                            <div class="color-grid">
+                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-muted"><span>Muted / sub-heading</span></label>
+                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-headertext"><span>Topbar text</span></label>
+                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-positive"><span>Positive (gains)</span></label>
+                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-negative"><span>Negative (losses)</span></label>
+                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-neutral"><span>Neutral (info)</span></label>
+                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-essential"><span>Essential spend</span></label>
+                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-warning"><span>Warning</span></label>
+                            </div>
+                        </details>
                     </div>
                     <div class="settings-section">
                         <div class="settings-title">Typography</div>

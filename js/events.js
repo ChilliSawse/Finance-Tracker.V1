@@ -64,20 +64,21 @@ function setupEventListeners() {
         // Input changes are handled by the "Apply GUI Settings" button typically,
         // but if live updates were desired, listeners could be added here.
     }
-     // GUI Settings Form Element Change Handlers (for live update or just data gathering before apply)
-    const guiElementsToWatch = [
-        'gui-primary-bg-start', 'gui-primary-bg-end', 'gui-header-text-color',
-        'gui-card-bg-start', 'gui-card-bg-end', 'gui-accent-color',
-        'gui-font-family', 'gui-base-font-size', 'gui-main-heading', 'gui-sub-heading'
-    ];
-    guiElementsToWatch.forEach(id => {
+    // J2 — appearance inputs. Each colour picker (GUI_COLOR_FIELDS) writes ONLY its own
+    // guiSettings field, so override colours stay un-pinned until actually edited. Font /
+    // size / heading-text are gathered together by commitGuiText. 'input' previews live
+    // while dragging/typing; 'change' persists (appearance auto-saves — no Save button).
+    GUI_COLOR_FIELDS.forEach(field => {
+        const el = getElement(field.id);
+        if (!el) return;
+        el.addEventListener('input',  () => commitGuiColor(field, false));
+        el.addEventListener('change', () => commitGuiColor(field, true));
+    });
+    ['gui-font-family', 'gui-base-font-size', 'gui-main-heading', 'gui-sub-heading'].forEach(id => {
         const el = getElement(id);
-        if (el) {
-            // Appearance auto-saves: 'input' previews live while dragging/typing; 'change'
-            // commits + persists once the value settles (no "Save Appearance" button).
-            el.addEventListener('input', applyGuiSettingsLivePreview);
-            el.addEventListener('change', commitGuiSettings);
-        }
+        if (!el) return;
+        el.addEventListener('input',  () => commitGuiText(false));
+        el.addEventListener('change', () => commitGuiText(true));
     });
 // --- JSON IMPORT LISTENER ---
     // (The former Settings-tab import input was removed with the tab in D.6; import now
@@ -271,7 +272,7 @@ function handleWhatIfChangeEvents(event) {
 
 function handleGuiSettingsClickEvents(event) {
     const target = event.target;
-    // (No "Save Appearance" button — appearance auto-saves on change; see commitGuiSettings.)
+    // (No "Save Appearance" button — appearance auto-saves on change; see commitGuiColor/commitGuiText.)
     if (target.id === 'reset-gui-settings') {
         inlineConfirm(target, 'Reset appearance to application defaults?', actionResetGuiToDefaults); // H.5
         return;
@@ -286,31 +287,26 @@ function handleGuiSettingsClickEvents(event) {
         const preset = THEMES[key];
         if (!preset) return;
 
-        // Apply full theme immediately (derives tab colours, tints, etc.)
-        applyTheme(preset);
+        // J2 — selecting a preset starts from its base colours and CLEARS every custom
+        // override, so the preset drives the whole page (no stale overlay = no split look).
+        // applyGuiStylesToPage() then derives the full token set from the base.
+        guiSettingsData.theme           = key;
+        guiSettingsData.primaryBgStart  = preset.bg;
+        guiSettingsData.cardBgStart     = preset.panel;
+        guiSettingsData.textColor       = preset.fg;
+        guiSettingsData.borderColor     = preset.border;
+        guiSettingsData.accentColor     = preset.accent;
+        guiSettingsData.colorPositive   = preset.positive;
+        guiSettingsData.colorNegative   = preset.negative;
+        guiSettingsData.colorNeutral    = preset.neutral;
+        guiSettingsData.headingColor    = '';
+        guiSettingsData.mutedColor      = '';
+        guiSettingsData.headerTextColor = '';
+        guiSettingsData.colorEssential  = '';
+        guiSettingsData.colorWarning    = '';
 
-        // Update colour pickers to reflect the preset so clicking Apply saves them
-        const tokens = deriveTokens(preset);
-        setValue('gui-primary-bg-start', preset.bg);
-        setValue('gui-primary-bg-end',   tokens['--primary-bg-color-end']);
-        setValue('gui-header-text-color', tokens['--header-text-color']);
-        setValue('gui-card-bg-start',    preset.panel);
-        setValue('gui-card-bg-end',      tokens['--card-bg-gradient-end']);
-        setValue('gui-accent-color',     preset.accent);
-
-        // Commit those picker values into guiSettingsData so the per-colour fields match the
-        // preset. Without this, only `theme` changed while primaryBgStart/cardBgStart/… stayed
-        // stale; on reload loadTheme() applies the preset, then applyGuiStylesToPage() splatters
-        // the stale per-colour subset back over it → a split/half-applied theme. (Bug 2026-06-20.)
-        syncGuiSettingsFromInputs();
-
-        // Persist theme name + semantic colours immediately
-        guiSettingsData.theme = key;
-        guiSettingsData.colorPositive = preset.positive;
-        guiSettingsData.colorNegative = preset.negative;
-        guiSettingsData.colorNeutral  = preset.neutral;
-
-        // Re-render swatches so active state updates
+        applyGuiStylesToPage();
+        syncGuiColorInputs(); // refresh the Customize pickers to the new colours
         renderThemeSwitcher(document.getElementById('theme-switcher-container'));
 
         if (autoSave) autoSave.onDataChange();
@@ -569,34 +565,68 @@ function handleJSONImport(event, isGuiTabImport = false) {
 
 // GUI Settings Actions
 
-// Copies the GUI form inputs into guiSettingsData (no persistence / side effects).
-function syncGuiSettingsFromInputs() {
-    guiSettingsData.primaryBgStart  = getValue('gui-primary-bg-start');
-    guiSettingsData.primaryBgEnd    = getValue('gui-primary-bg-end');
-    guiSettingsData.headerTextColor = getValue('gui-header-text-color');
-    guiSettingsData.cardBgStart     = getValue('gui-card-bg-start');
-    guiSettingsData.cardBgEnd       = getValue('gui-card-bg-end');
-    guiSettingsData.accentColor     = getValue('gui-accent-color');
-    guiSettingsData.fontFamily      = getValue('gui-font-family');
-    guiSettingsData.baseFontSize    = getValue('gui-base-font-size');
-    guiSettingsData.mainHeading     = getValue('gui-main-heading');
-    guiSettingsData.subHeading      = getValue('gui-sub-heading');
+// J2 — appearance colour fields. `mode: 'base'` feeds deriveTokens (so the rest of the
+// palette follows it); `mode: 'override'` overlays a single CSS var only when the user
+// pins it (default empty = derived). `cssVar` is the token an override pins / reads back.
+const GUI_COLOR_FIELDS = [
+    { id: 'gui-col-bg',         key: 'primaryBgStart', mode: 'base' },
+    { id: 'gui-col-surface',    key: 'cardBgStart',    mode: 'base' },
+    { id: 'gui-col-text',       key: 'textColor',      mode: 'base' },
+    { id: 'gui-col-accent',     key: 'accentColor',    mode: 'base' },
+    { id: 'gui-col-border',     key: 'borderColor',    mode: 'base' },
+    { id: 'gui-col-heading',    key: 'headingColor',   mode: 'override', cssVar: '--heading-color' },
+    { id: 'gui-col-muted',      key: 'mutedColor',     mode: 'override', cssVar: '--text-color-secondary' },
+    { id: 'gui-col-headertext', key: 'headerTextColor',mode: 'override', cssVar: '--header-text-color' },
+    { id: 'gui-col-positive',   key: 'colorPositive',  mode: 'base' },
+    { id: 'gui-col-negative',   key: 'colorNegative',  mode: 'base' },
+    { id: 'gui-col-neutral',    key: 'colorNeutral',   mode: 'base' },
+    { id: 'gui-col-essential',  key: 'colorEssential', mode: 'override', cssVar: '--color-essential' },
+    { id: 'gui-col-warning',    key: 'colorWarning',   mode: 'override', cssVar: '--color-warning' },
+];
+
+// Normalise a CSS colour (hex or rgb/rgba) to #rrggbb for a native colour input.
+function toHexColor(c) {
+    if (!c) return '';
+    c = c.trim();
+    if (c[0] === '#') {
+        return c.length === 4 ? '#' + c.slice(1).split('').map(x => x + x).join('') : c;
+    }
+    const m = c.match(/rgba?\(([^)]+)\)/);
+    if (!m) return '';
+    const [r, g, b] = m[1].split(',').map(n => parseInt(n, 10));
+    const h = v => Math.max(0, Math.min(255, v || 0)).toString(16).padStart(2, '0');
+    return '#' + h(r) + h(g) + h(b);
 }
 
-// B.6 — live preview while the user drags a colour picker / edits a field. Applies styles
-// immediately but does NOT persist; persistence happens on Save (or the debounced autosave).
-// Live preview while a control is being dragged/typed — no persistence (avoids spamming
-// autoSave on every 'input' tick as a colour picker drags).
-function applyGuiSettingsLivePreview() {
-    syncGuiSettingsFromInputs();
-    applyGuiStylesToPage();
+// Push current colours into the Customize pickers: base fields from guiSettings, override
+// fields from the live computed value (so the swatch shows the effective colour even when
+// the field is empty = derived). Called on form open + after a preset swatch click.
+function syncGuiColorInputs() {
+    const cs = getComputedStyle(document.documentElement);
+    GUI_COLOR_FIELDS.forEach(field => {
+        const el = getElement(field.id);
+        if (!el) return;
+        let val = guiSettingsData[field.key];
+        if (field.mode === 'override' && !val) val = toHexColor(cs.getPropertyValue(field.cssVar));
+        if (val) el.value = val;
+    });
 }
 
-// Commit + persist once a value settles ('change'). Appearance auto-saves (no Save button).
-function commitGuiSettings() {
-    syncGuiSettingsFromInputs();
+// One colour picker changed — write just its field, re-derive/apply, persist on commit.
+function commitGuiColor(field, persist) {
+    guiSettingsData[field.key] = getValue(field.id);
     applyGuiStylesToPage();
-    if (autoSave) autoSave.onDataChange();
+    if (persist && autoSave) autoSave.onDataChange();
+}
+
+// Font / base size / dashboard-label text changed — gather them and apply.
+function commitGuiText(persist) {
+    guiSettingsData.fontFamily   = getValue('gui-font-family');
+    guiSettingsData.baseFontSize = getValue('gui-base-font-size');
+    guiSettingsData.mainHeading  = getValue('gui-main-heading');
+    guiSettingsData.subHeading   = getValue('gui-sub-heading');
+    applyGuiStylesToPage();
+    if (persist && autoSave) autoSave.onDataChange();
 }
 
 // J2 — Themes / Customize tab switching in the appearance modal. Idempotent
