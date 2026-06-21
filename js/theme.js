@@ -54,55 +54,124 @@ function perceivedLuminance(hex) {
 }
 
 // --- Theme Registry ---
-// Each preset defines 8 core colours; everything else is derived.
-//   bg      – gradient start / page background
-//   accent  – gradient end / brand highlight
-//   panel   – card / content area base colour
-//   positive / negative / neutral – finance semantic tokens
+// J1 — the 12 presets ported from Odysseus (the codebase this engine came from).
+// Each preset is the same 5-colour base Odysseus uses — bg / fg / panel / border /
+// accent (Odysseus's `red`) — plus a locked finance-semantic trio so a *positive*
+// figure always reads green, never the brand accent (the motivating Net Worth bug).
+//   bg       – page background base (a subtle same-hue gradient is derived from it)
+//   fg       – primary text
+//   panel    – card / content surface base colour
+//   border   – dividers / outlines
+//   accent   – brand highlight (buttons, links, active states) — NOT the page gradient
+//   positive / negative / neutral – finance semantic figures (tuned per light/dark)
 const THEMES = {
-    default: {
-        name: 'Default',
-        bg: '#667eea', fg: '#333333', panel: '#ffffff',
-        border: '#e0e0e0', accent: '#764ba2',
-        positive: '#4CAF50', negative: '#f44336', neutral: '#2196F3',
-    },
-    midnight: {
-        name: 'Midnight',
-        bg: '#0d1117', fg: '#e2e8f0', panel: '#161b22',
-        border: '#30363d', accent: '#d97706',
-        positive: '#22c55e', negative: '#ef4444', neutral: '#60a5fa',
-    },
-    dark: {
-        name: 'Dark',
-        bg: '#282c34', fg: '#9cdef2', panel: '#1d2027',
-        border: '#355a66', accent: '#e06c75',
-        positive: '#50fa7b', negative: '#ff5555', neutral: '#8be9fd',
-    },
     light: {
         name: 'Light',
         bg: '#f0ebe3', fg: '#5a5248', panel: '#faf6f0',
         border: '#d4cdc2', accent: '#c47d5a',
         positive: '#2e7d32', negative: '#c62828', neutral: '#1565c0',
     },
-    ocean: {
-        name: 'Ocean',
-        bg: '#0b1a2c', fg: '#64d2ff', panel: '#091422',
-        border: '#1e5074', accent: '#4facfe',
-        positive: '#50fa7b', negative: '#ff5555', neutral: '#8be9fd',
+    midnight: {
+        name: 'Midnight',
+        bg: '#0d1117', fg: '#c9d1d9', panel: '#161b22',
+        border: '#30363d', accent: '#f85149',
+        positive: '#3fb950', negative: '#f85149', neutral: '#58a6ff',
+    },
+    paper: {
+        name: 'Paper',
+        bg: '#faf8f5', fg: '#3b3836', panel: '#ffffff',
+        border: '#d5d0c8', accent: '#c5ac4a',
+        positive: '#2e7d32', negative: '#c0392b', neutral: '#1d6fb8',
+    },
+    retrowave: {
+        name: 'Retrowave',
+        bg: '#1a1a2e', fg: '#e94560', panel: '#16213e',
+        border: '#533483', accent: '#e94560',
+        positive: '#34d399', negative: '#ff4d6d', neutral: '#4cc9f0',
     },
     forest: {
         name: 'Forest',
         bg: '#1b2a1b', fg: '#a8d5a2', panel: '#142414',
         border: '#3d6b3d', accent: '#7cb871',
-        positive: '#69ff47', negative: '#ff5555', neutral: '#8be9fd',
+        positive: '#4ade80', negative: '#ff6b6b', neutral: '#5fa8e8',
+    },
+    ocean: {
+        name: 'Ocean',
+        bg: '#0b1a2c', fg: '#64d2ff', panel: '#091422',
+        border: '#1e5074', accent: '#4facfe',
+        positive: '#2ee6a6', negative: '#ff6b6b', neutral: '#8be9fd',
+    },
+    ume: {
+        name: 'Ume',
+        bg: '#2b1b2e', fg: '#f5c2e7', panel: '#1e1420',
+        border: '#6c4675', accent: '#f5a0c0',
+        positive: '#6ee7a0', negative: '#ff7a90', neutral: '#a5b4fc',
     },
     copper: {
         name: 'Copper',
         bg: '#1c1410', fg: '#e8c39e', panel: '#140f0a',
         border: '#7a5533', accent: '#d4764e',
-        positive: '#a8d5a2', negative: '#ff7070', neutral: '#b3d9f5',
+        positive: '#7cc463', negative: '#e0625a', neutral: '#6fb3d4',
+    },
+    terminal: {
+        name: 'Terminal',
+        bg: '#000000', fg: '#00ff41', panel: '#0a0a0a',
+        border: '#003b00', accent: '#00ff41',
+        positive: '#2ee66a', negative: '#ff5f56', neutral: '#36c5f0',
+    },
+    organs: {
+        name: 'Organs',
+        bg: '#0a0406', fg: '#efe1c8', panel: '#15080a',
+        border: '#3a1519', accent: '#c83240',
+        positive: '#88c057', negative: '#e0524f', neutral: '#7ba7c9',
+    },
+    lavender: {
+        name: 'Lavender',
+        bg: '#f3eef8', fg: '#3d3551', panel: '#faf7ff',
+        border: '#cec3de', accent: '#9b6dcc',
+        positive: '#2f9e44', negative: '#d6453a', neutral: '#4263eb',
+    },
+    cute: {
+        name: 'Cute',
+        bg: '#fff0f5', fg: '#d4608a', panel: '#fff8fa',
+        border: '#f0c0d0', accent: '#ff6b9d',
+        positive: '#2fa866', negative: '#e63950', neutral: '#4c8df0',
     },
 };
+
+// J1 — preset set is now the 12 above. 'default'/'dark' (removed) map to the
+// closest survivor so older saves keep working. DEFAULT_THEME is the fresh-load
+// preset: midnight, for neutral-grey text that reads cleanly under dense figures.
+const DEFAULT_THEME = 'midnight';
+const THEME_ALIASES = { default: 'midnight', dark: 'midnight' };
+
+// Resolve a saved theme name to a valid preset key (handles removed/aliased names).
+function resolveTheme(name) {
+    if (THEMES[name]) return name;
+    if (name && THEME_ALIASES[name] && THEMES[THEME_ALIASES[name]]) return THEME_ALIASES[name];
+    return DEFAULT_THEME;
+}
+
+// J1 migration — if a save points at a removed/aliased preset, repoint it AND
+// rewrite the customisable colour overlay to the resolved preset's values, so the
+// stale overlay can't splatter the old palette over the new base (the "split
+// look" bug). No-op when the save already names a valid preset (the user's own
+// overlay customisations are then left untouched).
+function migrateGuiTheme(gs) {
+    if (!gs || THEMES[gs.theme]) return;
+    const preset = THEMES[resolveTheme(gs.theme)];
+    const tokens = deriveTokens(preset);
+    gs.theme = resolveTheme(gs.theme);
+    gs.primaryBgStart  = preset.bg;
+    gs.primaryBgEnd    = tokens['--primary-bg-color-end'];
+    gs.headerTextColor = tokens['--header-text-color'];
+    gs.cardBgStart     = preset.panel;
+    gs.cardBgEnd       = tokens['--card-bg-gradient-end'];
+    gs.accentColor     = preset.accent;
+    gs.colorPositive   = preset.positive;
+    gs.colorNegative   = preset.negative;
+    gs.colorNeutral    = preset.neutral;
+}
 
 // Compute every CSS custom property value from 8 core colours
 function deriveTokens(colors) {
@@ -113,9 +182,16 @@ function deriveTokens(colors) {
     const [pH, pS, pL] = hexToHSL(colors.panel);
     const panelAlt = hslToHex(pH, pS, isDark ? Math.min(pL + 4, 95) : Math.max(pL - 4, 5));
 
+    // J1 — the page background is a *subtle same-hue* gradient (a gentle shade
+    // shift of bg), not bg→accent. The old bg→accent gradient is what made ported
+    // themes read muddy/clashing (e.g. midnight navy→red, copper brown→orange); a
+    // single-hue wash matches Odysseus's flat backgrounds while keeping faint depth.
+    const [bH, bS, bL] = hexToHSL(colors.bg);
+    const bgEnd = hslToHex(bH, bS, isDark ? Math.min(bL + 5, 95) : Math.max(bL - 5, 5));
+
     return {
         '--primary-bg-color-start': colors.bg,
-        '--primary-bg-color-end':   colors.accent,
+        '--primary-bg-color-end':   bgEnd,
         '--header-text-color':      isDark ? '#ffffff' : colors.fg,
         '--tab-bg-color':           hexToRgba(overlay, 0.1),
         '--tab-active-bg-color':    hexToRgba(overlay, 0.2),
@@ -162,14 +238,14 @@ function applyTheme(colors) {
 
 // Apply whatever theme is saved in guiSettingsData
 function loadTheme() {
-    const name = (typeof guiSettingsData !== 'undefined' && guiSettingsData.theme) || 'default';
-    applyTheme(THEMES[name] || THEMES.default);
+    const name = (typeof guiSettingsData !== 'undefined' && guiSettingsData.theme) || DEFAULT_THEME;
+    applyTheme(THEMES[resolveTheme(name)]);
 }
 
 // Render preset swatch buttons into a container element
 function renderThemeSwitcher(container) {
     if (!container) return;
-    const activeName = (typeof guiSettingsData !== 'undefined' && guiSettingsData.theme) || 'default';
+    const activeName = resolveTheme((typeof guiSettingsData !== 'undefined' && guiSettingsData.theme) || DEFAULT_THEME);
     container.innerHTML = '';
     container.className = 'theme-switcher';
 

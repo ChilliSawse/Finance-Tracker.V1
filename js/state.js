@@ -39,17 +39,20 @@ let defaultFinanceData = {
     dashboardViewPeriod: "fortnightly" // Default view period
 };
 
+// J1 — defaults mirror the new DEFAULT_THEME (midnight) so a fresh load's
+// customisable overlay matches its derived base (no split look on first paint).
+// Values are midnight's derived tokens (see deriveTokens / migrateGuiTheme).
 let defaultGuiSettings = {
-    theme: 'default',
-    primaryBgStart: "#667eea",
-    primaryBgEnd: "#764ba2",
+    theme: 'midnight',
+    primaryBgStart: "#0d1117",
+    primaryBgEnd: "#161d27",
     headerTextColor: "#ffffff",
-    cardBgStart: "#ffffff",
-    cardBgEnd: "#f0f0f0",
-    accentColor: "#667eea",
-    colorPositive: "#4CAF50",
-    colorNegative: "#f44336",
-    colorNeutral: "#2196F3",
+    cardBgStart: "#161b22",
+    cardBgEnd: "#1e252e",
+    accentColor: "#f85149",
+    colorPositive: "#3fb950",
+    colorNegative: "#f85149",
+    colorNeutral: "#58a6ff",
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     baseFontSize: "16",
     mainHeading: "Personal Finance Dashboard",
@@ -187,10 +190,13 @@ class FinanceAutoSave {
                     financeData = loadedBundle.financeData;
                     guiSettingsData = loadedBundle.guiSettings;
                     // Migrate older saves that predate the theme system
-                    if (!guiSettingsData.theme) guiSettingsData.theme = 'default';
+                    if (!guiSettingsData.theme) guiSettingsData.theme = 'midnight';
                     if (!guiSettingsData.colorPositive) guiSettingsData.colorPositive = defaultGuiSettings.colorPositive;
                     if (!guiSettingsData.colorNegative) guiSettingsData.colorNegative = defaultGuiSettings.colorNegative;
                     if (!guiSettingsData.colorNeutral) guiSettingsData.colorNeutral = defaultGuiSettings.colorNeutral;
+                    // J1 — repoint saves on removed presets ('default'/'dark') to the closest
+                    // survivor and refresh the colour overlay so the old palette can't bleed through.
+                    if (typeof migrateGuiTheme === 'function') migrateGuiTheme(guiSettingsData);
                     migrateIncomeSourceTypes(financeData); // Backfill incomeType on legacy saves
                     migrateAllocationFields(financeData); // Stage 0 — backfill allocation goal/funds
                     this.lastSaveHash = this.getDataHash();

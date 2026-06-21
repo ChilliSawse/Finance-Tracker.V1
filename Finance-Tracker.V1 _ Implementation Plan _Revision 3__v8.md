@@ -31,6 +31,7 @@ Guiding principle throughout: **correctness before chrome** — fix wrong number
 | G | What If redesign (sandbox editor + simulated dashboard) | ✅ Stages 0–3 (G.5 ⏸) |
 | H | Remaining tab improvements | ✅ H.1/H.3/H.5/H.6 (H.2/H.4 partial) |
 | I | Visual polish + responsive | ✅ I.1/I.2/I.3/I.5/I.6/I.7/I.8 (I.4 verify-only) |
+| J | Theme & appearance redesign (Odysseus-derived) | 🚧 In progress (J1 building; J0/J2–J4 planned) |
 
 ---
 
@@ -65,6 +66,39 @@ Following the Phase A bottom-nav, real-device testing surfaced four issues, all 
 - **Currency figures overflowing cards** (large numbers, `/fortnight` suffixes, clipping/overlap) — replaced per-card hacks with a **universal auto-fit**: figures are `white-space: nowrap` (so overflow is detectable) and `fitAllAmounts()` (`utils.js`) shrinks any over-long figure's font just enough to fit its card, down to an 11px floor. Hooked into `updateAllUI()`, `showTab()` (figures can't be measured while their tab is hidden), `runWhatIfScenario()` (the simulated What If dashboard renders on its own, outside `updateAllUI`) and a debounced `resize`. Applies at all widths. **Exception:** the allocation buckets (`.savings-breakdown`, dashboard + What If) carry a `/period` suffix too long for a 2-up cell even at the auto-fit floor — and iOS renders wider than desktop Chrome, so they overflowed on-device. Those go **single-column** on phones so the figure shows at full size; auto-fit remains the universal backstop for every other card.
 - **Info "ⓘ" tooltips shoved off-screen** — the hover/absolute tooltips (`left:50%; margin-left:-125px`) clipped near screen edges. Replaced with native `<details class="info-tip">` disclosures that expand **inline** (like the "How the buckets work" `.info-more` expander): closed = an inline ⓘ by the heading; open = a full-width readable panel below it. Works on every width, accessible, touch-friendly — no positioning to clip. (A first attempt floated a fixed bottom panel, which needed dropping `.content`'s `backdrop-filter`; the inline `<details>` approach replaced it.)
 - **Topbar crowding** — the "All changes saved" pill pushed the gear cog over the title. On phones the save-status indicator collapses to a small colour-coded **dot** (green/amber/red/orange), giving the title + gear their space back. Desktop keeps the full text pill.
+
+---
+
+## 🚧 Phase J — Theme & appearance redesign (in progress)
+
+A from-scratch redo of the theme presets **and** the appearance panel, modelled on the **Odysseus** theme system (the same codebase FT's token engine was originally lifted from, at `C:\Users\Nebula PC\odysseus`). Goal: nicer, less-templated themes and a two-tab panel (Themes | Customize) with save / share / import of user themes. **Locked with user (2026-06-21).**
+
+**Why now:** the mobile build is done; the themes feel templated and one is semantically wrong (a *positive* Net Worth renders red/orange on several presets). See the four motivating issues under "Key fixes" → *Appearance redesign — motivating issues*.
+
+### Direction (agreed)
+- **Same DNA as Odysseus.** Both apps key off the same 5-colour base — FT's `{bg, fg, panel, border, accent}` is Odysseus's `{bg, fg, panel, border, red}` (`accent` = `red`). So palettes **port directly**; only the *derived* layer differs (Odysseus derives syntax-highlight colours, FT derives finance semantics).
+- **One chokepoint, always.** Every appearance change still funnels through a single derive-then-apply function (FT's existing rule); the panel never sets tokens directly. This is what prevents the recurring "split look" bug.
+- **Offline-native.** FT has no backend, so Odysseus's `/api/prefs` server sync is **dropped** — custom themes live in `localStorage`; "share" is the exported JSON file.
+- **Port only what a finance app uses.** No chat bubbles / send buttons / code-block overrides. Customisable surfaces are chosen by FT's real token map (audited in `style.css`), not a 1:1 copy.
+
+### Customisation surface (judgment call from FT's token map)
+Visible tier stays tight (the theme's *identity*); everything else hides under **More Colors** so casual users aren't overwhelmed and power users keep full freedom.
+- **Colors — base (6):** Background (page) · Surface (cards/content) · Text · Accent · Border · Headings.
+- **More Colors (grouped):** *Text detail* — muted/secondary, sub-heading, topbar text (pre-filled with the derived value so it can't go invisible white-on-white again). *Surface detail* — content-area bg, card gradient 2nd stop, tab bg, active-tab bg. *Finance figures* — Positive / Negative / Neutral (currently half-wired → properly exposed) + Essential / Warning.
+- **Font & Layout:** font family **+ custom font upload**, base size (+ background effect if J4).
+- **Dashboard labels (separate, content not colour):** main + sub heading **text** — resolves the old "content mixed into Typography" issue.
+- **Stays derived (not exposed):** all tints (`positive-tint`, `info-bg`…), `tab-text` contrast, `content-bg` opacity — change a base colour and its tint follows automatically.
+
+### Sub-phases
+- **J0 — Net Worth semantic fix** *(independent, shippable alone).* Signed figures paint by sign (`--color-positive` ≥ 0 / `--color-negative` < 0), **not** `--accent-color`. Root cause of motivating issue #1; `.amount.net-worth` currently hardcodes the brand accent (`style.css`).
+- **J1 — Port the 12 palettes.** `light, midnight, paper, retrowave, forest, ocean, ume, copper, terminal, organs, lavender, cute` (rename `red`→`accent`), each given a **locked semantic trio** (green/red/blue, tuned per light/dark for contrast) so positives always read green. Verify `deriveTokens` on the light presets (light/paper/lavender/cute).
+- **J2 — Two-tab panel.** Rebuild `#gui-settings-modal` into **Themes** (swatch grid with 4-circle previews + a "Your Themes" grid) | **Customize** (the surface above), keeping the single chokepoint. Round colour swatches.
+- **J3 — Custom themes, Import/Export, Harmony, Fonts.** Save named custom themes → `localStorage` (capped, with delete); JSON import/export (FT schema, no server); a Color Harmony generator (accent → derived palette, kept only if it earns its place); browser-side custom-font upload via the `FontFace` API + `localStorage` (FT has no `static/fonts/custom/` folder to scan — the one behavioural divergence from Odysseus).
+- **J4 — Background effects (optional).** A curated 3 — constellations / petals / rain — tied to themes, gated behind `prefers-reduced-motion` + a mobile perf guard. Cut with zero impact on J0–J3 if it reads as bloat.
+
+### Engineering deltas vs Odysseus
+1. **No server** — localStorage only (simplifies the sync paths).
+2. **Custom fonts** — folder-scan → browser upload (`FontFace` + `localStorage`), so it works fully offline.
 
 ---
 
@@ -165,6 +199,7 @@ The data-entry sections moved out of a single Settings tab into **per-tab gear-b
 - **Service worker is manually versioned.** Cache-first for JS/CSS means **you must bump `VERSION` in `sw.js`** on any asset change, or reloads serve stale code. (This bit us repeatedly mid-build.)
 - **0.6 — salaried calc.** The tax *engine* is correct; the bug was *behavioural* (salaried discarded the user's actual net/tax). Fixed by honouring the override-when-present, estimate-when-blank rule.
 - **Theme-consistency cleanup.** A family of hardcoded-colour elements that ignored the theme were tokenised along the way: stat cards, liability cards, `.btn-secondary`, the gear/edit buttons, and the `--color-warning` token.
+- **Appearance redesign — motivating issues (→ Phase J).** Four problems drove the J redesign: **(1)** Net Worth is painted with `--accent-color` (brand), so a *positive* net worth renders red on Dark, orange on Copper/Light — fixed by J0 (paint signed figures by sign). **(2)** Some preset backgrounds read muddy (Dark reddish-brown, Copper flat brown, Light low-contrast) — addressed by J1's ported palettes. **(3)** The old "Customise Colours" grid was too granular (separate card-gradient stops, an invisible white-on-white header-text swatch) — replaced by J2's tight base tier + grouped "More Colors". **(4)** Heading *text* (content) sat under Typography — moved to a separate "Dashboard labels" group in J2.
 
 ---
 
