@@ -439,6 +439,19 @@ function initializeGuiSettingsForm() {
     setValue('gui-font-family', guiSettingsData.fontFamily);
     setValue('gui-base-font-size', guiSettingsData.baseFontSize);
     setValue('gui-bg-effect', guiSettingsData.bgEffect || 'none'); // J4 — background effect
+    // J4 — effect tint: empty = match accent (checkbox on, picker disabled + showing the accent as
+    // a sensible starting point if they uncheck). A pinned value populates the picker directly.
+    const effColor = guiSettingsData.bgEffectColor || '';
+    const effAccentEl = getElement('gui-bg-effect-accent');
+    if (effAccentEl) effAccentEl.checked = !effColor;
+    const effPicker = getElement('gui-bg-effect-color');
+    if (effPicker) {
+        effPicker.disabled = !effColor;
+        effPicker.value = effColor || (typeof toHexColor === 'function'
+            ? toHexColor(getComputedStyle(document.documentElement).getPropertyValue('--accent-color')) || '#58a6ff'
+            : '#58a6ff');
+    }
+    if (typeof applyBgEffectColor === 'function') applyBgEffectColor(effColor);
     // Re-sync the running effect to the current settings (idempotent — no-op if unchanged),
     // so reset / factory-reset / JSON import all restore the right backdrop via this one path.
     if (typeof applyBackgroundEffect === 'function') applyBackgroundEffect(guiSettingsData.bgEffect);

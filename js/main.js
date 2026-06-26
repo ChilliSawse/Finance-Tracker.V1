@@ -143,6 +143,46 @@ function setupGuiModal() {
     setupModal('gui-settings-modal', 'open-gui-settings', initializeGuiSettingsForm);
 }
 
+// Make a modal behave like a real window: drag it by its header, resize it from the
+// bottom-right corner. The dialog is position:fixed (see style.css), so we set explicit
+// top/left coords — centred each time it opens, then updated as the user drags. This
+// fixes the flex-centred modal that appeared to grow from all sides while resizing.
+function setupDraggableModal(backdropId) {
+    const backdrop = getElement(backdropId);
+    if (!backdrop) return;
+    const dialog = backdrop.querySelector('.modal');
+    const header = backdrop.querySelector('.modal-header');
+    if (!dialog || !header) return;
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(v, max));
+    const center = () => {
+        const w = dialog.offsetWidth, h = dialog.offsetHeight;
+        dialog.style.left = clamp((window.innerWidth - w) / 2, 8, window.innerWidth - 80) + 'px';
+        dialog.style.top  = clamp((window.innerHeight - h) / 2, 8, window.innerHeight - 80) + 'px';
+    };
+    // Re-centre whenever it transitions from hidden → shown (microtask, so no paint flash).
+    new MutationObserver(() => { if (!backdrop.hidden) center(); })
+        .observe(backdrop, { attributes: true, attributeFilter: ['hidden'] });
+
+    let dragging = false, offX = 0, offY = 0;
+    header.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.modal-close')) return; // don't drag when grabbing the close button
+        const r = dialog.getBoundingClientRect();
+        dragging = true; offX = e.clientX - r.left; offY = e.clientY - r.top;
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        dialog.style.left = clamp(e.clientX - offX, 0, window.innerWidth - 60) + 'px';
+        dialog.style.top  = clamp(e.clientY - offY, 0, window.innerHeight - 40) + 'px';
+    });
+    document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false; document.body.style.userSelect = '';
+    });
+}
+
 // Phase D — per-page settings modals. The data-entry sections were moved out of the
 // Settings tab into these; their inner lists are kept fresh by renderSettingsTab()/
 // updateDataAndUI(), so re-rendering on open just guarantees current values.
@@ -425,6 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
     autoSave.loadData();
     loadTheme(); // apply full preset (tab colours, tints, etc.) before UI renders
     if (typeof registerStoredCustomFonts === 'function') registerStoredCustomFonts(); // J3 — re-register uploaded fonts
+    if (typeof applyBgEffectColor === 'function') applyBgEffectColor(guiSettingsData.bgEffectColor); // J4 — restore effect tint (before the effect starts)
     if (typeof applyBackgroundEffect === 'function') applyBackgroundEffect(guiSettingsData.bgEffect); // J4 — restore saved effect
 
     initializeSettingsUI();
@@ -437,6 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTabKeyboardNav();
     setupSidebar();   // A.3 — collapse toggle + restore
     setupGuiModal();  // A.4 — appearance modal
+    setupDraggableModal('gui-settings-modal'); // make the appearance modal a draggable, corner-resizable window
     setupPageSettingsModals(); // Phase D — per-page settings modals (Income, …)
     setupDashboardEmptyActions(); // F.1 — welcome empty-state action cards
     setupCardLinks(); // F.2 — dashboard cards link to their tab

@@ -83,6 +83,14 @@ function setupEventListeners() {
     // J4 — background effect selector (persists + applies immediately).
     const bgEffectSel = getElement('gui-bg-effect');
     if (bgEffectSel) bgEffectSel.addEventListener('change', () => commitGuiEffect(true));
+    // J4 — effect tint: the "Match accent" checkbox + the colour picker (live preview on input).
+    const bgEffectAccent = getElement('gui-bg-effect-accent');
+    if (bgEffectAccent) bgEffectAccent.addEventListener('change', () => commitGuiEffectColor(true));
+    const bgEffectColor = getElement('gui-bg-effect-color');
+    if (bgEffectColor) {
+        bgEffectColor.addEventListener('input',  () => commitGuiEffectColor(false));
+        bgEffectColor.addEventListener('change', () => commitGuiEffectColor(true));
+    }
     // J3 — Colour Harmony: changing any control re-renders the live preview (no apply
     // until the button). Bound once here; idempotent because setupEventListeners runs once.
     ['harmony-accent', 'harmony-type', 'harmony-mode'].forEach(id => {
@@ -790,7 +798,9 @@ const GUI_COLOR_FIELDS = [
     { id: 'gui-col-border',     key: 'borderColor',    mode: 'base' },
     { id: 'gui-col-heading',    key: 'headingColor',   mode: 'override', cssVar: '--heading-color' },
     { id: 'gui-col-muted',      key: 'mutedColor',     mode: 'override', cssVar: '--text-color-secondary' },
-    { id: 'gui-col-headertext', key: 'headerTextColor',mode: 'override', cssVar: '--header-text-color' },
+    // 'gui-col-headertext' (Topbar text) removed from the UI — on dark themes deriveTokens locks
+    // the header text to #ffffff, so the override read as a no-op. The headerTextColor field stays
+    // in state (harmless, empty = derived); re-add a picker here if it's ever wired up properly.
     { id: 'gui-col-positive',   key: 'colorPositive',  mode: 'base' },
     { id: 'gui-col-negative',   key: 'colorNegative',  mode: 'base' },
     { id: 'gui-col-neutral',    key: 'colorNeutral',   mode: 'base' },
@@ -847,6 +857,18 @@ function commitGuiText(persist) {
 function commitGuiEffect(persist) {
     guiSettingsData.bgEffect = getValue('gui-bg-effect');
     if (typeof applyBackgroundEffect === 'function') applyBackgroundEffect(guiSettingsData.bgEffect);
+    if (persist && autoSave) autoSave.onDataChange();
+}
+
+// J4 — effect tint changed. "Match accent" (checked) clears the pinned colour so the effect
+// follows the accent; unchecked pins the picker's value. Disables the picker while matching.
+function commitGuiEffectColor(persist) {
+    const accentEl = getElement('gui-bg-effect-accent');
+    const picker = getElement('gui-bg-effect-color');
+    const matchAccent = accentEl ? accentEl.checked : true;
+    if (picker) picker.disabled = matchAccent;
+    guiSettingsData.bgEffectColor = matchAccent ? '' : getValue('gui-bg-effect-color');
+    if (typeof applyBgEffectColor === 'function') applyBgEffectColor(guiSettingsData.bgEffectColor);
     if (persist && autoSave) autoSave.onDataChange();
 }
 

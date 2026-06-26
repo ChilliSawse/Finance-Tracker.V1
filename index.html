@@ -32,9 +32,6 @@
             </div>
             <div class="topbar-actions">
                 <button class="btn btn-install" id="install-app-btn" style="display: none;">Install App</button>
-                <button class="icon-btn" id="open-gui-settings" aria-label="Settings" aria-haspopup="dialog">
-                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                </button>
             </div>
         </header>
 
@@ -62,6 +59,10 @@
             <button role="tab" class="tab" data-tab-target="whatIf" aria-controls="whatIf" aria-selected="false" tabindex="-1">
                 <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="20" cy="14" r="2"/></svg></span>
                 <span class="tab-label">What If?</span>
+            </button>
+            <button class="sidebar-settings" id="open-gui-settings" aria-label="Settings" aria-haspopup="dialog">
+                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                <span class="tab-label">Settings</span>
             </button>
         </nav>
 
@@ -146,6 +147,8 @@
                             <div class="progress-fill" id="savings-progress" style="width: 0%;"></div>
                         </div>
                     </div>
+                </div>
+                <div class="dashboard-stack">
                     <div class="card card--link" data-card-link="expenses" role="link" tabindex="0" aria-label="Expense Breakdown — go to Expenses tab">
                         <div class="card-header">
                             <div>
@@ -187,16 +190,16 @@
                                 <div class="amount expense" id="total-liabilities-display"></div>
                             </div>
                         </div>
-                        <hr style="margin: 15px 0; border: 0; border-top: 1px solid var(--border-color);">
-                        <div class="card-subtitle" style="text-align: center; margin-bottom: 10px;">Breakdown</div>
+                        <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--border-color);">
+                        <div class="card-subtitle" style="text-align: center; margin-bottom: 4px;">Breakdown</div>
                         <div class="accounts-grid" id="assets-display"></div>
                         <div class="accounts-grid" id="liabilities-display"></div>
                     </div>
-                </div>
-                <div class="card card--link" data-card-link="savings" role="link" tabindex="0" aria-label="Income Allocation Strategy — go to Savings tab">
+                    <div class="card card--link" data-card-link="savings" role="link" tabindex="0" aria-label="Income Allocation Strategy — go to Savings tab">
                     <div class="card-title" id="allocation-title">Income Allocation Strategy</div>
                     <div class="card-subtitle" id="allocation-period-subtitle">Based on Net Income (Fortnightly)</div>
                     <div class="savings-breakdown" id="allocation-display"></div>
+                    </div>
                 </div>
                 </div><!-- /#dashboard-populated -->
             </div>
@@ -441,7 +444,7 @@
                         <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
                     </div>
                 </div>
-                <div class="settings-section" style="border-left-color: var(--color-neutral);">
+                <div class="settings-section settings-section--group">
                     <div class="settings-title">"What If" Scenario Planner</div>
                     <p class="form-hint" style="margin: 0 0 15px; color: var(--text-color-secondary);">
                         Edit any section below to model a scenario — it only changes this sandbox, never your real data. Your edits persist across tabs; click <strong>Reset to current</strong> to reload every section from your live data, then <strong>Calculate Scenario</strong> to see the results.
@@ -545,7 +548,7 @@
     <!-- A.4 — GUI Settings modal. The dialog body keeps id="guiSettings" so the existing
          swatch/colour-picker delegation and B.6 live-preview listeners keep working unchanged. -->
     <div class="modal-backdrop" id="gui-settings-modal" hidden>
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gui-settings-title">
+        <div class="modal modal--resizable" role="dialog" aria-modal="true" aria-labelledby="gui-settings-title">
             <div class="modal-header">
                 <h2 id="gui-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</h2>
                 <button class="modal-close" id="close-gui-settings" aria-label="Close appearance settings">
@@ -598,7 +601,6 @@
                             <summary>More colours</summary>
                             <div class="color-grid">
                                 <label class="color-field"><input type="color" class="color-dot" id="gui-col-muted"><span>Muted / sub-heading</span></label>
-                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-headertext"><span>Topbar text</span></label>
                                 <label class="color-field"><input type="color" class="color-dot" id="gui-col-positive"><span>Positive (gains)</span></label>
                                 <label class="color-field"><input type="color" class="color-dot" id="gui-col-negative"><span>Negative (losses)</span></label>
                                 <label class="color-field"><input type="color" class="color-dot" id="gui-col-neutral"><span>Neutral (info)</span></label>
@@ -637,8 +639,11 @@
                             <button class="btn btn-secondary" id="harmony-apply-btn">Apply palette</button>
                         </div>
                     </div>
+                    <!-- Font & Background — typography and the decorative backdrop merged into one
+                         section (Odysseus's "Font & Layout"). Existing input ids are preserved so the
+                         font/effect wiring keeps working unchanged. -->
                     <div class="settings-section">
-                        <div class="settings-title">Typography</div>
+                        <div class="settings-title">Font &amp; Background</div>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label" for="gui-font-family">Font Family</label>
@@ -658,8 +663,33 @@
                                 <input type="number" class="form-input" id="gui-base-font-size" min="10" max="24" step="1">
                             </div>
                         </div>
+                        <div class="form-grid" style="margin-top: 15px;">
+                            <div class="form-group">
+                                <label class="form-label" for="gui-bg-effect">Background effect</label>
+                                <select class="form-select" id="gui-bg-effect">
+                                    <option value="none">None</option>
+                                    <option value="constellations">Constellations</option>
+                                    <option value="petals">Petals</option>
+                                    <option value="rain">Rain</option>
+                                    <option value="synapse">Synapse</option>
+                                    <option value="sparkles">Sparkles</option>
+                                    <option value="embers">Embers</option>
+                                    <!-- Perlin Flow temporarily disabled — the flow-field look is unresolved
+                                         (an issue inherited from the Odysseus original). Code is kept in
+                                         theme.js (_ftPerlinFlow) to revisit later; just unlisted here. -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="gui-bg-effect-color">Effect colour</label>
+                                <div class="effect-colour-row">
+                                    <label class="settings-inline-check"><input type="checkbox" id="gui-bg-effect-accent"> Match accent colour</label>
+                                    <input type="color" class="color-dot" id="gui-bg-effect-color">
+                                </div>
+                            </div>
+                        </div>
+                        <p class="settings-hint">The background effect is a subtle animated backdrop. A lighter version runs on phones; it turns off when your system prefers reduced motion.</p>
                         <!-- J3 — custom font upload (browser-side: FontFace + localStorage; no
-                             server/font folder). Uploaded fonts join the dropdown above. -->
+                             server/font folder). Uploaded fonts join the Font Family dropdown above. -->
                         <div class="form-group" style="margin-top: 14px;">
                             <label class="form-label">Custom font</label>
                             <input type="file" id="gui-font-file" accept=".ttf,.otf,.woff,.woff2" style="display: none;">
@@ -667,24 +697,6 @@
                             <p class="settings-hint">Add a .ttf / .otf / .woff / .woff2 file (max 2&nbsp;MB). Stored on this device only; it joins the Font Family list above.</p>
                             <p class="theme-save-error" id="gui-font-error" role="alert" hidden></p>
                             <div id="custom-fonts-list" class="custom-fonts-list"></div>
-                        </div>
-                    </div>
-                    <div class="settings-section">
-                        <div class="settings-title">Background effect</div>
-                        <!-- J4 — curated 3 decorative canvas effects. Runtime-gated behind
-                             prefers-reduced-motion + a small-viewport perf guard (bgEffectsAllowed);
-                             the preference is still stored when guarded off. -->
-                        <p class="settings-hint">A subtle animated backdrop. Off on phones and when your system prefers reduced motion.</p>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="gui-bg-effect">Effect</label>
-                                <select class="form-select" id="gui-bg-effect">
-                                    <option value="none">None</option>
-                                    <option value="constellations">Constellations</option>
-                                    <option value="petals">Petals</option>
-                                    <option value="rain">Rain</option>
-                                </select>
-                            </div>
                         </div>
                     </div>
                     <div class="settings-section">

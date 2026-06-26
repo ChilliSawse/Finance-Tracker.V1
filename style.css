@@ -16,6 +16,9 @@
     --content-bg-color: rgba(22, 27, 34, 0.95);
     --card-bg-gradient-start: #161b22;
     --card-bg-gradient-end: #1e252e;
+    /* Card translucency — how opaque page cards are, so a background effect shows faintly
+       through them. 100% = solid; lower lets more of the effect through. One knob for all cards. */
+    --card-opacity: 80%;
     --border-color: #30363d;
     --text-color-primary: #c9d1d9;
     --text-color-secondary: rgba(201, 209, 217, 0.6);
@@ -266,20 +269,58 @@ body {
     display: none;
 }
 
-.app-shell.is-collapsed .tab {
+.app-shell.is-collapsed .tab,
+.app-shell.is-collapsed .sidebar-settings {
     justify-content: center;
     gap: 0;
     padding: 10px 0;
 }
 
+/* Settings entry pinned to the foot of the sidebar (moved out of the topbar).
+   Styled like a .tab but it isn't one — no role="tab"/.tab class — so the tablist
+   keyboard nav + click delegation ignore it; it just opens the appearance modal. */
+.sidebar-settings {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px; /* sits directly under the What If tab, set slightly apart */
+    padding: 10px 12px;
+    text-align: left;
+    color: var(--tab-text-color);
+    cursor: pointer;
+    border-radius: 10px;
+    border: none;
+    border-left: 3px solid transparent;
+    background: transparent;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    font-weight: 500;
+    font-size: 0.9em;
+    font-family: var(--font-family-main);
+    white-space: nowrap;
+}
+
+.sidebar-settings:hover {
+    background: var(--tab-bg-color);
+    color: var(--tab-active-text-color);
+}
+
+.sidebar-settings:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.sidebar-settings .tab-icon { display: inline-flex; flex-shrink: 0; }
+.sidebar-settings .tab-label { overflow: hidden; text-overflow: ellipsis; }
+
+/* The content area is a transparent layout container — cards float directly on the
+   page background, so the gaps around/between them reveal it (and any background
+   effect). Cards keep their own surface, so figures stay readable. Padding/margins
+   stay so cards remain inset from the edges. */
 .content {
     grid-area: main;
-    background: var(--content-bg-color);
-    border-radius: 20px;
+    background: transparent;
     padding: 20px;
     margin: 0 16px 16px;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
     min-height: 600px;
     overflow-x: auto;
 }
@@ -407,6 +448,21 @@ body {
     max-width: 95vw;
 }
 
+/* The appearance modal behaves like a real window: position:fixed so the bottom-right
+   resize handle grows from a fixed top-left anchor (not symmetrically from the centre),
+   and its header is a drag handle (positioned by setupDraggableModal in main.js). */
+#gui-settings-modal .modal {
+    position: fixed;
+    margin: 0;
+    width: min(760px, 95vw);
+    max-height: 90vh;
+}
+
+#gui-settings-modal .modal-header {
+    cursor: move;
+    user-select: none;
+}
+
 /* Let cramped dynamic lists scroll horizontally instead of crushing inputs. */
 .modal--wide .dynamic-list,
 .modal--resizable .dynamic-list {
@@ -455,7 +511,8 @@ body {
     align-items: center;
     gap: 6px;
     padding: 24px 16px;
-    background: var(--card-bg-gradient-start);
+    background: var(--card-bg-gradient-start); /* fallback: solid */
+    background: color-mix(in srgb, var(--card-bg-gradient-start) var(--card-opacity), transparent);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     cursor: pointer;
@@ -542,8 +599,19 @@ body {
     margin-bottom: 30px;
 }
 
+/* Full-width "long" cards stacked below the dashboard grid (Expense Breakdown,
+   Net Worth, Income Allocation) — each spans the content width with even spacing. */
+.dashboard-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
 .card {
-    background: linear-gradient(145deg, var(--card-bg-gradient-start), var(--card-bg-gradient-end));
+    background: linear-gradient(145deg, var(--card-bg-gradient-start), var(--card-bg-gradient-end)); /* fallback: solid */
+    background: linear-gradient(145deg,
+        color-mix(in srgb, var(--card-bg-gradient-start) var(--card-opacity), transparent),
+        color-mix(in srgb, var(--card-bg-gradient-end) var(--card-opacity), transparent));
     border-radius: 15px;
     padding: 20px;
     border: 1px solid var(--border-color); /* I.1 — definition on dark themes where the shadow is faint */
@@ -607,9 +675,9 @@ body {
    rendering in the accent (red on midnight, orange on copper) — i.e. looking
    like a warning. */
 .amount.net-worth {
-    font-size: 2.2em;
+    font-size: 1.8em;
     text-align: center;
-    margin: 15px 0;
+    margin: 6px 0;
 }
 
 .amount.net-worth.is-negative {
@@ -620,7 +688,7 @@ body {
     display: flex;
     justify-content: space-around;
     text-align: center;
-    margin: 15px 0;
+    margin: 8px 0;
     flex-wrap: wrap;
     gap: 10px;
 }
@@ -670,7 +738,7 @@ body {
     color: var(--text-color-secondary);
     text-transform: uppercase;
     letter-spacing: 1px;
-    word-wrap: break-word;
+    overflow-wrap: normal; /* wrap at spaces only — never split a word mid-character */
     line-height: 1.2;
 }
 
@@ -795,7 +863,7 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 10px;
-    margin-top: 15px;
+    margin-top: 10px;
 }
 
 /* Net Worth breakdown cards — tinted background + coloured text + accent border,
@@ -824,7 +892,7 @@ body {
     letter-spacing: 1px;
     line-height: 1.2;
     margin-bottom: 6px;
-    word-wrap: break-word;
+    overflow-wrap: normal; /* wrap at spaces only — never split a word mid-character */
 }
 
 .account-balance {
@@ -850,7 +918,10 @@ body {
 
 /* I.2 — themed stat cards (were hardcoded light-grey on every theme). */
 .stat-card {
-    background: linear-gradient(145deg, var(--card-bg-gradient-start), var(--card-bg-gradient-end));
+    background: linear-gradient(145deg, var(--card-bg-gradient-start), var(--card-bg-gradient-end)); /* fallback: solid */
+    background: linear-gradient(145deg,
+        color-mix(in srgb, var(--card-bg-gradient-start) var(--card-opacity), transparent),
+        color-mix(in srgb, var(--card-bg-gradient-end) var(--card-opacity), transparent));
     padding: 18px 15px;
     border-radius: 12px;
     text-align: center;
@@ -1023,6 +1094,23 @@ body {
     margin-bottom: 25px;
     border: 1px solid var(--border-color);
     border-left: 4px solid var(--accent-color);
+}
+
+/* A settings-section used purely as a grouping wrapper (e.g. the What If planner,
+   which holds the per-section scenario cards). Drops all card chrome so its child
+   sections are the only visible cards — no more boxes-on-boxes-on-boxes. */
+.settings-section.settings-section--group {
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+}
+
+/* What If scenario cards (the only page-level settings-sections) get the same translucency
+   as .card so the background effect shows through them too. Modal sections stay solid. */
+#whatIf .settings-section:not(.settings-section--group) {
+    background: var(--card-bg-gradient-end); /* fallback: solid */
+    background: color-mix(in srgb, var(--card-bg-gradient-end) var(--card-opacity), transparent);
 }
 
 .settings-title {
@@ -1274,6 +1362,48 @@ body {
     line-height: 1.5;
 }
 
+/* J4 — inline checkbox label (e.g. the effect-tint "Match accent" toggle). */
+.settings-inline-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+    font-size: 0.85em;
+    color: var(--text-color-primary);
+    cursor: pointer;
+}
+
+.settings-inline-check input {
+    width: auto;
+    margin: 0;
+}
+
+/* J4 — effect tint row: "Match accent colour" check sits beside the round colour swatch. */
+.effect-colour-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.effect-colour-row .settings-inline-check { margin: 0; }
+
+/* Sleeker, more refined buttons inside the appearance modal — the default .btn is chunky
+   (10/20 padding, 600 weight, big lift on hover); these are tighter and calmer. */
+#guiSettings .btn {
+    margin-top: 0;
+    padding: 7px 15px;
+    font-size: 0.82em;
+    font-weight: 500;
+    border-radius: 7px;
+}
+
+#guiSettings .btn:hover {
+    transform: none;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
 /* H.3 — savings-rate benchmark hint + allocation (buckets) explainer spacing. */
 .benchmark-hint {
     margin-top: 10px;
@@ -1382,7 +1512,8 @@ body {
 /* What If Scenario Styles */
 
 .scenario-results {
-    background: var(--card-bg-gradient-start);
+    background: var(--card-bg-gradient-start); /* fallback: solid */
+    background: color-mix(in srgb, var(--card-bg-gradient-start) var(--card-opacity), transparent);
     border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 20px;
@@ -1422,7 +1553,10 @@ body {
 /* Themed liability cards — match the theme (were hardcoded pink); red left-border + balance
    stay as the "debt" cue, consistent with how the app shows negative figures. */
 .liability-card {
-    background: linear-gradient(145deg, var(--card-bg-gradient-start), var(--card-bg-gradient-end));
+    background: linear-gradient(145deg, var(--card-bg-gradient-start), var(--card-bg-gradient-end)); /* fallback: solid */
+    background: linear-gradient(145deg,
+        color-mix(in srgb, var(--card-bg-gradient-start) var(--card-opacity), transparent),
+        color-mix(in srgb, var(--card-bg-gradient-end) var(--card-opacity), transparent));
     border-radius: 12px;
     padding: 20px;
     border: 1px solid var(--border-color);
@@ -1471,7 +1605,8 @@ body {
         display: none;
     }
 
-    .tab {
+    .tab,
+    .sidebar-settings {
         justify-content: center;
         gap: 0;
         padding: 10px 0;
@@ -1488,7 +1623,9 @@ body {
     }
 
     .sidebar:hover .tab,
-    .sidebar:focus-within .tab {
+    .sidebar:focus-within .tab,
+    .sidebar:hover .sidebar-settings,
+    .sidebar:focus-within .sidebar-settings {
         justify-content: flex-start;
         gap: 12px;
         padding: 10px 12px;
@@ -1521,9 +1658,16 @@ body {
         gap: 15px;
     }
 
-    .time-periods, .savings-breakdown, .accounts-grid {
+    /* Numeric tiles (Annual/Weekly/Daily) can stay small… */
+    .time-periods {
         grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
         gap: 6px;
+    }
+    /* …but the label-bearing tinted grids (allocation buckets, asset/liability cards) need
+       fewer, wider columns so names don't crush into a few characters and break mid-word. */
+    .savings-breakdown, .accounts-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
     }
 
     .list-header, .list-item {
@@ -1707,9 +1851,12 @@ body {
     }
 
     .app-shell .sidebar .tab,
-    .app-shell.is-collapsed .sidebar .tab {
+    .app-shell.is-collapsed .sidebar .tab,
+    .app-shell .sidebar .sidebar-settings,
+    .app-shell.is-collapsed .sidebar .sidebar-settings {
         flex: 1 1 0;
         min-width: 0;
+        margin-top: 0; /* it's pinned to the bottom on desktop; in the row bar it's just another item */
         flex-direction: column;
         align-items: center;
         justify-content: center;
@@ -1977,20 +2124,56 @@ body {
 .appearance-panel[hidden] { display: none; }
 
 /* J2 — round colour swatches (base tier + "More colours" expander) */
+/* The appearance modal body is a query container, so the Colours grid restacks based on
+   the MODAL's width (drag-resize) — not just the viewport width. */
+#guiSettings { container-type: inline-size; }
+
+/* Wide: two columns whose swatches meet dead-centre of the card, with each label flanking
+   its swatch on the outer side (left column = label|◯, right column = ◯|label). The 1fr
+   tracks keep the swatch pair centred as the card is resized, down to the restack point. */
 .color-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
-    gap: 14px 18px;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 26px;
 }
 
 .color-field {
     display: flex;
     align-items: center;
-    gap: 11px;
+    gap: 12px;
     cursor: pointer;
-    font-size: 0.88em;
+    font-size: 0.9em;
     color: var(--text-color-primary);
     min-width: 0;
+}
+
+/* Left column (odd children): label then swatch, hugged to the cell's right edge = centre. */
+.color-field:nth-child(odd) {
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+}
+/* Right column (even children): swatch then label, hugged to the cell's left edge = centre. */
+.color-field:nth-child(even) {
+    flex-direction: row;
+    justify-content: flex-start;
+}
+
+.color-field span {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+/* Thin: one column. Labels left-aligned; swatches line up in their own column a short,
+   consistent distance from the words (capped field width keeps that column close). */
+@container (max-width: 520px) {
+    .color-grid { grid-template-columns: 1fr; }
+    .color-field,
+    .color-field:nth-child(odd),
+    .color-field:nth-child(even) {
+        flex-direction: row-reverse;
+        justify-content: space-between;
+        max-width: 230px;
+    }
 }
 
 .color-field span {
@@ -2084,16 +2267,18 @@ body {
 
 .harmony-preview {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     margin-top: 14px;
-    min-height: 30px;
+    min-height: 32px;
 }
 
+/* Round preview swatches, matching the .color-dot pickers in the Colours section. */
 .harmony-preview span {
-    flex: 1;
-    height: 30px;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
 }
 
 /* J3 — uploaded custom fonts list */
