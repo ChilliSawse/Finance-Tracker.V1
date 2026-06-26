@@ -600,21 +600,33 @@ function renderCustomFontList(container) {
     });
 }
 
-// --- J4 — decorative background effects (curated 3, ported from Odysseus) ---
-// constellations / petals / rain. Each is a full-viewport <canvas> prepended behind the app
-// shell (z-index 0; .app-shell sits at z-index 1). Self-terminating: the draw loop bails the
-// moment the body's bg-effect-<name> class is gone, so switching/clearing tears the canvas
-// down. Gated behind prefers-reduced-motion + a small-viewport perf guard (bgEffectsAllowed).
-const BG_EFFECT_NAMES = ['constellations', 'petals', 'rain'];
+// --- J4 — decorative background effects (ported from Odysseus) ---
+// constellations / petals / rain / synapse / sparkles / embers / perlin-flow. Each is a
+// full-viewport <canvas> prepended behind the app shell (z-index 0; .app-shell sits at z-index 1).
+// Self-terminating: the draw loop bails the moment the body's bg-effect-<name> class is gone, so
+// switching/clearing tears the canvas down. Gated behind prefers-reduced-motion + a small-viewport
+// perf guard (bgEffectsAllowed).
+const BG_EFFECT_NAMES = ['constellations', 'petals', 'rain', 'synapse', 'sparkles', 'embers', 'perlin-flow'];
 
-// Respect the user's motion preference and skip on small/mobile viewports (the canvas loops
-// are pure decoration and not worth the battery/jank there).
+// Respect the user's motion preference; otherwise run on phones too (down to ~360px).
+// Phones get a lighter version (fewer particles + lower DPR — see the _bg* helpers below)
+// so the canvas loops stay smooth and easy on the battery.
 function bgEffectsAllowed() {
     try {
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
     } catch (_) {}
-    return window.innerWidth >= 700;
+    return window.innerWidth >= 360;
 }
+
+// Mobile-friendly tuning (effects on phones): below this width we treat the device as a
+// phone and dial the per-frame cost down.
+const _BG_SMALL_BP = 700;
+function _bgIsSmall() { return window.innerWidth < _BG_SMALL_BP; }
+// DPR cap: 1.5 on phones (a full-screen canvas at 3× is expensive), 2 elsewhere.
+function _bgDpr() { return Math.min(window.devicePixelRatio || 1, _bgIsSmall() ? 1.5 : 2); }
+// Particle density: ~half the particles on phones. _bgCount scales a desktop count.
+function _bgScale() { return _bgIsSmall() ? 0.5 : 1; }
+function _bgCount(n) { return Math.max(1, Math.round(n * _bgScale())); }
 
 // Effect tint: an explicit --bg-effect-color, else the accent, else primary text.
 function _bgEffectColor() {
@@ -635,15 +647,40 @@ function _makeEffectCanvas(name) {
     return canvas;
 }
 
+// Convert a CSS colour (hex or rgb()) to an rgba() string — needed by effects that build
+// radial-gradient glows (embers) where the tint must carry a per-stop alpha.
+function _bgRgba(color, a) {
+    color = (color || '').trim();
+    let r = 156, g = 222, b = 242; // fallback #9cdef2
+    if (color[0] === '#') {
+        let h = color.slice(1);
+        if (h.length === 3) h = h.split('').map(ch => ch + ch).join('');
+        if (h.length >= 6) { r = parseInt(h.slice(0, 2), 16); g = parseInt(h.slice(2, 4), 16); b = parseInt(h.slice(4, 6), 16); }
+    } else {
+        const m = color.match(/[\d.]+/g);
+        if (m && m.length >= 3) { r = +m[0]; g = +m[1]; b = +m[2]; }
+    }
+    return `rgba(${r},${g},${b},${a})`;
+}
+
+// Cheap value-noise (hash → smoothstep-interpolated), for the perlin-flow flow field.
+function _bgNoise2d(x, y) { const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return n - Math.floor(n); }
+function _bgSmoothNoise(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+    const a = _bgNoise2d(ix, iy), b = _bgNoise2d(ix + 1, iy), cc = _bgNoise2d(ix, iy + 1), d = _bgNoise2d(ix + 1, iy + 1);
+    const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+    return a + (b - a) * ux + (cc - a) * uy + (a - b - cc + d) * ux * uy;
+}
+
 // ── Rain — thin falling streaks ──
 function _ftRain() {
     if (document.getElementById('rain-canvas')) return;
     const canvas = _makeEffectCanvas('rain');
     const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = _bgDpr();
     let W, H;
     const drops = [];
-    const MAX_DROPS = 130;
+    const MAX_DROPS = _bgCount(130);
     function resize() {
         W = window.innerWidth; H = window.innerHeight;
         canvas.width = W * dpr; canvas.height = H * dpr;
@@ -687,9 +724,9 @@ function _ftConstellations() {
     if (document.getElementById('constellations-canvas')) return;
     const canvas = _makeEffectCanvas('constellations');
     const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = _bgDpr();
     let W, H;
-    const STAR_COUNT = 50, CONNECT_DIST = 120;
+    const STAR_COUNT = _bgCount(50), CONNECT_DIST = 120;
     let stars = [];
     function initStars() {
         stars = [];
@@ -754,7 +791,7 @@ function _ftPetals() {
     if (document.getElementById('petals-canvas')) return;
     const canvas = _makeEffectCanvas('petals');
     const ctx = canvas.getContext('2d');
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = _bgDpr();
     let W, H;
     const petals = [];
     function makePetal() {
@@ -770,7 +807,7 @@ function _ftPetals() {
         W = window.innerWidth; H = window.innerHeight;
         canvas.width = W * dpr; canvas.height = H * dpr;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        if (petals.length === 0) for (let i = 0; i < 30; i++) { const p = makePetal(); p.y = Math.random() * H; petals.push(p); }
+        if (petals.length === 0) for (let i = 0; i < _bgCount(30); i++) { const p = makePetal(); p.y = Math.random() * H; petals.push(p); }
     }
     resize();
     const _onResize = () => resize();
@@ -797,7 +834,234 @@ function _ftPetals() {
     draw();
 }
 
-const BG_EFFECTS = { constellations: _ftConstellations, petals: _ftPetals, rain: _ftRain };
+// ── Synapse — bright pulses racing along an invisible grid ──
+function _ftSynapse() {
+    if (document.getElementById('synapse-canvas')) return;
+    const canvas = _makeEffectCanvas('synapse');
+    const ctx = canvas.getContext('2d');
+    const dpr = _bgDpr();
+    const GRID = 24, MAX_PULSES = _bgCount(20), SPEED_MIN = 2, SPEED_MAX = 22, TRAIL_LEN = 12;
+    let W, H, cols, rows;
+    const pulses = [];
+    function resize() {
+        W = window.innerWidth; H = window.innerHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        cols = Math.ceil(W / GRID); rows = Math.ceil(H / GRID);
+    }
+    resize();
+    const _onResize = () => resize();
+    window.addEventListener('resize', _onResize);
+    function spawnPulse() {
+        const speed = SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN);
+        if (Math.random() > 0.5) {
+            pulses.push({ x: -TRAIL_LEN, y: Math.floor(Math.random() * (rows + 1)) * GRID, dx: speed, dy: 0 });
+        } else {
+            pulses.push({ x: Math.floor(Math.random() * (cols + 1)) * GRID, y: -TRAIL_LEN, dx: 0, dy: speed });
+        }
+    }
+    function draw() {
+        if (!document.body.classList.contains('bg-effect-synapse')) { window.removeEventListener('resize', _onResize); canvas.remove(); return; }
+        requestAnimationFrame(draw);
+        ctx.clearRect(0, 0, W, H);
+        const c = _bgEffectColor();
+        if (pulses.length < MAX_PULSES && Math.random() < 0.12) spawnPulse();
+        for (let i = pulses.length - 1; i >= 0; i--) {
+            const p = pulses[i];
+            p.x += p.dx; p.y += p.dy;
+            if (p.x > W + TRAIL_LEN || p.y > H + TRAIL_LEN) { pulses.splice(i, 1); continue; }
+            const tx = p.x - (p.dx > 0 ? TRAIL_LEN : 0);
+            const ty = p.y - (p.dy > 0 ? TRAIL_LEN : 0);
+            const grad = ctx.createLinearGradient(tx, ty, p.x, p.y);
+            grad.addColorStop(0, 'transparent');
+            grad.addColorStop(1, c);
+            ctx.strokeStyle = grad; ctx.globalAlpha = 0.35; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(p.x, p.y); ctx.stroke();
+            ctx.globalAlpha = 0.55; ctx.fillStyle = c;
+            ctx.beginPath(); ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+    draw();
+}
+
+// ── Sparkles — twinkling 4-point stars fading in and out ──
+function _ftSparkles() {
+    if (document.getElementById('sparkles-canvas')) return;
+    const canvas = _makeEffectCanvas('sparkles');
+    const ctx = canvas.getContext('2d');
+    const dpr = _bgDpr();
+    let W, H;
+    const sparkles = [];
+    function makeSpark() {
+        return { x: Math.random() * W, y: Math.random() * H, size: 2 + Math.random() * 5, phase: Math.random() * Math.PI * 2, speed: 0.015 + Math.random() * 0.03, life: 0.5 + Math.random() * 0.5 };
+    }
+    function resize() {
+        W = window.innerWidth; H = window.innerHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (sparkles.length === 0) for (let i = 0; i < _bgCount(35); i++) sparkles.push(makeSpark());
+    }
+    resize();
+    const _onResize = () => resize();
+    window.addEventListener('resize', _onResize);
+    function drawStar(x, y, r, c, alpha) {
+        ctx.save(); ctx.translate(x, y); ctx.fillStyle = c; ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.moveTo(0, -r); ctx.quadraticCurveTo(r * 0.15, -r * 0.15, r, 0);
+        ctx.quadraticCurveTo(r * 0.15, r * 0.15, 0, r);
+        ctx.quadraticCurveTo(-r * 0.15, r * 0.15, -r, 0);
+        ctx.quadraticCurveTo(-r * 0.15, -r * 0.15, 0, -r);
+        ctx.fill(); ctx.restore();
+    }
+    function draw() {
+        if (!document.body.classList.contains('bg-effect-sparkles')) { window.removeEventListener('resize', _onResize); canvas.remove(); return; }
+        requestAnimationFrame(draw);
+        ctx.clearRect(0, 0, W, H);
+        const c = _bgEffectColor();
+        sparkles.forEach(s => {
+            s.phase += s.speed;
+            const twinkle = Math.sin(s.phase);
+            const alpha = Math.max(0, twinkle) * 0.25 * s.life;
+            const scale = 0.5 + Math.max(0, twinkle) * 0.5;
+            if (alpha > 0.01) drawStar(s.x, s.y, s.size * scale, c, alpha);
+            if (s.phase > Math.PI * 6) Object.assign(s, makeSpark());
+        });
+        ctx.globalAlpha = 1;
+    }
+    draw();
+}
+
+// ── Embers — warm particles rising with an additive glow + occasional spark bursts ──
+function _ftEmbers() {
+    if (document.getElementById('embers-canvas')) return;
+    const canvas = _makeEffectCanvas('embers');
+    const ctx = canvas.getContext('2d');
+    const dpr = _bgDpr();
+    let W, H;
+    const embers = [];
+    function makeEmber() {
+        return {
+            x: Math.random() * W, y: H + Math.random() * 40,
+            vx: (Math.random() - 0.5) * 0.3, vy: -0.3 - Math.random() * 0.8,
+            r: 0.3 + Math.random() * 0.6, life: 0, maxLife: 220 + Math.random() * 220,
+            wobble: Math.random() * Math.PI * 2, spark: false,
+        };
+    }
+    function resize() {
+        W = window.innerWidth; H = window.innerHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (embers.length === 0) for (let i = 0; i < _bgCount(60); i++) { const e = makeEmber(); e.y = Math.random() * H; e.life = Math.random() * e.maxLife; embers.push(e); }
+    }
+    resize();
+    const _onResize = () => resize();
+    window.addEventListener('resize', _onResize);
+    function draw() {
+        if (!document.body.classList.contains('bg-effect-embers')) { window.removeEventListener('resize', _onResize); canvas.remove(); return; }
+        requestAnimationFrame(draw);
+        // Fade the previous frame toward transparent so trails decay (keeps the canvas see-through).
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalCompositeOperation = 'lighter';
+        const color = _bgEffectColor();
+        for (let i = embers.length - 1; i >= 0; i--) {
+            const e = embers[i];
+            e.wobble += 0.03;
+            e.x += e.vx + Math.sin(e.wobble) * 0.5;
+            e.y += e.vy;
+            e.life++;
+            if (e.life > e.maxLife || e.y < -20) {
+                embers.splice(i, 1);
+                if (embers.length < _bgCount(70)) embers.push(makeEmber());
+                continue;
+            }
+            if (!e.spark && Math.random() < 0.003) e.spark = true;
+            const lifeRatio = e.life / e.maxLife;
+            const fade = Math.min(1, Math.min(lifeRatio * 4, (1 - lifeRatio) * 3));
+            const r = e.r * (e.spark ? 2.4 : 1);
+            const a = (e.spark ? 0.9 : 0.55) * fade;
+            const g = ctx.createRadialGradient(e.x, e.y, 0, e.x, e.y, r * 4);
+            g.addColorStop(0, _bgRgba(color, a));
+            g.addColorStop(0.4, _bgRgba(color, a * 0.3));
+            g.addColorStop(1, _bgRgba(color, 0));
+            ctx.fillStyle = g;
+            ctx.fillRect(e.x - r * 4, e.y - r * 4, r * 8, r * 8);
+            ctx.fillStyle = _bgRgba('#ffffff', a * 0.6);
+            ctx.beginPath(); ctx.arc(e.x, e.y, r * 0.5, 0, Math.PI * 2); ctx.fill();
+            e.spark = false;
+        }
+        if (Math.random() < 0.015) {
+            const bx = Math.random() * W;
+            for (let i = 0; i < 5; i++) { const e = makeEmber(); e.x = bx + (Math.random() - 0.5) * 40; e.y = H - 10; e.vy *= 1.5; embers.push(e); }
+        }
+        ctx.globalCompositeOperation = 'source-over';
+    }
+    draw();
+}
+
+// ── Perlin Flow — particles streaming along a smooth, organic flow field ──
+function _ftPerlinFlow() {
+    if (document.getElementById('perlin-flow-canvas')) return;
+    const canvas = _makeEffectCanvas('perlin-flow');
+    const ctx = canvas.getContext('2d');
+    const dpr = _bgDpr();
+    let W, H, t = 0;
+    const particles = [];
+    function resize() {
+        W = window.innerWidth; H = window.innerHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (particles.length === 0) for (let i = 0; i < 130; i++) particles.push({ x: Math.random() * W, y: Math.random() * H, life: Math.random() });
+    }
+    resize();
+    const _onResize = () => resize();
+    window.addEventListener('resize', _onResize);
+    // Direct Odysseus port: fade by painting the page background over the canvas at a low alpha
+    // (source-over). That's a convex blend toward the bg, so streams stay soft + bounded — a hot
+    // streamline can never exceed the streak colour (the additive `destination-out` version went
+    // fully opaque = "messy"). FT has no single `--bg`, so we use the primary-bg end stop; cached
+    // so we only re-parse on a theme change. Trade-off: this effect's canvas fills to a flat bg
+    // tone rather than letting the page gradient show through (exactly how Odysseus looks).
+    let _cachedBg = '', _fadeStyle = 'rgba(13,17,23,0.04)';
+    function getFade() {
+        const cs = getComputedStyle(document.documentElement);
+        const bg = (cs.getPropertyValue('--primary-bg-color-end').trim()
+            || cs.getPropertyValue('--primary-bg-color-start').trim() || '#0d1117');
+        if (bg !== _cachedBg) { _cachedBg = bg; _fadeStyle = _bgRgba(bg, 0.04); }
+        return _fadeStyle;
+    }
+    function draw() {
+        if (!document.body.classList.contains('bg-effect-perlin-flow')) { window.removeEventListener('resize', _onResize); canvas.remove(); return; }
+        requestAnimationFrame(draw);
+        ctx.fillStyle = getFade();
+        ctx.fillRect(0, 0, W, H);
+        const c = _bgEffectColor();
+        particles.forEach(p => {
+            const n = _bgSmoothNoise(p.x * 0.004 + t * 0.0008, p.y * 0.004 + 100);
+            const angle = n * Math.PI * 6;
+            const speed = 1 + _bgSmoothNoise(p.x * 0.003, p.y * 0.003 + 50) * 1.5;
+            p.x += Math.cos(angle) * speed; p.y += Math.sin(angle) * speed; p.life -= 0.001;
+            if (p.life <= 0 || p.x < 0 || p.x > W || p.y < 0 || p.y > H) { p.x = Math.random() * W; p.y = Math.random() * H; p.life = 1; }
+            ctx.beginPath(); ctx.arc(p.x, p.y, 1, 0, Math.PI * 2);
+            ctx.fillStyle = c; ctx.globalAlpha = p.life * 0.15; ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+        t++;
+    }
+    draw();
+}
+
+const BG_EFFECTS = {
+    constellations: _ftConstellations, petals: _ftPetals, rain: _ftRain,
+    synapse: _ftSynapse, sparkles: _ftSparkles, embers: _ftEmbers,
+    // 'perlin-flow' is temporarily disabled — the flow-field look is unresolved (an issue
+    // inherited from the Odysseus original). _ftPerlinFlow is kept above to revisit later;
+    // it's left out of this registry (and the index.html dropdown) so it can't be selected,
+    // and any save still pointing at it falls back to 'none' in applyBackgroundEffect.
+    // 'perlin-flow': _ftPerlinFlow,
+};
 
 // The one entry point: switch to the requested effect (or none). Honours the perf/motion
 // guard — the stored preference is kept either way, so an effect a desktop user picked simply
@@ -814,6 +1078,16 @@ function applyBackgroundEffect(name) {
     if (wanted === 'none') return;
     body.classList.add('bg-effect-' + wanted);
     BG_EFFECTS[wanted]();
+}
+
+// Optional custom tint for the effect. A non-empty value pins `--bg-effect-color` (which every
+// effect reads live each frame); empty removes it so `_bgEffectColor()` falls back to the accent.
+// Decorative — not part of the colour-token chokepoint, hence its own entry point.
+function applyBgEffectColor(color) {
+    if (typeof document === 'undefined' || !document.documentElement) return;
+    const root = document.documentElement;
+    if (color) root.style.setProperty('--bg-effect-color', color);
+    else root.style.removeProperty('--bg-effect-color');
 }
 
 // --- END OF: theme.js ---
