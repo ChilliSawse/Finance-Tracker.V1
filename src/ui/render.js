@@ -13,8 +13,14 @@ import {
     updateDashboardUI, updateIncomeTabUI, updateExpensesTabUI,
     updateSavingsTabUI, updateLiabilitiesTabUI,
 } from './render-tabs.js';
+import { renderHomeFeed } from './feed.js';
+import { recordDailySnapshot } from '../state/snapshots.js';
+import { checkMilestones } from '../state/milestones.js';
 
 const TAB_RENDERERS = {
+    // Home is async (event log is IndexedDB); fire-and-forget — it renders
+    // greeting/pulse synchronously enough and fills the feed when ready.
+    home: () => { renderHomeFeed(); },
     dashboard: updateDashboardUI,
     income: updateIncomeTabUI,
     expenses: updateExpensesTabUI,
@@ -36,6 +42,8 @@ function renderTab(tabName, totals) {
 // Full render — initial load, resets, imports.
 export function updateAllUI() {
     const totals = calculateTotals(store.financeData);
+    recordDailySnapshot(totals);
+    checkMilestones(totals);
     Object.keys(TAB_RENDERERS).forEach(tab => renderTab(tab, totals));
     // The liabilities-modal total readout rides along with any full render.
     setText('total-liabilities-settings', formatCurrency(totals.currentLiabilities));
@@ -47,6 +55,11 @@ export function updateDataAndUI(callback) {
     if (callback) callback(); // legacy signature: execute the data-modifying function
 
     if (store.autoSave) store.autoSave.onDataChange();
+
+    // Trend + celebration bookkeeping ride along with every data change.
+    const totals = calculateTotals(store.financeData);
+    recordDailySnapshot(totals);
+    checkMilestones(totals);
 
     Object.keys(TAB_RENDERERS).forEach(tab => dirty.add(tab));
     renderActiveTab();

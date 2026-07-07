@@ -36,7 +36,11 @@
         </header>
 
         <nav class="sidebar" id="sidebar" role="tablist" aria-orientation="vertical" aria-label="Finance sections">
-            <button role="tab" class="tab active" data-tab-target="dashboard" aria-controls="dashboard" aria-selected="true" tabindex="0">
+            <button role="tab" class="tab active" data-tab-target="home" aria-controls="home" aria-selected="true" tabindex="0">
+                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg></span>
+                <span class="tab-label">Home</span>
+            </button>
+            <button role="tab" class="tab" data-tab-target="dashboard" aria-controls="dashboard" aria-selected="false" tabindex="-1">
                 <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
                 <span class="tab-label">Dashboard</span>
             </button>
@@ -56,6 +60,7 @@
                 <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
                 <span class="tab-label">Liabilities</span>
             </button>
+            <div class="sidebar-group-label" role="presentation" aria-hidden="true">Tools</div>
             <button role="tab" class="tab" data-tab-target="whatIf" aria-controls="whatIf" aria-selected="false" tabindex="-1">
                 <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="20" cy="14" r="2"/></svg></span>
                 <span class="tab-label">What If?</span>
@@ -67,7 +72,16 @@
         </nav>
 
         <main class="content main-content" id="main-content">
-            <div id="dashboard" role="tabpanel" aria-labelledby="tab-dashboard" class="tab-content active">
+            <div id="home" role="tabpanel" aria-labelledby="tab-home" class="tab-content active">
+                <div class="home-greeting">
+                    <h2 id="home-greeting-title">Good morning</h2>
+                    <p id="home-greeting-sub">Here's what's happening with your money.</p>
+                </div>
+                <div class="pulse-row" id="home-pulse"></div>
+                <div class="feed" id="home-feed" aria-live="polite"></div>
+            </div>
+
+            <div id="dashboard" role="tabpanel" aria-labelledby="tab-dashboard" class="tab-content">
                 <div id="dashboard-empty-state" class="dashboard-empty" hidden>
                     <h2>Welcome to your Finance Tracker</h2>
                     <p>Add a few details and your income, spending, and savings come to life. Start here:</p>
@@ -180,6 +194,7 @@
                             </div>
                         </div>
                         <div class="amount net-worth" id="net-worth-display" aria-live="polite" aria-atomic="true"></div>
+                        <div class="trend-slot" id="net-worth-trend" aria-hidden="true"></div>
                          <div class="net-worth-breakdown">
                             <div>
                                 <div class="card-subtitle">Total Assets</div>
@@ -350,6 +365,7 @@
                         <div class="card-title">Savings Rate</div>
                         <div class="card-subtitle">Percentage of net income saved</div>
                         <div class="amount" style="color: var(--color-positive);" id="savings-rate">0.0%</div>
+                        <div class="trend-slot" id="savings-rate-trend" aria-hidden="true"></div>
                         <div class="progress-bar">
                             <div class="progress-fill" id="savings-rate-progress" style="width: 0%;"></div>
                         </div>

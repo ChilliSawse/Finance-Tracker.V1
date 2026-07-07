@@ -2,6 +2,17 @@
 import { store } from '../state/store.js';
 import { getElement, setText, setHTML, setValue, formatCurrency, escapeHtml, getWeeklyAmount, getPayCyclesPerYear, formatTimeToGoal } from '../utils.js';
 import { calculateYearsToFI, getTaxBracketBreakdown } from '../calc/calculations.js';
+import { sparklineSvg } from './sparkline.js';
+import { listSnapshots } from '../state/snapshots.js';
+
+// Fill a trend slot with a sparkline of snapshot history. Empty until there are
+// at least two days of history — a one-point line says nothing.
+function renderTrendSlot(slotId, field) {
+    const slot = getElement(slotId);
+    if (!slot) return;
+    const series = listSnapshots().slice(-30).map(s => s[field]);
+    slot.innerHTML = series.length >= 2 ? sparklineSvg(series) : '';
+}
 
 // --- START OF: uiDashboard.js ---
 
@@ -97,6 +108,7 @@ function updateDashboardUI(totals) {
     setText('net-worth-display', formatCurrency(totals.netWorth));
     const netWorthEl = getElement('net-worth-display');
     if (netWorthEl) netWorthEl.classList.toggle('is-negative', totals.netWorth < 0);
+    renderTrendSlot('net-worth-trend', 'netWorth'); // 30-day sparkline (needs ≥2 days of history)
     setText('total-assets-display', formatCurrency(totals.currentAssets));
     setText('total-liabilities-display', formatCurrency(totals.currentLiabilities));
 
@@ -347,6 +359,7 @@ function updateSavingsTabUI(totals) {
     if (savingsRateProgressEl) {
         savingsRateProgressEl.style.width = `${Math.max(0, Math.min(100, totals.savingsRate))}%`;
     }
+    renderTrendSlot('savings-rate-trend', 'savingsRate'); // 30-day sparkline
 
 
     let message = '';

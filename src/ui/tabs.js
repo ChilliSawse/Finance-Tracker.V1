@@ -6,8 +6,8 @@ import { renderActiveTab, refreshTab } from './render.js';
 import { initializeWhatIfTab } from './whatif.js';
 import { setExpenseSearchQuery } from './render-tabs.js';
 
-// 'settings' removed (Phase D.6) — it's a modal now, not a tab. Legacy saved value falls back to dashboard.
-const VALID_TABS = ['dashboard', 'income', 'expenses', 'savings', 'liabilities', 'whatIf'];
+// 'settings' removed (Phase D.6) — it's a modal now, not a tab. Legacy saved value falls back to home.
+const VALID_TABS = ['home', 'dashboard', 'income', 'expenses', 'savings', 'liabilities', 'whatIf'];
 
 export function showTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(content => {
@@ -47,9 +47,9 @@ export function showTab(tabName) {
     fitAllAmounts();
 }
 
-// A.3 — restore the last-viewed section, falling back to the dashboard.
+// A.3 — restore the last-viewed section, falling back to the Home feed.
 export function restoreActiveTab() {
-    let tab = 'dashboard';
+    let tab = 'home';
     try {
         const saved = localStorage.getItem('ft-active-tab');
         if (saved && VALID_TABS.includes(saved)) tab = saved;

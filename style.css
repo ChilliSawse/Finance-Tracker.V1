@@ -2413,3 +2413,206 @@ body {
     text-overflow: ellipsis;
     max-width: 100%;
 }
+/* ── Ledger: Home feed + pulse tiles + sparklines ─────────────────────────
+   All colours are theme tokens — every preset and custom theme keeps working. */
+
+/* Sidebar group label ("Tools") — quiet structural divider, not a control. */
+.sidebar-group-label {
+    margin: 14px 12px 4px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--tab-text-color);
+    white-space: nowrap;
+    overflow: hidden;
+}
+.app-shell.is-collapsed .sidebar-group-label {
+    margin: 14px 4px 4px;
+    text-align: center;
+    font-size: 0.5rem;
+    letter-spacing: 0.05em;
+}
+
+/* Home greeting — the conversational open. The insight line is the voice. */
+.home-greeting {
+    margin: 6px 2px 22px;
+}
+.home-greeting h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 650;
+    color: var(--heading-color);
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+}
+.home-greeting p {
+    margin-top: 6px;
+    font-size: 1rem;
+    color: var(--text-color-secondary);
+    max-width: 60ch;
+    line-height: 1.45;
+}
+
+/* Pulse row — three glanceable tiles with trends. */
+.pulse-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 28px;
+}
+.pulse-tile {
+    background: var(--card-bg-gradient-start); /* fallback: solid */
+    background: color-mix(in srgb, var(--card-bg-gradient-start) var(--card-opacity), transparent);
+    border: 1px solid var(--border-color);
+    border-radius: 15px;
+    padding: 16px 18px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.pulse-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-color-secondary);
+}
+.pulse-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-color-primary);
+    line-height: 1.15;
+}
+.pulse-value.is-negative-value { color: var(--color-negative); }
+.pulse-delta {
+    align-self: flex-start;
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.pulse-delta.is-good { background: var(--positive-tint); color: var(--color-positive); }
+.pulse-delta.is-bad  { background: var(--negative-tint); color: var(--color-negative); }
+.pulse-sub {
+    font-size: 0.78rem;
+    color: var(--text-color-secondary);
+}
+.pulse-tile .sparkline {
+    margin-top: auto;
+    width: 100%;
+    height: 32px;
+}
+
+/* Sparklines — single series, thin line, token-coloured (identity, not direction). */
+.sparkline { display: block; overflow: visible; }
+.sparkline-line {
+    fill: none;
+    stroke: var(--color-neutral);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.sparkline-area { fill: var(--neutral-tint); }
+.sparkline-dot  { fill: var(--color-neutral); }
+.trend-slot { margin: 4px 0 2px; }
+.trend-slot .sparkline { width: min(100%, 220px); height: 30px; }
+.amount.net-worth + .trend-slot { text-align: center; }
+.amount.net-worth + .trend-slot .sparkline { margin: 0 auto; }
+
+/* Activity feed — the ledger-journal timeline. The spine + typed dots are the
+   signature: a continuous line of what happened, colour-coded by kind. */
+.feed { max-width: 720px; }
+.feed-cluster-label {
+    margin: 22px 0 10px 34px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-color-secondary);
+}
+.feed-cluster-label:first-child { margin-top: 4px; }
+.feed-item {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    padding: 0 0 18px 34px;
+}
+/* The spine — runs behind the dots, breaks naturally at cluster labels. */
+.feed-item::before {
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 14px;
+    bottom: -4px;
+    width: 2px;
+    background: var(--border-color);
+    border-radius: 1px;
+}
+.feed-item:last-child::before { display: none; }
+.feed-dot {
+    position: absolute;
+    left: 3px;
+    top: 4px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 3px solid var(--primary-bg-color-start);
+    background: var(--text-color-secondary);
+}
+.feed-kind-good .feed-dot { background: var(--color-positive); }
+.feed-kind-info .feed-dot { background: var(--color-neutral); }
+.feed-kind-warn .feed-dot { background: var(--color-warning); }
+.feed-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+.feed-text {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--text-color-primary);
+    overflow-wrap: break-word;
+    min-width: 0;
+}
+.feed-text strong { color: var(--heading-color); font-variant-numeric: tabular-nums; }
+.feed-time {
+    flex-shrink: 0;
+    font-size: 0.74rem;
+    color: var(--text-color-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+/* Feed empty state — an invitation, not a dead end. */
+.feed-empty {
+    padding: 28px 24px;
+    border: 1px dashed var(--border-color);
+    border-radius: 15px;
+    text-align: center;
+}
+.feed-empty-title {
+    margin: 0 0 6px;
+    font-size: 1.05rem;
+    font-weight: 650;
+    color: var(--heading-color);
+}
+.feed-empty-sub {
+    margin: 0 auto;
+    max-width: 46ch;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    color: var(--text-color-secondary);
+}
+
+@media (max-width: 640px) {
+    .feed-body { flex-direction: column; gap: 2px; }
+    .home-greeting { margin-bottom: 16px; }
+    .pulse-row { gap: 10px; margin-bottom: 20px; }
+}

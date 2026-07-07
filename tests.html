@@ -43,6 +43,7 @@
     import { configureDb, deleteDb } from './src/state/db.js';
     import { makeTransaction, addTransactions, listTransactions, monthlySpendByCategory, deleteImportBatch, countTransactions } from './src/state/transactions.js';
     import { logEvent, listRecentEvents, pruneEvents } from './src/state/eventlog.js';
+    import { CSV_TEST_CASES } from './src/import/csv.test-cases.js';
     (async function () {
         const results = [];
         let pass = 0, fail = 0;
@@ -195,6 +196,19 @@
         assertEqual('UBER TRIP → transport', categoriseDescription('UBER TRIP HELP.UBER.COM', DEFAULT_CATEGORIES), 'transport');
         assertEqual('Unknown merchant → other', categoriseDescription('TRANSFER 000-000 REF 1', DEFAULT_CATEGORIES), 'other');
         assertEqual('Empty description → other', categoriseDescription('', DEFAULT_CATEGORIES), 'other');
+
+        // --- CSV import engine (self-describing cases from src/import/csv.test-cases.js) ---
+        group('CSV import engine');
+        for (const tc of CSV_TEST_CASES) {
+            try {
+                tc.fn((label, actual, expected) => {
+                    const a = JSON.stringify(actual), e = JSON.stringify(expected);
+                    record(`${tc.name} — ${label}`, a === e, e, a);
+                });
+            } catch (err) {
+                record(tc.name, false, 'no exception', String(err));
+            }
+        }
 
         // --- Transaction store (IndexedDB, isolated test database) ---
         group('Transaction store (IndexedDB)');
