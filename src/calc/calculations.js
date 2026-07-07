@@ -1,6 +1,14 @@
-// --- START OF: calculations.js ---
+// The tax and financial math engine (moved from js/calculations.js).
+// Pure functions — no store access, no DOM. tests.html imports this module
+// directly; keep it that way so the math stays testable in isolation.
+//
+// One deliberate signature change from the pre-module code: calculateTotals
+// no longer defaults its argument to the global financeData — every caller
+// passes data explicitly.
 
-function calculateTotals(currentData = financeData) {
+import { getPayCyclesPerYear, getWeeklyAmount } from '../utils.js';
+
+export function calculateTotals(currentData) {
     let totalGrossAnnualIncome = 0;
     let totalNetAnnualIncome = 0;
     let totalAnnualTaxFromSources = 0;
@@ -90,7 +98,7 @@ function calculateTotals(currentData = financeData) {
  * and max may be Infinity (or null) for the top band.
  * @returns {number} Estimated annual tax (0 if no brackets / no income).
  */
-function calculateTaxFromBrackets(grossAnnual, brackets) {
+export function calculateTaxFromBrackets(grossAnnual, brackets) {
     const gross = parseFloat(grossAnnual) || 0;
     if (gross <= 0 || !Array.isArray(brackets) || brackets.length === 0) return 0;
 
@@ -110,7 +118,7 @@ function calculateTaxFromBrackets(grossAnnual, brackets) {
  * Per-band breakdown of the progressive tax calc, for an auditable display.
  * @returns {Array<{min,max,rate,taxable,tax}>} Only bands that the income reaches.
  */
-function getTaxBracketBreakdown(grossAnnual, brackets) {
+export function getTaxBracketBreakdown(grossAnnual, brackets) {
     const gross = parseFloat(grossAnnual) || 0;
     if (gross <= 0 || !Array.isArray(brackets) || brackets.length === 0) return [];
 
@@ -127,7 +135,7 @@ function getTaxBracketBreakdown(grossAnnual, brackets) {
     return rows;
 }
 
-function calculateYearsToFI(annualSavings, currentAssets, fiTarget, expectedReturnRate) {
+export function calculateYearsToFI(annualSavings, currentAssets, fiTarget, expectedReturnRate) {
     if (fiTarget <= 0) return 0;
     if (currentAssets >= fiTarget) return 0;
     if (annualSavings <= 0) return Infinity;
@@ -151,6 +159,3 @@ function calculateYearsToFI(annualSavings, currentAssets, fiTarget, expectedRetu
     const years = Math.log(numerator / denominator) / Math.log(1 + r);
     return isNaN(years) ? Infinity : Math.max(0, years);
 }
-
-
-// --- END OF: calculations.js ---

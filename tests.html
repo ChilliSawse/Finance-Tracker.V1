@@ -32,11 +32,10 @@
         <tbody id="results"></tbody>
     </table>
 
-    <!-- Minimal globals some functions reference via default params (only evaluated if called). -->
-    <script>var financeData = { currency: 'AUD' };</script>
-    <script src="js/utils.js"></script>
-    <script src="js/calculations.js"></script>
-    <script>
+    <script type="module">
+    import {
+        calculateTotals, calculateTaxFromBrackets, getTaxBracketBreakdown, calculateYearsToFI,
+    } from './src/calc/calculations.js';
     (function () {
         const results = [];
         let pass = 0, fail = 0;

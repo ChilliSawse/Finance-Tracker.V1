@@ -1,15 +1,20 @@
+// ES module conversion: logic unchanged from js/uiDashboard.js; financeData now lives on the store.
+import { store } from '../state/store.js';
+import { getElement, setText, setHTML, setValue, formatCurrency, escapeHtml, getWeeklyAmount, getPayCyclesPerYear, formatTimeToGoal } from '../utils.js';
+import { calculateYearsToFI, getTaxBracketBreakdown } from '../calc/calculations.js';
+
 // --- START OF: uiDashboard.js ---
 
 function updateDashboardUI(totals) {
     // F.1 — show a welcome empty state (instead of zero-filled cards) until there's any data.
     const dashIsEmpty = totals.totalGrossAnnualIncome === 0 && totals.totalNetAnnualIncome === 0
-        && totals.totalWeeklyExpenses === 0 && financeData.assets.length === 0 && financeData.liabilities.length === 0;
+        && totals.totalWeeklyExpenses === 0 && store.financeData.assets.length === 0 && store.financeData.liabilities.length === 0;
     const emptyStateEl = getElement('dashboard-empty-state');
     const populatedEl = getElement('dashboard-populated');
     if (emptyStateEl) emptyStateEl.hidden = !dashIsEmpty;
     if (populatedEl) populatedEl.hidden = dashIsEmpty;
 
-    const viewPeriod = financeData.dashboardViewPeriod || 'fortnightly';
+    const viewPeriod = store.financeData.dashboardViewPeriod || 'fortnightly';
     setValue('dashboard-view-period', viewPeriod);
 
     let incomeForPeriod = 0;
@@ -98,13 +103,13 @@ function updateDashboardUI(totals) {
     const assetsDisplayContainer = getElement('assets-display');
     if (assetsDisplayContainer) {
         assetsDisplayContainer.innerHTML = '';
-        financeData.assets.forEach(asset => {
+        store.financeData.assets.forEach(asset => {
             const assetDiv = document.createElement('div');
             assetDiv.className = 'account-item asset';
             assetDiv.innerHTML = `<div class="account-name">${escapeHtml(asset.name)}</div><div class="account-balance">${formatCurrency(asset.balance)}</div>`;
             assetsDisplayContainer.appendChild(assetDiv);
         });
-        if (financeData.assets.length === 0) {
+        if (store.financeData.assets.length === 0) {
             assetsDisplayContainer.innerHTML = `<p style="text-align:center; font-size:0.9em; color: var(--text-color-secondary);">No assets added yet.</p>`;
         }
     }
@@ -112,13 +117,13 @@ function updateDashboardUI(totals) {
     const liabilitiesDisplayContainer = getElement('liabilities-display');
     if (liabilitiesDisplayContainer) {
         liabilitiesDisplayContainer.innerHTML = '';
-        financeData.liabilities.forEach(liability => {
+        store.financeData.liabilities.forEach(liability => {
             const liabilityDiv = document.createElement('div');
             liabilityDiv.className = 'account-item liability';
             liabilityDiv.innerHTML = `<div class="account-name">${escapeHtml(liability.name)}</div><div class="account-balance">${formatCurrency(liability.balance)}</div>`;
             liabilitiesDisplayContainer.appendChild(liabilityDiv);
         });
-         if (financeData.liabilities.length === 0) {
+         if (store.financeData.liabilities.length === 0) {
             liabilitiesDisplayContainer.innerHTML = `<p style="text-align:center; font-size:0.9em; color: var(--text-color-secondary);">No liabilities added yet.</p>`;
         }
     }
@@ -131,7 +136,7 @@ function updateDashboardUI(totals) {
         setText('allocation-title', "Income Allocation Strategy");
         setText('allocation-period-subtitle', `Based on Net Income (${incomePeriodLabel})`);
 
-        financeData.allocation.forEach(alloc => {
+        store.financeData.allocation.forEach(alloc => {
             const amountForPeriod = incomeForPeriod * (alloc.percentage / 100);
             const itemDiv = document.createElement('div');
             itemDiv.className = 'savings-item';
@@ -161,7 +166,7 @@ function updateDashboardUI(totals) {
             itemDiv.innerHTML = `<div class="savings-label">${escapeHtml(alloc.name)} (${alloc.percentage}%)</div><div class="savings-amount">${formatCurrency(amountForPeriod)}/${periodSuffix}</div>${goalLine}`;
             allocationDisplayContainer.appendChild(itemDiv);
         });
-        if (financeData.allocation.length === 0) {
+        if (store.financeData.allocation.length === 0) {
              allocationDisplayContainer.innerHTML = `<p style="text-align:center; font-size:0.9em; color: var(--text-color-secondary);">No allocation categories defined.</p>`;
         }
     }
@@ -171,14 +176,14 @@ function updateIncomeTabUI(totals) {
     const incomeStreamsContainer = getElement('income-streams-display');
     if (incomeStreamsContainer) {
         incomeStreamsContainer.innerHTML = '';
-        financeData.incomeSources.forEach((source, index) => {
+        store.financeData.incomeSources.forEach((source, index) => {
             const payCycles = getPayCyclesPerYear(source.paySchedule);
             const grossAnnual = source._calculatedGrossAnnual != null ? source._calculatedGrossAnnual : (source.grossAnnual || 0);
             const taxAnnual = source._calculatedAnnualTax || 0;
             const netAnnual = source._calculatedNetAnnual || 0;
             const payCycleGross = grossAnnual / payCycles;
             const payCycleNet = netAnnual / payCycles; // Use pre-calculated net
-            const isPrimary = index === financeData.primaryIncomeIndex;
+            const isPrimary = index === store.financeData.primaryIncomeIndex;
             const typeLabel = source.incomeType === 'selfEmployed' ? 'Self-employed' : 'Salaried';
 
             const card = document.createElement('div');
@@ -226,9 +231,9 @@ function updateIncomeTabUI(totals) {
 
     const taxBreakdownRefEl = getElement('tax-breakdown-reference');
     if (taxBreakdownRefEl) {
-        const primaryIncomeSource = financeData.incomeSources[financeData.primaryIncomeIndex];
+        const primaryIncomeSource = store.financeData.incomeSources[store.financeData.primaryIncomeIndex];
         if (primaryIncomeSource && primaryIncomeSource.grossAnnual > 0) {
-            const rows = getTaxBracketBreakdown(primaryIncomeSource.grossAnnual, financeData.taxBrackets);
+            const rows = getTaxBracketBreakdown(primaryIncomeSource.grossAnnual, store.financeData.taxBrackets);
             let taxBreakdownHTML = '';
             let totalTax = 0;
 
@@ -275,6 +280,7 @@ function updateIncomeTabUI(totals) {
 
 // H.2 — live name filter for the Expenses tab lists (display-only; totals stay full).
 let expenseSearchQuery = '';
+export function setExpenseSearchQuery(q) { expenseSearchQuery = q; }
 
 function updateExpensesTabUI(totals) {
     const renderExpenseList = (containerId, expenses, typeClass) => {
@@ -307,8 +313,8 @@ function updateExpensesTabUI(totals) {
         }
     };
 
-    renderExpenseList('essential-expenses', financeData.essentialExpenses, 'essential');
-    renderExpenseList('non-essential-expenses', financeData.nonEssentialExpenses, 'non-essential');
+    renderExpenseList('essential-expenses', store.financeData.essentialExpenses, 'essential');
+    renderExpenseList('non-essential-expenses', store.financeData.nonEssentialExpenses, 'non-essential');
 
     setText('essential-subtitle', `${formatCurrency(totals.essentialWeeklyTotal)}/week • ${formatCurrency(totals.essentialWeeklyTotal * 52)}/year`);
     setText('non-essential-subtitle', `${formatCurrency(totals.nonEssentialWeeklyTotal)}/week • ${formatCurrency(totals.nonEssentialWeeklyTotal * 52)}/year`);
@@ -355,8 +361,8 @@ function updateSavingsTabUI(totals) {
 
     // Financial Independence Stats
     const annualExpenses = totals.totalWeeklyExpenses * 52;
-    const fiTarget = annualExpenses * financeData.fiSettings.multiple;
-    const yearsToFIValue = calculateYearsToFI(totals.annualSavings, totals.currentAssets, fiTarget, financeData.fiSettings.expectedReturn);
+    const fiTarget = annualExpenses * store.financeData.fiSettings.multiple;
+    const yearsToFIValue = calculateYearsToFI(totals.annualSavings, totals.currentAssets, fiTarget, store.financeData.fiSettings.expectedReturn);
     const currentProgress = fiTarget > 0 ? (totals.currentAssets / fiTarget) * 100 : (totals.currentAssets > 0 ? 100 : 0);
 
     // Build a human-readable label — Infinity is a number in JS so typeof isn't enough
@@ -371,7 +377,7 @@ function updateSavingsTabUI(totals) {
 
     setHTML('fi-stats', `
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-            <span>Years to FI (${financeData.fiSettings.multiple}x expenses):</span>
+            <span>Years to FI (${store.financeData.fiSettings.multiple}x expenses):</span>
             <span style="font-weight: 600; color: var(--color-positive);">${yearsLabel}</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
@@ -394,10 +400,10 @@ function updateSavingsTabUI(totals) {
     const savingsAssetsContainer = getElement('savings-assets-display');
     if (savingsAssetsContainer) {
         savingsAssetsContainer.innerHTML = '';
-        if (financeData.assets.length === 0) {
+        if (store.financeData.assets.length === 0) {
             savingsAssetsContainer.innerHTML = `<p style="grid-column: 1 / -1; text-align:center; font-size:0.9em; color: var(--text-color-secondary);">No assets added yet — add them via "Edit assets, allocation &amp; FI" above.</p>`;
         } else {
-            financeData.assets.forEach(asset => {
+            store.financeData.assets.forEach(asset => {
                 const assetDiv = document.createElement('div');
                 assetDiv.className = 'account-item asset';
                 assetDiv.innerHTML = `<div class="account-name">${escapeHtml(asset.name)}</div><div class="account-balance">${formatCurrency(asset.balance)}</div>`;
@@ -411,10 +417,10 @@ function updateLiabilitiesTabUI(totals) {
     const summaryContainer = getElement('liability-summary-display');
     if (summaryContainer) {
         summaryContainer.innerHTML = '';
-        if (financeData.liabilities.length === 0) {
+        if (store.financeData.liabilities.length === 0) {
             summaryContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--color-positive); font-size: 1.2em;">No liabilities tracked - Great job!</div>';
         } else {
-            financeData.liabilities.forEach(debt => {
+            store.financeData.liabilities.forEach(debt => {
                 const debtCard = document.createElement('div');
                 debtCard.className = 'liability-card';
                 const monthlyInterest = (debt.balance * (debt.interestRate / 100)) / 12;
@@ -442,7 +448,7 @@ function updateLiabilitiesTabUI(totals) {
     const impactStatsContainer = getElement('debt-impact-stats');
     if (impactStatsContainer) {
         const totalLiabilities = totals.currentLiabilities;
-        const totalAnnualInterest = financeData.liabilities.reduce((sum, debt) =>
+        const totalAnnualInterest = store.financeData.liabilities.reduce((sum, debt) =>
             sum + (debt.balance * (debt.interestRate / 100)), 0);
         const averageInterestRate = totalLiabilities > 0 ? (totalAnnualInterest / totalLiabilities) * 100 : 0;
         const netWorthWithoutDebt = totals.currentAssets; // Assets remain, liabilities become 0
@@ -470,3 +476,7 @@ function updateLiabilitiesTabUI(totals) {
 
 
 // --- END OF: uiDashboard.js ---
+export {
+    updateDashboardUI, updateIncomeTabUI, updateExpensesTabUI,
+    updateSavingsTabUI, updateLiabilitiesTabUI,
+};

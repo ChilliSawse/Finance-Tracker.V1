@@ -1,3 +1,6 @@
+// ES module conversion: logic unchanged from js/theme.js; guiSettingsData now lives on the store.
+import { store } from '../state/store.js';
+
 // --- START OF: theme.js ---
 // Colour utilities lifted from Odysseus (hex.js + theme.js)
 
@@ -258,9 +261,9 @@ function applyTheme(colors) {
     try { localStorage.setItem(_FOUC_KEY, JSON.stringify(tokens)); } catch (_) {}
 }
 
-// Apply whatever theme is saved in guiSettingsData
+// Apply whatever theme is saved in store.guiSettingsData
 function loadTheme() {
-    const name = (typeof guiSettingsData !== 'undefined' && guiSettingsData.theme) || DEFAULT_THEME;
+    const name = (typeof store.guiSettingsData !== 'undefined' && store.guiSettingsData.theme) || DEFAULT_THEME;
     applyTheme(THEMES[resolveTheme(name)]);
 }
 
@@ -269,7 +272,7 @@ function renderThemeSwitcher(container) {
     if (!container) return;
     // Highlight a preset only when the active theme IS one. A custom theme highlights in
     // the Your Themes grid instead, so no preset should look selected in that case.
-    const raw = (typeof guiSettingsData !== 'undefined' && guiSettingsData.theme) || DEFAULT_THEME;
+    const raw = (typeof store.guiSettingsData !== 'undefined' && store.guiSettingsData.theme) || DEFAULT_THEME;
     const activeName = THEMES[raw] ? raw : '';
     container.innerHTML = '';
     container.className = 'theme-switcher';
@@ -323,7 +326,7 @@ const THEME_REQUIRED_KEYS = [
 
 function snapshotAppearance() {
     const snap = {};
-    THEME_SNAPSHOT_KEYS.forEach(k => { snap[k] = guiSettingsData[k]; });
+    THEME_SNAPSHOT_KEYS.forEach(k => { snap[k] = store.guiSettingsData[k]; });
     return snap;
 }
 
@@ -352,12 +355,12 @@ function deleteCustomTheme(name) {
     _saveCustomThemesObj(ct);
 }
 
-// Copy a saved custom theme's fields into guiSettingsData and mark it active.
+// Copy a saved custom theme's fields into store.guiSettingsData and mark it active.
 function applyCustomTheme(name) {
     const data = loadCustomThemes()[name];
     if (!data) return false;
-    guiSettingsData.theme = name; // active = this custom name (not a preset)
-    THEME_SNAPSHOT_KEYS.forEach(k => { if (data[k] !== undefined) guiSettingsData[k] = data[k]; });
+    store.guiSettingsData.theme = name; // active = this custom name (not a preset)
+    THEME_SNAPSHOT_KEYS.forEach(k => { if (data[k] !== undefined) store.guiSettingsData[k] = data[k]; });
     return true;
 }
 
@@ -385,7 +388,7 @@ function renderCustomThemes(container) {
     container.innerHTML = '';
     if (!names.length) { if (card) card.hidden = true; return; }
     if (card) card.hidden = false;
-    const active = (typeof guiSettingsData !== 'undefined') ? guiSettingsData.theme : '';
+    const active = (typeof store.guiSettingsData !== 'undefined') ? store.guiSettingsData.theme : '';
 
     names.forEach(name => {
         const data = ct[name];
@@ -1091,3 +1094,15 @@ function applyBgEffectColor(color) {
 }
 
 // --- END OF: theme.js ---
+
+export {
+    hexToRgb, hexToHSL, hslToHex, hexToRgba, perceivedLuminance,
+    THEMES, DEFAULT_THEME, resolveTheme, migrateGuiTheme, migrateGuiColorFields,
+    deriveTokens, applyTheme, loadTheme, renderThemeSwitcher,
+    MAX_CUSTOM_THEMES, snapshotAppearance, loadCustomThemes, saveCustomTheme,
+    deleteCustomTheme, applyCustomTheme, parseThemeImport, renderCustomThemes,
+    generateHarmonyBase,
+    MAX_CUSTOM_FONTS, MAX_FONT_BYTES, customFontStack, registerStoredCustomFonts,
+    addCustomFont, deleteCustomFont, populateCustomFontOptions, renderCustomFontList,
+    applyBackgroundEffect, applyBgEffectColor,
+};

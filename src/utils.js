@@ -1,6 +1,10 @@
-// --- START OF: utils.js ---
+// Shared helpers (moved from js/utils.js).
+// updateDataAndUI moved to ui/render.js — it coordinates autosave + rendering,
+// which isn't a leaf-utility concern.
 
-function escapeHtml(str) {
+import { store } from './state/store.js';
+
+export function escapeHtml(str) {
     if (str == null) return '';
     return String(str)
         .replace(/&/g, '&amp;')
@@ -15,7 +19,7 @@ function escapeHtml(str) {
  * @param {string} schedule - 'weekly', 'fortnightly', 'monthly', 'yearly'.
  * @returns {number} Number of cycles per year.
  */
-function getPayCyclesPerYear(schedule) {
+export function getPayCyclesPerYear(schedule) {
     switch (schedule) {
         case 'weekly': return 52;
         case 'fortnightly': return 26;
@@ -31,7 +35,7 @@ function getPayCyclesPerYear(schedule) {
  * @param {string} frequency - The frequency of the amount.
  * @returns {number} The equivalent weekly amount.
  */
-function getWeeklyAmount(amount, frequency) {
+export function getWeeklyAmount(amount, frequency) {
     if (typeof amount !== 'number' || isNaN(amount)) amount = 0;
     switch (frequency) {
         case 'weekly': return amount;
@@ -47,7 +51,7 @@ function getWeeklyAmount(amount, frequency) {
  * @param {number} years - decimal years until the goal is reached.
  * @returns {string}
  */
-function formatTimeToGoal(years) {
+export function formatTimeToGoal(years) {
     if (!isFinite(years) || years < 0) return '—';
     const months = years * 12;
     if (months < 1) return '< 1 month';
@@ -61,11 +65,11 @@ function formatTimeToGoal(years) {
 /**
  * Formats a number as currency according to the global settings.
  * @param {number} amount - The number to format.
- * @param {string} [currencyCode=financeData.currency] - The currency code.
+ * @param {string} [currencyCode] - The currency code (defaults to the app setting).
  * @param {number} [decimalPlaces=2] - Number of decimal places.
  * @returns {string} The formatted currency string.
  */
-function formatCurrency(amount, currencyCode = financeData.currency, decimalPlaces = 2) {
+export function formatCurrency(amount, currencyCode = store.financeData.currency, decimalPlaces = 2) {
     if (typeof amount !== 'number' || isNaN(amount)) {
         amount = 0;
     }
@@ -85,11 +89,8 @@ function formatCurrency(amount, currencyCode = financeData.currency, decimalPlac
 /**
  * Creates a debounced function that delays invoking `func` until after `wait`
  * milliseconds have elapsed since the last time the debounced function was invoked.
- * @param {Function} func - The function to debounce.
- * @param {number} wait - The number of milliseconds to delay.
- * @returns {Function} Returns the new debounced function.
  */
-function debounce(func, wait) {
+export function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
         const later = () => {
@@ -101,27 +102,6 @@ function debounce(func, wait) {
     };
 }
 
-/**
- * Updates the data via a callback and then dispatches an event
- * to signal that the UI should be updated.
- * @param {Function} [callback] - A function to execute to modify the data.
- */
-function updateDataAndUI(callback) {
-    if (callback) {
-        callback(); // Execute the data-modifying function
-    }
-
-    if (autoSave) {
-        autoSave.onDataChange(); // Trigger the auto-save mechanism
-    }
-
-    // Dispatch a custom event to signal that data has changed
-    // main.js will listen for this event and trigger the UI update.
-    log("Dispatching 'dataChanged' event.");
-    document.dispatchEvent(new CustomEvent('dataChanged'));
-}
-
-
 // --- Auto-fit currency figures ---
 // Large numbers or long suffixes ("/fortnight") can be wider than their card.
 // Rather than wrap mid-number or clip, shrink the figure's font just enough to
@@ -131,7 +111,7 @@ const FIT_SELECTOR = '.amount, .stat-value, .time-amount, .savings-amount, ' +
     '.account-balance, .liability-balance, .expense-amount';
 const FIT_MIN_PX = 11;
 
-function fitTextToWidth(el) {
+export function fitTextToWidth(el) {
     el.style.fontSize = '';                          // reset to the CSS-defined size
     if (el.clientWidth === 0) return;                // hidden (inactive tab) — skip
     if (el.scrollWidth <= el.clientWidth) return;    // already fits
@@ -144,13 +124,13 @@ function fitTextToWidth(el) {
     }
 }
 
-function fitAllAmounts(root) {
+export function fitAllAmounts(root) {
     (root || document).querySelectorAll(FIT_SELECTOR).forEach(fitTextToWidth);
 }
 
 // --- Inline Field Validation ---
 
-function showFieldError(input, message) {
+export function showFieldError(input, message) {
     clearFieldError(input);
     input.classList.add('field-error');
     const errEl = document.createElement('span');
@@ -160,7 +140,7 @@ function showFieldError(input, message) {
     input.insertAdjacentElement('afterend', errEl);
 }
 
-function clearFieldError(input) {
+export function clearFieldError(input) {
     input.classList.remove('field-error');
     const parent = input.closest('span') || input.parentElement;
     if (parent) {
@@ -170,7 +150,7 @@ function clearFieldError(input) {
 }
 
 // Returns an error string if invalid, or null if valid.
-function validateFieldValue(field, rawValue) {
+export function validateFieldValue(field, rawValue) {
     const str = rawValue == null ? '' : String(rawValue);
     const num = parseFloat(str);
     const empty = str.trim() === '';
@@ -226,10 +206,8 @@ function validateFieldValue(field, rawValue) {
 
 /**
  * Safely gets an element by its ID.
- * @param {string} id - The ID of the element.
- * @returns {HTMLElement|null} The element or null if not found.
  */
-function getElement(id) {
+export function getElement(id) {
     const element = document.getElementById(id);
     if (!element) {
         console.warn(`Element with ID '${id}' not found.`);
@@ -239,10 +217,8 @@ function getElement(id) {
 
 /**
  * Safely sets the text content of an element.
- * @param {string} elementId - The ID of the element.
- * @param {string} text - The text to set.
  */
-function setText(elementId, text) {
+export function setText(elementId, text) {
     const element = getElement(elementId);
     if (element) {
         element.textContent = text;
@@ -251,10 +227,8 @@ function setText(elementId, text) {
 
 /**
  * Safely sets the HTML content of an element.
- * @param {string} elementId - The ID of the element.
- * @param {string} html - The HTML string to set.
  */
-function setHTML(elementId, html) {
+export function setHTML(elementId, html) {
     const element = getElement(elementId);
     if (element) {
         element.innerHTML = html;
@@ -263,10 +237,8 @@ function setHTML(elementId, html) {
 
 /**
  * Safely sets the value of an input or select element.
- * @param {string} elementId - The ID of the element.
- * @param {string|number} value - The value to set.
  */
-function setValue(elementId, value) {
+export function setValue(elementId, value) {
     const element = getElement(elementId);
     if (element) {
         element.value = value;
@@ -275,11 +247,8 @@ function setValue(elementId, value) {
 
 /**
  * Safely gets the value of an input or select element.
- * @param {string} elementId - The ID of the element.
- * @param {boolean} [isNumeric=false] - Whether to parse the value as a float.
- * @returns {string|number} The value.
  */
-function getValue(elementId, isNumeric = false) {
+export function getValue(elementId, isNumeric = false) {
     const element = getElement(elementId);
     if (element) {
         const val = element.value;
