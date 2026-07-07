@@ -82,6 +82,7 @@
                     <p id="home-greeting-sub">Here's what's happening with your money.</p>
                 </div>
                 <div class="pulse-row" id="home-pulse"></div>
+                <div id="home-upcoming"></div>
                 <div class="feed" id="home-feed" aria-live="polite"></div>
             </div>
 
@@ -219,6 +220,16 @@
                     <div class="card-subtitle" id="allocation-period-subtitle">Based on Net Income (Fortnightly)</div>
                     <div class="savings-breakdown" id="allocation-display"></div>
                     </div>
+                    <div class="card" id="dashboard-spending-card" hidden>
+                        <div class="card-title">Spending this month</div>
+                        <div class="card-subtitle" id="dashboard-spending-subtitle"></div>
+                        <div id="dashboard-spending-list" style="margin-top: 14px;"></div>
+                    </div>
+                    <div class="card" id="year-so-far-card" hidden>
+                        <div class="card-title" id="year-so-far-title">This year so far</div>
+                        <div class="card-subtitle">Your year in numbers</div>
+                        <div id="year-so-far-stats" style="margin-top: 14px;"></div>
+                    </div>
                 </div>
                 </div><!-- /#dashboard-populated -->
             </div>
@@ -270,6 +281,11 @@
                         <div style="margin-top: 20px;" id="tax-breakdown-reference"></div>
                     </div>
                 </div>
+                <div class="card" id="help-payoff-card" hidden style="margin-top: 30px;">
+                    <div class="card-title">HELP/HECS payoff</div>
+                    <div class="card-subtitle" id="help-payoff-subtitle"></div>
+                    <div style="margin: 16px 0 4px;" id="help-payoff-stats"></div>
+                </div>
                 <div class="summary-stats" id="income-stats"></div>
             </div>
 
@@ -320,6 +336,11 @@
                         <div class="card-subtitle" id="non-essential-subtitle"></div>
                         <div class="expense-list" id="non-essential-expenses"></div>
                     </div>
+                </div>
+                <div class="card" id="envelopes-card" hidden style="margin-top: 15px;">
+                    <div class="card-title">Budget envelopes</div>
+                    <div class="card-subtitle">Category caps vs what you've actually spent this month (from imported transactions)</div>
+                    <div id="envelopes-list" style="margin-top: 16px;"></div>
                 </div>
                 <div class="summary-stats" id="expense-stats"></div>
             </div>
@@ -764,6 +785,7 @@
                             <button class="btn btn-secondary" id="export-json-gui">Export Backup (JSON)</button>
                             <input type="file" id="json-import-gui" accept=".json" style="display: none;">
                             <button class="btn btn-secondary" id="import-json-gui-btn">Import Backup (JSON)</button>
+                            <button class="btn btn-secondary" id="export-csv-transactions">Export Transactions (CSV)</button>
                         </div>
                     </div>
                 </div>
@@ -809,6 +831,27 @@
                     </div>
                     <button class="add-btn" id="add-tax-bracket">+ Add Tax Bracket</button>
                 </div>
+                <div class="settings-section">
+                    <div class="settings-title">Tax details
+                        <details class="info-tip"><summary aria-label="More info">ⓘ</summary><div class="info-tip-body">These improve the tax <strong>estimate</strong> for salaried income when you haven't entered your actual net pay. If you enter real payslip figures, those always win — they already include Medicare and HELP.</div></details>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="tax-fy-select">Financial year (rates)</label>
+                            <select class="form-select" id="tax-fy-select"></select>
+                            <p class="settings-hint">Picking a year loads its official ATO brackets above.</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="tax-help-balance">HELP/HECS balance</label>
+                            <input type="number" class="form-input" id="tax-help-balance" min="0" step="100" placeholder="0 = no HELP debt">
+                            <p class="settings-hint">Adds compulsory repayments to the estimate and unlocks the payoff projection on the Income tab.</p>
+                        </div>
+                    </div>
+                    <div class="import-toggles">
+                        <label class="settings-inline-check"><input type="checkbox" id="tax-medicare-check"> Include the 2% Medicare levy in estimates</label>
+                        <label class="settings-inline-check"><input type="checkbox" id="tax-help-include"> Include HELP repayments in estimates</label>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -842,6 +885,30 @@
                         <div id="non-essential-expenses-settings-list"></div>
                     </div>
                     <button class="add-btn" id="add-non-essential-expense-settings">+ Add Non-Essential Expense</button>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">Upcoming bills
+                        <details class="info-tip"><summary aria-label="More info">ⓘ</summary><div class="info-tip-body">Bills are <strong>reminders</strong> — they show on your Home feed when they're coming up, and roll to the next date automatically. They don't change your expense totals, so if a bill is a regular cost, keep it in the expense lists above too.</div></details>
+                    </div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr 1.2fr auto;">
+                            <span>Bill Name</span> <span>Amount</span> <span>Repeats</span> <span>Next Due</span> <span>Action</span>
+                        </div>
+                        <div id="bills-settings"></div>
+                    </div>
+                    <button class="add-btn" id="add-bill">+ Add Bill</button>
+                </div>
+                <div class="settings-section">
+                    <div class="settings-title">Categories &amp; budgets
+                        <details class="info-tip"><summary aria-label="More info">ⓘ</summary><div class="info-tip-body">Categories power CSV import auto-matching and the budget envelopes. <strong>Keywords</strong> are comma-separated snippets matched against transaction descriptions (first category in the list wins). Set a <strong>monthly budget</strong> to get an envelope with a burn bar on the Expenses tab.</div></details>
+                    </div>
+                    <div class="dynamic-list">
+                        <div class="list-header" style="grid-template-columns: 1.4fr 1fr 0.6fr 3fr auto;">
+                            <span>Category</span> <span>Monthly Budget</span> <span>Essential</span> <span>Keywords (comma-separated)</span> <span>Action</span>
+                        </div>
+                        <div id="categories-settings"></div>
+                    </div>
+                    <button class="add-btn" id="add-category">+ Add Category</button>
                 </div>
             </div>
         </div>

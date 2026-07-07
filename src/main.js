@@ -15,6 +15,8 @@ import {
 } from './ui/tabs.js';
 import { setupGuiModal, setupDraggableModal, setupPageSettingsModals } from './ui/modals.js';
 import { setupImport } from './import/import-ui.js';
+import { rollForwardBills, generateBillDueEvents } from './state/bills.js';
+import { refreshSpendCache } from './state/spend-cache.js';
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
 
@@ -26,6 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
     registerStoredCustomFonts(); // J3 — re-register uploaded fonts
     applyBgEffectColor(store.guiSettingsData.bgEffectColor); // J4 — restore effect tint (before the effect starts)
     applyBackgroundEffect(store.guiSettingsData.bgEffect); // J4 — restore saved effect
+
+    // Ledger — advance past-due bills to their next occurrence and announce
+    // anything due this week in the feed (once per bill+date).
+    if (rollForwardBills(store.financeData) && store.autoSave) store.autoSave.onDataChange();
+    generateBillDueEvents(store.financeData);
 
     initializeSettingsUI();
     initializeGuiSettingsForm();
@@ -44,7 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
     setupInfoSections(); // C.1 — collapsible info guides
 
     updateAllUI();
-    restoreActiveTab(); // A.3 — restore last-viewed section (defaults to dashboard)
+    restoreActiveTab(); // A.3 — restore last-viewed section (defaults to Home)
+
+    // Spending aggregates load async from IndexedDB; refresh the visible tab
+    // once they're in so transaction-fed cards appear without a manual switch.
+    refreshSpendCache().then(() => {
+        updateAllUI();
+    });
 
     // Re-fit currency figures when the viewport changes (rotate / resize).
     let fitRaf;

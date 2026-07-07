@@ -11,7 +11,7 @@ import {
     commitGuiEffect, commitGuiEffectColor, updateHarmonyPreview,
     handleCustomFontUpload, handleThemeImport,
 } from '../theme/appearance.js';
-import { actionExportDataJSON, handleJSONImport } from './import-export.js';
+import { actionExportDataJSON, actionExportTransactionsCSV, handleJSONImport } from './import-export.js';
 
 export function setupEventListeners() {
     // Tab navigation
@@ -68,6 +68,7 @@ export function setupEventListeners() {
         guiSettingsContent.addEventListener('click', (event) => {
             if (event.target.id === 'export-json-gui') actionExportDataJSON();
             else if (event.target.id === 'import-json-gui-btn') getElement('json-import-gui').click();
+            else if (event.target.id === 'export-csv-transactions') actionExportTransactionsCSV();
         });
     }
     // J2 — appearance inputs. Each colour picker (GUI_COLOR_FIELDS) writes ONLY its own

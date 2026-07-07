@@ -5,6 +5,7 @@
 import { store } from '../state/store.js';
 import { getElement, setText, setValue, escapeHtml, formatCurrency } from '../utils.js';
 import { calculateTotals } from '../calc/calculations.js';
+import { AU_TAX_YEARS } from '../calc/tax-au.js';
 import { updateDefaultsButtonLabels } from '../events/settings-events.js';
 import { initializeGuiSettingsForm } from '../theme/appearance.js';
 import { initializeWhatIfTab } from './whatif.js';
@@ -15,10 +16,13 @@ export function initializeSettingsUI() {
 
     renderIncomeSourcesSettings();
     renderTaxBracketsSettings();
+    renderTaxSettings();
     renderAssetsSettings();
     renderLiabilitiesSettings();
     renderAllocationSettings();
     renderExpensesSettingsLists(); // Combined essential and non-essential
+    renderBillsSettings();
+    renderCategoriesSettings();
     renderFISettings();
     updateDefaultsButtonLabels(); // Reflect whether user defaults exist
     initializeGuiSettingsForm(); // Appearance modal form
@@ -121,6 +125,26 @@ export function renderTaxBracketsSettings() {
             <button class="delete-btn" data-index="${index}" data-type="taxBracket" aria-label="Delete Tax Bracket ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
     });
+}
+
+// Ledger — the estimate components beyond the brackets (FY rates, Medicare, HELP).
+export function renderTaxSettings() {
+    const ts = store.financeData.taxSettings;
+    if (!ts) return;
+    const sel = getElement('tax-fy-select');
+    if (sel) {
+        let html = '';
+        for (const [key, fy] of Object.entries(AU_TAX_YEARS)) {
+            html += `<option value="${key}" ${ts.financialYear === key ? 'selected' : ''}>${escapeHtml(fy.label)}</option>`;
+        }
+        html += `<option value="" ${!ts.financialYear ? 'selected' : ''}>Custom brackets</option>`;
+        sel.innerHTML = html;
+    }
+    const medicare = getElement('tax-medicare-check');
+    if (medicare) medicare.checked = !!ts.includeMedicareLevy;
+    setValue('tax-help-balance', ts.helpBalance || '');
+    const helpInc = getElement('tax-help-include');
+    if (helpInc) helpInc.checked = ts.includeHelpInEstimate !== false;
 }
 
 export function renderAssetsSettings() {
@@ -258,6 +282,80 @@ export function renderExpensesSettingsLists() {
     };
     renderList('essential-expenses-settings-list', 'essentialExpenses', 'essentialExpense');
     renderList('non-essential-expenses-settings-list', 'nonEssentialExpenses', 'nonEssentialExpense');
+}
+
+// Ledger — categories & budgets editor (Expenses modal). Categories drive CSV
+// auto-matching (keywords, first match wins) and envelopes (monthlyBudget).
+export function renderCategoriesSettings() {
+    const container = getElement('categories-settings');
+    if (!container) return;
+    container.innerHTML = '';
+    (store.financeData.categories || []).forEach((cat, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'list-item';
+        itemDiv.style.gridTemplateColumns = '1.4fr 1fr 0.6fr 3fr auto';
+        const baseId = `cat-${index}`;
+        const locked = cat.id === 'other' || cat.id === 'income'; // structural categories
+        itemDiv.innerHTML = `
+            <span>
+                <label for="${baseId}-name" class="visually-hidden">Category Name ${index + 1}</label>
+                <input type="text" value="${escapeHtml(cat.name || '')}" data-collection="categories" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Name">
+            </span>
+            <span>
+                <label for="${baseId}-budget" class="visually-hidden">Monthly Budget ${index + 1}</label>
+                <input type="number" value="${cat.monthlyBudget || ''}" data-collection="categories" data-index="${index}" data-field="monthlyBudget" id="${baseId}-budget" placeholder="No cap" step="1" min="0">
+            </span>
+            <span style="justify-self: center;">
+                <label for="${baseId}-essential" class="visually-hidden">Essential ${index + 1}</label>
+                <input type="checkbox" ${cat.essential ? 'checked' : ''} data-collection="categories" data-index="${index}" data-field="essential" id="${baseId}-essential">
+            </span>
+            <span>
+                <label for="${baseId}-keywords" class="visually-hidden">Keywords ${index + 1}</label>
+                <input type="text" value="${escapeHtml((cat.keywords || []).join(', '))}" data-collection="categories" data-index="${index}" data-field="keywords" id="${baseId}-keywords" placeholder="woolworths, coles, …">
+            </span>
+            ${locked
+                ? '<span class="settings-hint" style="justify-self: center; margin: 0;">built-in</span>'
+                : `<button class="delete-btn" data-index="${index}" data-type="category" aria-label="Delete Category ${index + 1}">Delete</button>`}`;
+        container.appendChild(itemDiv);
+    });
+}
+
+// Ledger — recurring bills editor (Expenses modal). Bills are reminders only.
+export function renderBillsSettings() {
+    const container = getElement('bills-settings');
+    if (!container) return;
+    container.innerHTML = '';
+    (store.financeData.bills || []).forEach((bill, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'list-item';
+        itemDiv.style.gridTemplateColumns = '2fr 1fr 1fr 1.2fr auto';
+        const baseId = `bill-${index}`;
+        itemDiv.innerHTML = `
+            <span>
+                <label for="${baseId}-name" class="visually-hidden">Bill Name ${index + 1}</label>
+                <input type="text" value="${escapeHtml(bill.name || '')}" data-collection="bills" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="e.g. Car insurance">
+            </span>
+            <span>
+                <label for="${baseId}-amount" class="visually-hidden">Bill Amount ${index + 1}</label>
+                <input type="number" value="${bill.amount != null ? bill.amount : ''}" data-collection="bills" data-index="${index}" data-field="amount" id="${baseId}-amount" placeholder="Amount" step="0.01" min="0">
+            </span>
+            <span>
+                <label for="${baseId}-frequency" class="visually-hidden">Bill Frequency ${index + 1}</label>
+                <select data-collection="bills" data-index="${index}" data-field="frequency" id="${baseId}-frequency">
+                    <option value="weekly" ${bill.frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
+                    <option value="fortnightly" ${bill.frequency === 'fortnightly' ? 'selected' : ''}>Fortnightly</option>
+                    <option value="monthly" ${bill.frequency === 'monthly' || !bill.frequency ? 'selected' : ''}>Monthly</option>
+                    <option value="quarterly" ${bill.frequency === 'quarterly' ? 'selected' : ''}>Quarterly</option>
+                    <option value="yearly" ${bill.frequency === 'yearly' ? 'selected' : ''}>Yearly</option>
+                </select>
+            </span>
+            <span>
+                <label for="${baseId}-due" class="visually-hidden">Next Due Date ${index + 1}</label>
+                <input type="date" value="${escapeHtml(bill.nextDue || '')}" data-collection="bills" data-index="${index}" data-field="nextDue" id="${baseId}-due">
+            </span>
+            <button class="delete-btn" data-index="${index}" data-type="bill" aria-label="Delete Bill ${index + 1}">Delete</button>`;
+        container.appendChild(itemDiv);
+    });
 }
 
 export function renderFISettings() {

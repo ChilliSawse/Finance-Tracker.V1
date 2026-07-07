@@ -28,6 +28,39 @@ export function actionExportDataJSON() {
     showCustomModal("Data exported as JSON!");
 }
 
+// Ledger — export imported transactions as CSV (date, description, amount, category).
+export async function actionExportTransactionsCSV() {
+    const { listTransactions } = await import('../state/transactions.js');
+    let rows;
+    try {
+        rows = await listTransactions();
+    } catch (err) {
+        showCustomModal('Could not read transactions: ' + (err && err.message || err), 'error');
+        return;
+    }
+    if (!rows.length) {
+        showCustomModal('No transactions to export yet — import a bank CSV first.');
+        return;
+    }
+    const catName = (id) => {
+        const c = (store.financeData.categories || []).find(x => x.id === id);
+        return c ? c.name : 'Other';
+    };
+    const quote = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const lines = ['Date,Description,Amount,Category'];
+    // Oldest first reads naturally in a spreadsheet.
+    [...rows].reverse().forEach(r => {
+        lines.push([r.date, quote(r.description), (r.amountCents / 100).toFixed(2), quote(catName(r.categoryId))].join(','));
+    });
+    const blob = new Blob([lines.join('\r\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `ledger-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.href = url;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
 export function validateImportBundle(bundle) {
     if (!bundle || typeof bundle !== 'object') return 'File does not contain valid JSON.';
     if (!bundle.financeData || typeof bundle.financeData !== 'object') return 'Missing financeData in backup file.';

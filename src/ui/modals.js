@@ -5,7 +5,7 @@ import { initializeGuiSettingsForm } from '../theme/appearance.js';
 import {
     renderIncomeSourcesSettings, renderTaxBracketsSettings, renderAssetsSettings,
     renderLiabilitiesSettings, renderAllocationSettings, renderExpensesSettingsLists,
-    renderFISettings,
+    renderFISettings, renderTaxSettings, renderBillsSettings, renderCategoriesSettings,
 } from './settings-forms.js';
 
 // A.4 / Phase D — reusable modal shell: open/close, focus trap, focus restore.
@@ -103,9 +103,12 @@ export function setupPageSettingsModals() {
     setupModal('income-settings-modal', 'open-income-settings', () => {
         renderIncomeSourcesSettings();
         renderTaxBracketsSettings();
+        renderTaxSettings();
     });
     setupModal('expenses-settings-modal', 'open-expenses-settings', () => {
         renderExpensesSettingsLists();
+        renderBillsSettings();
+        renderCategoriesSettings();
     });
     setupModal('savings-settings-modal', 'open-savings-settings', () => {
         renderAssetsSettings();

@@ -11,6 +11,7 @@ import { getElement, setHTML, escapeHtml, formatCurrency, fitAllAmounts } from '
 import { calculateTotals } from '../calc/calculations.js';
 import { listRecentEvents } from '../state/eventlog.js';
 import { listSnapshots, snapshotBefore } from '../state/snapshots.js';
+import { upcomingBills } from '../state/bills.js';
 import { sparklineSvg } from './sparkline.js';
 
 // ---------- greeting ----------
@@ -90,6 +91,30 @@ function renderPulse(totals) {
             <div class="pulse-label">Left over each fortnight</div>
             <div class="pulse-value amount${fortnightlySavings < 0 ? ' is-negative-value' : ''}">${formatCurrency(fortnightlySavings)}</div>
             <span class="pulse-sub">after tax and all expenses</span>
+        </div>`;
+}
+
+// ---------- coming up (bills due in the next fortnight) ----------
+
+function renderUpcoming() {
+    const el = getElement('home-upcoming');
+    if (!el) return;
+    const soon = upcomingBills(store.financeData, 14);
+    if (!soon.length) { el.innerHTML = ''; return; }
+    const total = soon.reduce((sum, u) => sum + (parseFloat(u.bill.amount) || 0), 0);
+    const rows = soon.map(u => `
+        <div class="upcoming-row">
+            <span class="upcoming-name">${escapeHtml(u.bill.name)}</span>
+            <span class="upcoming-due${u.dueInDays <= 2 ? ' is-close' : ''}">${u.dueLabel}</span>
+            <span class="upcoming-amount">${formatCurrency(parseFloat(u.bill.amount) || 0)}</span>
+        </div>`).join('');
+    el.innerHTML = `
+        <div class="upcoming-card">
+            <div class="upcoming-head">
+                <span class="upcoming-title">Coming up</span>
+                <span class="upcoming-total">${soon.length} bill${soon.length === 1 ? '' : 's'} · ${formatCurrency(total)} in the next fortnight</span>
+            </div>
+            ${rows}
         </div>`;
 }
 
@@ -203,6 +228,7 @@ export async function renderHomeFeed() {
     if (subEl) subEl.textContent = insightLine(totals);
 
     renderPulse(totals);
+    renderUpcoming();
 
     let events = [];
     try {

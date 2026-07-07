@@ -4,6 +4,117 @@ import { getElement, setText, setHTML, setValue, formatCurrency, escapeHtml, get
 import { calculateYearsToFI, getTaxBracketBreakdown } from '../calc/calculations.js';
 import { sparklineSvg } from './sparkline.js';
 import { listSnapshots } from '../state/snapshots.js';
+import { getTaxYear, calculateHelpRepayment, projectHelpPayoff } from '../calc/tax-au.js';
+import { getSpendCache } from '../state/spend-cache.js';
+
+function categoryName(id) {
+    const cat = (store.financeData.categories || []).find(c => c.id === id);
+    return cat ? cat.name : 'Other';
+}
+
+// "Spending this month" — top categories from imported transactions (spend cache).
+function renderSpendingCard() {
+    const card = getElement('dashboard-spending-card');
+    if (!card) return;
+    const cache = getSpendCache();
+    if (!cache.ready || cache.monthTotalCents <= 0) { card.hidden = true; return; }
+    card.hidden = false;
+
+    const entries = [...cache.monthByCategory.entries()].sort((a, b) => b[1] - a[1]);
+    const top = entries.slice(0, 6);
+    const restCents = entries.slice(6).reduce((s, [, v]) => s + v, 0);
+    const total = cache.monthTotalCents;
+    const biggest = top[0];
+    setText('dashboard-spending-subtitle',
+        biggest ? `Looks like ${categoryName(biggest[0])} is your biggest expense this month.` : '');
+
+    const row = (name, cents) => {
+        const pct = total > 0 ? (cents / total) * 100 : 0;
+        return `
+        <div class="spend-row">
+            <span class="spend-name">${escapeHtml(name)}</span>
+            <span class="spend-bar"><span class="spend-bar-fill" style="width:${pct.toFixed(1)}%"></span></span>
+            <span class="spend-amount">${formatCurrency(cents / 100)}</span>
+        </div>`;
+    };
+    let html = top.map(([id, cents]) => row(categoryName(id), cents)).join('');
+    if (restCents > 0) html += row('Everything else', restCents);
+    html += `<div class="spend-total"><span>Total spent</span><span>${formatCurrency(total / 100)}</span></div>`;
+    setHTML('dashboard-spending-list', html);
+}
+
+// "This year so far" — the running year-in-review.
+function renderYearSoFar(totals) {
+    const card = getElement('year-so-far-card');
+    if (!card) return;
+    const cache = getSpendCache();
+    const snaps = listSnapshots();
+    const year = new Date().getFullYear();
+    const hasAnything = totals.totalNetAnnualIncome > 0 || cache.count > 0 || snaps.length >= 2;
+    if (!hasAnything) { card.hidden = true; return; }
+    card.hidden = false;
+    setText('year-so-far-title', `${year} so far`);
+
+    const yearFraction = Math.min(1, (Date.now() - new Date(year, 0, 1).getTime()) / (365.25 * 24 * 3600 * 1000));
+    const line = (label, value, color) => `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <span>${label}</span>
+            <span style="font-weight: 600;${color ? ` color: var(${color});` : ''}">${value}</span>
+        </div>`;
+
+    let html = '';
+    if (totals.totalNetAnnualIncome > 0) {
+        html += line('Earned (after tax, estimated)', formatCurrency(totals.totalNetAnnualIncome * yearFraction), '--color-positive');
+    }
+    if (cache.yearTotalCents > 0) {
+        html += line('Spent (from your imports)', formatCurrency(cache.yearTotalCents / 100), '--color-negative');
+        const topYear = [...cache.yearByCategory.entries()].sort((a, b) => b[1] - a[1])[0];
+        if (topYear) html += line('Biggest spending category', `${escapeHtml(categoryName(topYear[0]))} · ${formatCurrency(topYear[1] / 100)}`, '--color-warning');
+    } else if (totals.totalWeeklyExpenses > 0) {
+        html += line('Spent (estimated from your expense plan)', formatCurrency(totals.totalWeeklyExpenses * 52 * yearFraction), '--color-negative');
+    }
+    html += line('Savings rate right now', `${totals.savingsRate.toFixed(1)}%`, totals.savingsRate >= 0 ? '--color-positive' : '--color-negative');
+
+    const jan = snaps.find(s => s.date >= `${year}-01-01`);
+    if (jan && snaps.length >= 2) {
+        const delta = totals.netWorth - jan.netWorth;
+        if (Math.abs(delta) >= 0.01) {
+            html += line(`Net worth since ${jan.date === snaps[0].date ? 'you started tracking' : '1 January'}`,
+                `${delta >= 0 ? '+' : '−'}${formatCurrency(Math.abs(delta))}`, delta >= 0 ? '--color-positive' : '--color-negative');
+        }
+    }
+    setHTML('year-so-far-stats', html);
+}
+
+// Budget envelopes — category caps vs actual month spend, with burn colouring.
+function renderEnvelopes() {
+    const card = getElement('envelopes-card');
+    if (!card) return;
+    const cache = getSpendCache();
+    const budgeted = (store.financeData.categories || []).filter(c => (parseFloat(c.monthlyBudget) || 0) > 0);
+    if (!budgeted.length) { card.hidden = true; return; }
+    card.hidden = false;
+
+    const html = budgeted.map(cat => {
+        const spent = (cache.monthByCategory.get(cat.id) || 0) / 100;
+        const cap = parseFloat(cat.monthlyBudget) || 0;
+        const pct = cap > 0 ? (spent / cap) * 100 : 0;
+        const state = pct > 100 ? 'is-over' : pct >= 75 ? 'is-warm' : 'is-ok';
+        const label = pct > 100
+            ? `${formatCurrency(spent - cap)} over`
+            : `${formatCurrency(cap - spent)} left`;
+        return `
+        <div class="envelope-row">
+            <div class="envelope-head">
+                <span class="envelope-name">${escapeHtml(cat.name)}</span>
+                <span class="envelope-figures">${formatCurrency(spent)} of ${formatCurrency(cap)} · ${label}</span>
+            </div>
+            <div class="envelope-bar"><div class="envelope-fill ${state}" style="width:${Math.min(100, pct).toFixed(1)}%"></div></div>
+        </div>`;
+    }).join('');
+    setHTML('envelopes-list', html + (cache.ready && cache.count === 0
+        ? '<p class="settings-hint" style="margin-top: 10px;">Envelopes fill up from imported transactions — bring in a bank CSV to see real numbers here.</p>' : ''));
+}
 
 // Fill a trend slot with a sparkline of snapshot history. Empty until there are
 // at least two days of history — a one-point line says nothing.
@@ -182,6 +293,9 @@ function updateDashboardUI(totals) {
              allocationDisplayContainer.innerHTML = `<p style="text-align:center; font-size:0.9em; color: var(--text-color-secondary);">No allocation categories defined.</p>`;
         }
     }
+
+    renderSpendingCard();
+    renderYearSoFar(totals);
 }
 
 function updateIncomeTabUI(totals) {
@@ -277,6 +391,46 @@ function updateIncomeTabUI(totals) {
     }
 
 
+    // Ledger — HELP/HECS payoff projection (shows only when a balance is set).
+    const helpCard = getElement('help-payoff-card');
+    if (helpCard) {
+        const ts = store.financeData.taxSettings;
+        const helpBalance = ts ? (parseFloat(ts.helpBalance) || 0) : 0;
+        if (helpBalance > 0) {
+            helpCard.hidden = false;
+            const fy = getTaxYear(ts.financialYear);
+            const primary = store.financeData.incomeSources[store.financeData.primaryIncomeIndex || 0];
+            const income = primary ? (primary._calculatedGrossAnnual != null ? primary._calculatedGrossAnnual : (primary.grossAnnual || 0)) : 0;
+            const annualRepayment = calculateHelpRepayment(income, fy.help);
+            const proj = projectHelpPayoff(helpBalance, income, { help: fy.help });
+            setText('help-payoff-subtitle',
+                `${formatCurrency(helpBalance)} owing · repayments estimated on your primary income's ${formatCurrency(income)} gross`);
+            const line = (label, value, color) => `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                    <span>${label}:</span>
+                    <span style="font-weight: 600;${color ? ` color: var(${color});` : ''}">${value}</span>
+                </div>`;
+            if (annualRepayment <= 0) {
+                setHTML('help-payoff-stats',
+                    line('Compulsory repayment', 'None — income is under the $' + fy.help.minThreshold.toLocaleString() + ' threshold', '--color-neutral')
+                    + `<p style="font-size: 0.85em; color: var(--text-color-secondary); margin-top: 4px;">The balance still indexes each June (currently ~${fy.help.indexationPercentDefault}%), so it grows until your income passes the threshold.</p>`);
+            } else if (!isFinite(proj.years)) {
+                setHTML('help-payoff-stats',
+                    line('Annual repayment', formatCurrency(annualRepayment), '--color-neutral')
+                    + line('Years to clear', 'Indexation is outpacing repayments at this income', '--color-warning'));
+            } else {
+                const debtFreeYear = new Date().getFullYear() + proj.years;
+                setHTML('help-payoff-stats',
+                    line('Years to clear', `${proj.years} year${proj.years === 1 ? '' : 's'} (around ${debtFreeYear})`, '--color-positive')
+                    + line('Repayment from your pay', `${formatCurrency(annualRepayment)}/year (~${formatCurrency(annualRepayment / 26)}/fortnight)`, '--color-neutral')
+                    + line('Indexation added along the way', formatCurrency(proj.totalIndexation), '--color-warning')
+                    + `<p style="font-size: 0.85em; color: var(--text-color-secondary); margin-top: 4px;">Assumes your income stays flat and ~${fy.help.indexationPercentDefault}% indexation each June. Voluntary repayments before 1 June shorten this.</p>`);
+            }
+        } else {
+            helpCard.hidden = true;
+        }
+    }
+
     const fortnightlyGrossTotal = totals.totalGrossAnnualIncome / 26;
     const fortnightlyNetTotal = totals.totalNetAnnualIncome / 26;
     const monthlyNetTotal = totals.totalNetAnnualIncome / 12;
@@ -327,6 +481,7 @@ function updateExpensesTabUI(totals) {
 
     renderExpenseList('essential-expenses', store.financeData.essentialExpenses, 'essential');
     renderExpenseList('non-essential-expenses', store.financeData.nonEssentialExpenses, 'non-essential');
+    renderEnvelopes();
 
     setText('essential-subtitle', `${formatCurrency(totals.essentialWeeklyTotal)}/week • ${formatCurrency(totals.essentialWeeklyTotal * 52)}/year`);
     setText('non-essential-subtitle', `${formatCurrency(totals.nonEssentialWeeklyTotal)}/week • ${formatCurrency(totals.nonEssentialWeeklyTotal * 52)}/year`);

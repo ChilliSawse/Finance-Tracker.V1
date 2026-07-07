@@ -14,6 +14,8 @@ import { makeTransaction, addTransactions, deleteImportBatch } from '../state/tr
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
 import { renderHomeFeed } from '../ui/feed.js';
+import { refreshSpendCache } from '../state/spend-cache.js';
+import { updateAllUI } from '../ui/render.js';
 
 const MAPPINGS_KEY = 'ft-csv-mappings';
 const PREVIEW_ROWS = 15;
@@ -286,6 +288,8 @@ async function commitImport() {
             </div>
         </div>`);
 
+    await refreshSpendCache();
+    updateAllUI();
     if (store.activeTab === 'home') renderHomeFeed();
 }
 
@@ -303,6 +307,8 @@ async function undoLastImport() {
             </div>
         </div>`);
     lastCommit = null;
+    await refreshSpendCache();
+    updateAllUI();
     if (store.activeTab === 'home') renderHomeFeed();
 }
 

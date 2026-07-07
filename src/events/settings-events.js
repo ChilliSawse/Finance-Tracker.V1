@@ -11,8 +11,10 @@ import { updateDataAndUI } from '../ui/render.js';
 import {
     initializeSettingsUI, renderIncomeSourcesSettings, renderTaxBracketsSettings,
     renderAssetsSettings, renderLiabilitiesSettings, renderAllocationSettings,
-    renderExpensesSettingsLists, updateAllocationTotalDisplay,
+    renderExpensesSettingsLists, updateAllocationTotalDisplay, renderTaxSettings,
+    renderBillsSettings, renderCategoriesSettings,
 } from '../ui/settings-forms.js';
+import { AU_TAX_YEARS } from '../calc/tax-au.js';
 import {
     renderWhatIfIncomeSources, renderWhatIfAssets, renderWhatIfLiabilities,
     renderWhatIfAllocation, renderWhatIfExpensesList,
@@ -24,7 +26,7 @@ import {
 // (note `allocation` is singular).
 const SETTINGS_COLLECTIONS = [
     'incomeSources', 'taxBrackets', 'assets', 'liabilities',
-    'allocation', 'essentialExpenses', 'nonEssentialExpenses'
+    'allocation', 'essentialExpenses', 'nonEssentialExpenses', 'bills', 'categories'
 ];
 
 export function handleSettingsClickEvents(event) {
@@ -46,6 +48,8 @@ export function handleSettingsClickEvents(event) {
     else if (target.id === 'whatif-add-nonessential') addExpenseToList('nonEssentialExpenses', 'whatif');
     else if (target.id === 'add-essential-expense-settings') addExpenseToList('essentialExpenses');
     else if (target.id === 'add-non-essential-expense-settings') addExpenseToList('nonEssentialExpenses');
+    else if (target.id === 'add-bill') addBill();
+    else if (target.id === 'add-category') addCategory();
 
     // Delete buttons for dynamic lists.
     // B.4: expense and liability deletes go through a non-blocking inline confirm popover
@@ -58,6 +62,8 @@ export function handleSettingsClickEvents(event) {
         else if (dataType === 'asset') removeAsset(index, scope);
         else if (dataType === 'allocation') removeAllocationCategory(index, scope);
         else if (dataType === 'liability') inlineConfirm(target, 'Delete this liability?', () => removeLiability(index, scope));
+        else if (dataType === 'bill') inlineConfirm(target, 'Delete this bill?', () => removeBill(index));
+        else if (dataType === 'category') inlineConfirm(target, 'Delete this category? Transactions using it will show as "Other".', () => removeCategory(index));
         else if (dataType === 'essentialExpense') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('essentialExpenses', index));
         else if (dataType === 'nonEssentialExpense') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('nonEssentialExpenses', index));
         // What If scenario expenses tag data-type with the collection name (plural).
@@ -127,6 +133,48 @@ export function handleSettingsChangeEvents(event) {
         updateDataAndUI();
         return;
     }
+    // Ledger — tax estimate components (Income modal, "Tax details" section).
+    else if (target.id === 'tax-fy-select') {
+        const ts = store.financeData.taxSettings;
+        if (!ts) return;
+        if (value && AU_TAX_YEARS[value]) {
+            ts.financialYear = value;
+            // Picking a year loads its official bracket table.
+            store.financeData.taxBrackets = AU_TAX_YEARS[value].brackets.map(b => ({ ...b }));
+            renderTaxBracketsSettings();
+        } else {
+            ts.financialYear = null; // custom — leave the brackets as they are
+        }
+        updateDataAndUI();
+        return;
+    }
+    else if (target.id === 'tax-medicare-check') {
+        if (store.financeData.taxSettings) {
+            store.financeData.taxSettings.includeMedicareLevy = target.checked;
+            updateDataAndUI();
+        }
+        return;
+    }
+    else if (target.id === 'tax-help-include') {
+        if (store.financeData.taxSettings) {
+            store.financeData.taxSettings.includeHelpInEstimate = target.checked;
+            updateDataAndUI();
+        }
+        return;
+    }
+    else if (target.id === 'tax-help-balance') {
+        const ts = store.financeData.taxSettings;
+        if (!ts) return;
+        const val = parseFloat(value);
+        if (value !== '' && (isNaN(val) || val < 0)) {
+            showFieldError(target, 'Must be 0 or greater');
+            return;
+        }
+        clearFieldError(target);
+        ts.helpBalance = isNaN(val) ? 0 : val;
+        updateDataAndUI();
+        return;
+    }
     else if (target.id === 'expected-return') {
         const val = parseFloat(value);
         if (isNaN(val) || val < 0) {
@@ -160,6 +208,24 @@ export function handleSettingsChangeEvents(event) {
         const arrayToUpdate = (fd && SETTINGS_COLLECTIONS.includes(collection)) ? fd[collection] : undefined;
 
         if (arrayToUpdate && arrayToUpdate[index] !== undefined) {
+            // Category-editor conversions (checkbox boolean; comma list → keyword array).
+            if (collection === 'categories' && field === 'essential') {
+                value = target.checked;
+                arrayToUpdate[index][field] = value;
+                updateDataAndUI();
+                return;
+            }
+            if (collection === 'categories' && field === 'keywords') {
+                arrayToUpdate[index][field] = String(value).split(',')
+                    .map(k => k.trim().toLowerCase()).filter(Boolean);
+                updateDataAndUI();
+                return;
+            }
+            if (collection === 'categories' && field === 'monthlyBudget') {
+                arrayToUpdate[index][field] = Math.max(0, parseFloat(value) || 0);
+                updateDataAndUI();
+                return;
+            }
             // Type conversions
             if (['grossAnnual', 'balance', 'interestRate', 'percentage', 'amount', 'min', 'max', 'rate', 'hoursPerCycle', 'taxRemoved', 'invoicedPayPostTax', 'currentBalance', 'savingsGoal'].includes(field)) {
                 if (field === 'invoicedPayPostTax' || field === 'taxRemoved' || field === 'hoursPerCycle') {
@@ -260,6 +326,42 @@ export function removeAllocationCategory(index, scope) {
     fd.allocation.splice(index, 1);
     if (scope === 'whatif') { renderWhatIfAllocation(); }
     else { renderAllocationSettings(); updateDataAndUI(); }
+}
+
+export function addCategory() {
+    if (!Array.isArray(store.financeData.categories)) store.financeData.categories = [];
+    // Insert before the trailing 'other' catch-all so keyword matching can reach it.
+    const cats = store.financeData.categories;
+    const cat = { id: 'cat-' + crypto.randomUUID().slice(0, 8), name: 'New Category', essential: false, monthlyBudget: 0, keywords: [] };
+    const otherIdx = cats.findIndex(c => c.id === 'other');
+    if (otherIdx >= 0) cats.splice(otherIdx, 0, cat); else cats.push(cat);
+    renderCategoriesSettings();
+    updateDataAndUI();
+}
+export function removeCategory(index) {
+    const cats = store.financeData.categories;
+    if (!Array.isArray(cats) || !cats[index]) return;
+    if (cats[index].id === 'other' || cats[index].id === 'income') return; // structural
+    cats.splice(index, 1);
+    renderCategoriesSettings();
+    updateDataAndUI();
+}
+
+export function addBill() {
+    if (!Array.isArray(store.financeData.bills)) store.financeData.bills = [];
+    // Default the first due date a month out — a sensible starting point to edit.
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    store.financeData.bills.push({ id: crypto.randomUUID(), name: 'New Bill', amount: 0, frequency: 'monthly', nextDue: iso });
+    renderBillsSettings();
+    updateDataAndUI();
+}
+export function removeBill(index) {
+    if (!Array.isArray(store.financeData.bills)) return;
+    store.financeData.bills.splice(index, 1);
+    renderBillsSettings();
+    updateDataAndUI();
 }
 
 export function addExpenseToList(arrayName, scope) { // arrayName is 'essentialExpenses' or 'nonEssentialExpenses'
