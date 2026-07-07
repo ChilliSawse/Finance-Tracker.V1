@@ -1,7 +1,7 @@
 // Full-data JSON backup export / import (from events.js).
 
 import { store } from '../state/store.js';
-import { migrateIncomeSourceTypes, migrateAllocationFields } from '../state/migrations.js';
+import { migrateIncomeSourceTypes, migrateAllocationFields, migrateLedgerFields } from '../state/migrations.js';
 import { showCustomModal, confirmAction } from '../ui/confirm.js';
 import { updateDataAndUI } from '../ui/render.js';
 import { initializeSettingsUI } from '../ui/settings-forms.js';
@@ -62,6 +62,7 @@ export function handleJSONImport(event) {
                 store.guiSettingsData = importedBundle.guiSettings;
                 migrateIncomeSourceTypes(store.financeData); // Backfill incomeType on imported legacy data
                 migrateAllocationFields(store.financeData); // Stage 0 — backfill allocation goal/funds
+                migrateLedgerFields(store.financeData); // Ledger — tax settings, categories, bills
                 initializeSettingsUI();
                 initializeGuiSettingsForm();
                 updateDataAndUI();

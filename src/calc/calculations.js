@@ -7,13 +7,19 @@
 // passes data explicitly.
 
 import { getPayCyclesPerYear, getWeeklyAmount } from '../utils.js';
+import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment } from './tax-au.js';
 
 export function calculateTotals(currentData) {
     let totalGrossAnnualIncome = 0;
     let totalNetAnnualIncome = 0;
     let totalAnnualTaxFromSources = 0;
 
-    currentData.incomeSources.forEach(source => {
+    // Optional estimate components beyond the brackets (see tax-au.js). Absent or
+    // switched-off taxSettings = brackets only, exactly the pre-Ledger behaviour.
+    const taxSettings = currentData.taxSettings || null;
+    const taxYear = taxSettings ? getTaxYear(taxSettings.financialYear) : null;
+
+    currentData.incomeSources.forEach((source, sourceIndex) => {
         const payCycles = getPayCyclesPerYear(source.paySchedule);
         const type = source.incomeType === 'selfEmployed' ? 'selfEmployed' : 'salaried';
 
@@ -44,6 +50,17 @@ export function calculateTotals(currentData) {
                 sourceAnnualTax = Math.max(0, sourceGrossAnnual - sourceAnnualNet);
             } else {
                 sourceAnnualTax = calculateTaxFromBrackets(sourceGrossAnnual, currentData.taxBrackets);
+                // Estimate-path extras (payslip overrides above already include these):
+                // Medicare levy per estimated source; HELP repayment on the primary
+                // source only (one debt per person — the primary is "you").
+                if (taxSettings && taxSettings.includeMedicareLevy) {
+                    sourceAnnualTax += calculateMedicareLevy(sourceGrossAnnual, taxYear.medicare);
+                }
+                if (taxSettings && taxSettings.includeHelpInEstimate
+                    && (parseFloat(taxSettings.helpBalance) || 0) > 0
+                    && sourceIndex === (currentData.primaryIncomeIndex || 0)) {
+                    sourceAnnualTax += calculateHelpRepayment(sourceGrossAnnual, taxYear.help);
+                }
                 sourceAnnualNet = Math.max(0, sourceGrossAnnual - sourceAnnualTax);
             }
         }

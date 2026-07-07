@@ -1,6 +1,9 @@
 // Default data structures (moved from state.js).
 // These are the factory shapes; the live copies sit in store.js.
 
+import { AU_TAX_YEARS, CURRENT_TAX_YEAR } from '../calc/tax-au.js';
+import { DEFAULT_CATEGORIES } from './categories.js';
+
 export const defaultFinanceData = {
     currency: "AUD",
     primaryIncomeIndex: 0,
@@ -10,12 +13,24 @@ export const defaultFinanceData = {
     // Half-open intervals [min, max): each band's min equals the previous band's max,
     // so no income value can fall between bands (fixes off-by-one cracks). The top band
     // uses max: Infinity so income above the cap keeps being taxed (fixes regressive cap).
-    taxBrackets: [
-        { min: 0, max: 18200, rate: 0 },
-        { min: 18200, max: 45000, rate: 0.19 },
-        { min: 45000, max: 120000, rate: 0.325 },
-        { min: 120000, max: Infinity, rate: 0.37 },
-    ],
+    // Defaults are the current-FY ATO resident rates (see calc/tax-au.js); still fully
+    // user-editable in the Income modal.
+    taxBrackets: AU_TAX_YEARS[CURRENT_TAX_YEAR].brackets.map(b => ({ ...b })),
+    // Estimate components beyond the brackets. Medicare levy defaults ON for fresh
+    // installs (it's part of what actually comes out of a payslip); existing saves are
+    // migrated with it OFF so their numbers don't shift silently (see migrations.js).
+    // helpBalance > 0 turns on the HELP/HECS repayment estimate (primary source only)
+    // and the payoff projection.
+    taxSettings: {
+        financialYear: CURRENT_TAX_YEAR,
+        includeMedicareLevy: true,
+        helpBalance: 0,
+        includeHelpInEstimate: true,
+    },
+    // Spending categories (CSV import auto-categorisation + budget envelopes).
+    categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
+    // Recurring bills / upcoming payments: { id, name, amount, frequency, nextDue (ISO date), categoryId }.
+    bills: [],
     assets: [
         { name: "New Asset", balance: 0 },
     ],
@@ -78,10 +93,13 @@ export const defaultGuiSettings = {
     subHeading: "Track your income, expenses, and savings with style"
 };
 
+// structuredClone (not JSON round-trip) so taxBrackets' Infinity top band survives.
+// The old JSON.parse(JSON.stringify(...)) clone nulled Infinity on every fresh
+// install — the source of the tax-bracket "null" input warning.
 export function cloneDefaultFinanceData() {
-    return JSON.parse(JSON.stringify(defaultFinanceData));
+    return structuredClone(defaultFinanceData);
 }
 
 export function cloneDefaultGuiSettings() {
-    return JSON.parse(JSON.stringify(defaultGuiSettings));
+    return structuredClone(defaultGuiSettings);
 }

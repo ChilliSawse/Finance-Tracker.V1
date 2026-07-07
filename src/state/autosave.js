@@ -4,7 +4,7 @@
 
 import { store } from './store.js';
 import { cloneDefaultFinanceData, cloneDefaultGuiSettings, defaultGuiSettings } from './defaults.js';
-import { migrateIncomeSourceTypes, migrateAllocationFields } from './migrations.js';
+import { migrateIncomeSourceTypes, migrateAllocationFields, migrateLedgerFields } from './migrations.js';
 import { migrateGuiTheme, migrateGuiColorFields } from '../theme/theme.js';
 
 export class FinanceAutoSave {
@@ -126,6 +126,7 @@ export class FinanceAutoSave {
                     migrateGuiColorFields(store.guiSettingsData);
                     migrateIncomeSourceTypes(store.financeData); // Backfill incomeType on legacy saves
                     migrateAllocationFields(store.financeData); // Stage 0 — backfill allocation goal/funds
+                    migrateLedgerFields(store.financeData); // Ledger — tax settings, categories, bills
                     this.lastSaveHash = this.getDataHash();
                     this.updateSaveStatus('saved');
                     return true;

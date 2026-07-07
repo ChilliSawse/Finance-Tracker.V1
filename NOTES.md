@@ -52,6 +52,38 @@ This file is a dev artifact — exclude from `dist/`.
 
 ## Log
 
+### 2026-07-07 — Phase 2: data model (tax tables, categories, bills, IndexedDB stores)
+- **`src/calc/tax-au.js`** — verified AU tax reference data (sources checked 2026-07-07):
+  2026–27 + 2025–26 resident brackets (2026–27 has the legislated 16%→15% cut);
+  Medicare levy 2% with the $28,011 single low-income threshold + 10c/$ shade-in;
+  HELP **marginal** repayment system ($69,528 threshold, 15% to $129,717, 17% above,
+  capped at 10% of repayment income); `projectHelpPayoff` year-by-year schedule
+  (indexation-before-repayment ordering, default 2.8% = the 1 June 2026 rate).
+  Documented limitations: single resident, no LITO/offsets/MLS/family thresholds.
+- **calculateTotals estimate path** — optional `taxSettings` adds Medicare per
+  estimated source + HELP on the primary source only. Absent/off = brackets only
+  (all pre-existing tests unaffected). Payslip overrides still always win.
+- **Defaults + migration** — fresh installs: 2026–27 brackets, Medicare ON.
+  `migrateLedgerFields`: normalises bracket max null→Infinity (kills the "null"
+  input warning; root cause was JSON-cloning Infinity — clone functions now use
+  structuredClone), upgrades an UNTOUCHED legacy default bracket set to 2026–27
+  (customised brackets never touched), backfills taxSettings (Medicare OFF for
+  existing saves so their numbers don't shift silently), categories, bills.
+- **Categories** (`src/state/categories.js`) — 13 AU defaults with merchant
+  keywords (`categoriseDescription`: first match in array order; 'uber trip' vs
+  'uber eats' disambiguation works). `monthlyBudget` field = envelope cap.
+- **IndexedDB** (`ledger-db` v1): `db.js` (tiny promise wrapper, `configureDb()`
+  test hook → tests use a throwaway DB), `transactions.js` (cents integers,
+  normalised-hash dedupe so overlapping CSV re-imports are safe, import-batch
+  undo, month spend-by-category), `eventlog.js` (activity events as {type, data}
+  facts — copy rendered later, i18n-ready; monotonic `seq` ordering because ISO
+  timestamps collide within a millisecond; 500-event prune).
+  **Convention: financeData = dollars (legacy), IndexedDB stores = integer cents.**
+- **tests.html: 23 → 65 assertions**, all green in dev + dist (async IIFE now;
+  IDB tests isolated via configureDb + deleteDb). Verified in-app: fresh install
+  $80k gross → net **A$63,880** (brackets+Medicare); legacy-save migration →
+  brackets upgraded, Medicare off, net A$65,480; categories/bills backfilled.
+
 ### 2026-07-07 — Phase 1: build pipeline + ES modules + scoped rendering
 - **Vite 8 + vite-plugin-pwa** (`npm run dev/build/preview`). `base: './'` for GitHub
   Pages subpaths. `manifest.json` + `icons/` moved to `public/`. Two build entries:

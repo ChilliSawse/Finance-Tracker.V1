@@ -36,7 +36,14 @@
     import {
         calculateTotals, calculateTaxFromBrackets, getTaxBracketBreakdown, calculateYearsToFI,
     } from './src/calc/calculations.js';
-    (function () {
+    import {
+        AU_TAX_YEARS, calculateMedicareLevy, calculateHelpRepayment, projectHelpPayoff,
+    } from './src/calc/tax-au.js';
+    import { DEFAULT_CATEGORIES, categoriseDescription } from './src/state/categories.js';
+    import { configureDb, deleteDb } from './src/state/db.js';
+    import { makeTransaction, addTransactions, listTransactions, monthlySpendByCategory, deleteImportBatch, countTransactions } from './src/state/transactions.js';
+    import { logEvent, listRecentEvents, pruneEvents } from './src/state/eventlog.js';
+    (async function () {
         const results = [];
         let pass = 0, fail = 0;
 
@@ -125,6 +132,108 @@
         const rEst = calculateTotals(makeData([src({})])); // net/tax blank → estimate
         assertClose('Salaried falls back to bracket estimate when net/tax blank', rEst.totalAnnualTax, T(79500), 1e-6);
         assertClose('Salaried estimate net = gross − bracket tax', rEst.totalNetAnnualIncome, 79500 - T(79500), 1e-6);
+
+        // --- AU tax data: 2026–27 brackets ---
+        group('AU tax data — 2026–27 resident brackets');
+        const FY = AU_TAX_YEARS['2026-27'];
+        const T27 = (g) => calculateTaxFromBrackets(g, FY.brackets);
+        assertEqual('Tax(18200) is 0', T27(18200), 0);
+        assertClose('Tax(45000) = 26800 × 15%', T27(45000), 4020, 1e-6);
+        assertClose('Tax(80000) = 4020 + 35000 × 30%', T27(80000), 14520, 1e-6);
+        assertClose('Tax(135000)', T27(135000), 31020, 1e-6);
+        assertClose('Tax(190000) adds the 37% band', T27(190000), 51370, 1e-6);
+        assertClose('Tax(200000) reaches the 45% band', T27(200000), 55870, 1e-6);
+
+        // --- Medicare levy ---
+        group('Medicare levy (2% + low-income shade-in)');
+        const M = (x) => calculateMedicareLevy(x, FY.medicare);
+        assertEqual('Nil at the lower threshold ($28,011)', M(28011), 0);
+        assertEqual('Nil below it', M(20000), 0);
+        assertClose('Shade-in: 10c/$ just above threshold', M(30000), (30000 - 28011) * 0.10, 1e-9);
+        assertClose('Full 2% once the taper meets it', M(40000), 800, 1e-9);
+        assertClose('Full 2% at $100k', M(100000), 2000, 1e-9);
+
+        // --- HELP repayment (marginal system, 2026–27) ---
+        group('HELP/HECS repayment — marginal system');
+        const H = (x) => calculateHelpRepayment(x, FY.help);
+        assertEqual('Nil at the threshold ($69,528)', H(69528), 0);
+        assertEqual('Nil below it', H(60000), 0);
+        assertClose('15% of income above threshold', H(100000), (100000 - 69528) * 0.15, 1e-9);
+        assertClose('17% band above $129,717', H(150000), (129717 - 69528) * 0.15 + (150000 - 129717) * 0.17, 1e-9);
+        assertClose('Capped at 10% of repayment income', H(250000), 25000, 1e-9);
+
+        group('HELP payoff projection');
+        const payoff = projectHelpPayoff(20000, 100000, { indexationPercent: 2.8, help: FY.help });
+        assertEqual('$20k @ $100k income clears in 5 years', payoff.years, 5);
+        assertClose('Final year closes at 0', payoff.schedule[payoff.schedule.length - 1].closing, 0, 1e-6);
+        assertEqual('Zero balance → 0 years', projectHelpPayoff(0, 100000, { help: FY.help }).years, 0);
+        assertEqual('Income below threshold → never (Infinity)', projectHelpPayoff(10000, 50000, { help: FY.help }).years, Infinity);
+        assertEqual('Indexation outpacing repayment → Infinity', projectHelpPayoff(100000, 70000, { indexationPercent: 2.8, help: FY.help }).years, Infinity);
+
+        // --- calculateTotals + taxSettings estimate components ---
+        group('calculateTotals — Medicare + HELP in the estimate path');
+        const dataFY = makeData([src({ grossAnnual: 80000 })]);
+        dataFY.taxBrackets = FY.brackets;
+        dataFY.taxSettings = { financialYear: '2026-27', includeMedicareLevy: true, helpBalance: 30000, includeHelpInEstimate: true };
+        const rFY = calculateTotals(dataFY);
+        assertClose('Estimate = brackets + Medicare + HELP', rFY.totalAnnualTax, 14520 + 1600 + (80000 - 69528) * 0.15, 1e-6);
+        const dataNoTS = makeData([src({ grossAnnual: 80000 })]);
+        dataNoTS.taxBrackets = FY.brackets;
+        const rNoTS = calculateTotals(dataNoTS);
+        assertClose('No taxSettings → brackets only (back-compat)', rNoTS.totalAnnualTax, 14520, 1e-6);
+        const dataOverride = makeData([src({ grossAnnual: 80000, invoicedPayPostTax: 2400, taxRemoved: 700 })]);
+        dataOverride.taxBrackets = FY.brackets;
+        dataOverride.taxSettings = { financialYear: '2026-27', includeMedicareLevy: true, helpBalance: 30000, includeHelpInEstimate: true };
+        const rOv = calculateTotals(dataOverride);
+        assertClose('Payslip override wins — no double-counting components', rOv.totalAnnualTax, 700 * 26, 1e-6);
+
+        // --- Category auto-matching ---
+        group('Category keyword matching');
+        assertEqual('WOOLWORTHS → groceries', categoriseDescription('WOOLWORTHS 1234 SYDNEY NSW', DEFAULT_CATEGORIES), 'groceries');
+        assertEqual('NETFLIX → entertainment', categoriseDescription('NETFLIX.COM Sydney', DEFAULT_CATEGORIES), 'entertainment');
+        assertEqual('UBER EATS → dining (not transport)', categoriseDescription('UBER EATS PENDING', DEFAULT_CATEGORIES), 'dining');
+        assertEqual('UBER TRIP → transport', categoriseDescription('UBER TRIP HELP.UBER.COM', DEFAULT_CATEGORIES), 'transport');
+        assertEqual('Unknown merchant → other', categoriseDescription('TRANSFER 000-000 REF 1', DEFAULT_CATEGORIES), 'other');
+        assertEqual('Empty description → other', categoriseDescription('', DEFAULT_CATEGORIES), 'other');
+
+        // --- Transaction store (IndexedDB, isolated test database) ---
+        group('Transaction store (IndexedDB)');
+        try {
+            configureDb('ledger-test-db');
+            await deleteDb(); // clean slate even after an interrupted earlier run
+            const batchId = 'test-batch-1';
+            const t1 = makeTransaction({ date: '2026-07-01', description: 'WOOLWORTHS 1234', amountCents: -8532, categoryId: 'groceries', source: 'csv', importBatchId: batchId });
+            const t2 = makeTransaction({ date: '2026-07-02', description: 'NETFLIX.COM', amountCents: -1899, categoryId: 'entertainment', source: 'csv', importBatchId: batchId });
+            const t1dup = makeTransaction({ date: '2026-07-01', description: '  woolworths   1234 ', amountCents: -8532, categoryId: 'groceries', source: 'csv', importBatchId: batchId });
+            const res1 = await addTransactions([t1, t2, t1dup]);
+            assertEqual('Batch insert adds unique rows', res1.added, 2);
+            assertEqual('Normalised duplicate is skipped', res1.duplicates, 1);
+            const res2 = await addTransactions([
+                makeTransaction({ date: '2026-07-01', description: 'WOOLWORTHS 1234', amountCents: -8532 }),
+            ]);
+            assertEqual('Re-import of an existing row is skipped', res2.duplicates, 1);
+            const listed = await listTransactions();
+            assertEqual('List returns the stored rows', listed.length, 2);
+            assertEqual('Newest first', listed[0].date, '2026-07-02');
+            const spend = await monthlySpendByCategory('2026-07');
+            assertEqual('Monthly category spend (groceries, cents)', spend.get('groceries'), 8532);
+            const removed = await deleteImportBatch(batchId);
+            assertEqual('Undo import removes the whole batch', removed, 2);
+            assertEqual('Store empty after batch undo', await countTransactions(), 0);
+
+            // Event log
+            await logEvent('import', { batchId, count: 2, source: 'csv' });
+            await logEvent('milestone', { kind: 'net-worth', value: 50000, threshold: 50000 });
+            const events = await listRecentEvents(10);
+            assertEqual('Event log stores + lists newest first', events[0].type, 'milestone');
+            assertEqual('Event log count', events.length, 2);
+            const pruned = await pruneEvents(1);
+            assertEqual('Prune trims oldest beyond the cap', pruned, 1);
+            assertEqual('Newest survives the prune', (await listRecentEvents(10))[0].type, 'milestone');
+            await deleteDb();
+        } catch (err) {
+            record('IndexedDB store tests (environment provides IndexedDB)', false, 'no error', String(err));
+        }
 
         // --- Render ---
         const tbody = document.getElementById('results');
