@@ -2616,3 +2616,76 @@ body {
     .home-greeting { margin-bottom: 16px; }
     .pulse-row { gap: 10px; margin-bottom: 20px; }
 }
+
+/* ── Ledger: CSV import flow ────────────────────────────────────────────── */
+.import-drop {
+    border: 2px dashed var(--border-color);
+    border-radius: 15px;
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.import-drop:hover, .import-drop:focus-visible, .import-drop.is-dragover {
+    border-color: var(--accent-color);
+    background: var(--neutral-tint);
+    outline: none;
+}
+.import-drop-title { font-size: 1.05rem; font-weight: 650; color: var(--heading-color); margin: 0 0 4px; }
+.import-drop-sub { color: var(--text-color-secondary); font-size: 0.85rem; margin: 0 0 10px; }
+.import-toggles { display: flex; flex-wrap: wrap; gap: 4px 22px; margin-top: 14px; }
+.import-table-wrap {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: auto;
+    max-height: 320px;
+}
+.import-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.import-table th {
+    position: sticky; top: 0;
+    background: var(--card-bg-gradient-end);
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+.import-table td { padding: 7px 12px; border-bottom: 1px solid var(--border-color); }
+.import-table tr:last-child td { border-bottom: none; }
+.import-cell-date { white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--text-color-secondary); }
+.import-cell-desc { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.import-cell-amount { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+.import-cell-amount.is-out { color: var(--text-color-primary); }
+.import-cell-amount.is-in { color: var(--color-positive); }
+.import-cat-select {
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--card-bg-gradient-start);
+    color: var(--text-color-primary);
+    font: inherit;
+    font-size: 0.8rem;
+    max-width: 170px;
+}
+.import-more-note, .import-empty-note { margin-top: 10px; font-size: 0.85rem; color: var(--text-color-secondary); }
+.import-errors-box {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: var(--warning-tint);
+    border: 1px solid var(--color-warning);
+}
+.import-errors-title { font-weight: 600; margin: 0 0 6px; color: var(--text-color-primary); }
+.import-errors-box ul { margin: 0 0 0 18px; font-size: 0.84rem; color: var(--text-color-secondary); }
+.import-success {
+    margin-top: 8px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    background: var(--positive-tint);
+    border: 1px solid var(--color-positive);
+    text-align: center;
+}
+.import-success-title { font-weight: 650; color: var(--heading-color); margin: 0 0 4px; }
+.import-success-sub { color: var(--text-color-secondary); font-size: 0.88rem; margin: 0; }

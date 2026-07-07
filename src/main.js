@@ -14,6 +14,7 @@ import {
     setupDashboardEmptyActions, setupExpenseSearch, setupInfoSections,
 } from './ui/tabs.js';
 import { setupGuiModal, setupDraggableModal, setupPageSettingsModals } from './ui/modals.js';
+import { setupImport } from './import/import-ui.js';
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
 
@@ -36,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupGuiModal();  // A.4 — appearance modal
     setupDraggableModal('gui-settings-modal'); // draggable, corner-resizable appearance window
     setupPageSettingsModals(); // Phase D — per-page settings modals
+    setupImport(); // Ledger — bank CSV import (Tools)
     setupDashboardEmptyActions(); // F.1 — welcome empty-state action cards
     setupCardLinks(); // F.2 — dashboard cards link to their tab
     setupExpenseSearch(); // H.2 — expense name filter
