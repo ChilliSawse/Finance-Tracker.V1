@@ -62,16 +62,16 @@ export const defaultFinanceData = {
 //     essential / warning — overlaid on top of the derived set only when non-empty.
 // primaryBgEnd / cardBgEnd are retained for back-compat but no longer drive anything.
 export const defaultGuiSettings = {
-    theme: 'midnight',
-    // base
-    primaryBgStart: "#0d1117",
-    cardBgStart: "#161b22",
-    textColor: "#c9d1d9",
-    borderColor: "#30363d",
-    accentColor: "#f85149",
-    colorPositive: "#3fb950",
-    colorNegative: "#f85149",
-    colorNeutral: "#58a6ff",
+    theme: 'sunrise',
+    // base — Ledger's warm default (theme.js THEMES.sunrise)
+    primaryBgStart: "#f7f1e6",
+    cardBgStart: "#fffdf8",
+    textColor: "#453c33",
+    borderColor: "#e0d5c2",
+    accentColor: "#e8642c",
+    colorPositive: "#2e7d32",
+    colorNegative: "#c62828",
+    colorNeutral: "#0f766e",
     // override (empty = derive)
     headingColor: "",
     mutedColor: "",
@@ -79,8 +79,8 @@ export const defaultGuiSettings = {
     colorEssential: "",
     colorWarning: "",
     // derived 2nd stops, kept for back-compat (unused)
-    primaryBgEnd: "#161d27",
-    cardBgEnd: "#1e252e",
+    primaryBgEnd: "#f2e7d4",
+    cardBgEnd: "#fff8e5",
     // typography
     fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     baseFontSize: "16",

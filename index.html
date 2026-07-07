@@ -1016,6 +1016,84 @@
         </div>
     </div>
 
+    <!-- Ledger — first-run onboarding. Shown once on a fresh install; every step
+         says why it matters. Sample data is the no-commitment way in. -->
+    <div class="modal-backdrop" id="onboarding-modal" hidden>
+        <div class="modal onboarding" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+            <div class="modal-body">
+                <div class="onboarding-step" id="onboard-step-welcome">
+                    <h2 id="onboarding-title" class="onboarding-h">Welcome to Ledger</h2>
+                    <p class="onboarding-p">Your money has a story — income, spending, milestones, the lot.
+                    Ledger keeps it all on this device (nothing is uploaded, ever) and tells it back to you straight.</p>
+                    <div class="onboarding-choices">
+                        <button type="button" class="btn onboarding-primary" id="onboard-setup">Set up my numbers</button>
+                        <button type="button" class="btn btn-secondary" id="onboard-sample">Explore with sample data</button>
+                    </div>
+                    <button type="button" class="onboarding-skip" id="onboard-skip">Skip for now — I'll poke around myself</button>
+                </div>
+
+                <div class="onboarding-step" id="onboard-step-income" hidden>
+                    <h2 class="onboarding-h">First, your income</h2>
+                    <p class="onboarding-p">Your take-home pay drives everything else. Enter your before-tax salary
+                    and Ledger estimates the rest with current ATO rates — Medicare levy included.</p>
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" for="onboard-income-name">What should we call it?</label>
+                        <input type="text" class="form-input" id="onboard-income-name" value="My job" maxlength="60">
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="onboard-income-gross">Salary before tax (per year)</label>
+                            <input type="number" class="form-input" id="onboard-income-gross" min="0" step="1000" placeholder="e.g. 85000">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="onboard-income-schedule">How often are you paid?</label>
+                            <select class="form-select" id="onboard-income-schedule">
+                                <option value="weekly">Weekly</option>
+                                <option value="fortnightly" selected>Fortnightly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="onboarding-nav">
+                        <button type="button" class="btn onboarding-primary" id="onboard-income-next">Next</button>
+                        <button type="button" class="btn btn-secondary" id="onboard-income-back">Back</button>
+                    </div>
+                </div>
+
+                <div class="onboarding-step" id="onboard-step-spend" hidden>
+                    <h2 class="onboarding-h">Roughly, what goes out?</h2>
+                    <p class="onboarding-p">Ballpark is fine — you can refine every line later. What's left over
+                    is your savings rate, the single biggest lever you have.</p>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="onboard-spend-essential">Essentials per week (rent, food, bills…)</label>
+                            <input type="number" class="form-input" id="onboard-spend-essential" min="0" step="10" placeholder="e.g. 650">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="onboard-spend-fun">Fun money per week (everything else)</label>
+                            <input type="number" class="form-input" id="onboard-spend-fun" min="0" step="10" placeholder="e.g. 150">
+                        </div>
+                    </div>
+                    <div class="onboarding-nav">
+                        <button type="button" class="btn onboarding-primary" id="onboard-spend-next">Next</button>
+                        <button type="button" class="btn btn-secondary" id="onboard-spend-back">Back</button>
+                    </div>
+                </div>
+
+                <div class="onboarding-step" id="onboard-step-done" hidden>
+                    <h2 class="onboarding-h">You're set</h2>
+                    <p class="onboarding-p" id="onboard-summary"></p>
+                    <p class="onboarding-p">Want the full picture? Import a CSV export from your bank — it stays on
+                    this device, gets auto-categorised, and fills your feed with real history.</p>
+                    <div class="onboarding-choices">
+                        <button type="button" class="btn onboarding-primary" id="onboard-finish">Take me home</button>
+                        <button type="button" class="btn btn-secondary" id="onboard-import">Import a bank CSV</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Ledger — bank CSV import. Sandboxed flow: parse → map columns → preview
          (with per-row errors) → explicit commit. Nothing is stored until the user
          clicks Import; the file never leaves the device. -->

@@ -68,6 +68,16 @@ function perceivedLuminance(hex) {
 //   accent   – brand highlight (buttons, links, active states) — NOT the page gradient
 //   positive / negative / neutral – finance semantic figures (tuned per light/dark)
 const THEMES = {
+    // Ledger's warm default — engaging with your money should feel like a
+    // kitchen-table chat, not a terminal session. Warm paper, soft brown ink,
+    // a persimmon accent, and a teal info tone (instead of the usual blue) so
+    // the whole palette reads warm end-to-end.
+    sunrise: {
+        name: 'Sunrise',
+        bg: '#f7f1e6', fg: '#453c33', panel: '#fffdf8',
+        border: '#e0d5c2', accent: '#e8642c',
+        positive: '#2e7d32', negative: '#c62828', neutral: '#0f766e',
+    },
     light: {
         name: 'Light',
         bg: '#f0ebe3', fg: '#5a5248', panel: '#faf6f0',
@@ -142,11 +152,20 @@ const THEMES = {
     },
 };
 
-// J1 — preset set is now the 12 above. 'default'/'dark' (removed) map to the
-// closest survivor so older saves keep working. DEFAULT_THEME is the fresh-load
-// preset: midnight, for neutral-grey text that reads cleanly under dense figures.
-const DEFAULT_THEME = 'midnight';
+// 'default'/'dark' (removed presets) map to the closest survivor so older
+// saves keep working. DEFAULT_THEME is the fresh-install preset: Ledger's warm
+// Sunrise (dark-mode systems get midnight via pickFirstRunTheme). Existing
+// saves keep whatever theme they had.
+const DEFAULT_THEME = 'sunrise';
 const THEME_ALIASES = { default: 'midnight', dark: 'midnight' };
+
+// First run only: respect the system's colour-scheme preference.
+function pickFirstRunTheme() {
+    try {
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) return 'midnight';
+    } catch (_) {}
+    return DEFAULT_THEME;
+}
 
 // Resolve a saved theme name to a valid preset key (handles removed/aliased names).
 function resolveTheme(name) {
@@ -1105,4 +1124,5 @@ export {
     MAX_CUSTOM_FONTS, MAX_FONT_BYTES, customFontStack, registerStoredCustomFonts,
     addCustomFont, deleteCustomFont, populateCustomFontOptions, renderCustomFontList,
     applyBackgroundEffect, applyBgEffectColor,
+    pickFirstRunTheme,
 };

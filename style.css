@@ -3,27 +3,27 @@
     --font-body: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --font-mono: 'Fira Code', 'Consolas', monospace;
     --font-display: var(--font-body);
-    /* J1 — fallbacks mirror DEFAULT_THEME (midnight) so a brand-new install
-       doesn't flash the old purple before theme.js runs. Returning users get
-       their exact tokens replayed from the FOUC cache (see index.html head). */
-    --primary-bg-color-start: #0d1117;
-    --primary-bg-color-end: #161d27;
-    --header-text-color: #ffffff;
-    --tab-bg-color: rgba(255, 255, 255, 0.1);
-    --tab-active-bg-color: rgba(255, 255, 255, 0.2);
-    --tab-text-color: rgba(255, 255, 255, 0.7);
-    --tab-active-text-color: white;
-    --content-bg-color: rgba(22, 27, 34, 0.95);
-    --card-bg-gradient-start: #161b22;
-    --card-bg-gradient-end: #1e252e;
+    /* Fallbacks mirror DEFAULT_THEME (sunrise) so a brand-new install doesn't
+       flash a dark palette before theme.js runs. Returning users get their
+       exact tokens replayed from the FOUC cache (see index.html head). */
+    --primary-bg-color-start: #f7f1e6;
+    --primary-bg-color-end: #f2e7d4;
+    --header-text-color: #453c33;
+    --tab-bg-color: rgba(0, 0, 0, 0.1);
+    --tab-active-bg-color: rgba(0, 0, 0, 0.2);
+    --tab-text-color: rgba(0, 0, 0, 0.7);
+    --tab-active-text-color: #000000;
+    --content-bg-color: rgba(255, 253, 248, 0.95);
+    --card-bg-gradient-start: #fffdf8;
+    --card-bg-gradient-end: #fff8e5;
     /* Card translucency — how opaque page cards are, so a background effect shows faintly
        through them. 100% = solid; lower lets more of the effect through. One knob for all cards. */
     --card-opacity: 80%;
-    --border-color: #30363d;
-    --text-color-primary: #c9d1d9;
-    --text-color-secondary: rgba(201, 209, 217, 0.6);
-    --heading-color: #c9d1d9;
-    --accent-color: #f85149;
+    --border-color: #e0d5c2;
+    --text-color-primary: #453c33;
+    --text-color-secondary: rgba(69, 60, 51, 0.6);
+    --heading-color: #453c33;
+    --accent-color: #e8642c;
     --font-family-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     --base-font-size: 16px;
     --save-status-saving-bg: rgba(255, 193, 7, 0.9); /* Amber */
@@ -31,16 +31,16 @@
     --save-status-error-bg: rgba(244, 67, 54, 0.9); /* Red */
     --save-status-unsaved-bg: rgba(255, 152, 0, 0.9); /* Orange */
     /* Finance semantic colour tokens — overwritten by applyTheme() / loadTheme().
-       J1 fallbacks match DEFAULT_THEME (midnight). */
-    --color-positive: #3fb950;
-    --color-negative: #f85149;
-    --color-neutral: #58a6ff;
-    --color-warning: #ff9800;
-    --info-bg: rgba(88, 166, 255, 0.08);
-    --info-border: #58a6ff;
-    --positive-tint: rgba(63, 185, 80, 0.1);
-    --neutral-tint: rgba(88, 166, 255, 0.1);
-    --negative-tint: rgba(248, 81, 73, 0.1);
+       Fallbacks match DEFAULT_THEME (sunrise). */
+    --color-positive: #2e7d32;
+    --color-negative: #c62828;
+    --color-neutral: #0f766e;
+    --color-warning: #f59e0b;
+    --info-bg: rgba(15, 118, 110, 0.08);
+    --info-border: #0f766e;
+    --positive-tint: rgba(46, 125, 50, 0.1);
+    --neutral-tint: rgba(15, 118, 110, 0.1);
+    --negative-tint: rgba(198, 40, 40, 0.1);
 }
 
 * {
@@ -2779,3 +2779,84 @@ body {
 .envelope-fill.is-ok   { background: var(--color-positive); }
 .envelope-fill.is-warm { background: var(--color-warning); }
 .envelope-fill.is-over { background: var(--color-negative); }
+
+/* ── Ledger: onboarding + toast ─────────────────────────────────────────── */
+.modal.onboarding {
+    max-width: 520px;
+    text-align: left;
+}
+.onboarding-h {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--heading-color);
+    margin: 6px 0 12px;
+    letter-spacing: -0.01em;
+}
+.onboarding-p {
+    color: var(--text-color-primary);
+    line-height: 1.55;
+    margin: 0 0 18px;
+}
+.onboarding-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 4px 0 14px;
+}
+.onboarding-choices .btn { width: 100%; margin-top: 0; }
+.btn.onboarding-primary {
+    background: var(--accent-color);
+    font-size: 1em;
+    padding: 12px 20px;
+}
+.onboarding-skip {
+    display: block;
+    margin: 4px auto 0;
+    background: none;
+    border: none;
+    color: var(--text-color-secondary);
+    font: inherit;
+    font-size: 0.84rem;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.onboarding-skip:hover { color: var(--text-color-primary); }
+.onboarding-nav { display: flex; gap: 10px; margin-top: 18px; }
+.onboarding-nav .btn { margin-top: 0; }
+
+#ledger-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translate(-50%, 16px);
+    max-width: min(480px, calc(100vw - 32px));
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: var(--card-bg-gradient-start);
+    color: var(--text-color-primary);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    font-size: 0.92rem;
+    line-height: 1.4;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 3000;
+}
+#ledger-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+#ledger-toast.is-celebrate { border-color: var(--color-positive); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--color-positive); }
+
+/* Milestone dots in the feed get a one-time celebratory pulse. */
+@keyframes ledger-dot-pulse {
+    0% { box-shadow: 0 0 0 0 var(--positive-tint); }
+    70% { box-shadow: 0 0 0 9px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+}
+.feed-kind-good .feed-dot { animation: ledger-dot-pulse 1.6s ease-out 1; }
+
+@media (max-width: 640px) {
+    /* Keep the toast clear of the bottom tab bar. */
+    #ledger-toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+}

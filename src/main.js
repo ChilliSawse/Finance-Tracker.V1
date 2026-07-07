@@ -17,13 +17,15 @@ import { setupGuiModal, setupDraggableModal, setupPageSettingsModals } from './u
 import { setupImport } from './import/import-ui.js';
 import { rollForwardBills, generateBillDueEvents } from './state/bills.js';
 import { refreshSpendCache } from './state/spend-cache.js';
+import { setupOnboarding } from './ui/onboarding.js';
+import { setupMilestoneToasts } from './ui/toast.js';
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     setupPwaUpdateListeners();
     store.autoSave = new FinanceAutoSave();
-    store.autoSave.loadData();
+    const hadSavedData = store.autoSave.loadData();
     loadTheme(); // apply full preset (tab colours, tints, etc.) before UI renders
     registerStoredCustomFonts(); // J3 — re-register uploaded fonts
     applyBgEffectColor(store.guiSettingsData.bgEffectColor); // J4 — restore effect tint (before the effect starts)
@@ -52,6 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateAllUI();
     restoreActiveTab(); // A.3 — restore last-viewed section (defaults to Home)
+
+    setupMilestoneToasts(); // Ledger — celebration toasts
+    setupOnboarding(hadSavedData); // Ledger — first-run guided setup / sample data
 
     // Spending aggregates load async from IndexedDB; refresh the visible tab
     // once they're in so transaction-fed cards appear without a manual switch.

@@ -6,6 +6,13 @@
 // re-arms it, so a later re-crossing celebrates again.
 
 import { logEvent } from './eventlog.js';
+import { formatCurrency } from '../utils.js';
+
+// UI layers (toasts, confetti-adjacent things) listen for this without the
+// state layer having to know about them.
+function announce(detail) {
+    try { document.dispatchEvent(new CustomEvent('ledger:milestone', { detail })); } catch (_) {}
+}
 
 const MILESTONES_KEY = 'ft-milestones';
 
@@ -52,6 +59,7 @@ export function checkMilestones(totals) {
     if (nwNow > nwCelebrated && totals.netWorth > 0) {
         next.netWorth = nwNow;
         logEvent('milestone', { kind: 'net-worth', threshold: nwNow, value: totals.netWorth }).catch(() => {});
+        announce({ kind: 'net-worth', threshold: nwNow, thresholdLabel: formatCurrency(nwNow, undefined, 0) });
     } else if (nwNow < nwCelebrated) {
         next.netWorth = nwNow; // re-arm after a dip, silently
     }
@@ -61,6 +69,7 @@ export function checkMilestones(totals) {
     if (srNow > srCelebrated && totals.savingsRate > 0) {
         next.savingsRate = srNow;
         logEvent('milestone', { kind: 'savings-rate', threshold: srNow, value: Math.round(totals.savingsRate * 10) / 10 }).catch(() => {});
+        announce({ kind: 'savings-rate', threshold: srNow });
     } else if (srNow < srCelebrated) {
         next.savingsRate = srNow;
     }

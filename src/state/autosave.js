@@ -5,7 +5,7 @@
 import { store } from './store.js';
 import { cloneDefaultFinanceData, cloneDefaultGuiSettings, defaultGuiSettings } from './defaults.js';
 import { migrateIncomeSourceTypes, migrateAllocationFields, migrateLedgerFields } from './migrations.js';
-import { migrateGuiTheme, migrateGuiColorFields } from '../theme/theme.js';
+import { migrateGuiTheme, migrateGuiColorFields, pickFirstRunTheme, THEMES } from '../theme/theme.js';
 
 export class FinanceAutoSave {
     constructor() {
@@ -104,6 +104,15 @@ export class FinanceAutoSave {
         } catch (error) {
             console.error('Auto-save to localStorage failed:', error);
             this.updateSaveStatus('error');
+            // Storage full: say what happened and what to do, once per session —
+            // not on every retried save.
+            if (error && error.name === 'QuotaExceededError' && !this._quotaWarned) {
+                this._quotaWarned = true;
+                alert("[STORAGE FULL] Your latest changes couldn't be saved — this device's storage for Ledger is full.\n\n"
+                    + '1. Open Settings → Save, Reset & Backup → Export Backup (JSON) so nothing is lost.\n'
+                    + '2. Free space by removing a custom font or saved themes (they take the most room).\n\n'
+                    + 'Saving will resume automatically once there is space.');
+            }
         }
     }
 
@@ -138,6 +147,19 @@ export class FinanceAutoSave {
         // Fallback to default if load fails or no data
         store.financeData = cloneDefaultFinanceData();
         store.guiSettingsData = cloneDefaultGuiSettings();
+        // First run: respect the system colour scheme — dark systems open in
+        // midnight instead of the warm sunrise default. Mirrors a preset click
+        // (write the 8 base colours; overrides stay empty).
+        const firstTheme = pickFirstRunTheme();
+        if (firstTheme !== store.guiSettingsData.theme && THEMES[firstTheme]) {
+            const p = THEMES[firstTheme];
+            Object.assign(store.guiSettingsData, {
+                theme: firstTheme,
+                primaryBgStart: p.bg, cardBgStart: p.panel, textColor: p.fg,
+                borderColor: p.border, accentColor: p.accent,
+                colorPositive: p.positive, colorNegative: p.negative, colorNeutral: p.neutral,
+            });
+        }
         this.lastSaveHash = this.getDataHash();
         this.updateSaveStatus('saved'); // Consider it 'saved' as it's default
         return false;

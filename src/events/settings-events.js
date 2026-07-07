@@ -442,6 +442,18 @@ export function actionSetCurrentAsDefault() {
 
 export function actionResetToAppDefaults() {
     // Confirmation handled by the caller's inlineConfirm (H.5).
+    // If the sample household is loaded, clear its transaction batch too so a
+    // reset really is a clean slate. Fire-and-forget (IndexedDB).
+    import('../state/sample-data.js').then(async (sample) => {
+        if (sample.sampleDataActive()) {
+            const tx = await import('../state/transactions.js');
+            await tx.deleteImportBatch(sample.SAMPLE_BATCH_ID).catch(() => {});
+            sample.clearSampleFlag();
+            const { refreshSpendCache } = await import('../state/spend-cache.js');
+            await refreshSpendCache();
+            updateDataAndUI();
+        }
+    }).catch(() => {});
     const userDefaults = getUserDefaults();
     if (userDefaults) {
         store.financeData = JSON.parse(JSON.stringify(userDefaults.financeData));
