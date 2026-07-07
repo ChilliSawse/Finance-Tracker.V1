@@ -9,6 +9,7 @@ import { updateAllUI } from './render.js';
 import { initializeSettingsUI } from './settings-forms.js';
 import { loadSampleData } from '../state/sample-data.js';
 import { showToast } from './toast.js';
+import { t } from '../i18n/strings.js';
 
 const ONBOARDED_KEY = 'ft-onboarded';
 
@@ -60,16 +61,18 @@ function renderSummary() {
     const el = getElement('onboard-summary');
     if (!el) return;
     if (totals.totalNetAnnualIncome <= 0) {
-        el.textContent = 'Your numbers are in — refine any of them from the tabs whenever you like.';
+        el.textContent = t('onboard.summary.plain');
         return;
     }
     const fortnightly = totals.weeklySavings * 2;
     if (totals.savingsRate > 0) {
-        el.textContent = `On those numbers you're keeping about ${formatCurrency(fortnightly)} a fortnight — `
-            + `a ${totals.savingsRate.toFixed(0)}% savings rate. That's the number Ledger helps you grow.`;
+        el.textContent = t('onboard.summary.saving', {
+            fortnightly: formatCurrency(fortnightly), rate: totals.savingsRate.toFixed(0),
+        });
     } else {
-        el.textContent = `On those numbers, spending is running ahead of income by about `
-            + `${formatCurrency(Math.abs(fortnightly))} a fortnight. Ledger will help you see exactly where it goes.`;
+        el.textContent = t('onboard.summary.overspending', {
+            fortnightly: formatCurrency(Math.abs(fortnightly)),
+        });
     }
 }
 
@@ -90,7 +93,7 @@ export function setupOnboarding(hadSavedData) {
     getElement('onboard-sample').addEventListener('click', async () => {
         const btn = getElement('onboard-sample');
         btn.disabled = true;
-        btn.textContent = 'Setting things up…';
+        btn.textContent = t('onboard.sample.loading');
         const count = await loadSampleData();
         initializeSettingsUI();
         const { generateBillDueEvents } = await import('../state/bills.js');
@@ -100,8 +103,8 @@ export function setupOnboarding(hadSavedData) {
         updateAllUI();
         closeOnboarding();
         showToast(count > 0
-            ? `Meet Alex and Sam — a sample household with ${count} transactions to explore.`
-            : 'Meet Alex and Sam — a sample household to explore.');
+            ? t('toast.sample.loaded', { count })
+            : t('toast.sample.loadedNoTxns'));
     });
 
     getElement('onboard-income-back').addEventListener('click', () => showStep('onboard-step-welcome'));
@@ -115,7 +118,7 @@ export function setupOnboarding(hadSavedData) {
 
     getElement('onboard-finish').addEventListener('click', () => {
         closeOnboarding();
-        showToast("You're all set — this feed fills up as your story unfolds.");
+        showToast(t('toast.onboarding.done'));
     });
     getElement('onboard-import').addEventListener('click', () => {
         closeOnboarding();

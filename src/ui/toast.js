@@ -2,6 +2,8 @@
 // confirmations). One at a time; auto-dismisses; respects reduced motion via
 // the global transition kill-switch in style.css.
 
+import { t } from '../i18n/strings.js';
+
 let hideTimer = null;
 
 export function showToast(message, kind = 'info', duration = 4500) {
@@ -30,9 +32,9 @@ export function setupMilestoneToasts() {
     document.addEventListener('ledger:milestone', (e) => {
         const d = e.detail || {};
         if (d.kind === 'net-worth') {
-            showToast(`Nice one — net worth just crossed ${d.thresholdLabel}.`, 'celebrate', 6000);
+            showToast(t('toast.milestone.netWorth', { threshold: d.thresholdLabel }), 'celebrate', 6000);
         } else if (d.kind === 'savings-rate') {
-            showToast(`Looking good — your savings rate hit ${d.threshold}%.`, 'celebrate', 6000);
+            showToast(t('toast.milestone.savingsRate', { threshold: d.threshold }), 'celebrate', 6000);
         }
     });
 }

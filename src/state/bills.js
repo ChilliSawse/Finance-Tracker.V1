@@ -7,6 +7,7 @@
 //     nextDue: 'YYYY-MM-DD' }
 
 import { logEvent } from './eventlog.js';
+import { t } from '../i18n/strings.js';
 
 const NOTIFIED_KEY = 'ft-bill-notified'; // billId → the nextDue date already announced
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -58,9 +59,9 @@ export function rollForwardBills(data) {
 
 /** Human "due" label. */
 export function dueLabel(days) {
-    if (days <= 0) return 'today';
-    if (days === 1) return 'tomorrow';
-    return `in ${days} days`;
+    if (days <= 0) return t('bills.dueToday');
+    if (days === 1) return t('bills.dueTomorrow');
+    return t('bills.dueInDays', { days });
 }
 
 /**

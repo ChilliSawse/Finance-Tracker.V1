@@ -3,8 +3,9 @@
 // and three "pulse" tiles with trend sparklines.
 //
 // Events come from the IndexedDB event log as {type, data} facts; this module
-// owns turning them into copy at render time. All colours are theme tokens so
-// every preset/custom theme works.
+// turns them into copy at render time via the i18n catalogue (src/i18n/en.js).
+// All colours are theme tokens so every preset/custom theme works.
+// Interpolated params are escaped here — t() does not escape.
 
 import { store } from '../state/store.js';
 import { getElement, setHTML, escapeHtml, formatCurrency, fitAllAmounts } from '../utils.js';
@@ -13,42 +14,43 @@ import { listRecentEvents } from '../state/eventlog.js';
 import { listSnapshots, snapshotBefore } from '../state/snapshots.js';
 import { upcomingBills } from '../state/bills.js';
 import { sparklineSvg } from './sparkline.js';
+import { t } from '../i18n/strings.js';
 
 // ---------- greeting ----------
 
 function greetingTitle() {
     const h = new Date().getHours();
-    if (h < 5) return 'Up late?';
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 5) return t('greeting.lateNight');
+    if (h < 12) return t('greeting.morning');
+    if (h < 18) return t('greeting.afternoon');
+    return t('greeting.evening');
 }
 
 // One insight line, picked by priority — a financially-literate friend's summary.
 function insightLine(totals) {
     if (totals.totalNetAnnualIncome <= 0 && totals.totalWeeklyExpenses <= 0) {
-        return "Let's get your money story started.";
+        return t('insight.gettingStarted');
     }
     if (totals.savingsRate < 0) {
-        return "Spending is running ahead of income right now — worth a look at the Expenses tab.";
+        return t('insight.overspending');
     }
     const prev = snapshotBefore(30);
     if (prev && prev.netWorth !== 0 && totals.netWorth > prev.netWorth) {
         const pct = ((totals.netWorth - prev.netWorth) / Math.abs(prev.netWorth)) * 100;
-        if (pct >= 0.5) return `Net worth is up ${pct.toFixed(1)}% this month. Keep it rolling.`;
+        if (pct >= 0.5) return t('insight.netWorthUp', { pct: pct.toFixed(1) });
     }
     if (totals.savingsRate >= 20) {
-        return `You're saving ${totals.savingsRate.toFixed(0)}% of your income. That's the good stuff.`;
+        return t('insight.savingsStrong', { rate: totals.savingsRate.toFixed(0) });
     }
     if (totals.savingsRate > 0) {
-        return `You're saving ${totals.savingsRate.toFixed(0)}% of your income — every point counts.`;
+        return t('insight.savingsSome', { rate: totals.savingsRate.toFixed(0) });
     }
-    return "Here's what's happening with your money.";
+    return t('insight.default');
 }
 
 // ---------- pulse tiles ----------
 
-function deltaChip(now, before, { asPercentOfBefore = true, suffix = ' this month', goodIsUp = true } = {}) {
+function deltaChip(now, before, { asPercentOfBefore = true, goodIsUp = true } = {}) {
     if (before == null || now == null) return '';
     const diff = now - before;
     if (Math.abs(diff) < 0.005) return '';
@@ -60,7 +62,7 @@ function deltaChip(now, before, { asPercentOfBefore = true, suffix = ' this mont
     }
     const up = diff > 0;
     const good = goodIsUp ? up : !up;
-    return `<span class="pulse-delta ${good ? 'is-good' : 'is-bad'}">${up ? '↑' : '↓'} ${label}${suffix}</span>`;
+    return `<span class="pulse-delta ${good ? 'is-good' : 'is-bad'}">${up ? '↑' : '↓'} ${label}${t('pulse.deltaSuffix')}</span>`;
 }
 
 function renderPulse(totals) {
@@ -76,21 +78,21 @@ function renderPulse(totals) {
 
     el.innerHTML = `
         <div class="pulse-tile">
-            <div class="pulse-label">Net worth</div>
+            <div class="pulse-label">${t('pulse.netWorth')}</div>
             <div class="pulse-value amount${totals.netWorth < 0 ? ' is-negative-value' : ''}">${formatCurrency(totals.netWorth)}</div>
             ${deltaChip(totals.netWorth, prev30 ? prev30.netWorth : null)}
             ${sparklineSvg(nwSeries)}
         </div>
         <div class="pulse-tile">
-            <div class="pulse-label">Savings rate</div>
+            <div class="pulse-label">${t('pulse.savingsRate')}</div>
             <div class="pulse-value amount${totals.savingsRate < 0 ? ' is-negative-value' : ''}">${totals.savingsRate.toFixed(1)}%</div>
-            ${totals.savingsRate >= 20 ? '<span class="pulse-delta is-good">on target</span>' : ''}
+            ${totals.savingsRate >= 20 ? `<span class="pulse-delta is-good">${t('pulse.onTarget')}</span>` : ''}
             ${sparklineSvg(srSeries)}
         </div>
         <div class="pulse-tile">
-            <div class="pulse-label">Left over each fortnight</div>
+            <div class="pulse-label">${t('pulse.leftover')}</div>
             <div class="pulse-value amount${fortnightlySavings < 0 ? ' is-negative-value' : ''}">${formatCurrency(fortnightlySavings)}</div>
-            <span class="pulse-sub">after tax and all expenses</span>
+            <span class="pulse-sub">${t('pulse.leftoverSub')}</span>
         </div>`;
 }
 
@@ -105,14 +107,18 @@ function renderUpcoming() {
     const rows = soon.map(u => `
         <div class="upcoming-row">
             <span class="upcoming-name">${escapeHtml(u.bill.name)}</span>
-            <span class="upcoming-due${u.dueInDays <= 2 ? ' is-close' : ''}">${u.dueLabel}</span>
+            <span class="upcoming-due${u.dueInDays <= 2 ? ' is-close' : ''}">${escapeHtml(u.dueLabel)}</span>
             <span class="upcoming-amount">${formatCurrency(parseFloat(u.bill.amount) || 0)}</span>
         </div>`).join('');
     el.innerHTML = `
         <div class="upcoming-card">
             <div class="upcoming-head">
-                <span class="upcoming-title">Coming up</span>
-                <span class="upcoming-total">${soon.length} bill${soon.length === 1 ? '' : 's'} · ${formatCurrency(total)} in the next fortnight</span>
+                <span class="upcoming-title">${t('upcoming.title')}</span>
+                <span class="upcoming-total">${t('upcoming.summary', {
+                    count: soon.length,
+                    billWord: t(soon.length === 1 ? 'upcoming.billOne' : 'upcoming.billMany'),
+                    total: formatCurrency(total),
+                })}</span>
             </div>
             ${rows}
         </div>`;
@@ -127,11 +133,11 @@ function clusterLabel(ts) {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const diffDays = Math.floor((startOfToday - new Date(then.getFullYear(), then.getMonth(), then.getDate())) / DAY_MS);
-    if (diffDays <= 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return 'This week';
-    if (diffDays < 31) return 'This month';
-    return 'Earlier';
+    if (diffDays <= 0) return t('feed.today');
+    if (diffDays === 1) return t('feed.yesterday');
+    if (diffDays < 7) return t('feed.thisWeek');
+    if (diffDays < 31) return t('feed.thisMonth');
+    return t('feed.earlier');
 }
 
 function timeLabel(ts) {
@@ -151,31 +157,42 @@ function composeEvent(event) {
         case 'import':
             return {
                 kind: 'info',
-                html: `You imported <strong>${d.count}</strong> transaction${d.count === 1 ? '' : 's'}${d.sourceName ? ' from ' + escapeHtml(d.sourceName) : ''}.`,
+                html: t('feed.import', {
+                    count: d.count,
+                    txnWord: t(d.count === 1 ? 'feed.import.txnOne' : 'feed.import.txnMany'),
+                    fromSource: d.sourceName ? t('feed.import.fromSource', { source: escapeHtml(d.sourceName) }) : '',
+                }),
             };
         case 'milestone':
             if (d.kind === 'net-worth') {
                 return {
                     kind: 'good',
-                    html: `Net worth crossed <strong>${formatCurrency(d.threshold)}</strong> — you're at ${formatCurrency(d.value)}.`,
+                    html: t('feed.milestone.netWorth', { threshold: formatCurrency(d.threshold), value: formatCurrency(d.value) }),
                 };
             }
             if (d.kind === 'savings-rate') {
                 return {
                     kind: 'good',
-                    html: `Your savings rate hit <strong>${d.threshold}%</strong> — you're keeping ${d.value}% of what you earn.`,
+                    html: t('feed.milestone.savingsRate', { threshold: d.threshold, value: d.value }),
                 };
             }
             return null;
         case 'bill-due':
             return {
                 kind: 'warn',
-                html: `<strong>${escapeHtml(d.name)}</strong> is due ${escapeHtml(d.dueLabel || 'soon')} — ${formatCurrency(d.amount)}.`,
+                html: t('feed.billDue', {
+                    name: escapeHtml(d.name),
+                    due: escapeHtml(d.dueLabel || t('feed.billDueSoon')),
+                    amount: formatCurrency(d.amount),
+                }),
             };
         case 'income-added':
             return {
                 kind: 'good',
-                html: `You added <strong>${escapeHtml(d.name)}</strong>${d.amount ? ` (${formatCurrency(d.amount)} ${escapeHtml(d.schedule || '')})` : ''}.`,
+                html: t('feed.incomeAdded', {
+                    name: escapeHtml(d.name),
+                    amountPart: d.amount ? ` (${formatCurrency(d.amount)} ${escapeHtml(d.schedule || '')})` : '',
+                }),
             };
         case 'note':
             return { kind: 'note', html: escapeHtml(d.text || '') };
@@ -187,6 +204,8 @@ function composeEvent(event) {
 function renderFeedItems(events) {
     let html = '';
     let currentCluster = null;
+    const todayLabel = t('feed.today');
+    const yesterdayLabel = t('feed.yesterday');
     for (const event of events) {
         const composed = composeEvent(event);
         if (!composed) continue;
@@ -195,7 +214,7 @@ function renderFeedItems(events) {
             currentCluster = cluster;
             html += `<div class="feed-cluster-label">${cluster}</div>`;
         }
-        const when = (cluster === 'Today' || cluster === 'Yesterday') ? timeLabel(event.ts) : dateLabel(event.ts);
+        const when = (cluster === todayLabel || cluster === yesterdayLabel) ? timeLabel(event.ts) : dateLabel(event.ts);
         html += `
             <div class="feed-item feed-kind-${composed.kind}">
                 <span class="feed-dot" aria-hidden="true"></span>
@@ -207,13 +226,6 @@ function renderFeedItems(events) {
     }
     return html;
 }
-
-const FEED_EMPTY_HTML = `
-    <div class="feed-empty">
-        <p class="feed-empty-title">Your story starts here</p>
-        <p class="feed-empty-sub">As things happen — a bank import, a milestone, a bill coming up —
-        they'll show up in this feed. Add your income and expenses to get the first entries rolling.</p>
-    </div>`;
 
 /**
  * Render the Home tab (greeting + pulse tiles + activity feed). Async because
@@ -238,7 +250,11 @@ export async function renderHomeFeed() {
         // feed degrades to the pulse tiles; nothing breaks.
     }
     const itemsHtml = renderFeedItems(events);
-    setHTML('home-feed', itemsHtml || FEED_EMPTY_HTML);
+    setHTML('home-feed', itemsHtml || `
+        <div class="feed-empty">
+            <p class="feed-empty-title">${t('feed.empty.title')}</p>
+            <p class="feed-empty-sub">${t('feed.empty.sub')}</p>
+        </div>`);
 
     fitAllAmounts(getElement('home'));
 }

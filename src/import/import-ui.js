@@ -16,6 +16,9 @@ import { setupModal } from '../ui/modals.js';
 import { renderHomeFeed } from '../ui/feed.js';
 import { refreshSpendCache } from '../state/spend-cache.js';
 import { updateAllUI } from '../ui/render.js';
+import { t } from '../i18n/strings.js';
+
+const txnWord = (n) => t(n === 1 ? 'feed.import.txnOne' : 'feed.import.txnMany');
 
 const MAPPINGS_KEY = 'ft-csv-mappings';
 const PREVIEW_ROWS = 15;
@@ -111,9 +114,7 @@ function populateConfigForm(detected, saved) {
 
     const note = getElement('import-detect-note');
     if (note) {
-        note.textContent = saved
-            ? "We've used the column matching you saved for this file shape — adjust it if anything looks off."
-            : "We had a go at matching the columns automatically — check the preview below and adjust if anything looks off.";
+        note.textContent = t(saved ? 'import.detect.saved' : 'import.detect.auto');
     }
 }
 
@@ -150,7 +151,7 @@ function renderPreview() {
 
     const previewEl = getElement('import-preview');
     if (!transactions.length) {
-        previewEl.innerHTML = `<p class="import-empty-note">No readable transactions with this column matching yet — try different columns above.</p>`;
+        previewEl.innerHTML = `<p class="import-empty-note">${t('import.preview.none')}</p>`;
     } else {
         const shown = transactions.slice(0, PREVIEW_ROWS);
         const rowsHtml = shown.map((t, i) => {
@@ -164,10 +165,10 @@ function renderPreview() {
             </tr>`;
         }).join('');
         const more = transactions.length > PREVIEW_ROWS
-            ? `<p class="import-more-note">…and ${transactions.length - PREVIEW_ROWS} more. Rows beyond the preview are auto-categorised the same way.</p>`
+            ? `<p class="import-more-note">${t('import.preview.more', { count: transactions.length - PREVIEW_ROWS })}</p>`
             : '';
         previewEl.innerHTML = `
-            <div class="settings-title" style="margin-top: 8px;">Preview — ${transactions.length} transaction${transactions.length === 1 ? '' : 's'} ready</div>
+            <div class="settings-title" style="margin-top: 8px;">${t('import.preview.title', { count: transactions.length, txnWord: txnWord(transactions.length) })}</div>
             <div class="import-table-wrap">
                 <table class="import-table">
                     <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Category</th></tr></thead>
@@ -180,11 +181,14 @@ function renderPreview() {
     const allErrors = [...draft.parseErrors, ...errors];
     if (allErrors.length) {
         const items = allErrors.slice(0, 8).map(e =>
-            `<li>Line ${e.line}: ${escapeHtml(e.message)}</li>`).join('');
-        const more = allErrors.length > 8 ? `<li>…and ${allErrors.length - 8} more.</li>` : '';
+            `<li>${t('import.errors.line', { line: e.line, message: escapeHtml(e.message) })}</li>`).join('');
+        const more = allErrors.length > 8 ? `<li>${t('import.errors.moreLines', { count: allErrors.length - 8 })}</li>` : '';
         errorsEl.innerHTML = `
             <div class="import-errors-box">
-                <p class="import-errors-title">${allErrors.length} row${allErrors.length === 1 ? " couldn't" : "s couldn't"} be read (they'll be skipped):</p>
+                <p class="import-errors-title">${t('import.errors.title', {
+                    count: allErrors.length,
+                    rowWord: t(allErrors.length === 1 ? 'import.errors.rowOne' : 'import.errors.rowMany'),
+                })}</p>
                 <ul>${items}${more}</ul>
             </div>`;
     } else {
@@ -196,8 +200,8 @@ function renderPreview() {
     const commitBtn = getElement('import-commit');
     commitBtn.disabled = transactions.length === 0;
     commitBtn.textContent = transactions.length
-        ? `Import ${transactions.length} transaction${transactions.length === 1 ? '' : 's'}`
-        : 'Import';
+        ? t('import.commit', { count: transactions.length, txnWord: txnWord(transactions.length) })
+        : t('import.commit.empty');
 }
 
 // ---- file intake ----
@@ -207,7 +211,7 @@ function handleFile(file) {
     reader.onload = (e) => {
         const { rows, errors } = parseCsv(String(e.target.result || ''));
         if (!rows.length) {
-            setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">That file looks empty — is it the right CSV export?</p></div>`);
+            setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.emptyFile')}</p></div>`);
             return;
         }
         draft = { rows, parseErrors: errors, fileName: file.name, normalised: [] };
@@ -228,7 +232,7 @@ function handleFile(file) {
         renderPreview();
     };
     reader.onerror = () => {
-        setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">Couldn't read that file. Try exporting it from your bank again.</p></div>`);
+        setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.readFailed')}</p></div>`);
     };
     reader.readAsText(file);
 }
@@ -255,7 +259,7 @@ async function commitImport() {
     try {
         result = await addTransactions(txns);
     } catch (err) {
-        setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">Saving failed: ${escapeHtml(String(err && err.message || err))}. Nothing was imported.</p></div>`);
+        setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.saveFailed', { message: escapeHtml(String(err && err.message || err)) })}</p></div>`);
         commitBtn.disabled = false;
         return;
     }
@@ -276,15 +280,15 @@ async function commitImport() {
     setHTML('import-errors', '');
     getElement('import-actions').hidden = true;
     const dupNote = result.duplicates > 0
-        ? ` ${result.duplicates} duplicate${result.duplicates === 1 ? ' was' : 's were'} already here and got skipped.`
+        ? t(result.duplicates === 1 ? 'import.success.dupOne' : 'import.success.dupMany', { count: result.duplicates })
         : '';
     setHTML('import-result', `
         <div class="import-success">
-            <p class="import-success-title">Done — ${result.added} transaction${result.added === 1 ? '' : 's'} imported.${dupNote}</p>
-            <p class="import-success-sub">They're in your activity feed and spending breakdowns now.</p>
+            <p class="import-success-title">${t('import.success.title', { count: result.added, txnWord: txnWord(result.added), dupNote })}</p>
+            <p class="import-success-sub">${t('import.success.sub')}</p>
             <div class="settings-actions" style="border-top: none; padding-top: 8px; margin-top: 4px;">
-                <button class="btn btn-secondary" id="import-another">Import another file</button>
-                ${result.added > 0 ? '<button class="btn btn-secondary" id="import-undo">Undo this import</button>' : ''}
+                <button class="btn btn-secondary" id="import-another">${t('import.another')}</button>
+                ${result.added > 0 ? `<button class="btn btn-secondary" id="import-undo">${t('import.undo')}</button>` : ''}
             </div>
         </div>`);
 
@@ -301,9 +305,9 @@ async function undoLastImport() {
     } catch (_) {}
     setHTML('import-result', `
         <div class="import-success">
-            <p class="import-success-title">Undone — those ${lastCommit.added} transactions are gone.</p>
+            <p class="import-success-title">${t('import.undo.done', { count: lastCommit.added })}</p>
             <div class="settings-actions" style="border-top: none; padding-top: 8px; margin-top: 4px;">
-                <button class="btn btn-secondary" id="import-another">Import another file</button>
+                <button class="btn btn-secondary" id="import-another">${t('import.another')}</button>
             </div>
         </div>`);
     lastCommit = null;

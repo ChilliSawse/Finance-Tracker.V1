@@ -6,6 +6,7 @@ import { sparklineSvg } from './sparkline.js';
 import { listSnapshots } from '../state/snapshots.js';
 import { getTaxYear, calculateHelpRepayment, projectHelpPayoff } from '../calc/tax-au.js';
 import { getSpendCache } from '../state/spend-cache.js';
+import { t } from '../i18n/strings.js';
 
 function categoryName(id) {
     const cat = (store.financeData.categories || []).find(c => c.id === id);
@@ -26,7 +27,7 @@ function renderSpendingCard() {
     const total = cache.monthTotalCents;
     const biggest = top[0];
     setText('dashboard-spending-subtitle',
-        biggest ? `Looks like ${categoryName(biggest[0])} is your biggest expense this month.` : '');
+        biggest ? t('spend.subtitle', { category: categoryName(biggest[0]) }) : '');
 
     const row = (name, cents) => {
         const pct = total > 0 ? (cents / total) * 100 : 0;
@@ -38,8 +39,8 @@ function renderSpendingCard() {
         </div>`;
     };
     let html = top.map(([id, cents]) => row(categoryName(id), cents)).join('');
-    if (restCents > 0) html += row('Everything else', restCents);
-    html += `<div class="spend-total"><span>Total spent</span><span>${formatCurrency(total / 100)}</span></div>`;
+    if (restCents > 0) html += row(t('spend.everythingElse'), restCents);
+    html += `<div class="spend-total"><span>${t('spend.total')}</span><span>${formatCurrency(total / 100)}</span></div>`;
     setHTML('dashboard-spending-list', html);
 }
 
