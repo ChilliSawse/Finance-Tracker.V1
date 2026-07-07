@@ -1,11 +1,11 @@
 {
-  "name": "Finance Tracker",
-  "short_name": "FinanceTracker",
-  "description": "Private, offline personal finance tracking",
+  "name": "Ledger — personal finance, told straight",
+  "short_name": "Ledger",
+  "description": "A warm, offline-first personal finance tracker. Your money's story, kept on your device.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#667eea",
-  "theme_color": "#667eea",
+  "background_color": "#f7f1e6",
+  "theme_color": "#f7f1e6",
   "icons": [
     {
       "src": "icons/icon-192.png",

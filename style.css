@@ -2860,3 +2860,9 @@ body {
     /* Keep the toast clear of the bottom tab bar. */
     #ledger-toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* Mobile bottom bar: the Tools group label is sidebar furniture — as a bar
+   item it just eats a slot. Hide it under 640px. */
+@media (max-width: 640px) {
+    .sidebar-group-label { display: none; }
+}

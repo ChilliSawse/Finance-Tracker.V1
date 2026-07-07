@@ -136,6 +136,12 @@ export class FinanceAutoSave {
                     migrateIncomeSourceTypes(store.financeData); // Backfill incomeType on legacy saves
                     migrateAllocationFields(store.financeData); // Stage 0 — backfill allocation goal/funds
                     migrateLedgerFields(store.financeData); // Ledger — tax settings, categories, bills
+                    // Rebrand: the heading editor was removed pre-Ledger, so every save
+                    // carries the old default strings — safe to upgrade them in place.
+                    if (store.guiSettingsData.mainHeading === 'Personal Finance Dashboard') {
+                        store.guiSettingsData.mainHeading = defaultGuiSettings.mainHeading;
+                        store.guiSettingsData.subHeading = defaultGuiSettings.subHeading;
+                    }
                     this.lastSaveHash = this.getDataHash();
                     this.updateSaveStatus('saved');
                     return true;

@@ -52,6 +52,48 @@ This file is a dev artifact — exclude from `dist/`.
 
 ## Log
 
+### 2026-07-07 — Phase 5: rebrand, README, deploy workflow
+- Rebrand to **Ledger**: title/manifest/topbar + defaults; loadData migrates the
+  old default heading strings in place (heading editor was removed pre-Ledger,
+  so every save carries the default — safe). localStorage keys unchanged.
+- README.md (licence: TBD note per owner decision), GitHub Pages workflow
+  (.github/workflows/deploy.yml — needs Pages source set to "GitHub Actions").
+
+### 2026-07-07 — Phase 4: sunrise theme, onboarding + sample data, i18n, delight
+- 'Sunrise' preset = fresh-install default; prefers-color-scheme dark → midnight
+  (first run only). style.css :root fallbacks + defaultGuiSettings mirror it.
+- Onboarding modal (guided setup / sample household / skip); sample data =
+  Alex & Sam config + 80 deterministic transactions (batch `ledger-sample-data`,
+  removed by factory reset). Toasts + milestone celebration pulse. Quota-full
+  saves explain themselves once per session.
+- **i18n foundation**: src/i18n/en.js catalogue + t() interpolation.
+  MIGRATED: feed, pulse, upcoming bills + due labels, toasts, onboarding
+  summary, entire CSV import flow, spending-card strings.
+  STILL INLINE (migration inventory): index.html long-form guide copy +
+  static labels; pre-Ledger alerts in settings-events/import-export/confirm;
+  render-tabs legacy card strings (savings messages, FI stats, HELP card,
+  year-so-far lines); autosave status pills. Pattern established — migrate
+  opportunistically when touching those files.
+
+### 2026-07-07 — Phase 3: feed, import, bills, envelopes, HELP, analytics
+- Home tab (default): greeting + insight line, 3 pulse tiles w/ sparklines,
+  "Coming up" bills card, activity feed (timeline spine, typed dots, clusters).
+- Event log renders {type,data} facts → copy at render time. Snapshots
+  (ft-snapshots, daily, 730 cap) feed sparklines; milestones (ft-milestones)
+  celebrate crossings one-shot with re-arm.
+- CSV import: engine in src/import/csv.js (subagent-built, 21 cases) + sandbox
+  UI (detect → map → preview w/ per-row line errors → commit → undo). Mappings
+  remembered per file shape (ft-csv-mappings). Dedupe via normalised hash.
+- Bills (reminders only — never in expense totals; roll forward at boot;
+  ft-bill-notified dedupes feed events). Envelopes (category.monthlyBudget vs
+  spend-cache actuals). Category manager (income/other locked). Tax details UI
+  (FY loads official brackets; Medicare/HELP toggles). HELP payoff card.
+  Spending-this-month + year-so-far dashboard cards. CSV transactions export.
+- **Testing gotcha (Playwright)**: dynamic `import()` of app modules in
+  page.evaluate gets a SEPARATE Vite module instance — store reads/writes
+  diverge from the app's. Interact via DOM; only IDB-backed modules are safe
+  to import directly (shared storage).
+
 ### 2026-07-07 — Phase 2: data model (tax tables, categories, bills, IndexedDB stores)
 - **`src/calc/tax-au.js`** — verified AU tax reference data (sources checked 2026-07-07):
   2026–27 + 2025–26 resident brackets (2026–27 has the legislated 16%→15% cut);

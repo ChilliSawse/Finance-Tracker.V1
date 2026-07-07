@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-ft-fouc-init'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;">
-    <title>Finance Tracker</title>
+    <title>Ledger</title>
     <script nonce="ft-fouc-init">
     /* FOUC prevention — replays the last-applied theme before CSS loads */
     (function(){try{var t=JSON.parse(localStorage.getItem('ft-theme-fouc'));if(!t)return;var s=document.documentElement.style;for(var k in t){s.setProperty(k,t[k]);}var m=document.querySelector('meta[name="theme-color"]');if(m&&t['--primary-bg-color-start'])m.setAttribute('content',t['--primary-bg-color-start']);}catch(e){}})();
@@ -13,7 +13,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="FinanceTracker">
+    <meta name="apple-mobile-web-app-title" content="Ledger">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -27,8 +27,8 @@
                 <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
             <div class="topbar-titles">
-                <h1 id="main-heading-display">Personal Finance Dashboard</h1>
-                <p id="sub-heading-display">Track your income, expenses, and savings with style</p>
+                <h1 id="main-heading-display">Ledger</h1>
+                <p id="sub-heading-display">Your money, telling its story</p>
             </div>
             <div class="topbar-actions">
                 <button class="btn btn-install" id="install-app-btn" style="display: none;">Install App</button>

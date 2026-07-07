@@ -89,8 +89,8 @@ export const defaultGuiSettings = {
     bgEffect: "none",
     // J4 — optional custom tint for the effect (hex). Empty = follow the accent colour.
     bgEffectColor: "",
-    mainHeading: "Personal Finance Dashboard",
-    subHeading: "Track your income, expenses, and savings with style"
+    mainHeading: "Ledger",
+    subHeading: "Your money, telling its story"
 };
 
 // structuredClone (not JSON round-trip) so taxBrackets' Infinity top band survives.
