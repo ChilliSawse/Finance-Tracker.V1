@@ -33,10 +33,18 @@ export function inlineConfirm(triggerEl, message, onConfirm) {
         </span>`;
     document.body.appendChild(pop);
 
-    // Anchor under the trigger, right-aligned to it, kept within the viewport.
+    // Anchor under the trigger, right-aligned to it, clamped to the viewport.
+    // On phones the trigger (e.g. a Delete button low in a settings modal) can
+    // sit near the bottom edge — flip the popover above it rather than letting
+    // it render off-screen, and clamp both axes as a final guarantee.
     const rect = triggerEl.getBoundingClientRect();
-    const left = Math.max(8, Math.min(rect.right - pop.offsetWidth, window.innerWidth - pop.offsetWidth - 8));
-    pop.style.top = `${rect.bottom + 6}px`;
+    const margin = 8;
+    const w = pop.offsetWidth, h = pop.offsetHeight;
+    const left = Math.max(margin, Math.min(rect.right - w, window.innerWidth - w - margin));
+    let top = rect.bottom + 6;
+    if (top + h > window.innerHeight - margin) top = rect.top - 6 - h;
+    top = Math.max(margin, Math.min(top, window.innerHeight - h - margin));
+    pop.style.top = `${top}px`;
     pop.style.left = `${left}px`;
 
     const cleanup = () => {

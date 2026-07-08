@@ -251,11 +251,34 @@ export function handleSettingsChangeEvents(event) {
 
 // --- Add/Remove for main settings (scope-aware: 'whatif' routes to the sandbox) ---
 
+// New rows land at the bottom of a scrollable container (a settings modal's .modal-body,
+// or the page itself on the What If tab) — often below the fold, so "Add" looked like a
+// no-op. After the list re-render, scroll the new row into view and focus its first input.
+// Call AFTER the render (and updateDataAndUI) so the row queried is the freshly built one.
+// `index` targets rows that don't land last (sorted tax brackets, category before 'other').
+function revealNewRow(containerId, index = -1) {
+    const container = getElement(containerId);
+    const row = container && (index >= 0 ? container.children[index] : container.lastElementChild);
+    if (!row) return;
+    // Focus before scrolling (preventScroll stops the browser's instant focus-jump from
+    // fighting the smooth scroll). Skipped on coarse pointers so tapping "Add" on a phone
+    // doesn't pop the keyboard over the row it just revealed.
+    if (!window.matchMedia('(pointer: coarse)').matches) {
+        const input = row.querySelector('input[type="text"]') || row.querySelector('input, select');
+        if (input) input.focus({ preventScroll: true });
+    }
+    // 'nearest': no movement if the row is already visible, minimal reveal otherwise —
+    // works for both the modal body and the page scroll container.
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    row.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+}
+
 export function addIncomeSource(scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
     if (!fd) return;
     fd.incomeSources.push({ name: "New Income", incomeType: "salaried", grossAnnual: 0, paySchedule: "monthly", hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null });
     if (scope === 'whatif') { renderWhatIfIncomeSources(); } else { renderIncomeSourcesSettings(); updateDataAndUI(); }
+    revealNewRow(scope === 'whatif' ? 'whatif-income-sources-settings' : 'income-sources-settings');
 }
 export function removeIncomeSource(index, scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
@@ -271,9 +294,12 @@ export function removeIncomeSource(index, scope) {
 }
 
 export function addTaxBracket() {
-    store.financeData.taxBrackets.push({ min: 0, max: Infinity, rate: 0 });
+    const bracket = { min: 0, max: Infinity, rate: 0 };
+    store.financeData.taxBrackets.push(bracket);
     renderTaxBracketsSettings(); // This will sort and re-render
     updateDataAndUI();
+    // The render sorts by min, so the new bracket isn't necessarily last — locate it.
+    revealNewRow('tax-brackets-settings', store.financeData.taxBrackets.indexOf(bracket));
 }
 export function removeTaxBracket(index) {
     const tb = store.financeData.taxBrackets;
@@ -292,6 +318,7 @@ export function addAsset(scope) {
     if (!fd) return;
     fd.assets.push({ name: "New Asset", balance: 0 });
     if (scope === 'whatif') { renderWhatIfAssets(); } else { renderAssetsSettings(); updateDataAndUI(); }
+    revealNewRow(scope === 'whatif' ? 'whatif-assets-settings' : 'assets-settings');
 }
 export function removeAsset(index, scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
@@ -305,6 +332,7 @@ export function addLiability(scope) {
     if (!fd) return;
     fd.liabilities.push({ name: "New Liability", balance: 0, interestRate: 0 });
     if (scope === 'whatif') { renderWhatIfLiabilities(); } else { renderLiabilitiesSettings(); updateDataAndUI(); }
+    revealNewRow(scope === 'whatif' ? 'whatif-liabilities-settings' : 'liabilities-settings');
 }
 export function removeLiability(index, scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
@@ -319,6 +347,7 @@ export function addAllocationCategory(scope) {
     fd.allocation.push({ name: "New Category", percentage: 0, currentBalance: 0, savingsGoal: 0 });
     if (scope === 'whatif') { renderWhatIfAllocation(); }
     else { renderAllocationSettings(); updateDataAndUI(); }
+    revealNewRow(scope === 'whatif' ? 'whatif-allocation-settings' : 'allocation-settings');
 }
 export function removeAllocationCategory(index, scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
@@ -337,6 +366,8 @@ export function addCategory() {
     if (otherIdx >= 0) cats.splice(otherIdx, 0, cat); else cats.push(cat);
     renderCategoriesSettings();
     updateDataAndUI();
+    // Inserted before 'other', so the new row isn't last — locate it.
+    revealNewRow('categories-settings', cats.indexOf(cat));
 }
 export function removeCategory(index) {
     const cats = store.financeData.categories;
@@ -356,6 +387,7 @@ export function addBill() {
     store.financeData.bills.push({ id: crypto.randomUUID(), name: 'New Bill', amount: 0, frequency: 'monthly', nextDue: iso });
     renderBillsSettings();
     updateDataAndUI();
+    revealNewRow('bills-settings');
 }
 export function removeBill(index) {
     if (!Array.isArray(store.financeData.bills)) return;
@@ -368,8 +400,10 @@ export function addExpenseToList(arrayName, scope) { // arrayName is 'essentialE
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
     if (!fd) return;
     fd[arrayName].push({ name: "New Expense", amount: 0, frequency: "monthly" });
-    if (scope === 'whatif') { renderWhatIfExpensesList(arrayName, `whatif-${arrayName === 'essentialExpenses' ? 'essential' : 'non-essential'}-expenses-settings`); }
+    const kind = arrayName === 'essentialExpenses' ? 'essential' : 'non-essential';
+    if (scope === 'whatif') { renderWhatIfExpensesList(arrayName, `whatif-${kind}-expenses-settings`); }
     else { renderExpensesSettingsLists(); updateDataAndUI(); }
+    revealNewRow(scope === 'whatif' ? `whatif-${kind}-expenses-settings` : `${kind}-expenses-settings-list`);
 }
 export function removeExpenseFromList(arrayName, index, scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;

@@ -49,6 +49,12 @@
     box-sizing: border-box;
 }
 
+html {
+    /* Paint the theme behind iOS letterboxing/overscroll — with viewport-fit=cover
+       the notch/status-bar region shows THIS, not default white. */
+    background: var(--primary-bg-color-start);
+}
+
 body {
     font-family: var(--font-family-main);
     background: linear-gradient(135deg, var(--primary-bg-color-start) 0%, var(--primary-bg-color-end) 100%);
@@ -94,6 +100,9 @@ body {
     align-items: center;
     gap: 14px;
     padding: 10px 16px;
+    /* viewport-fit=cover extends the page under the iOS status bar/notch —
+       keep the title and save dot below it while the theme paints behind. */
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
     color: var(--header-text-color);
 }
 
@@ -317,6 +326,13 @@ body {
    doesn't exist; the ≤640px bottom-bar block repurposes both. */
 .nav-overflow { display: contents; }
 .tab-more { display: none; }
+
+/* Nav taps must never be eaten by iOS double-tap-zoom heuristics, and the grey
+   UA tap flash doesn't belong to the theme — .active/.More states give feedback. */
+.tab, .sidebar-settings, .tab-more, .sidebar-toggle {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
 
 /* The content area is a transparent layout container — cards float directly on the
    page background, so the gaps around/between them reveal it (and any background
@@ -725,9 +741,18 @@ body {
 
 .savings-breakdown {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    /* 150px floor: a fortnightly figure at fitAllAmounts' minimum font still
+       fits, so buckets never bleed into their neighbours on narrow windows. */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 10px;
     margin-top: 20px;
+}
+
+/* Bucket cells may never paint over a neighbour — worst case (figure at the
+   auto-fit floor AND the shrunken font floor) clips inside its own card. */
+.savings-item {
+    min-width: 0;
+    overflow: hidden;
 }
 
 .savings-item {
@@ -1276,6 +1301,27 @@ body {
     min-width: 0;
 }
 
+/* Grid/flex children keep a min-content floor by default — a wrapped control
+   (e.g. the bills due-date input in its <span>) can push past the card edge
+   on phones unless the wrapper itself is allowed to shrink. */
+.list-item > span {
+    min-width: 0;
+}
+
+/* Date inputs: iOS gives them an unshrinkable UA width, centred text, and a
+   grey system look that ignores the theme. Flatten to the themed field style;
+   the picker still opens on tap. min-height stops the iOS empty-value collapse
+   that appearance:none causes. */
+input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 34px;
+    max-width: 100%;
+}
+input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
+}
+
 .delete-btn {
     background: #f44336;
     color: white;
@@ -1298,6 +1344,8 @@ body {
     z-index: 2500; /* above modal-backdrop (2000) — the delete/reset lists live inside modals (Phase D) */
     display: flex;
     align-items: center;
+    flex-wrap: wrap; /* long messages wrap above the buttons instead of shoving them off-screen */
+    max-width: calc(100vw - 16px);
     gap: 10px;
     padding: 10px 12px;
     background: var(--card-bg-gradient-start, #ffffff);
@@ -1309,7 +1357,8 @@ body {
     max-width: 90vw;
 }
 .inline-confirm-msg {
-    white-space: nowrap;
+    white-space: normal; /* was nowrap — the un-wrappable message was wider than a phone viewport */
+    min-width: 0;
 }
 .inline-confirm-actions {
     display: flex;
@@ -1648,8 +1697,15 @@ body {
     }
     /* …but the label-bearing tinted grids (allocation buckets, asset/liability cards) need
        fewer, wider columns so names don't crush into a few characters and break mid-word. */
-    .savings-breakdown, .accounts-grid {
+    .accounts-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    /* Allocation buckets stack in one column below the tablet breakpoint —
+       two-up left long labels + nowrap figures overlapping (issue #7, pass 2). */
+    .savings-breakdown {
+        grid-template-columns: 1fr;
         gap: 8px;
     }
 
@@ -1818,6 +1874,9 @@ body {
         gap: 2px;
         padding: 6px 4px;
         padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+        /* Landscape notch: keep the outer tabs clear of the rounded corners. */
+        padding-left: calc(4px + env(safe-area-inset-left, 0px));
+        padding-right: calc(4px + env(safe-area-inset-right, 0px));
         /* Match the body gradient the desktop sidebar floats over, so the tabs'
            existing white icon/label colours (--tab-text-color) stay readable.
            A white background here would render white-on-white. */
@@ -2934,4 +2993,70 @@ body {
    item it just eats a slot. Hide it under 640px. */
 @media (max-width: 640px) {
     .sidebar-group-label { display: none; }
+}
+
+/* ── UA-default cleanup (pass 2, issues #8/#9) ─────────────────────────
+   Controls the browser styles itself, pulled into the theme. */
+
+/* Number inputs: the OS spinner buttons can't be themed — remove them.
+   Typing, arrow keys, and validation still work (issue #8, app-wide). */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Selects: swap the OS arrow for a theme-coloured chevron. Two tiny CSS
+   gradients, not an image — the strict CSP (img-src falls back to 'self')
+   would block a data: URI. */
+select {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--text-color-secondary, #999) 50%),
+        linear-gradient(135deg, var(--text-color-secondary, #999) 50%, transparent 50%);
+    background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 28px;
+}
+
+/* Checkboxes & radios: keep the native affordance, take the theme accent
+   (the bare white checkbox in Categories & Budgets was pure UA styling). */
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--accent-color);
+}
+
+/* Search fields (expense search): strip iOS's rounded inset look so they
+   render like every other .form-input. */
+input[type="search"] {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* Scrollbars: thin and theme-tinted instead of OS chrome (sidebar, modal
+   bodies, scrollable lists). */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+/* Focus ring: themed accent everywhere a more specific rule doesn't already
+   provide one — no more UA-default blue/black rings. */
+:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
 }

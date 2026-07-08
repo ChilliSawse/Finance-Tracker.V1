@@ -52,6 +52,48 @@ This file is a dev artifact — exclude from `dist/`.
 
 ## Log
 
+### 2026-07-08 — Second pass: nine UX bugs from on-device + desktop review
+- **"/ear" annual label**: `viewPeriod.replace('ly','').replace('y','')` — string
+  surgery that worked for four periods and mangled the fifth ("yearly"→"year"→"ear",
+  with a `dai`→`day` patch hiding the same bug in daily). Lesson: period→label is a
+  lookup, not arithmetic; whatif.js had the correct map all along — now shared style.
+- **iOS tap drops**: taps with a few px of wobble never emit `click` (Safari
+  reclassifies as scroll), and quick taps can hit double-tap-zoom heuristics.
+  Tabs now fire on guarded `pointerup` (move <12px, hold <700ms, touch/pen only),
+  `click` retained for mouse/keyboard with a 400ms timestamp dedupe — showTab is
+  idempotent so a rare double-fire is harmless. `touch-action: manipulation` on all
+  nav controls. If misses persist on-device, next suspect is Safari's
+  bottom-toolbar tap-through zone (Safari-tab mode only, not PWA).
+- **inlineConfirm off-screen**: fixed-position popovers need BOTH axes clamped and
+  their text wrappable; `white-space: nowrap` on a message = popover wider than a
+  phone. Flip-above-when-no-room-below + viewport clamp + wrap.
+- **revealNewRow()** (subagent): every add-row path scrolls the new row into view;
+  two traps — tax brackets re-sort by min (new row lands at index ≠ last) and
+  categories splice before the trailing "other". Focus only on fine pointers (iOS
+  keyboard would bury the reveal). `block:'nearest'` so short lists don't jump.
+- **iOS date inputs**: unshrinkable UA width — need `appearance:none` +
+  `max-width:100%` + wrapper `min-width:0`; `min-height` guards the empty-value
+  collapse; `::-webkit-date-and-time-value { text-align:left }` un-centres.
+- **Notch**: `viewport-fit=cover` + `env(safe-area-inset-top)` on the topbar +
+  `html { background: var(--primary-bg-color-start) }` (letterbox/overscroll paint).
+  Works standalone AND Safari-tab (theme-color meta already handled Safari chrome).
+- **≤768px regression (own goal from pass 1)**: removing forced-64px left the
+  sidebar at 240px on narrow windows → allocation buckets overlapped. Fix keeps the
+  tap-expand: matchMedia('(max-width:768px)') starts collapsed at narrow widths,
+  stored pref only applies ≥769px, hamburger choice still persists. Allocation grid
+  hardened separately: 150px auto-fit floor, `overflow:hidden` on .savings-item
+  (never paint over a neighbour), single column ≤768px.
+- **UA-default cleanup**: number spinners hidden app-wide (owner chose hide over
+  custom steppers); select chevrons are CSS gradients because the strict CSP blocks
+  `data:` images (img-src falls back to default-src 'self'); checkbox/radio via
+  `accent-color`; thin themed scrollbars; global themed `:focus-visible`.
+- **Graphify now native on host** (py 3.14, `pip install graphifyy openai`,
+  OLLAMA_BASE_URL needs the /v1 suffix). Graph @ c53933a: 322 nodes / 937 edges /
+  33 communities. `graphify claude install` wrote CLAUDE.md (now carries an
+  architecture map) + PreToolUse hooks in .claude/ (gitignored).
+- **Verified**: tests 122/122, build clean, functional pass at 375/393/700/1280px.
+  Issue #9 audited at code level only (per brief — no screenshot verification).
+
 ### 2026-07-08 — Mobile compatibility pass (dead JS on Pages, bottom bar, tablet)
 - **Root cause of "tapping any tab does nothing" on the phone** — not CSS, not the
   click delegation. GitHub Pages serves the repo as `build_type: legacy` (branch

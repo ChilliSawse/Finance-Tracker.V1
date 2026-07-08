@@ -14,12 +14,35 @@ import {
 import { actionExportDataJSON, actionExportTransactionsCSV, handleJSONImport } from './import-export.js';
 
 export function setupEventListeners() {
-    // Tab navigation
+    // Tab navigation. iOS Safari silently drops the synthetic `click` when a
+    // tap wobbles a few pixels (reclassified as a scroll) or lands mid
+    // double-tap heuristics — on the bottom bar that read as "tabs randomly
+    // need two taps". So touch/pen taps activate on pointerup with a small
+    // movement/time guard; `click` stays as the mouse/keyboard path and is
+    // deduped by timestamp (showTab is idempotent, so a rare double-fire is
+    // harmless anyway).
     const tabsContainer = document.querySelector('[role="tablist"]');
     if (tabsContainer) {
+        let downX = 0, downY = 0, downTime = 0, pointerTapAt = 0;
+        tabsContainer.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse') return;
+            downX = e.clientX; downY = e.clientY; downTime = e.timeStamp;
+        });
+        tabsContainer.addEventListener('pointerup', (e) => {
+            if (e.pointerType === 'mouse') return;
+            const tab = e.target.closest('.tab');
+            if (!tab || !tab.dataset.tabTarget) return;
+            // Real taps barely move and don't linger; anything else is a
+            // scroll/press — leave those to their native behaviour.
+            if (Math.hypot(e.clientX - downX, e.clientY - downY) > 12) return;
+            if (e.timeStamp - downTime > 700) return;
+            pointerTapAt = performance.now();
+            showTab(tab.dataset.tabTarget);
+        });
         tabsContainer.addEventListener('click', (event) => {
             const tab = event.target.closest('.tab');
             if (tab) {
+                if (performance.now() - pointerTapAt < 400) return; // pointerup already handled this tap
                 const tabName = tab.dataset.tabTarget;
                 if (tabName) showTab(tabName);
             }

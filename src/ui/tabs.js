@@ -69,9 +69,19 @@ export function setupSidebar() {
     const toggle = getElement('sidebar-toggle');
     if (!shell || !toggle) return;
 
-    let collapsed = false;
-    try { collapsed = localStorage.getItem('ft-sidebar-collapsed') === '1'; } catch (_) {}
-    setSidebarCollapsed(shell, toggle, collapsed);
+    const storedCollapsed = () => {
+        try { return localStorage.getItem('ft-sidebar-collapsed') === '1'; } catch (_) { return false; }
+    };
+
+    // ≤768px the expanded 240px sidebar squeezes content into overlap, so
+    // narrow widths START collapsed regardless of the desktop preference —
+    // shrinking the window transitions to the compact layout (issue #7,
+    // pass 2). The hamburger still expands it on demand; only that explicit
+    // choice is persisted. Crossing the boundary re-applies the width default.
+    const narrow = window.matchMedia('(max-width: 768px)');
+    const applyForWidth = () => setSidebarCollapsed(shell, toggle, narrow.matches || storedCollapsed());
+    applyForWidth();
+    narrow.addEventListener('change', applyForWidth);
 
     toggle.addEventListener('click', () => {
         const now = !shell.classList.contains('is-collapsed');

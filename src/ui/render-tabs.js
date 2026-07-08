@@ -264,8 +264,7 @@ function updateDashboardUI(totals) {
             const amountForPeriod = incomeForPeriod * (alloc.percentage / 100);
             const itemDiv = document.createElement('div');
             itemDiv.className = 'savings-item';
-            let periodSuffix = viewPeriod.replace('ly', '').replace('y', '');
-            if (periodSuffix === 'dai') periodSuffix = 'day';
+            const periodSuffix = { daily: 'day', weekly: 'week', fortnightly: 'fortnight', monthly: 'month', yearly: 'year' }[viewPeriod];
 
             // Stage 0 — per-bucket savings goal + live time-to-reach (uses current funds +
             // this bucket's annual contribution = % of total net annual income).
