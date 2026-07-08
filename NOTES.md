@@ -89,12 +89,15 @@ This file is a dev artifact — exclude from `dist/`.
 - **Subagents deliberately skipped** for the three sub-fixes: they all edit the
   same `style.css` media blocks + the same nav DOM — parallel agents in one
   working tree would collide; done as one coherent change instead.
-- **Deployment debt (known, left alone per brief)**: Pages still serves raw
-  source. The app now works there, but `manifest.json`/`icons/` 404 (they live
-  in `public/`, only mapped to `/` by Vite), so PWA install/update from Pages
-  stays broken until `.github/workflows/deploy.yml` is pushed (needs `workflow`
-  scope or SSH — SSH pushes aren't scope-limited) and Pages is switched to
-  "GitHub Actions". Then dist/ (with generated SW) deploys properly.
+- **Deployment debt — RESOLVED same day (owner-approved follow-up)**: owner ran
+  `gh auth refresh -s workflow` (device flow) to lift the PAT scope wall;
+  deploy.yml committed (7927c8c) and pushed; Pages `build_type` flipped
+  legacy→workflow via `gh api -X PUT repos/.../pages -f build_type=workflow`
+  (no UI needed). First Actions run green; live site verified serving built
+  dist: hashed assets, manifest/sw.js/icons all 200, SW registered at
+  /Finance-Tracker.V1/ scope, nav verified at 375px. Deploys are now just
+  "push to main". The pwa.js dynamic-import guard stays — harmless under the
+  build and protects against any future fall-back to raw serving.
 
 ### 2026-07-07 — Phase 5: rebrand, README, deploy workflow
 - Rebrand to **Ledger**: title/manifest/topbar + defaults; loadData migrates the
