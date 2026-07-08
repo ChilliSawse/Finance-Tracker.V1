@@ -6,20 +6,26 @@
 // automatically. The explicit "Update Now" banner UX is preserved: Workbox
 // waits (registerType 'prompt') until the user opts in.
 
-import { registerSW } from 'virtual:pwa-register';
-
 let deferredPrompt = null;
 let installButton = null;
 
 export function setupPwaUpdateListeners() {
-    const updateSW = registerSW({
-        onNeedRefresh() {
-            showUpdateNotification(() => updateSW(true));
-        },
-        onRegisterError(error) {
-            console.error('Service Worker registration failed:', error);
-        },
-    });
+    // 'virtual:pwa-register' only exists when Vite serves/builds the app. GitHub
+    // Pages currently serves the raw source (legacy branch mode, no build step),
+    // where a STATIC import of it kills the entire module graph — no JS runs at
+    // all. Import it dynamically so raw hosting just skips SW setup instead.
+    import('virtual:pwa-register')
+        .then(({ registerSW }) => {
+            const updateSW = registerSW({
+                onNeedRefresh() {
+                    showUpdateNotification(() => updateSW(true));
+                },
+                onRegisterError(error) {
+                    console.error('Service Worker registration failed:', error);
+                },
+            });
+        })
+        .catch(() => { /* raw static hosting — no service worker, app still runs */ });
 }
 
 function showUpdateNotification(onUpdate) {

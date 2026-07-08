@@ -312,6 +312,12 @@ body {
 .sidebar-settings .tab-icon { display: inline-flex; flex-shrink: 0; }
 .sidebar-settings .tab-label { overflow: hidden; text-overflow: ellipsis; }
 
+/* Mobile-nav plumbing. On desktop/tablet the overflow wrapper is transparent to
+   layout (its children act as direct sidebar flex items) and the More button
+   doesn't exist; the ≤640px bottom-bar block repurposes both. */
+.nav-overflow { display: contents; }
+.tab-more { display: none; }
+
 /* The content area is a transparent layout container — cards float directly on the
    page background, so the gaps around/between them reveal it (and any background
    effect). Cards keep their own surface, so figures stay readable. Padding/margins
@@ -1592,43 +1598,20 @@ body {
 
 /* Responsive Styles */
 @media (max-width: 768px) {
-    /* Tablet: sidebar defaults to icon-only (64px) and expands on hover/focus. */
+    /* Tablet: the sidebar uses the SAME tap-based mechanism as desktop — the
+       topbar hamburger (#sidebar-toggle) toggles .is-collapsed (persisted,
+       aria-expanded). The old icon-only + :hover/:focus-within expansion is
+       gone: hover never fires on touch devices, which locked tablet users out
+       of the labels entirely. */
     .topbar-titles p {
         display: none;
     }
 
-    .sidebar {
-        width: 64px;
-    }
-
-    .tab-label {
-        display: none;
-    }
-
-    .tab,
-    .sidebar-settings {
-        justify-content: center;
-        gap: 0;
-        padding: 10px 0;
-    }
-
-    .sidebar:hover,
-    .sidebar:focus-within {
-        width: 240px;
-    }
-
-    .sidebar:hover .tab-label,
-    .sidebar:focus-within .tab-label {
-        display: inline;
-    }
-
-    .sidebar:hover .tab,
-    .sidebar:focus-within .tab,
-    .sidebar:hover .sidebar-settings,
-    .sidebar:focus-within .sidebar-settings {
-        justify-content: flex-start;
-        gap: 12px;
-        padding: 10px 12px;
+    /* The hamburger is the tablet's tap target for expanding the sidebar —
+       give it the full 44×44 touch minimum. */
+    .sidebar-toggle {
+        min-width: 44px;
+        min-height: 44px;
     }
 
     .content {
@@ -1844,28 +1827,43 @@ body {
         overflow: visible;
     }
 
-    /* Neutralise the tablet hover-to-expand rule on touch screens. */
-    .sidebar:hover,
-    .sidebar:focus-within {
-        width: auto;
-    }
-
+    /* Bar items: 5 slots (Home, Dashboard, Income, Expenses, More), so even a
+       375px viewport gives each ≥71px × ≥48px — clear of the 44×44 minimum.
+       The other five destinations live in the More sheet below. */
     .app-shell .sidebar .tab,
     .app-shell.is-collapsed .sidebar .tab,
     .app-shell .sidebar .sidebar-settings,
-    .app-shell.is-collapsed .sidebar .sidebar-settings {
+    .app-shell.is-collapsed .sidebar .sidebar-settings,
+    .app-shell .sidebar .tab-more,
+    .app-shell.is-collapsed .sidebar .tab-more {
+        display: flex;
         flex: 1 1 0;
         min-width: 0;
+        min-height: 48px;
         margin-top: 0; /* it's pinned to the bottom on desktop; in the row bar it's just another item */
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 3px;
-        padding: 6px 2px;
+        gap: 4px;
+        padding: 7px 2px;
         border-left: none;
         border-top: 3px solid transparent;
         border-radius: 8px;
-        font-size: 0.58rem;
+        font-size: 0.68rem;
+    }
+
+    /* The More button inherits no base button styling of its own — dress it
+       like its .tab siblings. */
+    .app-shell .sidebar .tab-more,
+    .app-shell.is-collapsed .sidebar .tab-more {
+        color: var(--tab-text-color);
+        background: transparent;
+        border-right: none;
+        border-bottom: none;
+        cursor: pointer;
+        font-weight: 500;
+        font-family: var(--font-family-main);
+        white-space: nowrap;
     }
 
     .app-shell .sidebar .tab.active,
@@ -1873,6 +1871,21 @@ body {
         border-left-color: transparent;
         border-top-color: var(--accent-color);
         background: var(--tab-active-bg-color);
+    }
+
+    /* When the ACTIVE tab lives inside the (closed) More sheet, mark the More
+       button so the current section is always visibly located. Also mark it
+       while the sheet is open. */
+    .sidebar:has(.nav-overflow .tab.active) .tab-more,
+    .sidebar.more-open .tab-more {
+        border-top-color: var(--accent-color);
+        background: var(--tab-active-bg-color);
+        color: var(--tab-active-text-color);
+    }
+
+    .tab-more:focus-visible {
+        outline: 2px solid white;
+        outline-offset: 2px;
     }
 
     .app-shell .sidebar .tab-label,
@@ -1883,6 +1896,62 @@ body {
         text-overflow: ellipsis;
         white-space: nowrap;
         line-height: 1.1;
+    }
+
+    /* --- The More sheet: the SAME nav buttons, laid out as a panel above the
+       bar. Hidden until .more-open (toggled by #nav-more-btn in tabs.js). --- */
+    .app-shell .sidebar .nav-overflow,
+    .app-shell.is-collapsed .sidebar .nav-overflow {
+        display: none;
+        position: absolute;
+        bottom: 100%;
+        right: 8px;
+        margin-bottom: 10px;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 230px;
+        max-width: calc(100vw - 16px);
+        padding: 8px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--primary-bg-color-start) 0%, var(--primary-bg-color-end) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    }
+
+    .app-shell .sidebar.more-open .nav-overflow,
+    .app-shell.is-collapsed .sidebar.more-open .nav-overflow {
+        display: flex;
+    }
+
+    /* Sheet rows: full-width horizontal items, comfortably ≥44px tall. The
+       deeper selector out-specifies the bar-item rules above. */
+    .app-shell .sidebar .nav-overflow .tab,
+    .app-shell.is-collapsed .sidebar .nav-overflow .tab,
+    .app-shell .sidebar .nav-overflow .sidebar-settings,
+    .app-shell.is-collapsed .sidebar .nav-overflow .sidebar-settings {
+        flex: 0 0 auto;
+        min-height: 44px;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 12px;
+        padding: 10px 14px;
+        border-top: none;
+        border-left: 3px solid transparent;
+        border-radius: 10px;
+        font-size: 0.9rem;
+    }
+
+    .app-shell .sidebar .nav-overflow .tab.active,
+    .app-shell.is-collapsed .sidebar .nav-overflow .tab.active {
+        border-top-color: transparent;
+        border-left-color: var(--accent-color);
+        background: var(--tab-active-bg-color);
+    }
+
+    /* The "Tools" group label earns its place back inside the sheet. */
+    .app-shell .sidebar .nav-overflow .sidebar-group-label,
+    .app-shell.is-collapsed .sidebar .nav-overflow .sidebar-group-label {
+        display: block;
     }
 
     /* Keep scrollable content clear of the fixed bar (+ iOS home-bar inset). */

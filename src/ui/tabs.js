@@ -80,6 +80,35 @@ export function setupSidebar() {
     });
 }
 
+// Mobile bottom bar — the "More" sheet. At ≤640px the last five nav items
+// (.nav-overflow) render as a panel above the bar, toggled here. Desktop/tablet
+// never show the button (CSS display:none), so the listeners are inert there.
+export function setupMobileNavOverflow() {
+    const nav = getElement('sidebar');
+    const moreBtn = getElement('nav-more-btn');
+    const overflow = getElement('nav-overflow');
+    if (!nav || !moreBtn || !overflow) return;
+
+    const setOpen = (open) => {
+        nav.classList.toggle('more-open', open);
+        moreBtn.setAttribute('aria-expanded', String(open));
+    };
+
+    moreBtn.addEventListener('click', () => setOpen(!nav.classList.contains('more-open')));
+    // Choosing anything in the sheet (tab switch or modal opener) closes it; the
+    // tablist click delegation still runs — nothing is stopped or duplicated.
+    overflow.addEventListener('click', (e) => {
+        if (e.target.closest('.tab, .sidebar-settings')) setOpen(false);
+    });
+    // A tap anywhere outside the nav dismisses the sheet, like a menu.
+    document.addEventListener('click', (e) => {
+        if (!nav.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setOpen(false);
+    });
+}
+
 export function setupTabKeyboardNav() {
     const tabList = document.querySelector('[role="tablist"]');
     if (!tabList) return;

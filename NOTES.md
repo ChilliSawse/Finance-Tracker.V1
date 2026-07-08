@@ -52,6 +52,50 @@ This file is a dev artifact — exclude from `dist/`.
 
 ## Log
 
+### 2026-07-08 — Mobile compatibility pass (dead JS on Pages, bottom bar, tablet)
+- **Root cause of "tapping any tab does nothing" on the phone** — not CSS, not the
+  click delegation. GitHub Pages serves the repo as `build_type: legacy` (branch
+  `main`, path `/` — raw source, no Vite build; deploy.yml was excluded from the
+  push because the PAT lacked `workflow` scope, and Pages was never flipped to
+  Actions). Under raw ESM the static `import 'virtual:pwa-register'` (Vite-only,
+  the app's ONLY non-relative import) fails → the entire module graph dies → zero
+  JS runs → static Home panel, dead tabs. Desktop "worked" because `npm run dev`
+  resolves the virtual module. Fix: `src/pwa.js` imports it dynamically with a
+  `.catch` — raw hosting skips SW setup, dev/build behave exactly as before
+  (verified: dist build emits the pwa-register chunk and the SW registers).
+- **Bottom bar (≤640px)**: was 9 items at ~37px wide / 0.58rem labels. Now 5
+  slots — Home, Dashboard, Income, Expenses, More (68.8×53 at 375px, 74.8 at 390,
+  79.6 at 414 — all past the 44×44 floor, labels 0.68rem). Savings, Liabilities,
+  the Tools label, Import CSV, What If? and Settings live in a **More sheet**:
+  the SAME tablist DOM, no duplication — the new `.nav-overflow` wrapper is
+  `display: contents` on desktop/tablet (invisible to layout) and an absolute
+  panel above the bar on phones. `#nav-more-btn` (not `.tab`, so tablist
+  delegation/keyboard nav ignore it) toggles `.more-open` + `aria-expanded`;
+  the sheet closes on item select, outside tap, and Escape
+  (`setupMobileNavOverflow` in `src/ui/tabs.js`). When the active tab lives in
+  the sheet, `.sidebar:has(.nav-overflow .tab.active) .tab-more` puts the accent
+  on More so the current section is always locatable.
+- **Tablet (641–768px)**: deleted the forced 64px + `:hover`/`:focus-within`
+  expansion (hover never fires on touch — users were locked out of labels).
+  The topbar hamburger (`#sidebar-toggle`, bumped to 44×44 here) now toggles
+  `.is-collapsed` at this width exactly like desktop: tap → 240px with labels,
+  tap → 64px icon-only. Persisted + `aria-expanded` as before.
+- **Verified** (Playwright): 375/390/414 — all 7 tabs + Import CSV + Settings
+  reachable, panels switch, modals open, sheet closes; 768 — toggle works both
+  ways; 1280 — desktop sidebar pixel-faithful (order, Tools label, active
+  highlight, no More button). tests.html **122/122 in dev AND built dist**. Raw
+  static serve of the repo root (Pages simulation) boots and navigates. Theme
+  files, tax engine, safe-area insets untouched.
+- **Subagents deliberately skipped** for the three sub-fixes: they all edit the
+  same `style.css` media blocks + the same nav DOM — parallel agents in one
+  working tree would collide; done as one coherent change instead.
+- **Deployment debt (known, left alone per brief)**: Pages still serves raw
+  source. The app now works there, but `manifest.json`/`icons/` 404 (they live
+  in `public/`, only mapped to `/` by Vite), so PWA install/update from Pages
+  stays broken until `.github/workflows/deploy.yml` is pushed (needs `workflow`
+  scope or SSH — SSH pushes aren't scope-limited) and Pages is switched to
+  "GitHub Actions". Then dist/ (with generated SW) deploys properly.
+
 ### 2026-07-07 — Phase 5: rebrand, README, deploy workflow
 - Rebrand to **Ledger**: title/manifest/topbar + defaults; loadData migrates the
   old default heading strings in place (heading editor was removed pre-Ledger,

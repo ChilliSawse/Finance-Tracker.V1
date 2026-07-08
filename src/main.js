@@ -12,6 +12,7 @@ import { updateAllUI } from './ui/render.js';
 import {
     restoreActiveTab, setupSidebar, setupTabKeyboardNav, setupCardLinks,
     setupDashboardEmptyActions, setupExpenseSearch, setupInfoSections,
+    setupMobileNavOverflow,
 } from './ui/tabs.js';
 import { setupGuiModal, setupDraggableModal, setupPageSettingsModals } from './ui/modals.js';
 import { setupImport } from './import/import-ui.js';
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPwaInstallListeners();
     setupTabKeyboardNav();
     setupSidebar();   // A.3 — collapse toggle + restore
+    setupMobileNavOverflow(); // ≤640px — "More" sheet on the bottom bar
     setupGuiModal();  // A.4 — appearance modal
     setupDraggableModal('gui-settings-modal'); // draggable, corner-resizable appearance window
     setupPageSettingsModals(); // Phase D — per-page settings modals
