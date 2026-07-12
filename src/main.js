@@ -16,6 +16,8 @@ import {
 } from './ui/tabs.js';
 import { setupGuiModal, setupDraggableModal, setupPageSettingsModals } from './ui/modals.js';
 import { setupImport } from './import/import-ui.js';
+import { setupPdfImport } from './import/pdf-ui.js';
+import { setupIncomeStatement } from './ui/income-statement.js';
 import { rollForwardBills, generateBillDueEvents } from './state/bills.js';
 import { refreshSpendCache } from './state/spend-cache.js';
 import { setupOnboarding } from './ui/onboarding.js';
@@ -49,6 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupDraggableModal('gui-settings-modal'); // draggable, corner-resizable appearance window
     setupPageSettingsModals(); // Phase D — per-page settings modals
     setupImport(); // Ledger — bank CSV import (Tools)
+    setupPdfImport(); // Variable income — bank PDF import + payslip autofill (Tools)
+    setupIncomeStatement(); // Variable income — printable statement (income modal)
     setupDashboardEmptyActions(); // F.1 — welcome empty-state action cards
     setupCardLinks(); // F.2 — dashboard cards link to their tab
     setupExpenseSearch(); // H.2 — expense name filter

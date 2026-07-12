@@ -6,6 +6,8 @@ import { store } from '../state/store.js';
 import { getElement, setText, setValue, escapeHtml, formatCurrency } from '../utils.js';
 import { calculateTotals } from '../calc/calculations.js';
 import { AU_TAX_YEARS } from '../calc/tax-au.js';
+import { sumEvents, fyRange, activeFyKey } from '../calc/income-events.js';
+import { t } from '../i18n/strings.js';
 import { updateDefaultsButtonLabels } from '../events/settings-events.js';
 import { initializeGuiSettingsForm } from '../theme/appearance.js';
 import { initializeWhatIfTab } from './whatif.js';
@@ -39,6 +41,7 @@ export function renderIncomeSourcesSettings() {
         itemDiv.style.gridTemplateColumns = '0.4fr 0.9fr 1.2fr 0.8fr 0.8fr 1fr 0.6fr 0.8fr 0.5fr';
         const isPrimary = index === store.financeData.primaryIncomeIndex;
         const isSelfEmployed = source.incomeType === 'selfEmployed';
+        const isVariable = source.incomeType === 'variable';
         const invoicedPayValue = source.invoicedPayPostTax === null || source.invoicedPayPostTax === undefined ? '' : source.invoicedPayPostTax;
         const taxRemovedValue = source.taxRemoved === null || source.taxRemoved === undefined ? '' : source.taxRemoved;
         const baseId = `income-${index}`;
@@ -46,10 +49,14 @@ export function renderIncomeSourcesSettings() {
         // Salaried: gross is entered; net/tax per cycle are OPTIONAL overrides (from a payslip) —
         //   when filled they take precedence over the bracket estimate, otherwise tax is estimated.
         // Self-employed: net (+ optional tax) per cycle is entered, gross back-calculated (gross disabled).
-        const grossDisabled = isSelfEmployed ? 'disabled' : '';
+        // Variable: no pay cycle at all — figures come from dated income events (editor below the
+        //   row), so every per-cycle field is disabled.
+        const grossDisabled = (isSelfEmployed || isVariable) ? 'disabled' : '';
+        const cycleDisabled = isVariable ? 'disabled' : '';
         const autoNote = '— auto —';
-        const netPlaceholder = isSelfEmployed ? 'Net Pay/Cycle' : 'Net/Cycle (opt)';
-        const taxPlaceholder = 'Tax/Cycle (opt)';
+        const eventsNote = t('varInc.fromEvents');
+        const netPlaceholder = isVariable ? eventsNote : (isSelfEmployed ? 'Net Pay/Cycle' : 'Net/Cycle (opt)');
+        const taxPlaceholder = isVariable ? eventsNote : 'Tax/Cycle (opt)';
 
         itemDiv.innerHTML = `
             <span>
@@ -59,8 +66,9 @@ export function renderIncomeSourcesSettings() {
             <span>
                 <label for="${baseId}-type" class="visually-hidden">Income Type ${index + 1}</label>
                 <select data-collection="incomeSources" data-index="${index}" data-field="incomeType" id="${baseId}-type" name="${baseId}-type">
-                    <option value="salaried" ${!isSelfEmployed ? 'selected' : ''}>Salaried</option>
+                    <option value="salaried" ${!isSelfEmployed && !isVariable ? 'selected' : ''}>Salaried</option>
                     <option value="selfEmployed" ${isSelfEmployed ? 'selected' : ''}>Self-employed</option>
+                    <option value="variable" ${isVariable ? 'selected' : ''}>Variable</option>
                 </select>
             </span>
             <span>
@@ -69,11 +77,11 @@ export function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-gross" class="visually-hidden">Gross Annual Income ${index + 1}</label>
-                <input type="number" value="${source.grossAnnual || 0}" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" name="${baseId}-gross" placeholder="${isSelfEmployed ? autoNote : 'Gross Annual'}" step="0.01" ${grossDisabled}>
+                <input type="number" value="${source.grossAnnual || 0}" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" name="${baseId}-gross" placeholder="${(isSelfEmployed || isVariable) ? autoNote : 'Gross Annual'}" step="0.01" ${grossDisabled}>
             </span>
             <span>
                 <label for="${baseId}-schedule" class="visually-hidden">Pay Schedule ${index + 1}</label>
-                <select data-collection="incomeSources" data-index="${index}" data-field="paySchedule" id="${baseId}-schedule" name="${baseId}-schedule">
+                <select data-collection="incomeSources" data-index="${index}" data-field="paySchedule" id="${baseId}-schedule" name="${baseId}-schedule" ${cycleDisabled}>
                     <option value="weekly" ${source.paySchedule === 'weekly' ? 'selected' : ''}>Weekly</option>
                     <option value="fortnightly" ${source.paySchedule === 'fortnightly' ? 'selected' : ''}>Fortnightly</option>
                     <option value="monthly" ${source.paySchedule === 'monthly' ? 'selected' : ''}>Monthly</option>
@@ -82,19 +90,122 @@ export function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-netpay" class="visually-hidden">Net Pay Per Cycle ${index + 1}</label>
-                <input type="number" value="${invoicedPayValue}" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" name="${baseId}-netpay" placeholder="${netPlaceholder}" step="0.01">
+                <input type="number" value="${isVariable ? '' : invoicedPayValue}" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" name="${baseId}-netpay" placeholder="${netPlaceholder}" step="0.01" ${cycleDisabled}>
             </span>
             <span>
                  <label for="${baseId}-hours" class="visually-hidden">Hours Per Cycle ${index + 1}</label>
-                 <input type="number" value="${source.hoursPerCycle || ''}" data-collection="incomeSources" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" name="${baseId}-hours" placeholder="Hours" step="1">
+                 <input type="number" value="${isVariable ? '' : (source.hoursPerCycle || '')}" data-collection="incomeSources" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" name="${baseId}-hours" placeholder="${isVariable ? eventsNote : 'Hours'}" step="1" ${cycleDisabled}>
             </span>
             <span>
                 <label for="${baseId}-taxremoved" class="visually-hidden">Tax Removed Per Cycle ${index + 1}</label>
-                <input type="number" value="${taxRemovedValue}" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="${taxPlaceholder}" step="0.01">
+                <input type="number" value="${isVariable ? '' : taxRemovedValue}" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="${taxPlaceholder}" step="0.01" ${cycleDisabled}>
             </span>
             <button class="delete-btn" data-index="${index}" data-type="incomeSource" aria-label="Delete Income Source ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
+
+        if (isVariable) {
+            container.appendChild(buildIncomeEventsEditor(source, index));
+        } else {
+            // Payslip PDF autofill — fills gross/net/tax per cycle from a real payslip.
+            const tools = document.createElement('div');
+            tools.className = 'income-row-tools';
+            tools.innerHTML = `
+                <button type="button" class="btn btn-secondary btn-small payslip-upload-btn" data-parent-index="${index}">
+                    ${t('payslip.uploadBtn')}
+                </button>
+                <span class="settings-hint payslip-status" id="payslip-status-${index}"></span>`;
+            container.appendChild(tools);
+        }
     });
+}
+
+// Variable-income event editor — one block per Variable source, rendered under
+// its row. Rows follow the app's delegated-edit convention with a nested
+// collection: data-collection="incomeEvents" + data-parent-index (the source)
+// + data-index (the event) + data-field; deletes carry data-type="incomeEvent".
+function buildIncomeEventsEditor(source, sourceIndex) {
+    const wrap = document.createElement('div');
+    wrap.className = 'income-events-editor';
+    wrap.dataset.sourceIndex = sourceIndex;
+
+    const events = Array.isArray(source.incomeEvents) ? source.incomeEvents : [];
+    const fyKey = activeFyKey(store.financeData.taxSettings);
+    const { from, to } = fyRange(fyKey);
+    const fyTotals = sumEvents(events, from, to);
+    const fyLabel = AU_TAX_YEARS[fyKey] ? AU_TAX_YEARS[fyKey].label : fyKey;
+
+    let rowsHtml = '';
+    if (!events.length) {
+        rowsHtml = `<p class="income-events-empty">${t('varInc.noEvents')}</p>`;
+    } else {
+        rowsHtml = events.map((e, i) => {
+            const baseId = `income-${sourceIndex}-event-${i}`;
+            const optVal = (v) => (v === null || v === undefined ? '' : v);
+            return `
+            <div class="list-item income-event-row">
+                <span>
+                    <label for="${baseId}-date" class="visually-hidden">Event ${i + 1} date</label>
+                    <input type="date" value="${escapeHtml(e.date || '')}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="date" id="${baseId}-date">
+                </span>
+                <span>
+                    <label for="${baseId}-label" class="visually-hidden">Event ${i + 1} label</label>
+                    <input type="text" value="${escapeHtml(e.label || '')}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="label" id="${baseId}-label" placeholder="${t('varInc.labelPh')}">
+                </span>
+                <span>
+                    <label for="${baseId}-net" class="visually-hidden">Event ${i + 1} amount banked</label>
+                    <input type="number" value="${e.netAmount || 0}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="netAmount" id="${baseId}-net" placeholder="Banked $" step="0.01" min="0">
+                </span>
+                <span>
+                    <label for="${baseId}-tax" class="visually-hidden">Event ${i + 1} tax withheld</label>
+                    <input type="number" value="${optVal(e.taxWithheld)}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="taxWithheld" id="${baseId}-tax" placeholder="Tax $ (opt)" step="0.01" min="0">
+                </span>
+                <span>
+                    <label for="${baseId}-hours" class="visually-hidden">Event ${i + 1} hours worked</label>
+                    <input type="number" value="${optVal(e.hours)}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="hours" id="${baseId}-hours" placeholder="Hrs (opt)" step="0.25" min="0">
+                </span>
+                <span>
+                    <label for="${baseId}-cash" class="visually-hidden">Event ${i + 1} cash received</label>
+                    <input type="number" value="${optVal(e.cashReceived)}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="cashReceived" id="${baseId}-cash" placeholder="Cash $ (opt)" step="0.01" min="0">
+                </span>
+                <span class="income-event-check">
+                    <label for="${baseId}-gst" title="${t('varInc.gstTitle')}">GST</label>
+                    <input type="checkbox" ${e.gstInclusive ? 'checked' : ''} data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="gstInclusive" id="${baseId}-gst" aria-label="Event ${i + 1}: amount includes GST">
+                </span>
+                <span class="income-event-check">
+                    <label for="${baseId}-pen" title="${t('varInc.penaltyTitle')}">Pen.</label>
+                    <input type="checkbox" ${e.penaltyRates ? 'checked' : ''} data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="penaltyRates" id="${baseId}-pen" aria-label="Event ${i + 1}: paid at penalty rates">
+                </span>
+                <button class="delete-btn" data-parent-index="${sourceIndex}" data-index="${i}" data-type="incomeEvent" aria-label="Delete income event ${i + 1}">×</button>
+            </div>`;
+        }).join('');
+    }
+
+    wrap.innerHTML = `
+        <div class="income-events-head">
+            <span class="income-events-title">${t('varInc.eventsTitle', { name: escapeHtml(source.name || '') })}</span>
+            <span class="income-events-fy-total">${t('varInc.fyTotal', {
+                fy: escapeHtml(fyLabel),
+                net: formatCurrency(fyTotals.net),
+                count: fyTotals.count,
+                eventWord: t(fyTotals.count === 1 ? 'varInc.eventOne' : 'varInc.eventMany'),
+            })}</span>
+        </div>
+        <div class="income-events-meta">
+            <label class="form-label" for="income-${sourceIndex}-baserate">${t('varInc.baseRate')}</label>
+            <input type="number" class="income-baserate-input" value="${source.baseHourlyRate == null ? '' : source.baseHourlyRate}"
+                data-collection="incomeSources" data-index="${sourceIndex}" data-field="baseHourlyRate"
+                id="income-${sourceIndex}-baserate" placeholder="$/hr" step="0.01" min="0">
+            <span class="settings-hint">${t('varInc.baseRateHint')}</span>
+        </div>
+        <div class="dynamic-list income-events-list">
+            ${events.length ? `
+            <div class="list-header income-event-row">
+                <span>Date</span><span>Label / client</span><span>Banked $</span><span>Tax $</span><span>Hours</span><span>Cash $</span><span>GST</span><span>Pen.</span><span></span>
+            </div>` : ''}
+            ${rowsHtml}
+        </div>
+        <button class="add-btn add-income-event-btn" data-parent-index="${sourceIndex}">${t('varInc.addEvent')}</button>`;
+    return wrap;
 }
 
 export function renderTaxBracketsSettings() {
@@ -206,7 +317,7 @@ export function renderAllocationSettings() {
     store.financeData.allocation.forEach((alloc, index) => {
         const itemDiv = document.createElement('div');
         itemDiv.className = 'list-item';
-        itemDiv.style.gridTemplateColumns = '2fr 0.8fr 1fr 1fr auto';
+        itemDiv.style.gridTemplateColumns = '2fr 0.8fr 1fr 1fr 0.6fr auto';
         const baseId = `alloc-${index}`;
         itemDiv.innerHTML = `
             <span>
@@ -224,6 +335,10 @@ export function renderAllocationSettings() {
             <span>
                 <label for="${baseId}-goal" class="visually-hidden">Savings Goal ${index + 1}</label>
                 <input type="number" value="${alloc.savingsGoal != null ? alloc.savingsGoal : 0}" data-collection="allocation" data-index="${index}" data-field="savingsGoal" id="${baseId}-goal" name="${baseId}-goal" placeholder="Goal $ (opt)" step="0.01" min="0">
+            </span>
+            <span style="justify-self: center;" title="${t('taxpot.checkboxTitle')}">
+                <label for="${baseId}-taxpot" class="visually-hidden">Use bucket ${index + 1} as the tax provision pot</label>
+                <input type="checkbox" ${alloc.isTaxProvision ? 'checked' : ''} data-collection="allocation" data-index="${index}" data-field="isTaxProvision" id="${baseId}-taxpot">
             </span>
             <button class="delete-btn" data-index="${index}" data-type="allocation" aria-label="Delete Allocation Category ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);

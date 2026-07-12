@@ -14,6 +14,7 @@ import { listRecentEvents } from '../state/eventlog.js';
 import { listSnapshots, snapshotBefore } from '../state/snapshots.js';
 import { upcomingBills } from '../state/bills.js';
 import { sparklineSvg } from './sparkline.js';
+import { renderIncomeVolatility } from './income-insights.js';
 import { t } from '../i18n/strings.js';
 
 // ---------- greeting ----------
@@ -241,6 +242,7 @@ export async function renderHomeFeed() {
 
     renderPulse(totals);
     renderUpcoming();
+    renderIncomeVolatility(totals); // variable income only — hides itself otherwise
 
     let events = [];
     try {

@@ -83,36 +83,41 @@ export function renderWhatIfIncomeSources() {
         itemDiv.style.gridTemplateColumns = '0.4fr 0.9fr 1.2fr 0.8fr 0.8fr 1fr 0.6fr 0.8fr 0.5fr';
         const isPrimary = index === store.whatIfFinanceData.primaryIncomeIndex;
         const isSelfEmployed = source.incomeType === 'selfEmployed';
+        const isVariable = source.incomeType === 'variable';
         const invoicedPayValue = source.invoicedPayPostTax == null ? '' : source.invoicedPayPostTax;
         const taxRemovedValue = source.taxRemoved == null ? '' : source.taxRemoved;
         const baseId = `whatif-income-${index}`;
-        const grossDisabled = isSelfEmployed ? 'disabled' : '';
-        const netPlaceholder = isSelfEmployed ? 'Net Pay/Cycle' : 'Net/Cycle (opt)';
+        // Variable sources: events aren't editable in the sandbox (their FY sum flows
+        // through calculateTotals unchanged), so the per-cycle fields stay disabled.
+        const grossDisabled = (isSelfEmployed || isVariable) ? 'disabled' : '';
+        const cycleDisabled = isVariable ? 'disabled' : '';
+        const netPlaceholder = isVariable ? '— from events —' : (isSelfEmployed ? 'Net Pay/Cycle' : 'Net/Cycle (opt)');
         itemDiv.innerHTML = `
             <span><label for="${baseId}-primary" class="visually-hidden">Set Scenario Primary ${index + 1}</label>
                 <input type="radio" name="whatif-primary-income" ${isPrimary ? 'checked' : ''} data-scope="whatif" data-index="${index}" id="${baseId}-primary" style="justify-self: center;"></span>
             <span><label for="${baseId}-type" class="visually-hidden">Scenario Income Type ${index + 1}</label>
                 <select data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="incomeType" id="${baseId}-type">
-                    <option value="salaried" ${!isSelfEmployed ? 'selected' : ''}>Salaried</option>
+                    <option value="salaried" ${!isSelfEmployed && !isVariable ? 'selected' : ''}>Salaried</option>
                     <option value="selfEmployed" ${isSelfEmployed ? 'selected' : ''}>Self-employed</option>
+                    <option value="variable" ${isVariable ? 'selected' : ''}>Variable</option>
                 </select></span>
             <span><label for="${baseId}-name" class="visually-hidden">Scenario Income Name ${index + 1}</label>
                 <input type="text" value="${escapeHtml(source.name || '')}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Name"></span>
             <span><label for="${baseId}-gross" class="visually-hidden">Scenario Gross ${index + 1}</label>
-                <input type="number" value="${source.grossAnnual || 0}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" placeholder="${isSelfEmployed ? '— auto —' : 'Gross Annual'}" step="0.01" ${grossDisabled}></span>
+                <input type="number" value="${source.grossAnnual || 0}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" placeholder="${(isSelfEmployed || isVariable) ? '— auto —' : 'Gross Annual'}" step="0.01" ${grossDisabled}></span>
             <span><label for="${baseId}-schedule" class="visually-hidden">Scenario Schedule ${index + 1}</label>
-                <select data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="paySchedule" id="${baseId}-schedule">
+                <select data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="paySchedule" id="${baseId}-schedule" ${cycleDisabled}>
                     <option value="weekly" ${source.paySchedule === 'weekly' ? 'selected' : ''}>Weekly</option>
                     <option value="fortnightly" ${source.paySchedule === 'fortnightly' ? 'selected' : ''}>Fortnightly</option>
                     <option value="monthly" ${source.paySchedule === 'monthly' ? 'selected' : ''}>Monthly</option>
                     <option value="yearly" ${source.paySchedule === 'yearly' ? 'selected' : ''}>Yearly</option>
                 </select></span>
             <span><label for="${baseId}-netpay" class="visually-hidden">Scenario Net Pay ${index + 1}</label>
-                <input type="number" value="${invoicedPayValue}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" placeholder="${netPlaceholder}" step="0.01"></span>
+                <input type="number" value="${isVariable ? '' : invoicedPayValue}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" placeholder="${netPlaceholder}" step="0.01" ${cycleDisabled}></span>
             <span><label for="${baseId}-hours" class="visually-hidden">Scenario Hours ${index + 1}</label>
-                <input type="number" value="${source.hoursPerCycle || ''}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" placeholder="Hours" step="1"></span>
+                <input type="number" value="${isVariable ? '' : (source.hoursPerCycle || '')}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" placeholder="Hours" step="1" ${cycleDisabled}></span>
             <span><label for="${baseId}-taxremoved" class="visually-hidden">Scenario Tax Removed ${index + 1}</label>
-                <input type="number" value="${taxRemovedValue}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" placeholder="Tax/Cycle (opt)" step="0.01"></span>
+                <input type="number" value="${isVariable ? '' : taxRemovedValue}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" placeholder="${isVariable ? '— from events —' : 'Tax/Cycle (opt)'}" step="0.01" ${cycleDisabled}></span>
             <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="incomeSource" aria-label="Delete Scenario Income Source ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
     });

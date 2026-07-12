@@ -184,9 +184,19 @@ export function validateFieldValue(field, rawValue) {
 
         case 'hoursPerCycle':
         case 'invoicedPayPostTax':
+        // Variable-income event fields + per-source base rate (all optional).
+        case 'netAmount':
+        case 'taxWithheld':
+        case 'hours':
+        case 'cashReceived':
+        case 'baseHourlyRate':
             if (empty) return null; // optional fields
             if (isNaN(num) || num < 0) return 'Must be 0 or greater';
             return null;
+
+        case 'label':
+            if (str.trim().length > 100) return 'Max 100 characters';
+            return null; // empty label is fine — shows as "Unlabelled"
 
         case 'min':
             if (isNaN(num) || num < 0) return 'Must be 0 or greater';

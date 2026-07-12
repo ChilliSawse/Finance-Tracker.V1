@@ -39,11 +39,20 @@
     import {
         AU_TAX_YEARS, calculateMedicareLevy, calculateHelpRepayment, projectHelpPayoff,
     } from './src/calc/tax-au.js';
+    import {
+        fyKeyForDate, fyRange, fyQuarters, eventFigures, sumEvents,
+        variableSourceAnnualFigures, monthlyNetSeries, quarterlySummary,
+        estimateVariableTaxProvision, labelSummary, averageMonthlyExpenses,
+        coasterMonths, detectSlowSeasons, fyElapsedFraction,
+    } from './src/calc/income-events.js';
     import { DEFAULT_CATEGORIES, categoriseDescription } from './src/state/categories.js';
     import { configureDb, deleteDb } from './src/state/db.js';
     import { makeTransaction, addTransactions, listTransactions, monthlySpendByCategory, deleteImportBatch, countTransactions } from './src/state/transactions.js';
     import { logEvent, listRecentEvents, pruneEvents } from './src/state/eventlog.js';
     import { CSV_TEST_CASES } from './src/import/csv.test-cases.js';
+    import { parseStatementPages, detectBank } from './src/import/pdf-statement.js';
+    import { parsePayslipLines } from './src/import/payslip.js';
+    import { migrateIncomeSourceTypes, migrateVariableIncomeFields } from './src/state/migrations.js';
     (async function () {
         const results = [];
         let pass = 0, fail = 0;
@@ -188,6 +197,121 @@
         const rOv = calculateTotals(dataOverride);
         assertClose('Payslip override wins — no double-counting components', rOv.totalAnnualTax, 700 * 26, 1e-6);
 
+        // --- Variable income events (income-events.js) ---
+        group('Variable income — FY helpers');
+        assertEqual('1 July starts the FY', fyKeyForDate('2026-07-01'), '2026-27');
+        assertEqual('30 June ends the previous FY', fyKeyForDate('2026-06-30'), '2025-26');
+        assertEqual('FY range from', fyRange('2026-27').from, '2026-07-01');
+        assertEqual('FY range to', fyRange('2026-27').to, '2027-06-30');
+        assertEqual('Q3 crosses the calendar year', fyQuarters('2026-27')[2].from, '2027-01-01');
+        assertTrue('Elapsed fraction mid-FY is ~0.5 (1 Jan)',
+            Math.abs(fyElapsedFraction('2026-27', new Date('2027-01-01T00:00:00')) - 0.5) < 0.02,
+            fyElapsedFraction('2026-27', new Date('2027-01-01T00:00:00')));
+
+        group('Variable income — event figures & sums');
+        const gstEvent = { date: '2026-08-01', netAmount: 1100, gstInclusive: true, taxWithheld: 100, cashReceived: 50, hours: 10 };
+        const fig = eventFigures(gstEvent);
+        assertClose('GST-inclusive: ex-GST bank = amount / 1.1', fig.bank, 1000, 1e-9);
+        assertClose('GST collected = amount − ex-GST', fig.gst, 100, 1e-9);
+        assertClose('Net = ex-GST bank + cash', fig.net, 1050, 1e-9);
+        assertClose('Gross = net + withheld', fig.gross, 1150, 1e-9);
+        const cashOnly = eventFigures({ date: '2026-08-02', netAmount: 0, cashReceived: 200 });
+        assertClose('Cash-only event counts in full', cashOnly.net, 200, 1e-9);
+        const evs = [
+            { date: '2026-07-15', netAmount: 500, taxWithheld: 50 },
+            { date: '2026-08-15', netAmount: 700 },
+            { date: '2026-06-15', netAmount: 999 }, // previous FY — excluded by range
+        ];
+        const summed = sumEvents(evs, '2026-07-01', '2027-06-30');
+        assertClose('Range sum: net', summed.net, 1200, 1e-9);
+        assertClose('Range sum: tax', summed.tax, 50, 1e-9);
+        assertEqual('Range sum: count excludes out-of-FY', summed.count, 2);
+
+        group('Variable income — calculateTotals integration');
+        const varSource = {
+            name: 'Gigs', incomeType: 'variable', grossAnnual: 0, paySchedule: 'fortnightly',
+            hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null,
+            incomeEvents: [
+                { date: '2026-07-10', netAmount: 800, taxWithheld: 100 },
+                { date: '2026-09-01', netAmount: 1100, gstInclusive: true, cashReceived: 100 },
+            ],
+        };
+        const varData = makeData([varSource]);
+        varData.taxSettings = { financialYear: '2026-27', includeMedicareLevy: false, helpBalance: 0, includeHelpInEstimate: false };
+        const rVar = calculateTotals(varData);
+        assertClose('Variable net = Σ(ex-GST + cash)', rVar.totalNetAnnualIncome, 800 + 1000 + 100, 1e-9);
+        assertClose('Variable tax = Σ withheld', rVar.totalAnnualTax, 100, 1e-9);
+        assertClose('Variable gross = net + tax', rVar.totalGrossAnnualIncome, 2000, 1e-9);
+        assertClose('_calculatedNetAnnual set on the source', varSource._calculatedNetAnnual, 1900, 1e-9);
+        const figs = variableSourceAnnualFigures(varSource, '2026-27');
+        assertClose('variableSourceAnnualFigures matches totals', figs.netAnnual, 1900, 1e-9);
+        assertClose('GST tracked for BAS view', figs.gst, 100, 1e-9);
+
+        group('Variable income — provisioning, labels, coaster, seasons');
+        const provData = makeData([
+            { name: 'Job', incomeType: 'salaried', grossAnnual: 50000, paySchedule: 'fortnightly', hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null },
+            varSource,
+        ]);
+        provData.taxBrackets = AU_TAX_YEARS['2026-27'].brackets;
+        provData.taxSettings = { financialYear: '2026-27', includeMedicareLevy: false, helpBalance: 0, includeHelpInEstimate: false };
+        calculateTotals(provData); // set _calculated* on sources
+        const prov = estimateVariableTaxProvision(provData, new Date('2026-12-31T00:00:00'));
+        assertTrue('Provision estimate exists when events exist', !!prov, prov && 'ok');
+        assertClose('YTD gross feeds the projection', prov.ytdGross, 2000, 1e-9);
+        const elapsedDec = fyElapsedFraction('2026-27', new Date('2026-12-31T00:00:00'));
+        assertClose('Projected annual gross = YTD ÷ elapsed', prov.projectedAnnualGross, 2000 / elapsedDec, 1e-6);
+        // Marginal: tax(50k + projected) − tax(50k), pro-rated to today.
+        const projGross = 2000 / elapsedDec;
+        const marginal = calculateTaxFromBrackets(50000 + projGross, provData.taxBrackets) - calculateTaxFromBrackets(50000, provData.taxBrackets);
+        assertClose('Provision-to-date = marginal annual tax × elapsed', prov.provisionToDate, marginal * elapsedDec, 1e-6);
+        assertClose('Still-to-set-aside nets off withheld', prov.stillToSetAside, Math.max(0, marginal * elapsedDec - 100), 1e-6);
+        const noEvents = makeData([{ name: 'V', incomeType: 'variable', incomeEvents: [], grossAnnual: 0, paySchedule: 'fortnightly', taxRemoved: null, invoicedPayPostTax: null }]);
+        assertEqual('No events → null provision', estimateVariableTaxProvision(noEvents, new Date('2026-12-31T00:00:00')), null);
+
+        const labels = labelSummary([
+            { date: '2026-07-01', label: 'Club A', netAmount: 300, hours: 5, penaltyRates: true },
+            { date: '2026-07-08', label: 'Club A', netAmount: 200, hours: 5 },
+            { date: '2026-07-09', label: 'Cafe B', netAmount: 150, cashReceived: 50 },
+        ], 30);
+        assertEqual('Labels sorted by net desc', labels[0].label, 'Club A');
+        assertClose('Effective rate = net / hours', labels[0].effectiveRate, 50, 1e-9);
+        assertClose('Penalty base portion = baseRate × penalty hours', labels[0].basePortion, 150, 1e-9);
+        assertClose('Penalty loading portion = penalty net − base', labels[0].penaltyPortion, 150, 1e-9);
+        assertClose('Bank + cash split tracked', labels[1].cash, 50, 1e-9);
+
+        const avgSpend = averageMonthlyExpenses([
+            { date: '2026-07-10', amountCents: -30000 },
+            { date: '2026-06-10', amountCents: -60000 },
+            { date: '2026-05-10', amountCents: -90000 },
+            { date: '2026-04-10', amountCents: -99999 }, // outside 3-month window
+            { date: '2026-07-11', amountCents: 5000 },   // income — ignored
+        ], new Date('2026-07-13T00:00:00'), 3);
+        assertClose('Avg monthly expenses over last 3 months', avgSpend, 600, 1e-9);
+        assertClose('Coaster months = assets ÷ avg spend', coasterMonths(6000, 600), 10, 1e-9);
+        assertEqual('Zero spend → null coaster', coasterMonths(6000, 0), null);
+
+        const seasonEvents = [];
+        for (let m = 0; m < 18; m++) {
+            const d = new Date(2025, m, 15);
+            const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-15`;
+            // January is the slow month: $100 vs $1000 everywhere else.
+            seasonEvents.push({ date: iso, netAmount: d.getMonth() === 0 ? 100 : 1000 });
+        }
+        const seasonData = { incomeSources: [{ incomeType: 'variable', incomeEvents: seasonEvents }] };
+        const seasons = detectSlowSeasons(seasonData);
+        assertTrue('18 months of data is enough', seasons.enoughData, 'ok');
+        assertTrue('January detected as slow', seasons.slowMonths.some(s => s.month === 1),
+            JSON.stringify(seasons.slowMonths.map(s => s.month)));
+        const shortSpan = detectSlowSeasons({ incomeSources: [{ incomeType: 'variable', incomeEvents: seasonEvents.slice(0, 6) }] });
+        assertEqual('Under 12 months span → not enough data', shortSpan.enoughData, false);
+
+        const series = monthlyNetSeries(provData, 12, new Date('2026-09-30T00:00:00'));
+        assertEqual('Series returns 12 months', series.length, 12);
+        const sept = series[series.length - 1];
+        assertClose('Variable events land in their month', sept.variable, 1100, 1e-9);
+        assertClose('Regular sources blend pro-rata (net/12)', sept.regular,
+            (50000 - calculateTaxFromBrackets(50000, provData.taxBrackets)) / 12, 1e-6);
+
         // --- Category auto-matching ---
         group('Category keyword matching');
         assertEqual('WOOLWORTHS → groceries', categoriseDescription('WOOLWORTHS 1234 SYDNEY NSW', DEFAULT_CATEGORIES), 'groceries');
@@ -209,6 +333,82 @@
                 record(tc.name, false, 'no exception', String(err));
             }
         }
+
+        // --- PDF statement engine (pure — synthetic positioned lines) ---
+        group('PDF statement engine');
+        const PL = (...pairs) => ({ y: 0, items: pairs.map(([x, str]) => ({ x, str })), text: pairs.map(p => p[1]).join(' ') });
+        const ingPage = [
+            PL([50, 'ING Australia — Orange Everyday Statement']),
+            PL([50, 'Date'], [150, 'Details'], [400, 'Money out'], [480, 'Money in'], [560, 'Balance']),
+            PL([50, '13/06/2026'], [150, 'Visa Purchase - COFFEE HOUSE'], [400, '-$12.34'], [560, '$1,234.56']),
+            PL([50, '14/06/2026'], [150, 'Salary ACME PTY LTD'], [480, '$2,359.69'], [560, '$3,594.25']),
+            PL([50, 'Closing balance'], [560, '$3,594.25']),
+        ];
+        const ingRes = parseStatementPages([ingPage]);
+        assertEqual('ING detected from header', ingRes.bank && ingRes.bank.id, 'ing');
+        assertEqual('ING: signed spend, balance column dropped', ingRes.transactions[0].amountCents, -1234);
+        assertEqual('ING: credit stays positive', ingRes.transactions[1].amountCents, 235969);
+        assertEqual('ING: closing-balance line skipped', ingRes.transactions.length, 2);
+        const wbcPage = [
+            PL([50, 'Westpac Banking Corporation Statement 2026']),
+            PL([50, 'DATE'], [130, 'TRANSACTION DESCRIPTION'], [380, 'DEBIT'], [460, 'CREDIT'], [540, 'BALANCE']),
+            PL([50, '01/06/26'], [130, 'EFTPOS WOOLWORTHS 1234'], [370, '85.32'], [530, '914.68']),
+            PL([50, '02/06/26'], [130, 'DEPOSIT PAYROLL'], [450, '1,200.00'], [530, '2,114.68']),
+        ];
+        const wbcRes = parseStatementPages([wbcPage]);
+        assertEqual('Westpac: unsigned debit classified by column x', wbcRes.transactions[0].amountCents, -8532);
+        assertEqual('Westpac: unsigned credit classified by column x', wbcRes.transactions[1].amountCents, 120000);
+        const cbaPage = [
+            PL([50, 'Commonwealth Bank of Australia — Statement Period 1 June 2026 to 30 June 2026']),
+            PL([50, 'Date'], [130, 'Transaction'], [400, 'Debit'], [470, 'Credit'], [540, 'Balance']),
+            PL([50, '05'], [65, 'Jun'], [130, 'CARD xx1234 KFC SYDNEY'], [395, '23.45'], [535, '976.55 CR']),
+        ];
+        const cbaRes = parseStatementPages([cbaPage]);
+        assertEqual('CommBank: year-less "05 Jun" pinned to statement year', cbaRes.transactions[0].date, '2026-06-05');
+        assertEqual('CommBank: CR-suffixed balance ignored, debit negative', cbaRes.transactions[0].amountCents, -2345);
+        const genPage = [
+            PL([50, 'Some Credit Union statement 2026']),
+            PL([50, '03/06/2026'], [150, 'DIRECT DEBIT GYM'], [500, '-$29.95']),
+            PL([150, 'MEMBERSHIP FORTNIGHTLY']),
+        ];
+        const genRes = parseStatementPages([genPage]);
+        assertEqual('Generic: unknown bank → null config', genRes.bank, null);
+        assertEqual('Generic: wrapped description folds into the row',
+            genRes.transactions[0].description, 'DIRECT DEBIT GYM MEMBERSHIP FORTNIGHTLY');
+        assertEqual('Empty pages → zero rows', parseStatementPages([[]]).transactions.length, 0);
+        assertEqual('detectBank: Up fingerprint', detectBank('Welcome to Up — up.com.au statement').id, 'up');
+
+        group('Migrations — variable income survives load');
+        const migData = { incomeSources: [
+            { name: 'V', incomeType: 'variable', grossAnnual: 0, paySchedule: 'fortnightly', incomeEvents: [{ date: '2026-07-01', netAmount: '100' }] },
+            { name: 'Legacy', grossAnnual: 52000, paySchedule: 'fortnightly', invoicedPayPostTax: null, taxRemoved: null },
+        ] };
+        migrateIncomeSourceTypes(migData);
+        assertEqual('variable type untouched by the legacy backfill', migData.incomeSources[0].incomeType, 'variable');
+        assertEqual('legacy untyped source still backfills', migData.incomeSources[1].incomeType, 'selfEmployed');
+        migrateVariableIncomeFields(migData);
+        assertEqual('string netAmount normalised to number', migData.incomeSources[0].incomeEvents[0].netAmount, 100);
+        assertEqual('non-variable sources get an events array too', Array.isArray(migData.incomeSources[1].incomeEvents), true);
+
+        group('Payslip parser');
+        const slip = parsePayslipLines([
+            'ACME Hospitality Pty Ltd — Pay Advice (Powered by Xero)',
+            'Pay period: 01/06/2026 to 14/06/2026 (Fortnightly)',
+            'Gross Earnings 2,875.00 34,500.00',
+            'PAYG Withholding 515.00 6,180.00',
+            'Superannuation Guarantee 330.63 3,967.50',
+            'Net Pay 2,360.00 28,320.00',
+        ]);
+        assertEqual('Net: first amount on the row (this pay, not YTD)', slip.net, 2360);
+        assertEqual('Tax via PAYG label', slip.tax, 515);
+        assertEqual('Gross', slip.gross, 2875);
+        assertEqual('Super', slip.super, 330.63);
+        assertEqual('Schedule hint', slip.schedule, 'fortnightly');
+        assertEqual('Provider fingerprint', slip.provider, 'Xero');
+        const slipDerived = parsePayslipLines(['Net Payment 1,000.00', 'Tax 250.00']);
+        assertEqual('Gross derived when missing (net + tax)', slipDerived.gross, 1250);
+        const slipEmpty = parsePayslipLines(['Totally unrelated document about gardening']);
+        assertEqual('Nothing found → all null', slipEmpty.net === null && slipEmpty.tax === null && slipEmpty.gross === null, true);
 
         // --- Transaction store (IndexedDB, isolated test database) ---
         group('Transaction store (IndexedDB)');

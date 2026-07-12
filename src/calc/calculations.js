@@ -8,6 +8,7 @@
 
 import { getPayCyclesPerYear, getWeeklyAmount } from '../utils.js';
 import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment } from './tax-au.js';
+import { variableSourceAnnualFigures, activeFyKey } from './income-events.js';
 
 export function calculateTotals(currentData) {
     let totalGrossAnnualIncome = 0;
@@ -19,9 +20,14 @@ export function calculateTotals(currentData) {
     const taxSettings = currentData.taxSettings || null;
     const taxYear = taxSettings ? getTaxYear(taxSettings.financialYear) : null;
 
+    // Variable sources aggregate against the active AU financial year
+    // (taxSettings.financialYear, else the FY containing today).
+    const fyKey = activeFyKey(taxSettings);
+
     currentData.incomeSources.forEach((source, sourceIndex) => {
         const payCycles = getPayCyclesPerYear(source.paySchedule);
-        const type = source.incomeType === 'selfEmployed' ? 'selfEmployed' : 'salaried';
+        const type = source.incomeType === 'selfEmployed' ? 'selfEmployed'
+            : source.incomeType === 'variable' ? 'variable' : 'salaried';
 
         let sourceGrossAnnual, sourceAnnualNet, sourceAnnualTax;
 
@@ -33,7 +39,16 @@ export function calculateTotals(currentData) {
         const hasNetOverride = !isNaN(netPerCycle) && source.invoicedPayPostTax !== null && source.invoicedPayPostTax !== '';
         const hasTaxOverride = !isNaN(taxPerCycle) && source.taxRemoved !== null && source.taxRemoved !== '';
 
-        if (type === 'selfEmployed') {
+        if (type === 'variable') {
+            // Path C — dated income events summed over the active FY. Net is
+            // ex-GST banked + cash, tax is per-event withheld, gross = net + tax
+            // (same back-calc shape as self-employed). Per-cycle overrides
+            // don't apply — there is no pay cycle.
+            const fig = variableSourceAnnualFigures(source, fyKey);
+            sourceAnnualNet = fig.netAnnual;
+            sourceAnnualTax = fig.annualTax;
+            sourceGrossAnnual = fig.grossAnnual;
+        } else if (type === 'selfEmployed') {
             // Path B — enter net pay per cycle (+ optional tax per cycle); gross is back-calculated.
             sourceAnnualNet = hasNetOverride ? netPerCycle * payCycles : 0;
             sourceAnnualTax = hasTaxOverride ? Math.max(0, taxPerCycle * payCycles) : 0;

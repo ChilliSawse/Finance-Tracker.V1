@@ -5,7 +5,10 @@
 import { store } from '../state/store.js';
 import {
     getElement, getValue, showFieldError, clearFieldError, validateFieldValue,
+    formatCurrency,
 } from '../utils.js';
+import { makeIncomeEvent, sumEvents, fyRange, activeFyKey } from '../calc/income-events.js';
+import { t } from '../i18n/strings.js';
 import { showCustomModal, confirmAction, inlineConfirm } from '../ui/confirm.js';
 import { updateDataAndUI } from '../ui/render.js';
 import {
@@ -35,7 +38,10 @@ export function handleSettingsClickEvents(event) {
     const index = parseInt(target.dataset.index, 10);
 
     // Add buttons
-    if (target.id === 'add-income-source') addIncomeSource();
+    if (target.classList.contains('add-income-event-btn')) {
+        addIncomeEvent(parseInt(target.dataset.parentIndex, 10));
+    }
+    else if (target.id === 'add-income-source') addIncomeSource();
     else if (target.id === 'whatif-add-income') addIncomeSource('whatif');
     else if (target.id === 'add-tax-bracket') addTaxBracket();
     else if (target.id === 'add-asset') addAsset();
@@ -57,7 +63,8 @@ export function handleSettingsClickEvents(event) {
     // keep their existing immediate delete plus their own "must keep at least one" guards.
     else if (target.classList.contains('delete-btn')) {
         const scope = target.dataset.scope; // 'whatif' for scenario rows, undefined for live
-        if (dataType === 'incomeSource') removeIncomeSource(index, scope);
+        if (dataType === 'incomeEvent') removeIncomeEvent(parseInt(target.dataset.parentIndex, 10), index);
+        else if (dataType === 'incomeSource') removeIncomeSource(index, scope);
         else if (dataType === 'taxBracket') removeTaxBracket(index);
         else if (dataType === 'asset') removeAsset(index, scope);
         else if (dataType === 'allocation') removeAllocationCategory(index, scope);
@@ -100,15 +107,50 @@ export function handleSettingsChangeEvents(event) {
         if (store.whatIfFinanceData) { store.whatIfFinanceData.primaryIncomeIndex = index; renderWhatIfIncomeSources(); }
         return;
     }
-    // Income source type (salaried / self-employed) — re-render to toggle which fields are active
+    // Income source type (salaried / self-employed / variable) — re-render to toggle
+    // which fields are active. Switching AWAY from Variable keeps incomeEvents in
+    // place (data is never dropped); switching TO Variable ensures the array exists.
     else if (field === 'incomeType' && target.dataset.collection === 'incomeSources') {
         const scope = target.dataset.scope;
         const data = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
         if (data && data.incomeSources[index] !== undefined) {
-            data.incomeSources[index].incomeType = value === 'selfEmployed' ? 'selfEmployed' : 'salaried';
+            const source = data.incomeSources[index];
+            source.incomeType = (value === 'selfEmployed' || value === 'variable') ? value : 'salaried';
+            if (source.incomeType === 'variable' && !Array.isArray(source.incomeEvents)) {
+                source.incomeEvents = [];
+            }
             if (scope === 'whatif') renderWhatIfIncomeSources();
             else { renderIncomeSourcesSettings(); updateDataAndUI(); }
         }
+        return;
+    }
+    // Variable income events — a nested collection (incomeSources[parent].incomeEvents[index]).
+    // Routed explicitly rather than through the top-level whitelist because of the
+    // parent/child indexing and the checkbox fields.
+    else if (target.dataset.collection === 'incomeEvents') {
+        const parentIndex = parseInt(target.dataset.parentIndex, 10);
+        const source = store.financeData.incomeSources[parentIndex];
+        const event_ = source && Array.isArray(source.incomeEvents) ? source.incomeEvents[index] : undefined;
+        if (!event_ || !field) return;
+
+        if (field === 'gstInclusive' || field === 'penaltyRates') {
+            event_[field] = target.checked;
+        } else if (field === 'date' || field === 'label') {
+            event_[field] = value;
+        } else if (['netAmount', 'taxWithheld', 'hours', 'cashReceived'].includes(field)) {
+            const validationError = validateFieldValue(field, value);
+            if (validationError) { showFieldError(target, validationError); return; }
+            clearFieldError(target);
+            if (field === 'netAmount') {
+                event_[field] = parseFloat(value) || 0;
+            } else {
+                event_[field] = value === '' ? null : parseFloat(value);
+            }
+        } else {
+            return;
+        }
+        refreshIncomeEventsFyTotal(parentIndex);
+        updateDataAndUI();
         return;
     }
     // What If scenario FI settings — write to the sandbox clone, no live update.
@@ -208,6 +250,14 @@ export function handleSettingsChangeEvents(event) {
         const arrayToUpdate = (fd && SETTINGS_COLLECTIONS.includes(collection)) ? fd[collection] : undefined;
 
         if (arrayToUpdate && arrayToUpdate[index] !== undefined) {
+            // Allocation "tax provision pot" checkbox — only one bucket can hold the
+            // tag at a time, so ticking one unticks the rest (and re-renders the list).
+            if (collection === 'allocation' && field === 'isTaxProvision') {
+                const fdAlloc = fd.allocation;
+                fdAlloc.forEach((a, i) => { a.isTaxProvision = i === index ? target.checked : false; });
+                if (scope !== 'whatif') { renderAllocationSettings(); updateDataAndUI(); }
+                return;
+            }
             // Category-editor conversions (checkbox boolean; comma list → keyword array).
             if (collection === 'categories' && field === 'essential') {
                 value = target.checked;
@@ -227,8 +277,8 @@ export function handleSettingsChangeEvents(event) {
                 return;
             }
             // Type conversions
-            if (['grossAnnual', 'balance', 'interestRate', 'percentage', 'amount', 'min', 'max', 'rate', 'hoursPerCycle', 'taxRemoved', 'invoicedPayPostTax', 'currentBalance', 'savingsGoal'].includes(field)) {
-                if (field === 'invoicedPayPostTax' || field === 'taxRemoved' || field === 'hoursPerCycle') {
+            if (['grossAnnual', 'balance', 'interestRate', 'percentage', 'amount', 'min', 'max', 'rate', 'hoursPerCycle', 'taxRemoved', 'invoicedPayPostTax', 'currentBalance', 'savingsGoal', 'baseHourlyRate'].includes(field)) {
+                if (field === 'invoicedPayPostTax' || field === 'taxRemoved' || field === 'hoursPerCycle' || field === 'baseHourlyRate') {
                      value = value === '' ? null : parseFloat(value);
                 } else if (field === 'max' && value === '') {
                     value = Infinity;
@@ -291,6 +341,56 @@ export function removeIncomeSource(index, scope) {
     if (fd.primaryIncomeIndex === index) fd.primaryIncomeIndex = 0;
     else if (fd.primaryIncomeIndex > index) fd.primaryIncomeIndex--;
     if (scope === 'whatif') { renderWhatIfIncomeSources(); } else { renderIncomeSourcesSettings(); updateDataAndUI(); }
+}
+
+// --- Variable income events (nested under an income source) ---
+
+export function addIncomeEvent(sourceIndex) {
+    const source = store.financeData.incomeSources[sourceIndex];
+    if (!source) return;
+    if (!Array.isArray(source.incomeEvents)) source.incomeEvents = [];
+    // Newest first — today's gig is what you're most likely entering.
+    source.incomeEvents.unshift(makeIncomeEvent());
+    renderIncomeSourcesSettings();
+    updateDataAndUI();
+    // Reveal the new row: it's the first event row inside this source's editor.
+    const editor = document.querySelector(`.income-events-editor[data-source-index="${sourceIndex}"]`);
+    const row = editor && editor.querySelector('.income-event-row:not(.list-header)');
+    if (row) {
+        if (!window.matchMedia('(pointer: coarse)').matches) {
+            const input = row.querySelector('input');
+            if (input) input.focus({ preventScroll: true });
+        }
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        row.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+    }
+}
+
+export function removeIncomeEvent(sourceIndex, eventIndex) {
+    const source = store.financeData.incomeSources[sourceIndex];
+    if (!source || !Array.isArray(source.incomeEvents)) return;
+    source.incomeEvents.splice(eventIndex, 1);
+    renderIncomeSourcesSettings();
+    updateDataAndUI();
+}
+
+// Keep the "FY total" line in an open income-events editor current without a
+// full list re-render (which would drop focus mid-edit).
+function refreshIncomeEventsFyTotal(sourceIndex) {
+    const editor = document.querySelector(`.income-events-editor[data-source-index="${sourceIndex}"]`);
+    const line = editor && editor.querySelector('.income-events-fy-total');
+    const source = store.financeData.incomeSources[sourceIndex];
+    if (!line || !source) return;
+    const fyKey = activeFyKey(store.financeData.taxSettings);
+    const { from, to } = fyRange(fyKey);
+    const totals = sumEvents(source.incomeEvents, from, to);
+    const fyLabel = AU_TAX_YEARS[fyKey] ? AU_TAX_YEARS[fyKey].label : fyKey;
+    line.textContent = t('varInc.fyTotal', {
+        fy: fyLabel,
+        net: formatCurrency(totals.net),
+        count: totals.count,
+        eventWord: t(totals.count === 1 ? 'varInc.eventOne' : 'varInc.eventMany'),
+    });
 }
 
 export function addTaxBracket() {

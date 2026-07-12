@@ -3060,3 +3060,243 @@ input[type="search"] {
     outline: 2px solid var(--accent-color);
     outline-offset: 2px;
 }
+
+/* ── Ledger: variable income (events editor, badges, award reference) ────── */
+.income-events-editor {
+    margin: 0 0 14px;
+    padding: 12px 14px 14px;
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--accent-color);
+    border-radius: 0 0 10px 10px;
+    background: var(--card-bg-gradient-end);
+}
+.income-events-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    margin-bottom: 8px;
+}
+.income-events-title { font-weight: 650; color: var(--heading-color); font-size: 0.95em; }
+.income-events-fy-total { font-size: 0.85em; color: var(--text-color-secondary); font-variant-numeric: tabular-nums; }
+.income-events-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-bottom: 10px;
+}
+.income-events-meta .form-label { margin: 0; }
+.income-events-meta .settings-hint { margin: 0; flex-basis: 100%; }
+.income-baserate-input {
+    width: 110px;
+    padding: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--card-bg-gradient-start);
+    color: var(--text-color-primary);
+    font-size: 0.85em;
+}
+.income-event-row {
+    grid-template-columns: 1.1fr 1.6fr 0.9fr 0.8fr 0.7fr 0.8fr 0.45fr 0.45fr auto;
+}
+.income-events-list .list-header { padding: 6px 12px; }
+.income-event-check {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.7em;
+    color: var(--text-color-secondary);
+}
+.income-event-check input[type="checkbox"] { width: auto; }
+.income-events-empty {
+    margin: 6px 0 10px;
+    font-size: 0.9em;
+    color: var(--text-color-secondary);
+    text-align: center;
+}
+.income-row-tools {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    padding: 4px 12px 10px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--card-bg-gradient-start);
+}
+.income-row-tools .settings-hint { margin: 0; }
+.btn-small { padding: 5px 12px; font-size: 0.8em; }
+
+/* Event badges (Income tab card) — emoji carry aria-labels at the call site. */
+.event-badge {
+    display: inline-block;
+    font-size: 0.78em;
+    padding: 1px 7px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    background: var(--neutral-tint);
+    color: var(--text-color-secondary);
+    white-space: nowrap;
+}
+.event-badge.is-penalty { background: var(--info-bg); border-color: var(--info-border); }
+.event-badge.is-cash { background: var(--positive-tint); }
+
+/* Award reference — a collapsed <details> block; keyboard-accessible for free. */
+.award-reference { padding: 0; }
+.award-reference-summary {
+    cursor: pointer;
+    font-weight: 650;
+    color: var(--heading-color);
+    padding: 14px 18px;
+    list-style-position: inside;
+}
+.award-reference-summary:hover { color: var(--accent-color); }
+.award-reference-body { padding: 0 18px 16px; }
+.award-table-wrap { border: 1px solid var(--border-color); border-radius: 10px; overflow-x: auto; }
+.award-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.award-table th {
+    background: var(--card-bg-gradient-end);
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+.award-table td { padding: 7px 12px; border-bottom: 1px solid var(--border-color); }
+.award-table tr:last-child td { border-bottom: none; }
+
+.income-statement-controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+}
+.income-statement-controls .form-select { max-width: 220px; }
+
+/* ── Ledger: income volatility section (Home) ────────────────────────────── */
+.volatility-card {
+    background: var(--card-bg-gradient-start); /* fallback: solid */
+    background: color-mix(in srgb, var(--card-bg-gradient-start) var(--card-opacity), transparent);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 24px;
+    max-width: 720px;
+}
+.volatility-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 16px; }
+.volatility-title { font-weight: 650; color: var(--heading-color); }
+.volatility-sub { font-size: 0.85em; color: var(--text-color-secondary); }
+
+/* Pure-CSS 12-month bar chart: flexbox columns, heights set inline as %,
+   average line as an absolutely-positioned rule. No libraries. */
+.vol-chart {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 120px;
+    margin: 16px 0 4px;
+    padding-bottom: 18px; /* room for month labels */
+}
+.vol-col { flex: 1 1 0; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; position: relative; min-width: 0; }
+.vol-bar {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    background: var(--accent-color);
+    opacity: 0.85;
+    min-height: 2px;
+    transition: opacity 0.15s ease;
+}
+.vol-bar.is-regular { background: var(--color-neutral); opacity: 0.55; border-radius: 0; }
+.vol-col:hover .vol-bar { opacity: 1; }
+.vol-col-label {
+    position: absolute;
+    bottom: -18px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 0.62rem;
+    color: var(--text-color-secondary);
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+}
+.vol-avg-line {
+    position: absolute;
+    left: 0; right: 0;
+    border-top: 2px dashed var(--color-warning);
+    pointer-events: none;
+}
+.vol-avg-caption { font-size: 0.78em; color: var(--text-color-secondary); margin: 0 0 12px; }
+.vol-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 12px; }
+.vol-stat {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--card-bg-gradient-end);
+}
+.vol-stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-color-secondary); }
+.vol-stat-value { font-weight: 700; color: var(--heading-color); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.vol-quarter-table-wrap { border: 1px solid var(--border-color); border-radius: 10px; overflow-x: auto; margin-top: 14px; }
+.vol-quarter-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.vol-quarter-table th {
+    background: var(--card-bg-gradient-end);
+    text-align: right;
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-color-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+.vol-quarter-table th:first-child, .vol-quarter-table td:first-child { text-align: left; }
+.vol-quarter-table td { padding: 7px 12px; border-bottom: 1px solid var(--border-color); text-align: right; font-variant-numeric: tabular-nums; }
+.vol-quarter-table tr:last-child td { border-bottom: none; }
+.vol-season-note {
+    margin: 14px 0 0;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: var(--info-bg);
+    border: 1px solid var(--info-border);
+    font-size: 0.88em;
+}
+
+/* ── Ledger: PDF import (spinner, progress) ──────────────────────────────── */
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: ft-spin 0.8s linear infinite;
+    vertical-align: -3px;
+    margin-right: 8px;
+}
+@keyframes ft-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+    .spinner { animation-duration: 2.4s; }
+}
+.pdf-status-line {
+    display: flex;
+    align-items: center;
+    margin: 14px 0 0;
+    font-size: 0.9em;
+    color: var(--text-color-secondary);
+}
+
+/* ── Mobile: event editor + import previews ──────────────────────────────── */
+@media (max-width: 640px) {
+    /* Event rows stack vertically like the other settings rows do. */
+    .income-events-list .list-header { display: none; }
+    .income-event-row { grid-template-columns: 1fr; }
+    .income-event-check { flex-direction: row; justify-content: flex-start; gap: 8px; font-size: 0.85em; }
+    .income-event-row .delete-btn { justify-self: stretch; }
+    .income-events-meta { align-items: flex-start; flex-direction: column; }
+    .vol-col-label { font-size: 0.5rem; }
+    .income-statement-controls { align-items: stretch; flex-direction: column; }
+    .income-statement-controls .form-select { max-width: none; }
+}

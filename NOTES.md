@@ -249,3 +249,57 @@ This file is a dev artifact — exclude from `dist/`.
 - **Gotcha for later**: index.html CSP is `script-src 'self' 'nonce-ft-fouc-init'` — the
   static nonce is security theatre but harmless; Vite dev + build both work under it.
   The FOUC inline script must keep its nonce if the CSP stays.
+
+## 2026-07-13 — Variable income (irregular earners) + PDF import
+
+- **Third income type `"variable"`** for gig/shift/freelance earners: dated income
+  events (`incomeSources[].incomeEvents[]`, PLAIN DOLLARS) instead of a pay cycle.
+  Event fields: date, label (client/venue), netAmount (banked), taxWithheld, hours,
+  gstInclusive (10% GST split out), penaltyRates (display flag only), cashReceived.
+  Aggregation: net = ex-GST bank + cash; gross = net + withheld; summed over the
+  active AU FY (`taxSettings.financialYear`, fixed 1 Jul–30 Jun) inside
+  `calculateTotals` — so Dashboard/Savings/What If consume variable sources through
+  the existing totals path unchanged. Pure maths in new `src/calc/income-events.js`.
+- **Migration gotcha fixed**: `migrateIncomeSourceTypes` (the legacy backfill) knew
+  only salaried/selfEmployed and silently converted `variable` sources to
+  selfEmployed on every load. Skip-list extended; regression test added. New
+  `migrateVariableIncomeFields` normalises events + `baseHourlyRate` +
+  `allocation[].isTaxProvision` on load and JSON import.
+- **Settings modal**: event editor per Variable source (nested delegation:
+  `data-collection="incomeEvents"` + `data-parent-index`; deletes
+  `data-type="incomeEvent"`), base-hourly-rate field, static HIGA award-reference
+  `<details>` (rates as at 1 Jul 2025, reference only), income-statement section,
+  per-source "Upload payslip (PDF)" button (hidden for Variable).
+- **New surfaces** (all hide when no Variable source exists): Home volatility card
+  (pure-CSS stacked 12-month bars + dashed average line, FY/BAS quarter table with
+  GST column, slow-season note ≥12mo span), Dashboard coaster card (assets ÷ avg
+  monthly spend from last-3-months transactions), Income tab tax-provision card
+  (annualised projection, MARGINAL tax of variable income on top of regular gross,
+  pro-rated to today), Savings tax-pot comparison (`allocation[].isTaxProvision`,
+  exclusive checkbox). Printable income statement via `window.open` (no scripts on
+  the page — opener CSP is inherited).
+- **PDF import** (`pdfjs-loader` / `pdf-statement` / `pdf-ui` / `payslip`): PDF.js
+  4.10.38 as a CDN dynamic import (never bundled; `/* @vite-ignore */`). CSP now
+  whitelists `https://cdn.jsdelivr.net` in script-src and `blob:` in worker-src
+  (PDF.js wraps its CDN worker in a blob; without worker-src it noisily falls back
+  to main-thread parsing — which still works offline-ish but logs a CSP error).
+  Statement engine is pure over positioned text lines: bank fingerprints
+  (ING/Up/Westpac/ANZ/CommBank/NAB/Bendigo), unsigned debit/credit columns resolved
+  by x-position against the header row, trailing running-balance dropped, year-less
+  "05 Jun" dates pinned to years found in the document, wrapped descriptions folded
+  in. Commit path is byte-identical to CSV (`makeTransaction`→`addTransactions`,
+  hash dedupe, undo via `deleteImportBatch`, `source: 'pdf'`).
+- **Payslip autofill**: vocabulary-based (Xero/MYOB/ADP/KeyPay/EH/generic); first
+  amount on a labelled row = "this pay" (second is YTD); fills net/tax per cycle +
+  annualised gross via the schedule; super reported but never added to figures.
+- **Verified** (Playwright, dev + built dist): tests.html 186/186 (was 132 —
+  54 new: FY helpers, GST/cash event maths, calculateTotals integration,
+  provisioning, label rollups, coaster, slow seasons, PDF engine, payslip,
+  migrations); full UI drive-through — event CRUD via real delegation, mixed-type
+  household, volatility/coaster/provision cards render + hide correctly, statement
+  export month/client tables exact, ING synthetic PDF end-to-end (5 txns → commit →
+  re-import dedupes 5 → friendly message), scanned/corrupt PDFs surface friendly
+  errors, payslip fills 2360/515/74750-fortnightly, Variable→Salaried→Variable
+  round-trip preserves all 8 events, zero console errors, prod build boots.
+  Synthetic fixtures: `../test-pdfs/synthetic/` (real bank PDFs pending — parser
+  x-position tolerances may need tuning against them).

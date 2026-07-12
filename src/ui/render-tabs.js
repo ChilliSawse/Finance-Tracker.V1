@@ -7,6 +7,10 @@ import { listSnapshots } from '../state/snapshots.js';
 import { getTaxYear, calculateHelpRepayment, projectHelpPayoff } from '../calc/tax-au.js';
 import { getSpendCache } from '../state/spend-cache.js';
 import { t } from '../i18n/strings.js';
+import {
+    buildVariableSourceCardHtml, buildTaxProvisionCardHtml,
+    renderCoasterCard, renderTaxProvisionCard,
+} from './income-insights.js';
 
 function categoryName(id) {
     const cat = (store.financeData.categories || []).find(c => c.id === id);
@@ -296,6 +300,7 @@ function updateDashboardUI(totals) {
 
     renderSpendingCard();
     renderYearSoFar(totals);
+    renderCoasterCard(totals); // async fill (IndexedDB) — variable-income coaster runway
 }
 
 function updateIncomeTabUI(totals) {
@@ -303,13 +308,25 @@ function updateIncomeTabUI(totals) {
     if (incomeStreamsContainer) {
         incomeStreamsContainer.innerHTML = '';
         store.financeData.incomeSources.forEach((source, index) => {
+            const isPrimary = index === store.financeData.primaryIncomeIndex;
+
+            // Variable sources get their own card: recent events, per-label
+            // rollup, FY aggregates — no pay-cycle maths.
+            if (source.incomeType === 'variable') {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.marginBottom = '20px';
+                card.innerHTML = buildVariableSourceCardHtml(source, isPrimary);
+                incomeStreamsContainer.appendChild(card);
+                return;
+            }
+
             const payCycles = getPayCyclesPerYear(source.paySchedule);
             const grossAnnual = source._calculatedGrossAnnual != null ? source._calculatedGrossAnnual : (source.grossAnnual || 0);
             const taxAnnual = source._calculatedAnnualTax || 0;
             const netAnnual = source._calculatedNetAnnual || 0;
             const payCycleGross = grossAnnual / payCycles;
             const payCycleNet = netAnnual / payCycles; // Use pre-calculated net
-            const isPrimary = index === store.financeData.primaryIncomeIndex;
             const typeLabel = source.incomeType === 'selfEmployed' ? 'Self-employed' : 'Salaried';
 
             const card = document.createElement('div');
@@ -339,6 +356,17 @@ function updateIncomeTabUI(totals) {
                 </div>`;
             incomeStreamsContainer.appendChild(card);
         });
+
+        // Running tax-provision estimate (annualised) — one card covering all
+        // variable sources; empty string when there are none / no events.
+        const provisionHtml = buildTaxProvisionCardHtml();
+        if (provisionHtml) {
+            const provCard = document.createElement('div');
+            provCard.className = 'card';
+            provCard.style.marginBottom = '20px';
+            provCard.innerHTML = provisionHtml;
+            incomeStreamsContainer.appendChild(provCard);
+        }
     }
 
     setHTML('income-breakdown', `
@@ -561,6 +589,9 @@ function updateSavingsTabUI(totals) {
             <span style="font-weight: 600; color: var(--color-warning);">${currentProgress.toFixed(1)}%</span>
         </div>
     `);
+
+    // Variable income — tax pot vs estimated liability comparison.
+    renderTaxProvisionCard(totals);
 
     // H.6 — Assets card on the Savings tab. Assets are edited in the Savings gear modal but
     // were only *shown* on the Dashboard's Net Worth card; mirror that list here.

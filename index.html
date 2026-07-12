@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-ft-fouc-init'; style-src 'self' 'unsafe-inline'; font-src 'self' data:;">
+    <!-- script-src whitelists cdn.jsdelivr.net for ONE thing: the on-demand PDF.js
+         dynamic import (bank statement / payslip reading); worker-src blob: lets
+         PDF.js spin up its parsing worker (it wraps the CDN worker in a blob).
+         Everything else stays 'self'. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-ft-fouc-init' https://cdn.jsdelivr.net; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:;">
     <title>Ledger</title>
     <script nonce="ft-fouc-init">
     /* FOUC prevention — replays the last-applied theme before CSS loads */
@@ -70,6 +74,10 @@
                 <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
                 <span class="tab-label">Import CSV</span>
             </button>
+            <button class="sidebar-settings" id="open-pdf-import" aria-haspopup="dialog" aria-controls="pdf-import-modal">
+                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg></span>
+                <span class="tab-label">Import PDF</span>
+            </button>
             <button role="tab" class="tab" data-tab-target="whatIf" aria-controls="whatIf" aria-selected="false" tabindex="-1">
                 <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="20" cy="14" r="2"/></svg></span>
                 <span class="tab-label">What If?</span>
@@ -96,6 +104,8 @@
                 </div>
                 <div class="pulse-row" id="home-pulse"></div>
                 <div id="home-upcoming"></div>
+                <!-- Variable income — volatility dashboard; renders only when a Variable source exists. -->
+                <div id="home-income-volatility"></div>
                 <div class="feed" id="home-feed" aria-live="polite"></div>
             </div>
 
@@ -242,6 +252,11 @@
                         <div class="card-title" id="year-so-far-title">This year so far</div>
                         <div class="card-subtitle">Your year in numbers</div>
                         <div id="year-so-far-stats" style="margin-top: 14px;"></div>
+                    </div>
+                    <div class="card" id="dashboard-coaster-card" hidden>
+                        <div class="card-title">Coasting runway</div>
+                        <div class="card-subtitle">How long your assets cover your average spending</div>
+                        <div id="dashboard-coaster-body" style="margin-top: 14px;"></div>
                     </div>
                 </div>
                 </div><!-- /#dashboard-populated -->
@@ -415,6 +430,11 @@
                         <div class="card-subtitle">At current savings rate</div>
                         <div style="margin: 20px 0;" id="fi-stats"></div>
                     </div>
+                </div>
+                <div class="card" id="tax-provision-card" hidden style="margin-top: 30px;">
+                    <div class="card-title">Tax provision</div>
+                    <div class="card-subtitle">Your tax pot vs the estimated liability on variable income</div>
+                    <div id="tax-provision-body" style="margin-top: 14px;"></div>
                 </div>
                 <div class="card" style="margin-top: 30px;">
                     <div class="card-title">Assets</div>
@@ -830,7 +850,62 @@
                         <div id="income-sources-settings"></div>
                     </div>
                     <button class="add-btn" id="add-income-source">+ Add Income Source</button>
+                    <!-- Payslip PDF autofill target — one shared picker; the clicked row's
+                         index is stashed by the handler before opening it. -->
+                    <input type="file" id="payslip-file" accept=".pdf,application/pdf" hidden>
                 </div>
+                <div class="settings-section">
+                    <div class="settings-title">Income statement</div>
+                    <p class="settings-hint" style="margin-bottom: 12px;">A printable statement of your income events — month by month, with per-client totals and hourly rates where you've tracked hours. Handy for rental applications, lenders, or your accountant.</p>
+                    <div class="income-statement-controls">
+                        <label class="form-label" for="income-statement-period">Period</label>
+                        <select class="form-select" id="income-statement-period">
+                            <option value="3">Last 3 months</option>
+                            <option value="6" selected>Last 6 months</option>
+                            <option value="12">Last 12 months</option>
+                            <option value="fy">This financial year</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" id="open-income-statement">Open income statement</button>
+                    </div>
+                    <p class="settings-hint" id="income-statement-note" style="margin-top: 8px;"></p>
+                </div>
+                <!-- Static reference only — not legal advice, and deliberately NOT auto-updating.
+                     Rates change every 1 July; the card says so and points at the source. -->
+                <details class="settings-section award-reference" id="award-reference">
+                    <summary class="award-reference-summary">Hospitality award quick reference (HIGA) — minimum hourly rates</summary>
+                    <div class="award-reference-body">
+                        <p class="settings-hint">Approximate <strong>Hospitality Industry (General) Award</strong> adult minimums as at 1 July 2025. Reference only — not legal advice. Rates change every 1 July and depend on your exact classification; always check <strong>fairwork.gov.au</strong> or the P.A.C.T. pay calculator.</p>
+                        <div class="award-table-wrap">
+                            <table class="award-table">
+                                <thead>
+                                    <tr><th scope="col">Classification</th><th scope="col">Full/part-time</th><th scope="col">Casual (+25%)</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Introductory</td><td>$24.95</td><td>$31.19</td></tr>
+                                    <tr><td>Level 2 (e.g. food &amp; beverage attendant gr. 2)</td><td>$26.13</td><td>$32.66</td></tr>
+                                    <tr><td>Level 3 (e.g. F&amp;B attendant gr. 3, cook gr. 1)</td><td>$26.96</td><td>$33.70</td></tr>
+                                    <tr><td>Level 4 (e.g. cook gr. 3 — trade)</td><td>$28.36</td><td>$35.45</td></tr>
+                                    <tr><td>Level 5 (e.g. cook gr. 4)</td><td>$30.09</td><td>$37.61</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="award-table-wrap" style="margin-top: 10px;">
+                            <table class="award-table">
+                                <thead>
+                                    <tr><th scope="col">When you work</th><th scope="col">Full/part-time</th><th scope="col">Casual</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Saturday</td><td>125% of base</td><td>150% of base</td></tr>
+                                    <tr><td>Sunday</td><td>150% of base</td><td>175% of base</td></tr>
+                                    <tr><td>Public holiday</td><td>225% of base</td><td>250% of base</td></tr>
+                                    <tr><td>Weeknights 7pm–midnight</td><td>+10% of standard rate/hr</td><td>same loading applies</td></tr>
+                                    <tr><td>Weeknights midnight–7am</td><td>+15% of standard rate/hr</td><td>same loading applies</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="settings-hint" style="margin-top: 10px;">Use the <strong>Pen.</strong> flag on an income event to mark shifts paid at penalty rates — with a base hourly rate set, Ledger shows how much of your pay came from loadings. It never calculates entitlements for you.</p>
+                    </div>
+                </details>
                 <div class="settings-section">
                     <div class="settings-title">
                         Tax Brackets (used for estimates)
@@ -967,12 +1042,13 @@
                         <p>Make it your own — create whatever categories make sense for you. The only rule: your allocations must total 100%.</p>
                     </details>
                     <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 2fr 0.8fr 1fr 1fr auto;">
-                            <span>Allocation Name</span> <span>%</span> <span>Current Funds</span> <span>Goal (opt)</span> <span>Action</span>
+                        <div class="list-header" style="grid-template-columns: 2fr 0.8fr 1fr 1fr 0.6fr auto;">
+                            <span>Allocation Name</span> <span>%</span> <span>Current Funds</span> <span>Goal (opt)</span> <span>Tax pot</span> <span>Action</span>
                         </div>
                         <div id="allocation-settings"></div>
                     </div>
                     <button class="add-btn" id="add-allocation-category">+ Add Category</button>
+                    <p class="settings-hint" style="margin-top: 8px;">Tick <strong>Tax pot</strong> on the bucket where you park money for tax — the Savings tab compares its balance against the estimated liability on your variable income.</p>
                     <p style="margin-top: 10px; color: var(--text-color-secondary); font-size: 0.9em;">
                         Total: <span id="total-percent">0.0%</span> (should equal 100%)
                     </p>
@@ -1172,6 +1248,56 @@
                 </div>
 
                 <div id="import-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ledger — bank PDF import. Same sandboxed shape as the CSV flow: parse →
+         detect bank → preview → explicit commit (with undo). PDF.js loads from the
+         CDN on demand the first time this modal is used; the PDF itself never
+         leaves the device. -->
+    <div class="modal-backdrop" id="pdf-import-modal" hidden>
+        <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="pdf-import-title">
+            <div class="modal-header">
+                <h2 id="pdf-import-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg> Import bank statement (PDF)</h2>
+                <button class="modal-close" aria-label="Close PDF import">
+                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="pdf-import-drop" class="import-drop" tabindex="0">
+                    <p class="import-drop-title">Drop a PDF bank statement here</p>
+                    <p class="import-drop-sub">or</p>
+                    <button type="button" class="btn btn-secondary" id="pdf-import-browse">Choose a file…</button>
+                    <input type="file" id="pdf-import-file" accept=".pdf,application/pdf" hidden>
+                    <p class="settings-hint">Works with CommBank, NAB, Westpac, ANZ, ING, Up and Bendigo statements (plus a generic reader for other banks). Everything is read right here in your browser — the file never leaves this device. The PDF reader library loads from a CDN the first time, so that step needs internet.</p>
+                </div>
+
+                <div id="pdf-import-status" role="status" aria-live="polite"></div>
+
+                <div id="pdf-import-config" class="settings-section" hidden>
+                    <div class="settings-title">Check what we found</div>
+                    <p class="settings-hint" id="pdf-import-detect-note" style="margin-bottom: 12px;"></p>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="pdf-import-source-name">Where is this from?</label>
+                            <input type="text" class="form-input" id="pdf-import-source-name" maxlength="40" placeholder="e.g. ING everyday account">
+                        </div>
+                    </div>
+                    <div class="import-toggles">
+                        <label class="settings-inline-check"><input type="checkbox" id="pdf-import-invert"> My spending shows as positive numbers</label>
+                    </div>
+                </div>
+
+                <div id="pdf-import-preview"></div>
+                <div id="pdf-import-errors"></div>
+
+                <div class="settings-actions" id="pdf-import-actions" hidden style="border-top: none; padding-top: 0;">
+                    <button class="btn" id="pdf-import-commit">Import</button>
+                    <button class="btn btn-secondary" id="pdf-import-start-over">Start over</button>
+                </div>
+
+                <div id="pdf-import-result"></div>
             </div>
         </div>
     </div>

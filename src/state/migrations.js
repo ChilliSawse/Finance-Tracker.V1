@@ -59,7 +59,8 @@ export function migrateLedgerFields(data) {
 export function migrateIncomeSourceTypes(data) {
     if (!data || !Array.isArray(data.incomeSources)) return;
     data.incomeSources.forEach(source => {
-        if (source.incomeType === 'salaried' || source.incomeType === 'selfEmployed') return;
+        if (source.incomeType === 'salaried' || source.incomeType === 'selfEmployed'
+            || source.incomeType === 'variable') return;
 
         const cycles = getPayCyclesPerYear(source.paySchedule);
         const grossAnnual = parseFloat(source.grossAnnual) || 0;
@@ -101,5 +102,36 @@ export function migrateAllocationFields(data) {
     data.allocation.forEach(alloc => {
         if (typeof alloc.currentBalance !== 'number') alloc.currentBalance = 0;
         if (typeof alloc.savingsGoal !== 'number') alloc.savingsGoal = 0;
+        // Variable-income era: a bucket can be tagged as the tax provision pot.
+        if (typeof alloc.isTaxProvision !== 'boolean') alloc.isTaxProvision = false;
+    });
+}
+
+/**
+ * Variable-income fields (the third incomeType). Idempotent and additive:
+ * - every source gets an incomeEvents array (kept even after switching a
+ *   source back to salaried, so no data is lost) and a baseHourlyRate slot;
+ * - event rows get their optional fields normalised so render/calc code can
+ *   trust the shape after a JSON backup round-trip.
+ */
+export function migrateVariableIncomeFields(data) {
+    if (!data || !Array.isArray(data.incomeSources)) return;
+    data.incomeSources.forEach(source => {
+        if (!Array.isArray(source.incomeEvents)) source.incomeEvents = [];
+        if (source.baseHourlyRate !== undefined && typeof source.baseHourlyRate !== 'number') {
+            const v = parseFloat(source.baseHourlyRate);
+            source.baseHourlyRate = isNaN(v) ? null : v;
+        }
+        (source.incomeEvents || []).forEach(e => {
+            if (!e.id) e.id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : String(Math.random());
+            if (typeof e.date !== 'string') e.date = '';
+            if (typeof e.label !== 'string') e.label = '';
+            if (typeof e.netAmount !== 'number') e.netAmount = parseFloat(e.netAmount) || 0;
+            if (e.taxWithheld != null && typeof e.taxWithheld !== 'number') e.taxWithheld = parseFloat(e.taxWithheld) || null;
+            if (e.hours != null && typeof e.hours !== 'number') e.hours = parseFloat(e.hours) || null;
+            if (e.cashReceived != null && typeof e.cashReceived !== 'number') e.cashReceived = parseFloat(e.cashReceived) || null;
+            e.gstInclusive = !!e.gstInclusive;
+            e.penaltyRates = !!e.penaltyRates;
+        });
     });
 }
