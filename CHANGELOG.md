@@ -1,6 +1,6 @@
 # Changelog — finance-tracker
 
-Reconstructed from git history by Build 15c. Entries before 2026-11-17 were not written at the time; they are grouped by month (Build 13 is the only build tag in the history). The first version is 1.0.0, the version `package.json` carried from the start; later groups add one minor version each, so the top entry is 1.3.0 and `package.json` now says the same.
+Reconstructed from git history by Build 15c. Entries before 2026-11-17 were not written at the time; they are grouped by month (Build 13 is the only build tag in the history). The first version is 1.0.0, a reconstruction anchor only: `package.json` was first added on 2026-07-07 (commit 9be0163), so the earlier entries predate any version file. Later groups add one minor version each, so the top entry is 1.3.0 and `package.json` now says the same.
 
 ## [1.3.0] — 2026-10-17
 

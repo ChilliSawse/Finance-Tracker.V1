@@ -27,7 +27,7 @@ Version 1.3.0 (`package.json`, name `ledger`). Changes by version are in [`CHANG
 **The experience**
 - **Offline-first PWA** — installable, works with no connection, service worker generated per-build
 - **First-run onboarding** — guided setup or a complete sample household (Alex & Sam, 80 transactions) to explore risk-free
-- **Theme engine** — 13 presets from warm *Sunrise* (default) to *Terminal* and *Midnight*, plus a colour-harmony generator, custom themes with import/export, and custom font upload. Honours your system's dark-mode preference on first run.
+- **Theme engine** — 12 presets ported (`src/theme/theme.js:60`; whether the default adds a 13th is UNVERIFIED), from warm *Sunrise* (default) to *Terminal* and *Midnight*, plus a colour-harmony generator, custom themes with import/export, and custom font upload. Honours your system's dark-mode preference on first run.
 - **Accessible** — keyboard navigation throughout, ARIA tab/dialog patterns, reduced-motion support
 - **Your data is yours** — JSON backup/restore, CSV export, no server, no analytics, no accounts
 
@@ -70,8 +70,8 @@ Vanilla JavaScript (no framework), ES modules, Vite build, Workbox-generated ser
 | `src/state/` | The store, autosave, IndexedDB access (`db.js`, `transactions.js`, `eventlog.js`), migrations, defaults and sample data |
 | `src/calc/` | Pure, DOM-free maths: `tax-au.js` (Australian brackets, Medicare, HELP), `calculations.js`, `income-events.js` |
 | `src/import/` | Bank CSV import (`csv.js`, `import-ui.js`) and PDF statement and payslip import (`pdf-*.js`, `payslip.js`) |
-| `src/events/` | Delegated event handlers: tabs and setup, settings, import and export |
-| `src/ui/` | Rendering by tab (`render.js`, `render-tabs.js`), the activity feed, What If, modals, onboarding |
+| `src/events/` | Delegated event handlers: setup, settings, import and export |
+| `src/ui/` | Rendering by tab (`render.js`, `render-tabs.js`), tab switching (`tabs.js`), the activity feed, What If, modals, onboarding |
 | `src/theme/` | The theme engine (`theme.js`, `appearance.js`) |
 | `src/i18n/` | The string catalogue and `t()` |
 | `src/pwa.js`, `vite.config.js`, `public/` | The offline service worker, build config, manifest and icons |
