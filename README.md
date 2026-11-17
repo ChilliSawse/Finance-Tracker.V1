@@ -4,6 +4,10 @@
 
 Ledger opens on an activity feed, not a spreadsheet: *"You imported 47 transactions from CBA." "Net worth crossed $50,000." "Car insurance is due in 3 days."* Behind it sits a correct Australian tax engine, bank CSV import, budget envelopes, and a scenario sandbox — all running entirely in your browser. Nothing you enter ever leaves your device.
 
+**Project:** finance-tracker · **Part:** finance-tracker · **System page:** none (no system page covers this project)
+
+Version 1.3.0 (`package.json`, name `ledger`). Changes by version are in [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Features
 
 **The story**
@@ -40,11 +44,11 @@ npm run preview  # serve the production build locally
 
 Deploy `dist/` to any static host. A GitHub Pages workflow is included (`.github/workflows/deploy.yml`) — enable Pages (Source: GitHub Actions) and push to the default branch.
 
-**Verify the maths:** open `/tests.html` (dev or built) — the calculation test harness runs 122 assertions against the tax engine, HELP projections, CSV parser, and stores in your own browser.
+**Verify the maths:** open `/tests.html` (dev or built) — the calculation test harness runs its assertions against the tax engine, HELP projections, CSV parser, and stores in your own browser.
 
 ## Privacy
 
-Everything is stored locally: settings and finances in `localStorage`, imported transactions and the activity log in IndexedDB. CSV files are parsed in the page and never uploaded. There is no backend, no telemetry, and no account.
+Everything is stored locally: settings and finances in `localStorage`, imported transactions and the activity log in IndexedDB. CSV files are parsed in the page and never uploaded. There is no backend, no telemetry, and no account. The one outside fetch is the PDF statement import, which loads the PDF.js library from a public CDN the first time it is used (`src/import/pdfjs-loader.js`); the PDF itself stays on your device.
 
 ## Tech
 
@@ -55,8 +59,39 @@ Vanilla JavaScript (no framework), ES modules, Vite build, Workbox-generated ser
 - Tax reference data lives in `src/calc/tax-au.js` (brackets, Medicare, HELP tables per financial year) — the engine itself is generic and user-editable in-app
 - The two-layer theme token system (`applyGuiStylesToPage` → `deriveTokens`) drives every colour; new UI must use tokens, never hex
 - The What If sandbox pattern (`data-scope` routing onto a cloned state) is the house style for any feature that previews before committing — CSV import follows it
-- Dev docs: `NOTES.md` (decisions log), `Implementation-Record.md` (pre-rebuild history)
+- The planning notes, decisions log and implementation record are no longer in this repo (removed in the 2026-10-17 clean-up); `CLAUDE.md` holds the architecture notes for working on the code
+
+## Codemap
+
+| Path | What it does |
+|---|---|
+| `index.html`, `style.css`, `tests.html` | The page, the styles, and the calculation test harness (a second built page) |
+| `src/main.js` | Start-up, in a fixed order: load data, theme, settings forms, events, render, restore the tab |
+| `src/state/` | The store, autosave, IndexedDB access (`db.js`, `transactions.js`, `eventlog.js`), migrations, defaults and sample data |
+| `src/calc/` | Pure, DOM-free maths: `tax-au.js` (Australian brackets, Medicare, HELP), `calculations.js`, `income-events.js` |
+| `src/import/` | Bank CSV import (`csv.js`, `import-ui.js`) and PDF statement and payslip import (`pdf-*.js`, `payslip.js`) |
+| `src/events/` | Delegated event handlers: tabs and setup, settings, import and export |
+| `src/ui/` | Rendering by tab (`render.js`, `render-tabs.js`), the activity feed, What If, modals, onboarding |
+| `src/theme/` | The theme engine (`theme.js`, `appearance.js`) |
+| `src/i18n/` | The string catalogue and `t()` |
+| `src/pwa.js`, `vite.config.js`, `public/` | The offline service worker, build config, manifest and icons |
+| `.github/workflows/deploy.yml` | Builds `dist/` and publishes it to GitHub Pages on a push to `main` |
+
+## Invariants
+
+What must stay true (each is spelled out in `CLAUDE.md`; there is no vault ruling behind them):
+
+- **No framework and no backend.** Vanilla JavaScript and ES modules; everything stays on the device.
+- **Saved-data keys never change**: `financeTrackerData_v2` and the `ft-*` localStorage keys, because real saves depend on them (`src/state/autosave.js`).
+- **Money is stored in integer cents** (`src/state/transactions.js`).
+- **The tax maths is verified**: do not touch `src/calc/tax-au.js` without running `tests.html`, which must stay green.
+- **Colours come from theme tokens**, never hex values in new UI.
+- **New user-facing strings go in the catalogue** (`src/i18n/en.js`).
+- **The PWA import is guarded** so unbuilt, raw hosting still boots (`src/pwa.js`).
+- **Nothing private in this repo**: it is public on GitHub.
 
 ## Licence
 
 TBD — all rights reserved until a licence is chosen. If you'd like to use Ledger beyond personal evaluation in the meantime, open an issue.
+
+Changes by version: see [`CHANGELOG.md`](CHANGELOG.md).
