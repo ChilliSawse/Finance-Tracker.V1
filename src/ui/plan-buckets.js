@@ -372,7 +372,7 @@ function fireHtml(m) {
         <div class="ctl"><button type="button" class="pb-mvb" data-pb="fire-up" data-id="${esc(r.id)}" aria-label="${A('e.plan.fireUp', { name: r.label })}"${i === 0 ? ' disabled' : ''}><span aria-hidden="true">↑</span></button>
         <button type="button" class="pb-mvb" data-pb="fire-down" data-id="${esc(r.id)}" aria-label="${A('e.plan.fireDown', { name: r.label })}"${i === last ? ' disabled' : ''}><span aria-hidden="true">↓</span></button>
         <button type="button" class="link small" data-pb="fire-skip" data-id="${esc(r.id)}" data-skip="${r.skip ? '0' : '1'}" aria-label="${A(r.skip ? 'e.plan.fireUnskipAria' : 'e.plan.fireSkipAria', { name: r.label })}">${esc(t(r.skip ? 'e.plan.fireUnskip' : 'e.plan.fireSkip'))}</button>
-        ${r.removable ? `<button type="button" class="link small" data-pb="fire-remove" data-id="${esc(r.id)}" aria-label="${A('e.plan.fireRemoveAria', { name: r.label })}">${esc(t('e.plan.fireRemove'))}</button>` : ''}</div></li>`).join('');
+        ${r.removable ? `<button type="button" class="link small" data-pb="fire-edit" data-id="${esc(r.id)}" aria-label="${A('e.plan.fireEditAria', { name: r.label })}">${esc(t('e.plan.fireEdit'))}</button><button type="button" class="link small" data-pb="fire-remove" data-id="${esc(r.id)}" aria-label="${A('e.plan.fireRemoveAria', { name: r.label })}">${esc(t('e.plan.fireRemove'))}</button>` : ''}</div></li>`).join('');
     const cash = f.cashCents > 0 ? `<div class="pb-hint"><span>${T('e.plan.fireCash', { amount: money(f.cashCents), name: f.active.label })}</span><button type="button" class="btn sm" data-pb="fire-cash">${esc(t('e.plan.fireCashBtn'))}</button></div>` : '';
     const note = f.note ? `<p class="pb-note">${T('e.plan.fireMojoNote', { starter: moneyWhole(MOJO_STARTER_CENTS) })}</p>` : '';
     const debtBtn = f.freeDebts.length ? `<button type="button" class="link small" data-pb="fire-add-debt">${esc(t('e.plan.fireAddDebt'))}</button>` : '';
@@ -501,6 +501,7 @@ export function dispatchBucketAction(data, action, a = {}, ctx = {}) {
         case 'fire-skip': return { res: skipTarget(data, a.id, a.skip !== '0') };
         case 'fire-remove': return { res: removeTarget(data, a.id) };
         case 'fire-cash': return { res: applyCashToTarget(data, { today }) };
+        case 'fire-edit': return { sheet: { kind: 'target-edit', id: a.id } };
         case 'fire-add-pot': return { sheet: { kind: 'target-pot' } };
         case 'fire-add-debt': return { sheet: { kind: 'target-debt' } };
         case 'mojo-change': return { sheet: { kind: 'mojo' } };
@@ -657,7 +658,7 @@ function openTargetSheet(root, kind) {
     });
 }
 
-const E7_KINDS = ['split', 'template', 'goal', 'goal-new', 'mojo', 'bucket-new', 'target-pot', 'target-debt'];
+const E7_KINDS = ['split', 'template', 'goal', 'goal-new', 'mojo', 'bucket-new', 'target-pot', 'target-debt', 'target-edit'];
 
 /** Which E7 sheet an action opens: { kind, id } for openBucketSheet, or null (T3; pure so it can be tested). */
 export function bucketSheetRoute(sheet) {
@@ -671,7 +672,7 @@ function openFor(root, sheet) {
     const route = bucketSheetRoute(sheet);
     if (kind === 'bucket') { if (route) openBucketSheet(route.kind, route.id); return; }
     const e7 = route ? openBucketSheet(route.kind, route.id) : false;
-    if (e7) return;
+    if (e7 || kind === 'target-edit') return; // a target that is gone opens nothing, never the add sheet
     if (kind === 'split') openSplitSheet(root);
     else if (kind === 'template') openTemplateSheet(root);
     else if (kind === 'goal') openGoalSheet(root, sheet.id, null);

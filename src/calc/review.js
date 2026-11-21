@@ -32,6 +32,22 @@ export function inMonth(dateIso, month) {
     return d >= `${month}-01` && d <= `${month}-31`;
 }
 
+const isObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
+
+/** The "last opened" marker lives at savingModel.review (bucket-migration.js); data.review is read only as an older shape. */
+function lastOpenedMonth(data) {
+    const sm = data && data.savingModel;
+    const r = isObj(sm) && isObj(sm.review) ? sm.review : data && data.review;
+    return (isObj(r) && r.lastOpenedMonth) || null;
+}
+
+/** bankSetTo lives at savingModel.transfers.bankSetTo; savingModel.bankSetTo is read only as an older shape. */
+export function bankSetToOf(data) {
+    const sm = data && data.savingModel;
+    if (!isObj(sm)) return null;
+    return (isObj(sm.transfers) && sm.transfers.bankSetTo) || sm.bankSetTo || null;
+}
+
 /**
  * The month to review, or null. It is the previous complete calendar month, so on the 31st (or any day before the 1st)
  * the month just ending is not due yet. Null once review.lastOpenedMonth is that month or later, and null when the month
@@ -39,7 +55,7 @@ export function inMonth(dateIso, month) {
  */
 export function reviewDue(data, today, opts = {}) {
     const month = previousMonth(monthOf(today));
-    const last = data && data.review && data.review.lastOpenedMonth;
+    const last = lastOpenedMonth(data);
     if (last && last >= month) return null;
     const moves = (data && data.savingModel && data.savingModel.movements) || [];
     if (moves.some((m) => m && inMonth(m.date, month))) return month;
@@ -146,6 +162,6 @@ export function buildMonthlyReview({ data, month, spendByCategory, today } = {})
         movements: movementsBlock(data, month, today),
         targets: targetsBlock(data, today, payDates),
         transfers: transfersToUpdate({ allocation: data && data.allocation, netCents: netPerPayCents(data),
-            bankSetTo: data && data.savingModel && data.savingModel.bankSetTo }),
+            bankSetTo: bankSetToOf(data) }),
     };
 }

@@ -317,7 +317,7 @@ export function renderTaxProvisionCard(totals) {
     card.hidden = false;
 
     const prov = estimateVariableTaxProvision(store.financeData);
-    const pot = (store.financeData.allocation || []).find(a => a.isTaxProvision);
+    const pot = (store.financeData.allocation || []).find(a => a && a.isTaxProvision);
 
     let html;
     if (!prov) {

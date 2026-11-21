@@ -1,5 +1,6 @@
 // Today's tax slot (C8, FT-R-66). Two states, both driven by taxTablesStatus (C1):
-//   July card  - from 1 July until a payslip is checked ("New tax year: check one payslip").
+//   July card  - from 1 July until a payslip is checked ("New tax year: check one payslip"); with no check ever made,
+//                only for a payslip-job source and only July to September.
 //                Stored as data.taxCheck = { fy, done }; Dismiss is explicit (adds dismissed:true).
 //   Stale      - the shipped tables are older than today's income year: one quiet label.
 // The builders are pure (now, data in; HTML out). Data is escaped; colours are tokens (today.css).

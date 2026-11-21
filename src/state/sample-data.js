@@ -13,7 +13,7 @@ import { logEvent } from './eventlog.js';
 import { calculateTotals } from '../calc/calculations.js';
 import { matchBills } from '../calc/bill-match.js';
 import { billOccurrences, addMonthsClamped, addDays, toIso, parseIso } from '../calc/pay-cycle.js';
-import { applySuggestedSplit, addGoal, setGoalShares, addTarget, moveTarget, removeTarget } from './saving-model.js';
+import { getBuckets, applySuggestedSplit, addGoal, setGoalShares, addTarget, moveTarget, removeTarget } from './saving-model.js';
 
 export const SAMPLE_BATCH_ID = 'ledger-sample-data';
 export const SAMPLE_FLAG_KEY = 'ft-sample-data';
@@ -196,6 +196,10 @@ export function buildSampleHousehold(today) {
     const indexOf = (id) => data.savingModel.fire.targets.findIndex((x) => x.id === id);
     while (indexOf('debt:l-credit-card') > 0) moveTarget(data, 'debt:l-credit-card', -1);
     while (indexOf('debt:l-car-loan') > 1) moveTarget(data, 'debt:l-car-loan', -1);
+    // What the bank transfers were last set to: the split rounded to the nearest ten dollars per pay, so the review's "Transfers to update" has rows to tick.
+    for (const b of getBuckets(data, t).filter((x) => !x.parentId && x.role !== 'mojo' && x.role !== 'grow')) {
+        data.savingModel.transfers.bankSetTo[b.id] = Math.round(b.perPayCents / 1000) * 1000;
+    }
 
     // Pay from the engine at generation time: no literal figure (the old 2,612.42 ignored HELP and Medicare).
     const alexPay = engineNetPerCycleCents(data, 0, t);
