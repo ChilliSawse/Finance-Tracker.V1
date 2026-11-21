@@ -308,7 +308,7 @@ function dueHtml(model) {
       <section class="card due-card a-due" aria-labelledby="h-due">
         <div class="card-head"><h2 id="h-due">${t(model.mode === 'month' ? 'a.today.dueTitleMonth' : 'a.today.dueTitle')}</h2><button type="button" class="link" data-go="activity">${t('a.today.allBills')}</button></div>
         ${rows.length ? `<ul class="rows">${rows.join('')}</ul>` : `<p class="muted">${t('a.today.dueNone')}</p>`}
-        <div class="due-total"><span>${t('a.today.heldBack')}</span><span class="money">${esc(money(model.billsDueCents))}</span></div>
+        <div class="due-total"><span>${t('a.today.heldBack')}</span><span class="money">${esc(money(model.dueListCents))}</span></div>
       </section>`;
 }
 

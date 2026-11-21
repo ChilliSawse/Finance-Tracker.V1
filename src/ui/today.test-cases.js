@@ -250,4 +250,18 @@ export const TODAY_TEST_CASES = [
             assert('mojo no longer borrows smile', (html.match(/class="tile b-smile"/g) || []).length, 1);
         },
     },
+    {
+        name: 'K3 Due card total is the sum of the rows it lists (a bill from another bucket included)',
+        fn(assert) {
+            const item = (id, name, amount, due, categoryId) => ({ id, categoryId, name, amount, frequency: 'monthly', anchorDue: due, inTotals: true });
+            const plan = [item('nfx', 'Netflix', 18.99, '2026-11-04', 'subscriptions'), item('ph', 'Phone', 65, '2026-11-08', 'phone')];
+            const { model, html } = run(mkData({ plan }), ROWS_A);
+            const listed = model.dueBeforePay.reduce((a, b) => a + Math.round(b.bill.amount * 100), 0);
+            assert('both listed', model.dueBeforePay.length, 2);
+            const card = html.slice(html.indexOf('class="due-total"'));
+            const shown = formatCurrency(listed / 100);
+            assert('card total equals the list sum', card.slice(0, 200).includes(shown), true);
+            assert('hero keeps billsDueCents', html.includes(formatCurrency(model.buckets.length ? model.billsDueCents / 100 : 0)), true);
+        },
+    },
 ];
