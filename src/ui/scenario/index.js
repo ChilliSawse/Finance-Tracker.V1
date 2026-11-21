@@ -34,7 +34,7 @@ const renderers = {};
  * Registering the same function again replaces it; a null function clears the region.
  */
 export function registerScenarioView(name, fn, { order = 0 } = {}) {
-    if (name !== 'answer' && name !== 'compare') return;
+    if (name !== 'answer' && name !== 'compare' && name !== 'make-real') return; // 'make-real' is the slot in the Compare step bar (F8b)
     if (typeof fn !== 'function') renderers[name] = [];
     else {
         const list = (renderers[name] || []).filter((r) => r.fn !== fn);
@@ -314,7 +314,10 @@ function comparePanel() {
     const acts = el('span', 'sn-acts');
     acts.appendChild(btn(t('f.wi.nav.change'), 'back-adjust'));
     const slot = el('span');
-    slot.dataset.hook = 'make-real'; // F8b adds Make this real here
+    slot.dataset.hook = 'make-real'; // F8b's Make this real button
+    for (const { fn } of renderers['make-real'] || []) {
+        try { fn(slot, { scenario: ui.scenario, data: dataNow(), today: todayIso() }); } catch (err) { console.error('scenario make-real view failed', err); }
+    }
     acts.appendChild(slot);
     nav.appendChild(acts);
     card.appendChild(nav);
