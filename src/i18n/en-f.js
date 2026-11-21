@@ -19,6 +19,7 @@ export const enF = {
     'f.scenario.keep': 'Keep',
     'f.scenario.update': 'Update',
     'f.scenario.madeReal': 'Made real: {count} changes applied',
+    'f.scenario.madeReal.one': 'Made real: 1 change applied',
     'f.scenario.untilDropped': 'End dates are not carried over: the change stays until you change it again.',
     // F3: FI engine, Explain this number
     'f.fi.explain.number': 'Your FI number is {number}: {multiple} times a year of Daily and Splurge spending ({spend}).',
@@ -578,6 +579,8 @@ export const enF = {
     'f.wa.pft.title': 'Plan for this',
     'f.wa.pft.aside': 'Save the chosen option as a scenario you can track towards',
     'f.wa.pft.lead': 'This is what {option} saves:',
+    'f.wa.pft.cutTotal': 'Together, the plan items above take {amt} {per} out of Splurge. Each amount shown is for that item in its own frequency, so a weekly item shows a weekly figure.',
+    'f.wa.pft.uncut': '{amt} of this cut is not tied to a plan item, so no item changes for it. It stays as your Splurge share.',
     'f.wa.pft.nothing': 'Nothing to save with this choice.',
     'f.wa.pft.split': 'Also move the split so Smile gets it: Smile {smileFrom} to {smileTo}, Splurge {splurgeFrom} to {splurgeTo}',
     'f.wa.pft.splitNo': 'The split is left as it is: Splurge could not pay for a bigger Smile on its own.',

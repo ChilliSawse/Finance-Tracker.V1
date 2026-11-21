@@ -3,12 +3,15 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 
 import { buildSampleHousehold } from '../../state/sample-data.js';
-import { computeAnswer, defaultState, verdictFor, renderAnswer, customOption } from './answer-top.js';
+import { computeAnswer, defaultState, verdictFor, renderAnswer, customOption, getAnswer } from './answer-top.js';
+import { renderAnswerBottom } from './results.js';
+import { plural } from '../../i18n/strings.js';
+import { applyMakeReal } from '../../state/scenarios.js';
 import { placeLabels, landingDates, rowCount, timelineModel } from './timeline.js';
 import {
-    optionChanges, pushDate, fundInOrder, dropGoal, shrinkGoal, planScenario, goalsFromPlan, splitOffer,
+    optionChanges, cutTakes, money, pushDate, fundInOrder, dropGoal, shrinkGoal, planScenario, goalsFromPlan, splitOffer,
 } from './plan-for-this.js';
-import { earningsThreeWays, planGoalsFromData } from '../../calc/goal-planner.js';
+import { earningsThreeWays, planGoalsFromData, splurgePlanItems } from '../../calc/goal-planner.js';
 import { resolveAt, changeProblems } from '../../calc/scenario.js';
 import { sanitizeScenario } from '../../state/scenarios.js';
 import { netPerPayCents } from '../../calc/plan.js';
@@ -258,6 +261,78 @@ export const SCENARIO_ANSWER_TOP_TEST_CASES = [
             box.querySelector('input.wa-radio[value="earn"]').click();
             assert('picking Earn it changes the top verdict', box.querySelector('.wa-verdict[data-verdict]').dataset.verdict, 'earn');
             box.remove();
+        },
+    },
+    {
+        name: 'Q1.1 Plan for this cuts exactly the option Splurge amount, biggest item first',
+        fn(assert) {
+            const items = [{ id: 'a', name: 'A', perPayCents: 22000 }, { id: 'b', name: 'B', perPayCents: 6900 }, { id: 'c', name: 'C', perPayCents: 5200 }];
+            assert('a cut inside the biggest item takes only that much', cutTakes(items, 13000).map((x) => [x.id, x.takeCents]), [['a', 13000]]);
+            assert('a cut across items takes the biggest whole first, then part of the next', cutTakes(items, 25000).map((x) => [x.id, x.takeCents]), [['a', 22000], ['b', 3000]]);
+            assert('a cut over all the items takes them all and no more', cutTakes(items, 99999).map((x) => x.takeCents), [22000, 6900, 5200]);
+            assert('ticked items only, still capped at the cut', cutTakes(items, 10000, ['b', 'c']).map((x) => [x.id, x.takeCents]), [['b', 6900], ['c', 3100]]);
+            for (const [fixture, id] of [['shortfall', 'mix'], ['shortfall', 'cut'], ['cuttable', 'mix'], ['cuttable', 'cut']]) {
+                const d = fixture === 'shortfall' ? shortfallData() : cuttableData();
+                const m = model(d, id);
+                const o = m.selected;
+                const oc = optionChanges({
+                    data: d, resolved: m.plan.resolved, existing: [], option: o, threeWays: m.threeWays, items: m.splurgeItems, today: TODAY,
+                    until: m.lastDue, neededPerPayCents: m.plan.requiredPerPayCents, withSplit: false,
+                });
+                const before = splurgePlanItems(d).reduce((s, i) => s + i.perPayCents, 0);
+                const after = splurgePlanItems(resolveAt(d, oc.changes, TODAY)).reduce((s, i) => s + i.perPayCents, 0);
+                const want = o.cutCents - oc.uncutCents;
+                assert(`${fixture}/${id}: the saved scenario takes exactly the option's cut out of the Splurge items (within a cent)`, Math.abs(before - after - want) <= 1, true);
+                assert(`${fixture}/${id}: any part of the cut with no plan item is reported, not lost`, oc.uncutCents >= 0 && oc.uncutCents < o.cutCents, true);
+            }
+            const m = model(shortfallData(), 'mix');
+            const exp = optionChanges({ data: shortfallData(), resolved: m.plan.resolved, existing: [], option: m.selected, threeWays: null, items: m.splurgeItems, today: TODAY, until: m.lastDue });
+            const dining = exp.changes.find((c) => c.target && c.target.id === 'p-dining');
+            assert('Mix on the sample: Dining is cut in part, not to nothing', dining.value > 0 && dining.value < dining.baseValue, true);
+        },
+    },
+    {
+        name: 'Q1.2 one change applied reads in the singular',
+        fn(assert) {
+            assert('one', plural(1, 'f.scenario.madeReal.one', 'f.scenario.madeReal'), 'Made real: 1 change applied');
+            assert('many', plural(3, 'f.scenario.madeReal.one', 'f.scenario.madeReal'), 'Made real: 3 changes applied');
+            const d = shortfallData();
+            const step = { id: 's1', route: 'plan', changes: [{ id: 'c1', kind: 'expense', target: { collection: 'plan', id: 'p-gym' }, field: 'amount', op: 'set', value: 10, baseValue: null, from: TODAY, until: null, note: '' }] };
+            const res = applyMakeReal(d, [step]);
+            assert('applyMakeReal says 1 change', [res.applied.length, res.message], [1, 'Made real: 1 change applied']);
+        },
+    },
+    {
+        name: 'Q1.3 the option, the verdict and the result cards move together (browser)',
+        fn(assert) {
+            if (!hasDom) return;
+            const d = cuttableData();
+            const sc = scenario([{ id: 'c1', kind: 'expense', target: { collection: 'plan', id: 'p-gym' }, field: 'amount', op: 'set', value: 20, baseValue: null, from: TODAY, until: null, note: '' }]);
+            const top = document.createElement('div');
+            const bottom = document.createElement('div');
+            document.body.append(top, bottom);
+            const ctx = { scenario: sc, data: d, today: TODAY };
+            renderAnswer(top, ctx);
+            renderAnswerBottom(bottom, ctx);
+            const splurgeCard = () => [...bottom.querySelectorAll('.wc li')].map((l) => l.textContent).find((x) => /^Splurge/.test(x)) || '';
+            const seen = new Set();
+            for (const id of ['cut', 'earn', 'mix']) {
+                top.querySelector(`input.wa-radio[value="${id}"]`).click();
+                assert(`${id}: the top verdict follows`, top.querySelector('.wa-verdict[data-verdict]').dataset.verdict, id);
+                assert(`${id}: the answer says the same`, getAnswer(sc.id).optionId, id);
+                const card = splurgeCard();
+                assert(`${id}: the Splurge result card shows this option's figure`, card.includes(money(getAnswer(sc.id).option.splurgeLeftCents)), true);
+                seen.add(card);
+            }
+            assert('the three choices gave three different Splurge cards', seen.size, 3);
+            const slider = top.querySelector('input[data-act="slider"]');
+            slider.value = String(Number(slider.max) / 2);
+            slider.dispatchEvent(new Event('input', { bubbles: true }));
+            assert('the slider makes it custom in the top verdict', top.querySelector('.wa-verdict[data-verdict]').dataset.verdict, 'custom');
+            assert('and the Splurge result card follows the slider', splurgeCard().includes(money(getAnswer(sc.id).option.splurgeLeftCents)), true);
+            assert('the Explain click is wired once however often the cards were redrawn', bottom._explainWired, true);
+            top.remove();
+            bottom.remove();
         },
     },
 ];

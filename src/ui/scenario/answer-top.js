@@ -608,7 +608,7 @@ function renderAnswer(container, ctx) {
             const res = await saveScenario(sc);
             if (!res.ok) { showToast(t('f.wi.saveFailed'), 'error'); return; }
             showToast(t('f.wa.pft.saved', { name: res.scenario.name }), 'info');
-            openScenario(res.scenario.id);
+            openScenario(res.scenario.id, { step: 'answer' });
         } catch (err) {
             console.error('plan save failed', err);
             showToast(t('f.wi.saveFailed'), 'error');

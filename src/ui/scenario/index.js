@@ -90,9 +90,10 @@ function rootEl() {
 
 /**
  * Open the What If screen on a saved scenario, or a new one when `id` is empty.
+ * `step` ('ask', 'adjust' or 'answer') picks the step to land on; Plan for this passes 'answer'.
  * @returns {boolean} true once the screen is showing (the scenario itself loads a moment later).
  */
-export function openScenario(id) {
+export function openScenario(id, { step = null } = {}) {
     const root = rootEl();
     if (!root) return false;
     showTab('future');
@@ -109,7 +110,7 @@ export function openScenario(id) {
         if (!row) { showToast(t('f.wi.notFound'), 'error'); closeScenario(); return; }
         ui.scenario = row;
         ui.saved = true;
-        ui.step = row.changes.length ? 'adjust' : 'ask';
+        ui.step = STEPS.includes(step) ? step : (row.changes.length ? 'adjust' : 'ask');
         render();
     }).catch((err) => {
         console.error('scenario load failed', err);

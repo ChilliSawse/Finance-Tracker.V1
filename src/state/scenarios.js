@@ -11,7 +11,7 @@ import { registerBackupPart, cleanValue, MAX_PART_ROWS } from './backup.js';
 import { changeProblems, applyOp, isIsoDate } from '../calc/scenario.js';
 import { addPlanItem, updatePlanItem, removePlanItem } from './plan.js';
 import { setSplit, addGoal, updateGoal, removeGoal } from './saving-model.js';
-import { t } from '../i18n/strings.js';
+import { t, plural } from '../i18n/strings.js';
 
 export const MAX_SCENARIO_ROWS = 10000;   // on restore; saving by hand has no cap
 export const MAX_CHANGES = 500;           // changes in one scenario, on save and on restore
@@ -249,7 +249,7 @@ export function applyMakeReal(data, steps) {
     let used = false;
     return {
         ok: failed.length === 0, applied, failed, sheets, skipped, onExpire: undefined,
-        message: t('f.scenario.madeReal', { count: applied.length }),
+        message: plural(applied.length, 'f.scenario.madeReal.one', 'f.scenario.madeReal'),
         onUndo() {
             if (used) return;
             used = true;

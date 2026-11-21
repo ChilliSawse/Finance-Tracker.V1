@@ -74,6 +74,26 @@ export function itemsForCut(items, cutCents, manualIds = null) {
 }
 
 /**
+ * How much of each Splurge item the cut takes, biggest first, so the takes add up to exactly the cut (Q1): the
+ * last item is cut only in part when the whole item is more than what is left. With ticked ids (`manualIds`) only
+ * those items are used, still biggest first and never more than `cutCents` in all.
+ * Returns [{id, name, perPayCents, takeCents}] (takeCents > 0 only).
+ */
+export function cutTakes(items, cutCents, manualIds = null) {
+    const ids = manualIds ? new Set(manualIds) : null;
+    const pool = (items || []).filter((i) => i && i.perPayCents > 0 && (!ids || ids.has(i.id)));
+    let left = Math.max(0, Math.round(cutCents) || 0);
+    const out = [];
+    for (const it of [...pool].sort((a, b) => b.perPayCents - a.perPayCents)) {
+        if (left <= 0) break;
+        const take = Math.min(left, it.perPayCents);
+        left -= take;
+        out.push({ id: it.id, name: it.name, perPayCents: it.perPayCents, takeCents: take });
+    }
+    return out;
+}
+
+/**
  * Split change offer: Smile gets what the plan needs each pay, Splurge pays for it. Daily, Fire extinguisher
  * and every other row keep their percentage. `neededPerPayCents` is the Smile figure the plan needs
  * (`requiredPerPayCents`). `data` is the real data, `changes` everything already in the scenario plus the
@@ -137,13 +157,19 @@ export function optionChanges({ data, resolved, existing, option, threeWays, ite
             }));
         }
     }
+    let uncutCents = 0;
     if (option.cutCents > 0) {
-        for (const it of itemsForCut(items, option.cutCents, manualIds)) {
+        const takes = cutTakes(items, option.cutCents, manualIds);
+        uncutCents = Math.max(0, option.cutCents - takes.reduce((s, x) => s + x.takeCents, 0));
+        for (const it of takes) {
             const row = (data.plan || []).find((p) => p && p.id === it.id);
             if (!row) continue;
+            const was = Number(row.amount) || 0;
+            // a whole item goes to 0; a part-cut item keeps the share of its own amount that is not taken (Q1)
+            const value = it.takeCents >= it.perPayCents ? 0 : Math.round((was * (it.perPayCents - it.takeCents) / it.perPayCents) * 100) / 100;
             out.push(mk(pool, {
-                kind: 'expense', target: { collection: 'plan', id: it.id }, field: 'amount', op: 'set', value: 0,
-                baseValue: Number(row.amount) || 0, from: today, until, note: t('f.wa.pft.noteCut'),
+                kind: 'expense', target: { collection: 'plan', id: it.id }, field: 'amount', op: 'set', value,
+                baseValue: was, from: today, until, note: t('f.wa.pft.noteCut'),
             }));
         }
     }
@@ -154,7 +180,7 @@ export function optionChanges({ data, resolved, existing, option, threeWays, ite
         split = splitOffer({ data, changes: [...existing, ...out], neededPerPayCents, today, until });
         if (split) out.push(...addSplit(pool, split));
     }
-    return { changes: out, split };
+    return { changes: out, split, uncutCents };
 }
 
 // ---------- the one-tap options ----------
@@ -324,6 +350,8 @@ export function renderPlanForThis(parent, ctx) {
     } else if (sel.cutCents > 0 || sel.earnedCents > 0) {
         main.appendChild(el('p', 'fine', t(sel.earnedCents > 0 ? 'f.wa.pft.splitWait' : 'f.wa.pft.splitNo')));
     }
+    if (sel.cutCents - noSplit.uncutCents > 0) main.appendChild(el('p', 'fine', t('f.wa.pft.cutTotal', { amt: money(sel.cutCents - noSplit.uncutCents), per: model.perWord })));
+    if (noSplit.uncutCents > 0) main.appendChild(el('p', 'fine', t('f.wa.pft.uncut', { amt: money(noSplit.uncutCents) })));
     const go = button(t('f.wa.pft.save'), 'pft-save', 'btn btn-primary');
     go.disabled = !showSpecs.length;
     main.appendChild(go);
