@@ -16,6 +16,7 @@ import {
     coasterMonths, detectSlowSeasons,
 } from '../calc/income-events.js';
 import { t } from '../i18n/strings.js';
+import { escNum } from './html.js';
 
 function fyLabel(fyKey) {
     return AU_TAX_YEARS[fyKey] ? AU_TAX_YEARS[fyKey].label : fyKey;
@@ -117,7 +118,7 @@ export function buildVariableSourceCardHtml(source, isPrimary) {
             </div>
             <div class="time-item">
                 <div class="time-label">Hours tracked</div>
-                <div class="time-amount">${fy.hours > 0 ? fy.hours : '—'}</div>
+                <div class="time-amount">${fy.hours > 0 ? escNum(fy.hours) : '—'}</div>
             </div>
         </div>
         ${recentHtml}
@@ -198,7 +199,7 @@ export function renderIncomeVolatility(totals) {
     const qRows = quarters.map(q => `
         <tr>
             <td>${escapeHtml(`${q.key} · ${q.label}`)}</td>
-            <td>${q.count || '—'}</td>
+            <td>${escNum(q.count) || '—'}</td>
             <td>${formatCurrency(q.net)}</td>
             <td>${formatCurrency(q.tax)}</td>
             <td>${formatCurrency(q.gst)}</td>

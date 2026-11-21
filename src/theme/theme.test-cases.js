@@ -70,15 +70,24 @@ export const THEME_TEST_CASES = [
         },
     },
     {
-        name: 'A4.3 the inline script is small, keeps its nonce and sets only the two attributes',
+        name: 'A4.3 the inline script is small, is allowed by hash (S2) and sets only the two attributes',
         async fn(assert) {
             const html = await indexHtml();
             if (html === null) { assert('index.html could not be read here, so the script is not checked', true, true); return; }
-            const m = html.match(/<script nonce="ft-fouc-init">([\s\S]*?)<\/script>/);
-            assert('the script keeps the ft-fouc-init nonce', Boolean(m), true);
+            const m = html.replace(/\r\n/g, '\n').match(/<script>([\s\S]*?)<\/script>/);
+            assert('the inline script is a plain classic script (no nonce)', Boolean(m), true);
             const body = m[1].trim();
             assert('at most 300 bytes', new TextEncoder().encode(body).length <= 300, true);
-            assert('the CSP still names that nonce', html.includes("'nonce-ft-fouc-init'"), true);
+            const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(m[1]));
+            const b64 = btoa(String.fromCharCode(...new Uint8Array(digest)));
+            const csp = html.match(/Content-Security-Policy" content="([^"]*)"/)[1];
+            const scriptSrc = csp.match(/script-src ([^;]*)/)[1];
+            assert('script-src carries the committed sha256 of the exact script', scriptSrc.includes("'sha256-" + b64 + "'"), true);
+            assert('script-src has no nonce and no unsafe-inline', /nonce-|unsafe-inline|unsafe-eval/.test(scriptSrc), false);
+            for (const d of ['object-src', 'base-uri', 'form-action', 'frame-src']) {
+                assert(d + " is 'none'", new RegExp(d + " 'none'").test(csp), true);
+            }
+            assert('the old nonce is gone everywhere', html.includes('ft-fouc-init'), false);
             const run = (stored) => {
                 const doc = { documentElement: { dataset: {} } };
                 new Function('localStorage', 'document', body)({ getItem: () => stored }, doc);

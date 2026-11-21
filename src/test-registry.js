@@ -34,6 +34,7 @@ import { FI_TEST_CASES } from './calc/fi.test-cases.js';
 import { GOAL_PLANNER_TEST_CASES } from './calc/goal-planner.test-cases.js';
 import { SCENARIO_UI_TEST_CASES } from './ui/scenario-ui.test-cases.js';
 import { SANITIZE_TEST_CASES } from './state/sanitize.test-cases.js';
+import { HTML_TEST_CASES } from './ui/html.test-cases.js';
 
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
@@ -68,4 +69,5 @@ export const TEST_GROUPS = [
     { name: 'goal-planner', env: 'pure', cases: GOAL_PLANNER_TEST_CASES },
     { name: 'scenario-ui', env: 'browser', cases: SCENARIO_UI_TEST_CASES },
     { name: 'sanitize', env: 'pure', cases: SANITIZE_TEST_CASES },
+    { name: 'html', env: 'pure', cases: HTML_TEST_CASES },
 ];

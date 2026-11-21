@@ -1,6 +1,7 @@
 // ES module conversion: logic unchanged from js/uiDashboard.js; financeData now lives on the store.
 import { store } from '../state/store.js';
 import { getElement, setText, setHTML, setValue, formatCurrency, escapeHtml, getWeeklyAmount, getPayCyclesPerYear, formatTimeToGoal } from '../utils.js';
+import { escNum } from './html.js';
 import { calculateYearsToFI, getTaxBracketBreakdown } from '../calc/calculations.js';
 import { sparklineSvg } from './sparkline.js';
 import { listSnapshots } from '../state/snapshots.js';
@@ -290,7 +291,7 @@ function updateDashboardUI(totals) {
                     </div>`;
             }
 
-            itemDiv.innerHTML = `<div class="savings-label">${escapeHtml(alloc.name)} (${alloc.percentage}%)</div><div class="savings-amount">${formatCurrency(amountForPeriod)}/${periodSuffix}</div>${goalLine}`;
+            itemDiv.innerHTML = `<div class="savings-label">${escapeHtml(alloc.name)} (${escNum(alloc.percentage)}%)</div><div class="savings-amount">${formatCurrency(amountForPeriod)}/${periodSuffix}</div>${goalLine}`;
             allocationDisplayContainer.appendChild(itemDiv);
         });
         if (store.financeData.allocation.length === 0) {
@@ -346,7 +347,7 @@ function updateIncomeTabUI(totals) {
                     </div>
                     <div class="time-item">
                         <div class="time-label">Hours / Cycle</div>
-                        <div class="time-amount">${source.hoursPerCycle || 'N/A'}</div>
+                        <div class="time-amount">${escNum(source.hoursPerCycle) || 'N/A'}</div>
                     </div>
                 </div>
                 <div class="source-annual-breakdown" style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color, #e0e0e0); font-size:0.9em; font-variant-numeric: tabular-nums;">
@@ -573,7 +574,7 @@ function updateSavingsTabUI(totals) {
 
     setHTML('fi-stats', `
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-            <span>Years to FI (${store.financeData.fiSettings.multiple}x expenses):</span>
+            <span>Years to FI (${escNum(store.financeData.fiSettings.multiple)}x expenses):</span>
             <span style="font-weight: 600; color: var(--color-positive);">${yearsLabel}</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
@@ -633,7 +634,7 @@ function updateLiabilitiesTabUI(totals) {
                     <div class="liability-card-title">${escapeHtml(debt.name)} <span class="cost-badge ${cost.cls}">${cost.label}</span></div>
                     <div class="liability-details">
                         <div class="liability-balance">${formatCurrency(debt.balance)}</div>
-                        <div class="liability-rate">Interest Rate: ${debt.interestRate}% annually</div>
+                        <div class="liability-rate">Interest Rate: ${escNum(debt.interestRate)}% annually</div>
                         <div style="font-size: 0.85em; color: var(--text-color-secondary); margin-top: 8px;">
                             Monthly Interest: ~${formatCurrency(monthlyInterest)}<br>
                             Annual Interest: ~${formatCurrency(yearlyInterest)}

@@ -16,6 +16,7 @@ import { upcomingBills } from '../state/bills.js';
 import { sparklineSvg } from './sparkline.js';
 import { renderIncomeVolatility } from './income-insights.js';
 import { t } from '../i18n/strings.js';
+import { escNum } from './html.js';
 
 // ---------- greeting ----------
 
@@ -159,7 +160,7 @@ function composeEvent(event) {
             return {
                 kind: 'info',
                 html: t('feed.import', {
-                    count: d.count,
+                    count: escNum(d.count),
                     txnWord: t(d.count === 1 ? 'feed.import.txnOne' : 'feed.import.txnMany'),
                     fromSource: d.sourceName ? t('feed.import.fromSource', { source: escapeHtml(d.sourceName) }) : '',
                 }),
@@ -174,7 +175,7 @@ function composeEvent(event) {
             if (d.kind === 'savings-rate') {
                 return {
                     kind: 'good',
-                    html: t('feed.milestone.savingsRate', { threshold: d.threshold, value: d.value }),
+                    html: t('feed.milestone.savingsRate', { threshold: escNum(d.threshold), value: escNum(d.value) }),
                 };
             }
             return null;
