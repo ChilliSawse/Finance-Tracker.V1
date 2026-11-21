@@ -31,7 +31,7 @@ const isObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : 0);
 const toCents = (dollars) => Math.round(num(dollars) * 100);
 
-function slug(name) {
+export function slug(name) {
     return String(name == null ? '' : name).toLowerCase().replace(/&/g, ' and ')
         .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }

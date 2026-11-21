@@ -36,7 +36,7 @@ export const defaultFinanceData = {
     // Recurring bills / upcoming payments: { id, name, amount, frequency, nextDue (ISO date), categoryId }.
     bills: [],
     assets: [
-        { name: "New Asset", balance: 0 },
+        { id: "a-new-asset", name: "New Asset", balance: 0, kind: "cash", kindSuggested: false },
     ],
     liabilities: [
         { id: "l-new-liability", name: "New Liability", balance: 0, interestRate: 0 }
@@ -55,8 +55,11 @@ export const defaultFinanceData = {
     nonEssentialExpenses: [],
     fiSettings: {
         multiple: 25,
-        expectedReturn: 7 // Default expected return
+        expectedReturn: 7, // Default expected return
+        inflation: 2.5 // F2: the real-terms deflator for the FI path
     },
+    // F2: new data starts on the asset and debt detail model, so the step 5b migration has nothing to do.
+    assetDebtVersion: 1,
     dashboardViewPeriod: "fortnightly" // Default view period
 };
 
