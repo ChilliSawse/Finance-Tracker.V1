@@ -20,6 +20,11 @@
     box-sizing: border-box;
 }
 
+/* The reset above strips the browser's auto margin that centres a modal <dialog>. */
+dialog:modal {
+    margin: auto;
+}
+
 html {
     /* Paint the theme behind iOS letterboxing/overscroll — with viewport-fit=cover
        the notch/status-bar region shows THIS, not default white. */
