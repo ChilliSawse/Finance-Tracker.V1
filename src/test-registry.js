@@ -69,7 +69,7 @@ export const TEST_GROUPS = [
     { name: 'bucket-migration', env: 'pure', cases: BUCKET_MIGRATION_TEST_CASES },
     { name: 'shell', env: 'pure', cases: SHELL_TEST_CASES },
     { name: 'state-api', env: 'pure', cases: STATE_API_TEST_CASES },
-    { name: 'setup', env: 'browser', cases: SETUP_TEST_CASES },
+    { name: 'setup', env: 'pure', cases: SETUP_TEST_CASES },
     { name: 'quick-add', env: 'pure', cases: QUICK_ADD_TEST_CASES },
     { name: 'scenario', env: 'pure', cases: SCENARIO_TEST_CASES },
     { name: 'assets-debts', env: 'pure', cases: ASSETS_DEBTS_TEST_CASES },

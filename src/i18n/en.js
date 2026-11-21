@@ -71,15 +71,10 @@ export const en = {
     // Toasts
     'toast.milestone.netWorth': 'Nice one — net worth just crossed {threshold}.',
     'toast.milestone.savingsRate': 'Looking good — your savings rate hit {threshold}%.',
-    'toast.onboarding.done': "You're all set — this feed fills up as your story unfolds.",
     'toast.sample.loaded': 'Meet Alex and Sam — a sample household with {count} transactions to explore.',
     'toast.sample.loadedNoTxns': 'Meet Alex and Sam — a sample household to explore.',
 
     // Onboarding summary
-    'onboard.summary.plain': 'Your numbers are in — refine any of them from the tabs whenever you like.',
-    'onboard.summary.saving': "On those numbers you're keeping about {fortnightly} a fortnight — a {rate}% savings rate. That's the number Ledger helps you grow.",
-    'onboard.summary.overspending': 'On those numbers, spending is running ahead of income by about {fortnightly} a fortnight. Ledger will help you see exactly where it goes.',
-    'onboard.sample.loading': 'Setting things up…',
 
     // CSV import flow
     'import.detect.saved': "We've used the column matching you saved for this file shape — adjust it if anything looks off.",

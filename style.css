@@ -2522,51 +2522,7 @@ input[type="date"]::-webkit-date-and-time-value {
 .envelope-fill.is-warm { background: var(--color-warning); }
 .envelope-fill.is-over { background: var(--color-negative); }
 
-/* ── Ledger: onboarding + toast ─────────────────────────────────────────── */
-.modal.onboarding {
-    max-width: 520px;
-    text-align: left;
-}
-.onboarding-h {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--heading-color);
-    margin: 6px 0 12px;
-    letter-spacing: -0.01em;
-}
-.onboarding-p {
-    color: var(--text-color-primary);
-    line-height: 1.55;
-    margin: 0 0 18px;
-}
-.onboarding-choices {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin: 4px 0 14px;
-}
-:where(.legacy) .onboarding-choices .btn { width: 100%; margin-top: 0; }
-:where(.legacy) .btn.onboarding-primary {
-    background: var(--accent-color);
-    font-size: 1em;
-    padding: 12px 20px;
-}
-.onboarding-skip {
-    display: block;
-    margin: 4px auto 0;
-    background: none;
-    border: none;
-    color: var(--text-color-secondary);
-    font: inherit;
-    font-size: 0.84rem;
-    cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-}
-.onboarding-skip:hover { color: var(--text-color-primary); }
-.onboarding-nav { display: flex; gap: 10px; margin-top: 18px; }
-:where(.legacy) .onboarding-nav .btn { margin-top: 0; }
-
+/* ── Ledger: toast ─────────────────────────────────────────── */
 #ledger-toast {
     position: fixed;
     left: 50%;

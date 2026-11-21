@@ -16,6 +16,7 @@ import { effectiveBucket, SPENDABLE_POOL } from '../calc/plan.js';
 import { formatCurrency } from '../utils.js';
 import { esc, escNum } from './html.js';
 import { renderHomeFeed } from './feed.js';
+import { renderSetupChecklist } from './setup/checklist.js'; // C7: fills #today-setup-slot
 
 // ---------- small formatters ----------
 
@@ -509,4 +510,5 @@ export function renderToday() {
     const nudge = slotChild('today-setup-slot', 'today-payday-nudge');
     if (nudge) nudge.innerHTML = model.ready && needsPayDayNudge(ctx.data, ctx.rows, model.today) ? nudgeHtml() : '';
     if (model.ready) renderHomeFeed(); // Story rows from the event log (async)
+    renderSetupChecklist(); // C7: the setup checklist stays until done
 }
