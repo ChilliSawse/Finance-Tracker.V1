@@ -4,6 +4,8 @@
 
 /* keep the app above the decorative background-effect canvas (z-index 0) */
 .app { position: relative; z-index: 1; }
+/* P3e: first run - Setup is still loading, so show only the ground colour instead of a frame of Today (lazy-setup.js clears it). */
+body.setup-pending .app { visibility: hidden; }
 
 /* screens: only the active one shows */
 .screen { display: none; }

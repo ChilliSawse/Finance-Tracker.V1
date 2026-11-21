@@ -73,7 +73,7 @@
   padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-tile); background: var(--surface);
 }
 .wi-change.is-gone { background: var(--warn-bg); border-color: var(--warn-line); }
-.wi-kind { padding: 2px 10px; border-radius: var(--r-pill); background: var(--scen-bg); color: var(--scen-ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
+.wi-change .wi-kind { padding: 2px 10px; border-radius: var(--r-pill); background: var(--scen-bg); color: var(--scen-ink); font-size: 12px; font-weight: 700; white-space: nowrap; }
 .wi-what { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
 .wi-what span { font-size: var(--fs-small); color: var(--muted); }
 .wi-what .wi-gone { color: var(--warn-ink); font-weight: 600; }
@@ -97,7 +97,7 @@
   .wi .stepper button > span:last-child span { display: none; }
   .wi .stepper b { font-size: var(--fs-body); }
   .wi-change { grid-template-columns: minmax(0, 1fr); }
-  .wi-kind { justify-self: start; }
+  .wi-change .wi-kind { justify-self: start; }
   .wi-when, .wi-act { grid-column: 1; grid-row: auto; }
   .wi .how { flex-direction: column; }
   .wi .card { padding: 16px; }

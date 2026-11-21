@@ -131,6 +131,28 @@ export const LAZY_SETUP_TEST_CASES = [
             assert('the first run wires Setup once and asks it for the welcome screen', log, ['setup hadSavedData=false']);
         },
     },
+    {
+        name: 'P3e.1 first run: the page is hidden while Setup loads and shown again once it has opened or failed',
+        async fn(assert) {
+            const classes = new Set();
+            const doc = { body: { classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c), contains: (c) => classes.has(c) } } };
+            let release;
+            const gate = new Promise((r) => { release = r; });
+            let seenWhileLoading = null;
+            const ensure = makeOnboardingFeature(async () => { seenWhileLoading = classes.has('setup-pending'); await gate; return { setupOnboarding() {} }; }, () => true);
+            const p = startFirstRunSetup(ensure, doc);
+            assert('pending the moment the first run starts', classes.has('setup-pending'), true);
+            await tick();
+            assert('still pending while the Setup module loads', seenWhileLoading, true);
+            release();
+            await p;
+            assert('cleared once Setup has opened', classes.has('setup-pending'), false);
+            const broken = makeOnboardingFeature(() => Promise.reject(new Error('offline')), () => true);
+            const quiet = console.error; console.error = () => {};
+            try { await startFirstRunSetup(broken, doc); } finally { console.error = quiet; }
+            assert('a failed load still hands the page back', classes.has('setup-pending'), false);
+        },
+    },
 ];
 
 // Browser only: the real Setup module on a throwaway page structure.
