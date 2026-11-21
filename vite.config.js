@@ -18,6 +18,8 @@ function ftCspHash() {
             handler(html) {
                 if (!html.includes('Content-Security-Policy')) return html; // tests.html has no CSP meta
                 const scripts = [...html.matchAll(/<script(?![^>]*\bsrc=)(?![^>]*\btype=)[^>]*>([\s\S]*?)<\/script>/g)];
+                // tests.html (S4): CSP without a classic inline script and without a sha256 source: nothing to hash.
+                if (scripts.length === 0 && !/script-src [^;]*'sha256-/.test(html)) return html;
                 if (scripts.length !== 1) throw new Error('ft-csp-hash: expected exactly one classic inline script, found ' + scripts.length);
                 const hash = createHash('sha256').update(scripts[0][1].replace(/\r\n/g, '\n'), 'utf8').digest('base64');
                 if (!/script-src [^;]*'sha256-[^']+'/.test(html)) throw new Error('ft-csp-hash: no sha256 source in script-src');
