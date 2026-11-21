@@ -28,9 +28,19 @@ const ROOT_ID = 'scenario-root';
 let ui = null; // { root, scenario, saved, view, step }
 const renderers = {};
 
-/** F8a and F8b fill the Answer and Compare regions through this. */
-export function registerScenarioView(name, fn) {
-    if (name === 'answer' || name === 'compare') renderers[name] = typeof fn === 'function' ? fn : null;
+/**
+ * F8a and F8b fill the Answer and Compare regions through this. More than one view can fill a region (F8a draws the
+ * top of the Answer, F8b the bottom): they draw in `order` (default 0, then registration order), each into its own box.
+ * Registering the same function again replaces it; a null function clears the region.
+ */
+export function registerScenarioView(name, fn, { order = 0 } = {}) {
+    if (name !== 'answer' && name !== 'compare') return;
+    if (typeof fn !== 'function') renderers[name] = [];
+    else {
+        const list = (renderers[name] || []).filter((r) => r.fn !== fn);
+        list.push({ fn, order });
+        renderers[name] = list.map((r, i) => ({ ...r, i })).sort((a, b) => a.order - b.order || a.i - b.i);
+    }
     if (ui) render();
 }
 
@@ -281,9 +291,13 @@ function stepPanel() {
 function hookRegion(name) {
     const box = el('div', 'wi-hook');
     box.dataset.hook = name;
-    const fn = renderers[name];
-    if (fn) {
-        try { fn(box, { scenario: ui.scenario, data: dataNow(), today: todayIso() }); } catch (err) { console.error(`scenario ${name} view failed`, err); box.textContent = t('f.wi.viewFailed'); }
+    const list = renderers[name] || [];
+    if (list.length) {
+        for (const { fn } of list) {
+            const part = el('div', 'wi-part');
+            box.appendChild(part);
+            try { fn(part, { scenario: ui.scenario, data: dataNow(), today: todayIso() }); } catch (err) { console.error(`scenario ${name} view failed`, err); part.textContent = t('f.wi.viewFailed'); }
+        }
     } else box.appendChild(el('p', 'muted', t(`f.wi.hook.${name}`)));
     return box;
 }

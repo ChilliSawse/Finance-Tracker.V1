@@ -33,6 +33,7 @@ import { ASSETS_DEBTS_TEST_CASES } from './state/assets-debts.test-cases.js';
 import { FI_TEST_CASES } from './calc/fi.test-cases.js';
 import { GOAL_PLANNER_TEST_CASES } from './calc/goal-planner.test-cases.js';
 import { SCENARIO_UI_TEST_CASES } from './ui/scenario-ui.test-cases.js';
+import { SCENARIO_ANSWER_TOP_TEST_CASES } from './ui/scenario/answer-top.test-cases.js';
 import { SANITIZE_TEST_CASES } from './state/sanitize.test-cases.js';
 import { HTML_TEST_CASES } from './ui/html.test-cases.js';
 import { ACTIVITY_TEST_CASES } from './ui/activity.test-cases.js';
@@ -84,6 +85,7 @@ export const TEST_GROUPS = [
     { name: 'fi', env: 'pure', cases: FI_TEST_CASES },
     { name: 'goal-planner', env: 'pure', cases: GOAL_PLANNER_TEST_CASES },
     { name: 'scenario-ui', env: 'pure', cases: SCENARIO_UI_TEST_CASES },
+    { name: 'scenario-answer-top', env: 'pure', cases: SCENARIO_ANSWER_TOP_TEST_CASES }, // F8a
     { name: 'sanitize', env: 'pure', cases: SANITIZE_TEST_CASES },
     { name: 'html', env: 'pure', cases: HTML_TEST_CASES },
     { name: 'activity', env: 'pure', cases: ACTIVITY_TEST_CASES },
