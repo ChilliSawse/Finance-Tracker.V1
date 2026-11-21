@@ -21,6 +21,7 @@ import {
     renderBillsSettings, renderCategoriesSettings,
 } from '../ui/settings-forms.js';
 import { AU_TAX_YEARS } from '../calc/tax-au.js';
+import { openIncomeSheet, acceptPayslipJobOffer, dismissPayslipJobOffer } from '../ui/income-layout.js';
 import {
     renderWhatIfIncomeSources, renderWhatIfAssets, renderWhatIfLiabilities,
     renderWhatIfAllocation, renderWhatIfExpensesList,
@@ -45,6 +46,9 @@ export function handleSettingsClickEvents(event) {
     if (target.classList.contains('add-income-event-btn')) {
         addIncomeEvent(parseInt(target.dataset.parentIndex, 10));
     }
+    else if (target.classList.contains('income-edit-pay')) openIncomeSheet(index);
+    else if (target.classList.contains('income-payslip-job-accept')) acceptPayslipJobOffer(index);
+    else if (target.classList.contains('income-payslip-job-dismiss')) dismissPayslipJobOffer(index);
     else if (target.id === 'add-income-source') addIncomeSource();
     else if (target.id === 'whatif-add-income') addIncomeSource('whatif');
     else if (target.id === 'add-tax-bracket') addTaxBracket();
@@ -120,6 +124,9 @@ export function handleSettingsChangeEvents(event) {
         if (data && data.incomeSources[index] !== undefined) {
             const source = data.incomeSources[index];
             source.incomeType = (value === 'selfEmployed' || value === 'variable') ? value : 'salaried';
+            // C6: keep the C4 fields in step with the type, and give a source the pay questions it lacks.
+            source.basis = source.incomeType === 'variable' ? 'variable' : source.incomeType === 'selfEmployed' ? 'selfEmployed' : 'salary';
+            if (!source.withholding) source.withholding = { claimsTaxFree: true, hasStudyDebt: null, medicareExemption: false, extraPerPay: 0 };
             if (source.incomeType === 'variable' && !Array.isArray(source.incomeEvents)) {
                 source.incomeEvents = [];
             }
@@ -330,9 +337,14 @@ function revealNewRow(containerId, index = -1) {
 export function addIncomeSource(scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
     if (!fd) return;
-    fd.incomeSources.push({ name: "New Income", incomeType: "salaried", grossAnnual: 0, paySchedule: "monthly", hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null });
+    fd.incomeSources.push({
+        name: "New Income", incomeType: "salaried", grossAnnual: 0, paySchedule: "monthly", hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null,
+        hourlyRate: null, hoursPerWeek: null, superPct: null, basis: "salary", taxCheck: null,
+        withholding: { claimsTaxFree: true, hasStudyDebt: null, medicareExemption: false, extraPerPay: 0 },
+    });
     if (scope === 'whatif') { renderWhatIfIncomeSources(); } else { renderIncomeSourcesSettings(); updateDataAndUI(); }
     revealNewRow(scope === 'whatif' ? 'whatif-income-sources-settings' : 'income-sources-settings');
+    if (scope !== 'whatif') openIncomeSheet(fd.incomeSources.length - 1); // C6: a new employee source opens its pay sheet
 }
 export function removeIncomeSource(index, scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;

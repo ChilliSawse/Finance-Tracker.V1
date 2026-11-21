@@ -21,6 +21,7 @@ import { loadPdfJs, openPdfDocument, extractPagesLines, PDF_LIMITS, PdfLimitErro
 import { confirmDialog } from '../ui/confirm.js';
 import { parseStatementPages } from './pdf-statement.js';
 import { parsePayslipLines, grossDecision } from './payslip.js';
+import { checkPayslip } from '../calc/payslip-check.js';
 import { t } from '../i18n/strings.js';
 
 const txnWord = (n) => t(n === 1 ? 'feed.import.txnOne' : 'feed.import.txnMany');
@@ -295,6 +296,22 @@ function payslipStatus(index, html) {
     if (el) el.innerHTML = html;
 }
 
+/**
+ * Reads a payslip PDF and returns the parsed figures (net, tax, gross, help ...), or null with the
+ * reason sent to onError. Writes nothing: the income sheet's check panel (C6) and the settings
+ * autofill both use it.
+ */
+export async function readPayslip(file, onStatus, onError) {
+    const pages = await readPdfPages(file, onStatus, onError);
+    if (!pages) return null;
+    const parsed = parsePayslipLines(pages.flat().map(l => l.text));
+    if (parsed.net == null && parsed.tax == null && parsed.gross == null) {
+        onError(t('payslip.nothingFound'));
+        return null;
+    }
+    return parsed;
+}
+
 async function handlePayslipFile(file) {
     const index = payslipSourceIndex;
     payslipSourceIndex = null;
@@ -305,15 +322,8 @@ async function handlePayslipFile(file) {
     const onStatus = (html) => payslipStatus(index, html);
     const onError = (message) => payslipStatus(index, `<span style="color: var(--color-negative);">${message}</span>`);
     onStatus(`<span class="spinner" aria-hidden="true"></span>${t('payslip.parsing')}`);
-    const pages = await readPdfPages(file, onStatus, onError);
-    if (!pages) return;
-
-    const lines = pages.flat().map(l => l.text);
-    const parsed = parsePayslipLines(lines);
-    if (parsed.net == null && parsed.tax == null && parsed.gross == null) {
-        onError(t('payslip.nothingFound'));
-        return;
-    }
+    const parsed = await readPayslip(file, onStatus, onError);
+    if (!parsed) return;
 
     // Gross is the one figure that is never written unseen (L7): an estimate
     // (net + tax) always asks, and a gross that differs from the stored one asks
@@ -355,6 +365,14 @@ async function handlePayslipFile(file) {
         ? t('payslip.superPart', { superAmt: formatCurrency(parsed.super) })
         : '';
 
+    // C6: line the payslip up against what Ledger expects, and say so in plain words.
+    let checkPart = '';
+    if (parsed.tax != null && source.withholding && source.incomeType === 'salaried') {
+        const chk = checkPayslip({ tax: parsed.tax, gross: slipGross }, source);
+        const msg = chk.matches ? t('c.income.check.matches') : chk.message;
+        if (msg) checkPart = ` <span>${escapeHtml(msg)}</span>`;
+    }
+
     renderIncomeSourcesSettings();
     updateDataAndUI();
     // Re-render rebuilt the row tools — write the status after it.
@@ -363,7 +381,7 @@ async function handlePayslipFile(file) {
         tax: formatCurrency(parsed.tax || 0),
         grossPart,
         superPart,
-    })}</span>`);
+    })}</span>${checkPart}`);
 }
 
 // ---- wiring ----
