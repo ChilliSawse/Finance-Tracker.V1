@@ -70,7 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Spending aggregates load async from IndexedDB; refresh the visible tab
     // once they're in so transaction-fed cards appear without a manual switch.
-    refreshSpendCache().then(() => {
+    // B7: data is loaded by now, so the cache can resolve the pay cycle; Today and Activity selectors stay ready:false until then.
+    refreshSpendCache({ data: store.financeData }).then(() => {
         updateAllUI();
     });
 
