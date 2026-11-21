@@ -3,6 +3,7 @@
 
 import { cloneDefaultFinanceData } from '../state/defaults.js';
 import { calculateTotals } from './calculations.js';
+import { addPlanItem, updatePlanItem, removePlanItem, convertToBill } from '../state/plan.js';
 import { perCycle, perMonth, planTotals, netPerPayCents } from './plan.js';
 
 // Mirrors the sample household (sample-data.js) without touching IndexedDB.
@@ -28,6 +29,18 @@ function sampleLike() {
 }
 
 const r2 = (n) => Math.round(n * 100) / 100;
+
+
+// B4 fixture: a v2 plan with one essential and one non-essential line.
+function b4Data() {
+    const d = sampleLike();
+    d.dataVersion = 2;
+    d.plan = [
+        { id: 'a', categoryId: 'housing', name: 'Rent', amount: 560, frequency: 'weekly', anchorDue: null, matchRule: null, bucketId: null, inTotals: true, legacy: null },
+        { id: 'b', categoryId: 'dining', name: 'Dining', amount: 110, frequency: 'weekly', anchorDue: null, matchRule: null, bucketId: null, inTotals: true, legacy: null },
+    ];
+    return d;
+}
 
 export const PLAN_TEST_CASES = [
     {
@@ -61,6 +74,74 @@ export const PLAN_TEST_CASES = [
             assert('v2 non-essential, bill excluded', r2(t.nonEssentialPerCycle), 220);
             d.dataVersion = 1;
             assert('unmigrated ignores plan', r2(planTotals(d).essentialPerCycle), 2072);
+        },
+    },
+    // ── B4 plan state API (appended; B6 adds its bill groups above or below separately) ──
+    {
+        name: 'B4.1 add, edit, remove each undo to a deep-equal state',
+        fn(assert) {
+            const d = b4Data();
+            const start = JSON.stringify(d);
+            const add = addPlanItem(d, { categoryId: 'dining', name: 'Cafe', amount: 20, frequency: 'weekly' });
+            assert('add ok', add.ok, true);
+            assert('add counts', add.item.inTotals, true);
+            assert('add grows plan', d.plan.length, 3);
+            add.onUndo();
+            assert('add undo deep-equal', JSON.stringify(d), start);
+
+            const upd = updatePlanItem(d, 'a', { amount: 600, name: 'Rent 2' });
+            assert('edit applied', d.plan[0].amount, 600);
+            upd.onUndo();
+            assert('edit undo deep-equal', JSON.stringify(d), start);
+
+            const rm = removePlanItem(d, 'a');
+            assert('remove', d.plan.length, 1);
+            rm.onUndo(); rm.onUndo();
+            assert('remove undo deep-equal, once only', JSON.stringify(d), start);
+            assert('unknown id', removePlanItem(d, 'zzz').ok, false);
+            assert('unknown id update', updatePlanItem(d, 'zzz', {}).ok, false);
+        },
+    },
+    {
+        name: 'B4.2 totals follow each change and each undo',
+        fn(assert) {
+            const d = b4Data();
+            const ess = () => r2(planTotals(d).essentialPerCycle);
+            const non = () => r2(planTotals(d).nonEssentialPerCycle);
+            assert('base essential', ess(), 1120);
+            assert('base non-essential', non(), 220);
+            const add = addPlanItem(d, { categoryId: 'housing', name: 'Water', amount: 10, frequency: 'weekly' });
+            assert('add raises essential', ess(), 1140);
+            add.onUndo();
+            assert('undo restores', ess(), 1120);
+            const upd = updatePlanItem(d, 'b', { amount: 55 });
+            assert('edit lowers non-essential', non(), 110);
+            upd.onUndo();
+            assert('edit undo', non(), 220);
+            const rm = removePlanItem(d, 'a');
+            assert('remove drops essential', ess(), 0);
+            rm.onUndo();
+            assert('remove undo', ess(), 1120);
+        },
+    },
+    {
+        name: 'B4.3 convertToBill sets anchorDue; a new bill counts; payload fits showUndoToast',
+        fn(assert) {
+            const d = b4Data();
+            const start = JSON.stringify(d);
+            assert('needs a date', convertToBill(d, 'b', {}).ok, false);
+            const res = convertToBill(d, 'b', { anchorDue: '2026-12-01', frequency: 'monthly' });
+            assert('anchorDue set', d.plan[1].anchorDue, '2026-12-01');
+            assert('frequency set', d.plan[1].frequency, 'monthly');
+            assert('still counts', d.plan[1].inTotals, true);
+            res.onUndo();
+            assert('convert undo deep-equal', JSON.stringify(d), start);
+            const bill = addPlanItem(d, { categoryId: 'housing', name: 'Rego', amount: 214, frequency: 'quarterly', anchorDue: '2027-01-10' });
+            assert('new bill counts', bill.item.inTotals, true);
+            assert('unique ids', addPlanItem(d, { name: 'Rego' }).item.id !== bill.item.id, true);
+            assert('toast shape', typeof bill.message === 'string' && typeof bill.onUndo === 'function', true);
+            assert('message from catalogue', bill.message, 'Added Rego');
+            assert('convert message', convertToBill(d, 'b', { anchorDue: '2026-12-01' }).message, 'Dining is now a bill');
         },
     },
 ];
