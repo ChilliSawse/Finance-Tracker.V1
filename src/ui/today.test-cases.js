@@ -3,7 +3,8 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected). Fixture: the Today mock's rows (fake data).
 
 import { buildTodayModel } from '../state/today-model.js';
-import { buildTodayHtml, skeletonHtml, needsPayDayNudge, savingsRateFigure, dayByDay } from './today.js';
+import { buildTodayHtml, skeletonHtml, splitSegmentsHtml, needsPayDayNudge, savingsRateFigure, dayByDay } from './today.js';
+import { showToast, dismissToastTagged } from './toast.js';
 import { formatCurrency } from '../utils.js';
 import { getBuckets } from '../state/saving-model.js';
 import { legacySampleFinanceData } from '../state/sample-data.js';
@@ -197,6 +198,35 @@ export const TODAY_TEST_CASES = [
             assert('accessible name', html.includes('aria-labelledby="h-trend t-desc"'), true);
             assert('data table', html.includes('<div class="today-sr"><table class="today-sr-table">'), true);
             assert('table has a row per day', (html.match(/<th scope="row">/g) || []).length, 14);
+        },
+    },
+    {
+        name: 'P5 split bar: a 0% bucket gets no slice and a tiny slice shows no label',
+        fn(assert) {
+            const tops = [
+                { name: 'Daily expenses', role: 'daily', pct: 60 }, { name: 'Splurge', role: 'splurge', pct: 11 },
+                { name: 'Smile', role: 'smile', pct: 29 }, { name: 'Mojo', role: 'smile', pct: 0 }, { name: 'Grow', role: 'fire', pct: 3 },
+            ];
+            const html = splitSegmentsHtml(tops, 103);
+            assert('three full slices plus one tiny', (html.match(/<span /g) || []).length, 4);
+            assert('0% bucket not rendered', html.includes('Mojo'), false);
+            assert('tiny slice carries a title and no text', html.includes('title="Grow 3%" style="flex:2.9"></span>'), true);
+            assert('wide slice keeps its label', html.includes('>Daily expenses 60%</span>'), true);
+            assert('mid slice shows the percent', html.includes('>11%</span>'), true);
+        },
+    },
+    {
+        name: 'P5 toast: dismissToastTagged closes only a toast with that tag',
+        fn(assert) {
+            if (typeof document === 'undefined') { assert('needs a DOM: runs in tests.html', true, true); return; }
+            showToast('Meet Alex and Sam', 'info', 60000, 'sample-welcome');
+            assert('other tag leaves it', dismissToastTagged('other'), false);
+            assert('matching tag dismisses it', dismissToastTagged('sample-welcome'), true);
+            assert('nothing left to dismiss', dismissToastTagged('sample-welcome'), false);
+            showToast('Plain', 'info', 60000);
+            assert('untagged toast is never dismissed by a tag', dismissToastTagged('sample-welcome'), false);
+            dismissToastTagged(undefined);
+            showToast('', 'info', 1);
         },
     },
 ];

@@ -18,6 +18,8 @@ button.pill.review { padding: 0 9px; background: var(--warn-bg); color: var(--wa
 .hero-review { margin: 10px 0 0; }
 .hero-fig.is-over { color: var(--negative); }
 .tile .after { margin-top: 4px; opacity: 0.85; }
+.a-story { align-self: start; }
+.split .tiny { padding: 0; }
 .split .p10 { justify-content: center; padding: 0 4px; }
 .story + .story li:first-child { border-top: 1px solid var(--rule); padding-top: 14px; }
 .story:empty { display: none; }

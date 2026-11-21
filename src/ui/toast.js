@@ -140,8 +140,20 @@ function getQueue() {
 }
 
 /** Plain toast. duration 0 keeps it until dismissed (a Dismiss button is added). */
-export function showToast(message, kind = 'info', duration = DEFAULT_DURATION) {
-    getQueue().show({ message, kind, duration });
+export function showToast(message, kind = 'info', duration = DEFAULT_DURATION, tag = null) {
+    getQueue().show({ message, kind, duration, tag });
+}
+
+/**
+ * Dismiss the visible toast only if it carries this tag (the sample welcome toast, so it never sits
+ * over a sheet or Setup's primary button). Undo toasts and others are left alone.
+ */
+export function dismissToastTagged(tag) {
+    if (!queue) return false;
+    const cur = queue.current();
+    if (!cur || !tag || cur.tag !== tag) return false;
+    queue.dismiss();
+    return true;
 }
 
 /** Toast with an Undo button. onUndo runs on Undo; onExpire when it times out, is dismissed or replaced. */

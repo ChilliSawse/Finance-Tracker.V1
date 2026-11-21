@@ -14,7 +14,7 @@
 
 import { t } from '../i18n/strings.js';
 import { trapTab, rememberFocus, getFocusables } from './focus.js';
-import { showUndoToast } from './toast.js';
+import { showUndoToast, dismissToastTagged } from './toast.js';
 
 // ── Pure: value coercion ────────────────────────────────────────────────────
 const NUMERIC = new Set(['money', 'number', 'percent']);
@@ -464,6 +464,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
     document.addEventListener('keydown', onDocKey, true);
 
     (document.getElementById('sheet-root') || document.body).appendChild(layer);
+    dismissToastTagged('sample-welcome');
     document.body.classList.add('has-sheet');
     renderNotes();
     const firstInput = getFocusables(form)[0] || getFocusables(sheet)[0];
