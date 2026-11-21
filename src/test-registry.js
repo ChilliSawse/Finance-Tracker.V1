@@ -40,6 +40,7 @@ import { TODAY_TEST_CASES } from './ui/today.test-cases.js';
 import { INCOME_LAYOUT_TEST_CASES } from './ui/income-layout.test-cases.js';
 import { SETTINGS_TEST_CASES } from './ui/settings.test-cases.js';
 import { PLAN_LISTS_TEST_CASES } from './ui/plan-lists.test-cases.js';
+import { BUCKET_SHEETS_TEST_CASES } from './ui/bucket-sheets.test-cases.js';
 import { PLAN_BUCKETS_TEST_CASES } from './ui/plan-buckets.test-cases.js';
 
 export const TEST_GROUPS = [
@@ -60,6 +61,7 @@ export const TEST_GROUPS = [
     { name: 'income-migration', env: 'pure', cases: INCOME_MIGRATION_TEST_CASES },
     { name: 'payslip-check', env: 'pure', cases: PAYSLIP_CHECK_TEST_CASES },
     { name: 'sheet', env: 'pure', cases: SHEET_TEST_CASES },
+    { name: 'bucket-sheets', env: 'pure', cases: BUCKET_SHEETS_TEST_CASES },
     { name: 'xlsx', env: 'browser', cases: XLSX_TEST_CASES },
     { name: 'saving-model', env: 'pure', cases: SAVING_MODEL_TEST_CASES },
     { name: 'fire', env: 'pure', cases: FIRE_TEST_CASES },
