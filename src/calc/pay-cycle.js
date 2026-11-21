@@ -6,6 +6,8 @@
 // `end` belongs to the next cycle. On pay day the new cycle starts today.
 
 import { getPayCyclesPerYear } from '../utils.js';
+import { netPerPayCents, effectiveBucket, SPENDABLE_POOL } from './plan.js';
+import { allocateCents } from './saving-model.js';
 
 const DAY_MS = 86400000;
 const STEP_DAYS = { weekly: 7, fortnightly: 14 };
@@ -188,4 +190,98 @@ export function billStatus(item, dueDate, txns, today) {
     if (dueDate > todayIso) return 'Upcoming';
     if (dueDate === todayIso) return 'Due';
     return 'Missed';
+}
+
+// ---------- Left this pay, per bucket (Phase 1 step B3b) ----------
+
+const cents = (dollars) => Math.round((Number(dollars) || 0) * 100);
+
+/**
+ * "Left this pay" per bucket (B 2.5 and 9.2), all in integer cents.
+ * Pool: planned net per pay (totals.netCents when given, else netPerPayCents(data)) split by
+ * allocateCents over the allocation percentages; no Daily bucket: the unallocated remainder is
+ * the spendable pool (id SPENDABLE_POOL); an unconfigured allocation (none, or one unroled row):
+ * the whole net. Spent: outgoing rows in [cycle.start, cycle.end) by effectiveBucket. Bills:
+ * every plan occurrence in the cycle with no billMatch (Upcoming, Due and Missed, FT-R-54),
+ * resolved to a bucket through its plan item and category. A matched bill is already in spent.
+ * Month mode (variable or no anchor that inferPayAnchor can't find): calendar month, and net is
+ * the income-category credits received so far this month ("left this month").
+ * The headline fields describe the Daily bucket (or the spendable pool); `buckets` lists all.
+ */
+export function leftThisPay({ data, totals, txns, today } = {}) {
+    const d = data || {};
+    const rows = Array.isArray(txns) ? txns : [];
+    const todayIso = toIso(parseIso(today));
+    const sources = d.incomeSources || [];
+    const source = sources[d.primaryIncomeIndex || 0] || sources[0] || null;
+    let cycle = getCycle(source, todayIso);
+    if (cycle.mode === 'month' && source && source.incomeType !== 'variable' && source.paySchedule !== 'yearly') {
+        const inf = inferPayAnchor(rows, source, todayIso);
+        if (inf.anchor) cycle = getCycle({ ...source, payAnchor: inf.anchor }, todayIso);
+    }
+    const inCycle = (iso) => validIso(iso) && iso >= cycle.start && iso < cycle.end;
+    const cycleRows = rows.filter((r) => r && inCycle(r.date));
+
+    let netCents;
+    if (cycle.mode === 'month') netCents = cycleRows.filter((r) => r.categoryId === 'income' && r.amountCents > 0 && r.date <= todayIso).reduce((s, r) => s + r.amountCents, 0);
+    else if (totals && Number.isFinite(totals.netCents)) netCents = Math.round(totals.netCents);
+    else netCents = netPerPayCents(d);
+
+    // Pools.
+    const alloc = Array.isArray(d.allocation) ? d.allocation.filter((a) => a && a.id) : [];
+    const pctOf = (a) => Number(a.percentage != null ? a.percentage : a.pct) || 0;
+    const configured = alloc.some((a) => a.role) || alloc.length > 1;
+    const hasDaily = alloc.some((a) => a.role === 'daily');
+    let list; // [{id, role, pct}]
+    if (!configured) list = [{ id: SPENDABLE_POOL, role: null, pct: 100 }];
+    else {
+        list = alloc.map((a) => ({ id: a.id, role: a.role || null, pct: pctOf(a) }));
+        if (!hasDaily) list.push({ id: SPENDABLE_POOL, role: null, pct: Math.max(0, 100 - list.reduce((s, b) => s + b.pct, 0)) });
+    }
+    const pools = allocateCents(netCents, list.map((b) => b.pct));
+    const bucketsOut = list.map((b, i) => ({ id: b.id, role: b.role, poolCents: pools[i], spentCents: 0, billsDueCents: 0, leftCents: 0 }));
+    const byId = new Map(bucketsOut.map((b) => [b.id, b]));
+    const allocForResolve = configured ? alloc : [];
+
+    const cats = new Map((d.categories || []).map((c) => [c.id, c]));
+    const plan = new Map((d.plan || []).map((p) => [p.id, p]));
+    let essentialSoFarCents = 0, nonEssentialSoFarCents = 0, unsortedCents = 0, toReview = 0;
+    for (const r of cycleRows) {
+        if (r.status === 'review') toReview++;
+        if (!(r.amountCents < 0)) continue;
+        const cat = cats.get(r.categoryId);
+        const out = -r.amountCents;
+        const item = r.billMatch ? plan.get(r.billMatch.planId) : null;
+        const b = byId.get(effectiveBucket(r, cat, item, allocForResolve));
+        if (b) b.spentCents += out;
+        if (cat && cat.essential) essentialSoFarCents += out; else nonEssentialSoFarCents += out;
+        if (!cat || r.categoryId === 'other') unsortedCents += out;
+    }
+    for (const item of d.plan || []) {
+        if (!item || !validIso(item.anchorDue)) continue;
+        for (const due of billOccurrences(item, cycle.start, addDays(cycle.end, -1))) {
+            if (billStatus(item, due, rows, todayIso) === 'Paid') continue;
+            const b = byId.get(effectiveBucket(null, cats.get(item.categoryId), item, allocForResolve));
+            if (b) b.billsDueCents += cents(item.amount);
+        }
+    }
+    for (const b of bucketsOut) b.leftCents = b.poolCents - b.spentCents - b.billsDueCents;
+
+    const head = bucketsOut.find((b) => b.role === 'daily') || byId.get(SPENDABLE_POOL) || bucketsOut[0];
+    const daysLeft = Math.max(1, cycle.daysLeft);
+    return {
+        mode: cycle.mode,
+        netCents,
+        poolCents: head.poolCents,
+        spentCents: head.spentCents,
+        billsDueCents: head.billsDueCents,
+        leftCents: head.leftCents,
+        perDayCents: Math.round(head.leftCents / daysLeft),
+        cycle,
+        essentialSoFarCents,
+        nonEssentialSoFarCents,
+        unsortedCents,
+        toReview,
+        buckets: bucketsOut,
+    };
 }

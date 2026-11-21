@@ -67,3 +67,38 @@ export function netPerPayCents(data) {
     const totals = calculateTotals(JSON.parse(JSON.stringify(data)));
     return Math.round((totals.totalNetAnnualIncome / primaryCycles(data)) * 100);
 }
+
+// ---------- Category to bucket (Phase 1 step B3b) ----------
+
+/** Id `effectiveBucket` returns when no allocation bucket can take the row: the spendable pool. */
+export const SPENDABLE_POOL = 'pool';
+
+/** Derived default role (B 9.1): essential goes to Daily, anything else to Splurge. Never stored. */
+export function defaultBucketRole(category) {
+    return category && category.essential ? 'daily' : 'splurge';
+}
+
+function isTransferCategory(category, txn) {
+    return (category && (category.kind === 'transfer' || category.id === 'transfer')) || (txn && txn.categoryId === 'transfer');
+}
+
+/**
+ * The bucket one row draws on (B 9.1). Order: transaction `bucketId`, plan item `bucketId`,
+ * `category.bucketId`, the allocation holding the derived role, the Daily-role bucket, then
+ * the spendable pool (SPENDABLE_POOL). An id that no longer exists in `allocation` is skipped.
+ * Income and transfers (a credit, or a transfer category) return null. Pass `txn` null to
+ * resolve a bill occurrence from its plan item and category alone (no amount check then).
+ * @returns {string|null}
+ */
+export function effectiveBucket(txn, category, planItem, allocation) {
+    if (txn && Number(txn.amountCents) > 0) return null;
+    if (isTransferCategory(category, txn)) return null;
+    const rows = Array.isArray(allocation) ? allocation : [];
+    const ids = new Set(rows.map((a) => a && a.id).filter(Boolean));
+    for (const c of [txn && txn.bucketId, planItem && planItem.bucketId, category && category.bucketId]) {
+        if (c && ids.has(c)) return c;
+    }
+    const byRole = (role) => rows.find((a) => a && a.id && a.role === role);
+    const hit = byRole(defaultBucketRole(category)) || byRole('daily');
+    return hit ? hit.id : SPENDABLE_POOL;
+}
