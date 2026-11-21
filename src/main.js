@@ -2,72 +2,77 @@
 // Order matters: load data → apply theme (before first render) → build the
 // settings forms → wire events → first full render → restore the active tab.
 
+// Style load order matters (A3): generated tokens, legacy aliases, fonts, base design system, then the shrinking legacy sheet.
+import './styles/tokens.generated.css';
+import './styles/legacy-aliases.css';
+import './styles/fonts.css';
+import './styles/base.css';
+import '../style.css';
+import './ui/shell.css'; // A5 — sidebar, phone bottom bar, screens
+import './ui/today.css'; // A6 — Today screen
 import { store } from './state/store.js';
 import { FinanceAutoSave } from './state/autosave.js';
-import { loadTheme, registerStoredCustomFonts, applyBackgroundEffect, applyBgEffectColor } from './theme/theme.js';
+import { loadTheme } from './theme/theme.js';
 import { initializeSettingsUI } from './ui/settings-forms.js';
-import { initializeGuiSettingsForm } from './theme/appearance.js';
+import './ui/settings.css'; // D2 — Settings screen styles (the screen's code loads on first open)
 import { setupEventListeners } from './events/setup.js';
 import { updateAllUI } from './ui/render.js';
 import {
-    restoreActiveTab, setupSidebar, setupTabKeyboardNav, setupCardLinks,
-    setupDashboardEmptyActions, setupExpenseSearch, setupInfoSections,
-    setupMobileNavOverflow,
+    restoreActiveTab, renderScopeLine, setupTabKeyboardNav,
 } from './ui/tabs.js';
-import { setupGuiModal, setupDraggableModal, setupPageSettingsModals } from './ui/modals.js';
-import { setupImport } from './import/import-ui.js';
-import { setupPdfImport } from './import/pdf-ui.js';
-import { setupIncomeStatement } from './ui/income-statement.js';
+import { setupImportEntry } from './import/import-entry.js';
+import { bindSetupEntryPoints, startFirstRunSetup, needsFirstRunSetup } from './lazy-setup.js';
 import { rollForwardBills, generateBillDueEvents } from './state/bills.js';
 import { refreshSpendCache } from './state/spend-cache.js';
-import { setupOnboarding } from './ui/onboarding.js';
 import { setupMilestoneToasts } from './ui/toast.js';
+import './ui/sheet.css'; // D1 — sheet, undo toast and dialog styles
+import './ui/help.css'; // A11 — the "?" button and help sheet
+import { mountHelpButtons } from './ui/help.js';
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
+import { showLoadNotices, showRecoveryPanel } from './events/import-export.js';
+import { runPayRollIfDue } from './state/saving-model.js'; // E5 — pay-day credit
 
-document.addEventListener('DOMContentLoaded', () => {
+function boot() {
     setupPwaUpdateListeners();
     store.autoSave = new FinanceAutoSave();
     const hadSavedData = store.autoSave.loadData();
-    loadTheme(); // apply full preset (tab colours, tints, etc.) before UI renders
-    registerStoredCustomFonts(); // J3 — re-register uploaded fonts
-    applyBgEffectColor(store.guiSettingsData.bgEffectColor); // J4 — restore effect tint (before the effect starts)
-    applyBackgroundEffect(store.guiSettingsData.bgEffect); // J4 — restore saved effect
+    // E5: pay-day credit (a no-op when auto-credit is off); saved with the next autosave.
+    if (runPayRollIfDue(store.financeData).changed) store.autoSave.onDataChange();
+    loadTheme(); // A4: palette and mode attributes plus text size, before the UI renders
 
-    // Ledger — advance past-due bills to their next occurrence and announce
+    // Ledger — un-migrated (legacy) bills roll to their next occurrence; plan-item bills (B6)
+    // never roll: their dates come from anchorDue, so this is a no-op for them. Announce
     // anything due this week in the feed (once per bill+date).
     if (rollForwardBills(store.financeData) && store.autoSave) store.autoSave.onDataChange();
     generateBillDueEvents(store.financeData);
 
     initializeSettingsUI();
-    initializeGuiSettingsForm();
-    setupEventListeners();
+    setupEventListeners(); // opens Settings through lazy-setup.js: the screen is built on first open (P3b)
 
     setupPwaInstallListeners();
     setupTabKeyboardNav();
-    setupSidebar();   // A.3 — collapse toggle + restore
-    setupMobileNavOverflow(); // ≤640px — "More" sheet on the bottom bar
-    setupGuiModal();  // A.4 — appearance modal
-    setupDraggableModal('gui-settings-modal'); // draggable, corner-resizable appearance window
-    setupPageSettingsModals(); // Phase D — per-page settings modals
-    setupImport(); // Ledger — bank CSV import (Tools)
-    setupPdfImport(); // Variable income — bank PDF import + payslip autofill (Tools)
-    setupIncomeStatement(); // Variable income — printable statement (income modal)
-    setupDashboardEmptyActions(); // F.1 — welcome empty-state action cards
-    setupCardLinks(); // F.2 — dashboard cards link to their tab
-    setupExpenseSearch(); // H.2 — expense name filter
-    setupInfoSections(); // C.1 — collapsible info guides
+    setupImportEntry(); // one Import statement button; the CSV, XLSX and PDF flows load and wire on first use (P3b)
+    bindSetupEntryPoints(); // Setup checklist buttons and Settings > Run setup again load Setup on first use (P3b)
+    mountHelpButtons(); // A11 — one "?" per screen
 
     updateAllUI();
-    restoreActiveTab(); // A.3 — restore last-viewed section (defaults to Home)
+    renderScopeLine(); // A5 — sidebar "Paid fortnightly", hidden when unset
+    restoreActiveTab(); // A.3 — restore last-viewed section (legacy names mapped; defaults to Today)
 
     setupMilestoneToasts(); // Ledger — celebration toasts
-    setupOnboarding(hadSavedData); // Ledger — first-run guided setup / sample data
+    if (needsFirstRunSetup(hadSavedData)) startFirstRunSetup(); // Ledger — first-run guided setup / sample data (loaded only when needed, P3b)
 
     // Spending aggregates load async from IndexedDB; refresh the visible tab
     // once they're in so transaction-fed cards appear without a manual switch.
-    refreshSpendCache().then(() => {
+    // B7: data is loaded by now, so the cache can resolve the pay cycle; Today and Activity selectors stay ready:false until then.
+    refreshSpendCache({ data: store.financeData }).then(() => {
         updateAllUI();
+    });
+
+    // E5: coming back to the app rolls any pay day that has passed (off by default for migrated data).
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && runPayRollIfDue(store.financeData).changed) { store.autoSave.onDataChange(); updateAllUI(); }
     });
 
     // Re-fit currency figures when the viewport changes (rotate / resize).
@@ -76,4 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelAnimationFrame(fitRaf);
         fitRaf = requestAnimationFrame(() => fitAllAmounts());
     });
+
+    showLoadNotices(); // S1: once-only notices (unreadable save set aside, upgrade aborted)
+}
+
+// S1/M3: if startup throws because of the saved data, show a recovery panel instead of a dead page.
+document.addEventListener('DOMContentLoaded', () => {
+    try { boot(); } catch (err) { showRecoveryPanel(err); }
 });

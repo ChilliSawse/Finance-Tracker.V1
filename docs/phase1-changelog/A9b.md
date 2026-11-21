@@ -1,0 +1,10 @@
+# A9b Plan lists: Debts, Assets, Categories
+
+- `src/ui/plan-lists.js` extended: `debtAssetModel` / `debtAssetBodyHtml` / `debtAssetSheetSpec` / `saveDebtAsset` / `deleteDebtAsset` (Debts and Assets, on `plan-assets-debts.js`; while M0's stub has no fields the sheet falls back to name, balance and, for debts, interest rate, so F5 can fill the stub with no change here); `categoriesModel` / `categoriesBodyHtml` / `categorySheetSpec` / `saveCategory` / `deleteCategory` / `categoryUse` / `moveTargets` (Categories, last, FT-R-88). Medicare and HELP settings stay with the pay.
+- Category sheet: name, icon (select, with a live preview), essential tick, monthly cap (FT-R-52, shown as "left against the cap" in Non-essentials as before), keywords (comma list), and E7's `categoryBucketField`. The link saves through E5's `relinkCategory`; a link to a gone bucket writes nothing. New categories go before Other so keyword matching still reaches the catch-all.
+- Delete guard: a category used by plan lines, learned rules, legacy bills or stored transactions is blocked (`code:'used'`, "used by N rows") and a Move sheet offers "Move them to" another category; one undo restores the lists (transactions are moved and restored by `plan.js`). Other, Income and Other essential cannot be deleted.
+- Every Debts, Assets and Categories add, edit and delete has an Undo toast; the lists restore in place.
+- `src/ui/plan.js`: mounts `#plan-debts`, `#plan-assets`, `#plan-categories` filled; the "Open Future / Open Settings" placeholders and their strings are gone.
+- New `src/ui/icon-paths.js` holds the shared icon paths (moved out of `quick-add.js`). Quick-add chips use `categoryIcon(c)`, so a category with no stored icon still gets its fallback.
+- Strings: `a.plan.debt.*`, `a.plan.asset.*`, `a.plan.cat.*`, `a.plan.list.*` in `en-a.js`.
+- Tests: A9b.1 (T19: relinking Dining to Smile moves where a new Dining purchase resolves, through the sheet and `resolveBucket`), A9b.2, A9b.3 (delete guard), A9b.4 (debts and assets). `run-cases` 1684 to 1721; `tests.html` 2030 to 2067.

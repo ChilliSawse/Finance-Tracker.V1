@@ -3,1185 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <!-- script-src whitelists cdn.jsdelivr.net for ONE thing: the on-demand PDF.js
-         dynamic import (bank statement / payslip reading); worker-src blob: lets
-         PDF.js spin up its parsing worker (it wraps the CDN worker in a blob).
-         Everything else stays 'self'. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-ft-fouc-init' https://cdn.jsdelivr.net; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:;">
+    <!-- CSP (meta, so frame-ancestors/report-uri cannot be set here). script-src carries NO nonce and NO unsafe-inline: the one inline script (FOUC, below) is allowed by its sha256, which the ftCspHash plugin in vite.config.js recomputes at build and dev time (a test checks the committed value). worker-src blob: is for PDF.js. object/base/form/frame are shut because the app uses none. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-xu7rRa7oIvF2GW4d/NTMa3gvArLbkc6c5dv9Z+PEc5w='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none';">
     <title>Ledger</title>
-    <script nonce="ft-fouc-init">
-    /* FOUC prevention — replays the last-applied theme before CSS loads */
-    (function(){try{var t=JSON.parse(localStorage.getItem('ft-theme-fouc'));if(!t)return;var s=document.documentElement.style;for(var k in t){s.setProperty(k,t[k]);}var m=document.querySelector('meta[name="theme-color"]');if(m&&t['--primary-bg-color-start'])m.setAttribute('content',t['--primary-bg-color-start']);}catch(e){}})();
+    <script>
+    /* replays {p,m} from the last session before CSS loads; the old shape sets nothing */
+    (function(){try{var t=JSON.parse(localStorage.getItem('ft-theme-fouc')),h=document.documentElement;if(t.p)h.dataset.palette=t.p;if(t.m&&t.m!='auto')h.dataset.mode=t.m}catch(e){}})()
     </script>
-    <link rel="stylesheet" href="style.css">
+    <meta name="theme-color"><!-- content is filled from the computed --ground by applyAppearance (theme.js) -->
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Ledger">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+    <!-- P3e: the tab icon is a 32 px copy of the same artwork (1.3 KB); the 192 and 512 are for the manifest and the home screen only. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
     <a href="#main-content" class="skip-link">Skip to main content</a>
-    <div class="app-shell" id="app-shell">
-        <header class="header topbar">
-            <button class="icon-btn sidebar-toggle" id="sidebar-toggle" aria-label="Collapse navigation" aria-expanded="true" aria-controls="sidebar">
-                <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-            </button>
-            <div class="topbar-titles">
-                <h1 id="main-heading-display">Ledger</h1>
-                <p id="sub-heading-display">Your money, telling its story</p>
-            </div>
-            <div class="topbar-actions">
-                <button class="btn btn-install" id="install-app-btn" style="display: none;">Install App</button>
-            </div>
-        </header>
 
-        <nav class="sidebar" id="sidebar" role="tablist" aria-orientation="vertical" aria-label="Finance sections">
-            <button role="tab" class="tab active" data-tab-target="home" aria-controls="home" aria-selected="true" tabindex="0">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-6h6v6"/></svg></span>
-                <span class="tab-label">Home</span>
-            </button>
-            <button role="tab" class="tab" data-tab-target="dashboard" aria-controls="dashboard" aria-selected="false" tabindex="-1">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
-                <span class="tab-label">Dashboard</span>
-            </button>
-            <button role="tab" class="tab" data-tab-target="income" aria-controls="income" aria-selected="false" tabindex="-1">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg></span>
-                <span class="tab-label">Income</span>
-            </button>
-            <button role="tab" class="tab" data-tab-target="expenses" aria-controls="expenses" aria-selected="false" tabindex="-1">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/></svg></span>
-                <span class="tab-label">Expenses</span>
-            </button>
-            <!-- Mobile overflow group: display:contents on desktop/tablet (invisible to
-                 layout, so the sidebar renders exactly as before); at ≤640px it becomes
-                 the "More" sheet so the bottom bar keeps 5 comfortable touch targets.
-                 Same single tablist DOM serves every viewport — nothing is duplicated. -->
-            <div class="nav-overflow" id="nav-overflow">
-            <button role="tab" class="tab" data-tab-target="savings" aria-controls="savings" aria-selected="false" tabindex="-1">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg></span>
-                <span class="tab-label">Savings</span>
-            </button>
-            <button role="tab" class="tab" data-tab-target="liabilities" aria-controls="liabilities" aria-selected="false" tabindex="-1">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span>
-                <span class="tab-label">Liabilities</span>
-            </button>
-            <div class="sidebar-group-label" role="presentation" aria-hidden="true">Tools</div>
-            <button class="sidebar-settings" id="open-import" aria-haspopup="dialog" aria-controls="import-modal">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></span>
-                <span class="tab-label">Import CSV</span>
-            </button>
-            <button class="sidebar-settings" id="open-pdf-import" aria-haspopup="dialog" aria-controls="pdf-import-modal">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg></span>
-                <span class="tab-label">Import PDF</span>
-            </button>
-            <button role="tab" class="tab" data-tab-target="whatIf" aria-controls="whatIf" aria-selected="false" tabindex="-1">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="20" cy="14" r="2"/></svg></span>
-                <span class="tab-label">What If?</span>
-            </button>
-            <button class="sidebar-settings" id="open-gui-settings" aria-label="Settings" aria-haspopup="dialog">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
-                <span class="tab-label">Settings</span>
-            </button>
-            </div><!-- /.nav-overflow -->
-            <!-- ≤640px only (display:none elsewhere): opens the overflow sheet above the
-                 bottom bar. Deliberately NOT class="tab" so the tablist click delegation
-                 and roving-tabindex keyboard nav ignore it. -->
-            <button type="button" class="tab-more" id="nav-more-btn" aria-expanded="false" aria-controls="nav-overflow" aria-label="More sections">
-                <span class="tab-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></span>
-                <span class="tab-label">More</span>
-            </button>
-        </nav>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="mark" viewBox="0 0 24 24"><g transform="rotate(-90 12 12)" fill="none" stroke-width="5"><circle cx="12" cy="12" r="8.5" pathLength="100" style="stroke:var(--b1, var(--accent))" stroke-dasharray="57 43"/><circle cx="12" cy="12" r="8.5" pathLength="100" style="stroke:var(--b2, var(--accent))" stroke-dasharray="7 93" stroke-dashoffset="-60"/><circle cx="12" cy="12" r="8.5" pathLength="100" style="stroke:var(--b3, var(--accent))" stroke-dasharray="7 93" stroke-dashoffset="-70"/><circle cx="12" cy="12" r="8.5" pathLength="100" style="stroke:var(--b4, var(--accent))" stroke-dasharray="17 83" stroke-dashoffset="-80"/></g></symbol>
+        <symbol id="i-today" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.6"/><path d="M8 1.6v1.8M8 12.6v1.8M1.6 8h1.8M12.6 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M3.5 12.5l1.3-1.3M11.2 4.8l1.3-1.3"/></symbol>
+        <symbol id="i-activity" viewBox="0 0 16 16"><path d="M2.5 4h11M2.5 8h11M2.5 12h7"/></symbol>
+        <symbol id="i-plan" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5V8l4 3.5"/></symbol>
+        <symbol id="i-future" viewBox="0 0 16 16"><path d="M2.5 12.5l3.5-4 3 2 4.5-6"/><path d="M10.5 4.5h3v3"/></symbol>
+        <symbol id="i-gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2"/><path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+        <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/></symbol>
+        <symbol id="i-chev" viewBox="0 0 16 16"><path d="M6 3.5L10.5 8 6 12.5"/></symbol>
+        <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
+    </svg>
+    <div class="app" id="app-shell">
+        <aside class="side" aria-label="Ledger">
+            <div class="brand"><svg class="mark" aria-hidden="true"><use href="#mark"/></svg>Ledger</div>
+            <div class="scope" id="scope-line" hidden></div>
+            <button type="button" class="add-btn" data-quick-add><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>Add</button>
+            <!-- ONE nav serves the desktop sidebar and the phone bottom bar (below 1024 px). Never duplicate it. -->
+            <nav class="nav" id="sidebar" role="tablist" aria-orientation="vertical" aria-label="Main">
+                <button type="button" role="tab" class="nav-tab active" id="tab-today" data-tab-target="today" aria-controls="today" aria-selected="true" tabindex="0"><svg class="i" aria-hidden="true"><use href="#i-today"/></svg><span class="tab-label">Today</span></button>
+                <button type="button" role="tab" class="nav-tab" id="tab-activity" data-tab-target="activity" aria-controls="activity" aria-selected="false" tabindex="-1"><svg class="i" aria-hidden="true"><use href="#i-activity"/></svg><span class="tab-label">Activity</span><span class="count" id="activity-review-count" hidden></span></button>
+                <button type="button" class="plus-tab" data-quick-add aria-label="Add"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
+                <button type="button" role="tab" class="nav-tab" id="tab-plan" data-tab-target="plan" aria-controls="plan" aria-selected="false" tabindex="-1"><svg class="i" aria-hidden="true"><use href="#i-plan"/></svg><span class="tab-label">Plan</span></button>
+                <button type="button" role="tab" class="nav-tab" id="tab-future" data-tab-target="future" aria-controls="future" aria-selected="false" tabindex="-1"><svg class="i" aria-hidden="true"><use href="#i-future"/></svg><span class="tab-label">Future</span></button>
+            </nav>
+            <div class="side-foot">
+                <!-- The autosave indicator is appended into the first .header (autosave.js). -->
+                <div class="header side-status"></div>
+                <p class="privacy">Kept on this device. Nothing leaves it.</p>
+                <button type="button" class="side-link side-settings" id="open-gui-settings" data-open-settings><svg class="i" aria-hidden="true"><use href="#i-gear"/></svg>Settings</button>
+            </div>
+        </aside>
 
-        <main class="content main-content" id="main-content">
-            <div id="home" role="tabpanel" aria-labelledby="tab-home" class="tab-content active">
-                <div class="home-greeting">
-                    <h2 id="home-greeting-title">Good morning</h2>
-                    <p id="home-greeting-sub">Here's what's happening with your money.</p>
-                </div>
-                <div class="pulse-row" id="home-pulse"></div>
-                <div id="home-upcoming"></div>
-                <!-- Variable income — volatility dashboard; renders only when a Variable source exists. -->
-                <div id="home-income-volatility"></div>
-                <div class="feed" id="home-feed" aria-live="polite"></div>
+        <main class="canvas" id="main-content">
+            <div class="topbar">
+                <div class="brand"><svg class="mark" aria-hidden="true"><use href="#mark"/></svg>Ledger</div>
+                <button type="button" class="icon-btn" data-open-settings aria-label="Settings"><svg class="i" aria-hidden="true"><use href="#i-gear"/></svg></button>
             </div>
 
-            <div id="dashboard" role="tabpanel" aria-labelledby="tab-dashboard" class="tab-content">
-                <div id="dashboard-empty-state" class="dashboard-empty" hidden>
-                    <h2>Welcome to your Finance Tracker</h2>
-                    <p>Add a few details and your income, spending, and savings come to life. Start here:</p>
-                    <div class="empty-actions">
-                        <button type="button" class="empty-action-card" data-empty-action="income">
-                            <span class="empty-action-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg></span>
-                            <span class="empty-action-title">Add income</span>
-                            <span class="empty-action-desc">Your salary or self-employed pay</span>
-                        </button>
-                        <button type="button" class="empty-action-card" data-empty-action="expenses">
-                            <span class="empty-action-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/></svg></span>
-                            <span class="empty-action-title">Add expenses</span>
-                            <span class="empty-action-desc">Essential and non-essential</span>
-                        </button>
-                        <button type="button" class="empty-action-card" data-empty-action="fi">
-                            <span class="empty-action-icon" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>
-                            <span class="empty-action-title">Set your FI goal</span>
-                            <span class="empty-action-desc">Assets, allocation &amp; FI settings</span>
-                        </button>
-                    </div>
-                </div>
-                <div id="dashboard-populated">
-                <div class="dashboard-controls">
-                    <label for="dashboard-view-period">View Period:</label>
-                    <select id="dashboard-view-period">
-                        <option value="daily">Daily (5-Day Week)</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="fortnightly">Fortnightly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="yearly">Yearly</option>
-                    </select>
-                </div>
-                <div class="dashboard-grid">
-                    <div class="card card--link" data-card-link="income" role="link" tabindex="0" aria-label="Income Overview — go to Income tab">
-                        <div class="card-header">
-                            <div>
-                                <div class="card-title">Income Overview</div>
-                                <div class="card-subtitle" id="dashboard-income-subtitle">After Tax (Fortnightly)</div>
-                            </div>
-                        </div>
-                        <div class="amount neutral" id="dashboard-income-period-display" aria-live="polite" aria-atomic="true"></div>
-                        <div class="time-periods">
-                             <div class="time-item">
-                                <div class="time-label">Annual</div>
-                                <div class="time-amount" id="dashboard-annual-income"></div>
-                            </div>
-                            <div class="time-item">
-                                <div class="time-label">Weekly</div>
-                                <div class="time-amount" id="dashboard-weekly-income"></div>
-                            </div>
-                            <div class="time-item">
-                                <div class="time-label">Daily (5-day week)
-                                    <details class="info-tip"><summary aria-label="More info: daily figures">ⓘ</summary><div class="info-tip-body">Daily figures divide your annual net income by 260 working days (5 days × 52 weeks), not 365 calendar days — so this reflects a typical pay day rather than a calendar day.</div></details>
-                                </div>
-                                <div class="time-amount" id="dashboard-daily-income"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card card--link" data-card-link="expenses" role="link" tabindex="0" aria-label="Outgoing vs Savings — go to Expenses tab">
-                        <div class="card-header">
-                            <div>
-                                <div class="card-title" id="dashboard-outgoing-savings-title">Fortnightly Overview</div>
-                                <div class="card-subtitle">Outgoing vs Savings</div>
-                            </div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <div style="text-align: center; flex: 1; min-width: 100px;">
-                                <div class="card-subtitle">Outgoing</div>
-                                <div class="amount expense" id="dashboard-period-expenses"></div>
-                            </div>
-                            <div style="text-align: center; flex: 1; min-width: 100px;">
-                                <div class="card-subtitle">Savings</div>
-                                <div class="amount" id="dashboard-period-savings"></div>
-                            </div>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="savings-progress" style="width: 0%;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="dashboard-stack">
-                    <div class="card card--link" data-card-link="expenses" role="link" tabindex="0" aria-label="Expense Breakdown — go to Expenses tab">
-                        <div class="card-header">
-                            <div>
-                                <div class="card-title">Expense Breakdown</div>
-                                <div class="card-subtitle" id="dashboard-expense-breakdown-subtitle">Essential vs Non-Essential</div>
-                            </div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                            <div style="text-align: center; flex: 1; min-width: 100px;">
-                                <div class="card-subtitle">Essential</div>
-                                <div class="amount" style="color: var(--color-essential);" id="dashboard-essential-expenses"></div>
-                                <div class="card-subtitle" id="dashboard-essential-pct"></div>
-                            </div>
-                            <div style="text-align: center; flex: 1; min-width: 100px;">
-                                <div class="card-subtitle">Non-Essential</div>
-                                <div class="amount" style="color: var(--color-warning);" id="dashboard-nonessential-expenses"></div>
-                                <div class="card-subtitle" id="dashboard-nonessential-pct"></div>
-                            </div>
-                        </div>
-                        <div class="progress-bar" title="Essential share of total spending">
-                            <div class="progress-fill" id="dashboard-essential-split" style="width: 0%;"></div>
-                        </div>
-                    </div>
-                    <div class="card card--link" data-card-link="savings" role="link" tabindex="0" aria-label="Net Worth — go to Savings tab">
-                        <div class="card-header">
-                            <div>
-                                <div class="card-title">Net Worth</div>
-                                <div class="card-subtitle">Assets minus Liabilities</div>
-                            </div>
-                        </div>
-                        <div class="amount net-worth" id="net-worth-display" aria-live="polite" aria-atomic="true"></div>
-                        <div class="trend-slot" id="net-worth-trend" aria-hidden="true"></div>
-                         <div class="net-worth-breakdown">
-                            <div>
-                                <div class="card-subtitle">Total Assets</div>
-                                <div class="amount" id="total-assets-display"></div>
-                            </div>
-                            <div>
-                                <div class="card-subtitle">Total Liabilities</div>
-                                <div class="amount expense" id="total-liabilities-display"></div>
-                            </div>
-                        </div>
-                        <hr style="margin: 10px 0; border: 0; border-top: 1px solid var(--border-color);">
-                        <div class="card-subtitle" style="text-align: center; margin-bottom: 4px;">Breakdown</div>
-                        <div class="accounts-grid" id="assets-display"></div>
-                        <div class="accounts-grid" id="liabilities-display"></div>
-                    </div>
-                    <div class="card card--link" data-card-link="savings" role="link" tabindex="0" aria-label="Income Allocation Strategy — go to Savings tab">
-                    <div class="card-title" id="allocation-title">Income Allocation Strategy</div>
-                    <div class="card-subtitle" id="allocation-period-subtitle">Based on Net Income (Fortnightly)</div>
-                    <div class="savings-breakdown" id="allocation-display"></div>
-                    </div>
-                    <div class="card" id="dashboard-spending-card" hidden>
-                        <div class="card-title">Spending this month</div>
-                        <div class="card-subtitle" id="dashboard-spending-subtitle"></div>
-                        <div id="dashboard-spending-list" style="margin-top: 14px;"></div>
-                    </div>
-                    <div class="card" id="year-so-far-card" hidden>
-                        <div class="card-title" id="year-so-far-title">This year so far</div>
-                        <div class="card-subtitle">Your year in numbers</div>
-                        <div id="year-so-far-stats" style="margin-top: 14px;"></div>
-                    </div>
-                    <div class="card" id="dashboard-coaster-card" hidden>
-                        <div class="card-title">Coasting runway</div>
-                        <div class="card-subtitle">How long your assets cover your average spending</div>
-                        <div id="dashboard-coaster-body" style="margin-top: 14px;"></div>
-                    </div>
-                </div>
-                </div><!-- /#dashboard-populated -->
-            </div>
+            <section id="today" role="tabpanel" aria-labelledby="tab-today" class="screen active">
+                <div class="title-row"><div><h1>Today</h1></div></div>
+                <div id="today-setup-slot"></div>
+                <div id="today-tax-slot"></div>
+                <div id="today-review-slot"></div>
+                <div id="today-body"></div>
+            </section>
 
-            <div id="income" role="tabpanel" aria-labelledby="tab-income" class="tab-content">
-                <div class="info-section" data-info-key="income">
-                    <div class="info-section-header">
-                        <h3>Understanding Your Income</h3>
-                        <button class="info-toggle" type="button" aria-expanded="true" aria-controls="info-body-income" aria-label="Collapse this guide">
-                            <svg class="ic info-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                        </button>
-                    </div>
-                    <div class="info-section-body" id="info-body-income">
-                        <p><strong>How to use:</strong></p>
-                        <ul>
-                            <li>Add each income source via the <strong>Edit income &amp; tax</strong> button and choose <strong>Salaried</strong> (tax estimated) or <strong>Self-employed</strong> (enter your net).</li>
-                            <li>Mark your main earner as <strong>Primary</strong> — its tax bracket breakdown appears below.</li>
-                            <li>Focus on the <strong>Net</strong> column — that's your actual take-home pay.</li>
-                            <li>Check the stat cards at the bottom for your average pay per fortnight and month.</li>
-                        </ul>
-                        <details class="info-more">
-                            <summary>Learn more</summary>
-                            <ul>
-                                <li><strong>Gross vs net pay:</strong> Your gross is what your employer puts on your contract. Net is what lands in your bank account after tax. This tool focuses on net — because that's the number you can actually spend or save.</li>
-                                <li><strong>How tax brackets actually work:</strong> Australia's system is progressive — you pay 0% on the first ~$18k, then rising rates on each extra slice. A pay rise that pushes you into a higher bracket only taxes the portion <em>above</em> the threshold, never your whole salary. Salaried sources estimate this for you; self-employed sources let you enter your net directly.</li>
-                                <li><strong>Superannuation explained:</strong> Your employer pays 11.5% of your ordinary earnings into super on top of your salary — it's not deducted from your gross. It's your money, invested for retirement, and understanding it early pays off massively.</li>
-                                <li><strong>Counting all your income:</strong> Beyond your main job, track any freelance, side gigs, investment dividends, or regular government payments. Each stream reduces your reliance on a single source.</li>
-                            </ul>
-                        </details>
-                        <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
+            <section id="activity" role="tabpanel" aria-labelledby="tab-activity" class="screen">
+                <div class="title-row">
+                    <div><h1>Activity</h1><p id="activity-sub"></p></div>
+                    <div class="title-actions">
+                        <button type="button" class="btn" id="open-import">Import statement</button>
+                        <input type="file" id="import-pick" accept=".csv,text/csv,text/plain,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,application/pdf" hidden aria-hidden="true" tabindex="-1">
+                        <button type="button" id="import-modal-open" hidden aria-hidden="true" tabindex="-1"></button>
+                        <button type="button" id="pdf-import-modal-open" hidden aria-hidden="true" tabindex="-1"></button>
                     </div>
                 </div>
-                <div class="tab-settings-bar">
-                    <button class="btn tab-edit-btn" id="open-income-settings" aria-haspopup="dialog" aria-controls="income-settings-modal">
-                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                        Edit income &amp; tax
-                    </button>
-                </div>
-                <div id="income-streams-display"></div>
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <div class="card-title">Income Breakdown (Total)</div>
-                        <div class="card-subtitle">Annual Summary</div>
-                        <div style="margin: 20px 0;" id="income-breakdown"></div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">Tax Brackets (Estimate)</div>
-                        <div class="card-subtitle">Progressive tax on your primary income's gross. Used to estimate net income for any source where 'Net Pay/Cycle' and 'Tax Removed/Cycle' are left blank.</div>
-                        <div style="margin-top: 20px;" id="tax-breakdown-reference"></div>
-                    </div>
-                </div>
-                <div class="card" id="help-payoff-card" hidden style="margin-top: 30px;">
-                    <div class="card-title">HELP/HECS payoff</div>
-                    <div class="card-subtitle" id="help-payoff-subtitle"></div>
-                    <div style="margin: 16px 0 4px;" id="help-payoff-stats"></div>
-                </div>
-                <div class="summary-stats" id="income-stats"></div>
-            </div>
+                <div id="activity-body"></div>
+            </section>
 
-            <div id="expenses" role="tabpanel" aria-labelledby="tab-expenses" class="tab-content">
-                <div class="info-section" data-info-key="expenses">
-                    <div class="info-section-header">
-                        <h3>Managing Your Expenses</h3>
-                        <button class="info-toggle" type="button" aria-expanded="true" aria-controls="info-body-expenses" aria-label="Collapse this guide">
-                            <svg class="ic info-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                        </button>
-                    </div>
-                    <div class="info-section-body" id="info-body-expenses">
-                        <p><strong>How to use:</strong></p>
-                        <ul>
-                            <li>Add each expense via the <strong>Edit expenses</strong> button with its <strong>name</strong>, <strong>amount</strong>, and <strong>real frequency</strong> (weekly, monthly, yearly…).</li>
-                            <li>Use the <strong>search bar</strong> to find a specific expense by name.</li>
-                            <li>Check the stat cards below for your total weekly spend, annual run rate, and the Essential Ratio.</li>
-                        </ul>
-                        <details class="info-more">
-                            <summary>Learn more</summary>
-                            <ul>
-                                <li><strong>Needs vs wants — a practical lens:</strong> Needs keep your life running (rent, utilities, groceries, minimum debt payments). Wants make life enjoyable (dining out, streaming, hobbies). This tool's Essential Ratio tells you what share of your spending is non-negotiable — a useful gut check.</li>
-                                <li><strong>Fixed vs variable — where you can actually adjust:</strong> Rent and loan repayments are fixed each month; groceries and entertainment are variable. When you need to cut back, start with variable non-essentials — you can cook more often, but you can't change your lease overnight.</li>
-                                <li><strong>Spending on yourself isn't the enemy:</strong> Cutting every joy to chase a savings number is unsustainable. The goal isn't deprivation — it's intention. Budget for the things that genuinely make you happy, cut the ones you don't even notice. A plan with room for joy is one you'll actually stick to.</li>
-                            </ul>
-                        </details>
-                        <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
-                    </div>
-                </div>
-                <div class="tab-settings-bar">
-                    <button class="btn tab-edit-btn" id="open-expenses-settings" aria-haspopup="dialog" aria-controls="expenses-settings-modal">
-                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                        Edit expenses
-                    </button>
-                </div>
-                <div class="expense-search-bar">
-                    <label for="expense-search" class="visually-hidden">Search expenses by name</label>
-                    <input type="search" id="expense-search" class="form-input" placeholder="Search expenses by name…" autocomplete="off">
-                </div>
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <div class="card-title">Essential Expenses</div>
-                        <div class="card-subtitle" id="essential-subtitle"></div>
-                        <div class="expense-list" id="essential-expenses"></div>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">Non-Essential Expenses</div>
-                        <div class="card-subtitle" id="non-essential-subtitle"></div>
-                        <div class="expense-list" id="non-essential-expenses"></div>
-                    </div>
-                </div>
-                <div class="card" id="envelopes-card" hidden style="margin-top: 15px;">
-                    <div class="card-title">Budget envelopes</div>
-                    <div class="card-subtitle">Category caps vs what you've actually spent this month (from imported transactions)</div>
-                    <div id="envelopes-list" style="margin-top: 16px;"></div>
-                </div>
-                <div class="summary-stats" id="expense-stats"></div>
-            </div>
+            <section id="plan" role="tabpanel" aria-labelledby="tab-plan" class="screen">
+                <div class="title-row"><div><h1>Plan</h1><p id="plan-sub"></p></div></div>
+                <div id="plan-buckets"></div>
+            </section>
 
-            <div id="savings" role="tabpanel" aria-labelledby="tab-savings" class="tab-content">
-                <div class="info-section" data-info-key="savings">
-                    <div class="info-section-header">
-                        <h3>Building Your Financial Future</h3>
-                        <button class="info-toggle" type="button" aria-expanded="true" aria-controls="info-body-savings" aria-label="Collapse this guide">
-                            <svg class="ic info-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                        </button>
-                    </div>
-                    <div class="info-section-body" id="info-body-savings">
-                        <p><strong>How to use:</strong></p>
-                        <ul>
-                            <li>Set your <strong>FI multiple</strong> and <strong>expected return</strong> via the <strong>Edit assets, allocation &amp; FI</strong> button — these drive your FI estimate.</li>
-                            <li>Track your <strong>Savings Rate</strong> and <strong>Years to FI</strong> in the stat cards below.</li>
-                            <li>Watch the <strong>FI progress</strong> to see how close you are to your target nest egg.</li>
-                        </ul>
-                        <details class="info-more">
-                            <summary>Learn more</summary>
-                            <ul>
-                                <li><strong>Your savings rate is your most powerful lever:</strong> The share of net income you keep — not your salary, not your returns — is the single biggest driver of when you reach financial independence. A high earner who spends it all gets there slower than a moderate earner who saves aggressively.</li>
-                                <li><strong>Financial independence, defined:</strong> FI isn't necessarily quitting work forever. It's the point where your investments generate enough to cover your core living costs — giving you the freedom to work because you <em>want</em> to, not because you have to. The FI multiple you set is your personal target: how many years of expenses you want saved before you call it.</li>
-                                <li><strong>The 4% rule — a starting point, not a guarantee:</strong> A common guide says ~25× your annual expenses invested can sustain a long retirement. If you spend $50k a year, that's roughly $1.25M. It's a useful compass — but real returns vary, and your timeline matters. Treat it as a target to aim past, not a number you can retire on the day you hit it.</li>
-                                <li><strong>Compound growth — the quiet engine:</strong> Reinvested returns earn their own returns. A dollar saved at 30 can be worth multiples of a dollar saved at 50 — not because you earned more, but because it had longer to snowball. Saving early lets compounding do the heavy lifting over time.</li>
-                                <li><strong>Good saving habits that stick:</strong> Automate transfers the day you're paid — if you never see the money in your spending account, you won't miss it. Pick a percentage, not a dollar amount, so your savings grow with pay rises. Build a small emergency buffer first (a few months of essentials), then direct everything else toward your FI goal.</li>
-                                <li><strong>Where to put your savings — a quick menu:</strong> High-interest savings accounts for your emergency fund (safe, accessible, ~5% right now in Australia). Offset accounts against a mortgage (tax-free effective return at your loan rate). Broad-market ETFs for long-term FI investing (low-cost diversification). Superannuation — the tax-advantaged long game. Each has a different job; the right mix depends on your timeline and goals.</li>
-                            </ul>
-                        </details>
-                        <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
-                    </div>
-                </div>
-                <div class="tab-settings-bar">
-                    <button class="btn tab-edit-btn" id="open-savings-settings" aria-haspopup="dialog" aria-controls="savings-settings-modal">
-                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                        Edit assets, allocation &amp; FI
-                    </button>
-                </div>
-                <div class="card">
-                    <div class="card-title">Net Savings Capacity</div>
-                    <div class="card-subtitle">Income minus all expenses</div>
-                    <div class="time-periods" style="margin-top: 30px;" id="savings-capacity"></div>
-                </div>
-                <div class="dashboard-grid" style="margin-top: 30px;">
-                    <div class="card">
-                        <div class="card-title">Savings Rate</div>
-                        <div class="card-subtitle">Percentage of net income saved</div>
-                        <div class="amount" style="color: var(--color-positive);" id="savings-rate">0.0%</div>
-                        <div class="trend-slot" id="savings-rate-trend" aria-hidden="true"></div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="savings-rate-progress" style="width: 0%;"></div>
-                        </div>
-                        <p style="margin-top: 15px; color: var(--text-color-secondary); font-size: 0.9em;" id="savings-message"></p>
-                        <p class="benchmark-hint">Benchmark: aim for 20%+ — the higher your savings rate, the sooner you reach financial independence.</p>
-                    </div>
-                    <div class="card">
-                        <div class="card-title">Financial Independence</div>
-                        <div class="card-subtitle">At current savings rate</div>
-                        <div style="margin: 20px 0;" id="fi-stats"></div>
-                    </div>
-                </div>
-                <div class="card" id="tax-provision-card" hidden style="margin-top: 30px;">
-                    <div class="card-title">Tax provision</div>
-                    <div class="card-subtitle">Your tax pot vs the estimated liability on variable income</div>
-                    <div id="tax-provision-body" style="margin-top: 14px;"></div>
-                </div>
-                <div class="card" style="margin-top: 30px;">
-                    <div class="card-title">Assets</div>
-                    <div class="card-subtitle">What you own · Total: <span id="savings-total-assets"></span></div>
-                    <div class="accounts-grid" id="savings-assets-display" style="margin-top: 20px;"></div>
-                </div>
-            </div>
+            <section id="future" role="tabpanel" aria-labelledby="tab-future" class="screen">
+                <div class="title-row"><div><h1>Future</h1><p id="future-sub"></p></div></div>
+            </section>
 
-            <div id="liabilities" role="tabpanel" aria-labelledby="tab-liabilities" class="tab-content">
-                <div class="info-section" data-info-key="liabilities">
-                    <div class="info-section-header">
-                        <h3>Understanding Your Liabilities</h3>
-                        <button class="info-toggle" type="button" aria-expanded="true" aria-controls="info-body-liabilities" aria-label="Collapse this guide">
-                            <svg class="ic info-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                        </button>
-                    </div>
-                    <div class="info-section-body" id="info-body-liabilities">
-                        <p><strong>How to use:</strong></p>
-                        <ul>
-                            <li>Add each liability via the <strong>Edit liabilities</strong> button with its <strong>name</strong>, <strong>balance</strong>, and <strong>interest rate</strong>.</li>
-                            <li>Check the <strong>Liability Summary</strong> card for each debt's monthly and annual interest cost.</li>
-                            <li>Scroll to the <strong>Debt Reduction Impact</strong> card to see your Net Worth if Debt-Free.</li>
-                        </ul>
-                        <details class="info-more">
-                            <summary>Learn more</summary>
-                            <ul>
-                                <li><strong>Good debt vs bad debt — a practical lens:</strong> Good debt builds assets or earns more than it costs (mortgage on an appreciating property, student loans that boost your income). Bad debt finances consumption at high interest (credit cards, car loans for more car than you need). The interest rate is the tell — if it's over ~8%, it's probably worth clearing fast.</li>
-                                <li><strong>Debt avalanche vs snowball — pick what works:</strong> Avalanche pays the highest interest rate first (math-optimal). Snowball pays the smallest balance first (momentum-optimal — quick wins keep you going). This tool shows each debt's monthly and annual interest cost, so you can see which one is bleeding you the most.</li>
-                                <li><strong>Interest compounds against you too:</strong> A $5,000 credit card at 20% costs ~$1,000 a year in interest if you only pay the minimum. That's money you could be saving instead. The Liability Summary card makes this visible — annual interest cost is the number to stare at.</li>
-                                <li><strong>Your net worth tells the whole story:</strong> Assets minus liabilities. You might have $50k saved, but if you owe $30k, your true position is $20k. The Net Worth if Debt-Free card shows what your finances look like without the drag of debt — that's the gap you're closing.</li>
-                            </ul>
-                        </details>
-                        <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
-                    </div>
-                </div>
-                <div class="tab-settings-bar">
-                    <button class="btn tab-edit-btn" id="open-liabilities-settings" aria-haspopup="dialog" aria-controls="liabilities-settings-modal">
-                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                        Edit liabilities
-                    </button>
-                </div>
-                <div class="card">
-                    <div class="card-title">Liability Summary</div>
-                    <div class="card-subtitle">Your current debt obligations</div>
-                    <div class="liability-summary" id="liability-summary-display"></div>
-                </div>
-                <div class="card" style="margin-top: 20px;">
-                    <div class="card-title">Debt Reduction Impact</div>
-                    <div class="card-subtitle">How paying off debts improves your net worth</div>
-                    <div style="margin: 20px 0;" id="debt-impact-stats"></div>
-                </div>
-            </div>
-
-            <div id="whatIf" role="tabpanel" aria-labelledby="tab-whatIf" class="tab-content">
-                <div class="info-section" data-info-key="whatIf">
-                    <div class="info-section-header">
-                        <h3>Financial Scenario Planning</h3>
-                        <button class="info-toggle" type="button" aria-expanded="true" aria-controls="info-body-whatIf" aria-label="Collapse this guide">
-                            <svg class="ic info-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-                        </button>
-                    </div>
-                    <div class="info-section-body" id="info-body-whatIf">
-                        <p><strong>How to use:</strong></p>
-                        <ul>
-                            <li>Edit any section below — income, expenses, assets, liabilities, allocation or FI — to model a change. <strong>Nothing here touches your real data.</strong></li>
-                            <li>Click <strong>Calculate Scenario</strong> to see a full simulated dashboard of that hypothetical.</li>
-                            <li>Use the <strong>View period</strong> selector on the results to switch between weekly, fortnightly, monthly and yearly.</li>
-                            <li>Click <strong>Reset to current</strong> to reload every section from your live data.</li>
-                        </ul>
-                        <details class="info-more">
-                            <summary>Learn more</summary>
-                            <ul>
-                                <li><strong>What "what if" planning is really for:</strong> Big money decisions are hard to picture in your head. This tab lets you try one on for size — a pay rise, a move, a new car loan, a savings push — and see the knock-on effect on your savings, net worth and FI date before you commit a single real dollar.</li>
-                                <li><strong>It's a true sandbox:</strong> Every section here is a private copy of your finances. Add a source, delete an expense, pay down a debt — your real Dashboard, Savings and Liabilities don't budge. When you're done exploring, <strong>Reset to current</strong> wipes the slate back to reality.</li>
-                                <li><strong>The levers that move the needle most:</strong> Your FI date is driven by three things — how much you keep (income minus expenses), the return you assume, and your FI multiple. Small, sustainable changes usually beat dramatic ones: trimming a recurring expense or nudging your savings rate up a few points compounds harder over time than a one-off windfall.</li>
-                                <li><strong>Reading the deltas:</strong> Each result shows a ↑/↓ badge versus your current plan — green when the change is in a good direction (more savings, fewer years to FI), red when it isn't, and "no change" when a figure didn't move. They make trade-offs obvious: a raise that all goes to lifestyle shows income ↑ but FI flat.</li>
-                                <li><strong>Set goals on your buckets:</strong> Give an allocation bucket a current balance and a target, and the simulated dashboard shows how long it'll take to get there at the scenario's savings rate. It's the fastest way to answer "if I change X, when do I hit my $Y goal?"</li>
-                                <li><strong>Scenarios worth trying:</strong> A pay rise (and where it actually goes). Cutting your biggest non-essential. Clearing a high-interest debt. Shifting your allocation toward Grow. A more conservative return assumption — it's wise to check your plan still holds if markets underperform.</li>
-                            </ul>
-                        </details>
-                        <label class="info-dismiss"><input type="checkbox" class="info-dismiss-check"> Don't show this again</label>
-                    </div>
-                </div>
-                <div class="settings-section settings-section--group">
-                    <div class="settings-title">"What If" Scenario Planner</div>
-                    <p class="form-hint" style="margin: 0 0 15px; color: var(--text-color-secondary);">
-                        Edit any section below to model a scenario — it only changes this sandbox, never your real data. Your edits persist across tabs; click <strong>Reset to current</strong> to reload every section from your live data, then <strong>Calculate Scenario</strong> to see the results.
-                    </p>
-                    <div class="settings-section" style="margin-top: 4px;">
-                        <div class="settings-title">Scenario Income Sources</div>
-                        <div class="dynamic-list">
-                            <div class="list-header" style="grid-template-columns: 0.4fr 0.9fr 1.2fr 0.8fr 0.8fr 1fr 0.6fr 0.8fr 0.5fr;">
-                                <span>Primary</span> <span>Type</span> <span>Name</span> <span>Annual Gross</span> <span>Schedule</span> <span>Net Pay / Cycle</span> <span>Hours/Cycle</span> <span>Tax Removed / Cycle</span> <span>Action</span>
-                            </div>
-                            <div id="whatif-income-sources-settings"></div>
-                        </div>
-                        <button class="add-btn" id="whatif-add-income">+ Add Income Source</button>
-                    </div>
-                    <div class="settings-section" style="margin-top: 20px;">
-                        <div class="settings-title">Scenario Essential Expenses</div>
-                        <div class="dynamic-list">
-                            <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
-                                <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
-                            </div>
-                            <div id="whatif-essential-expenses-settings"></div>
-                        </div>
-                        <button class="add-btn" id="whatif-add-essential">+ Add Essential</button>
-                    </div>
-                    <div class="settings-section" style="margin-top: 20px;">
-                        <div class="settings-title">Scenario Non-Essential Expenses</div>
-                        <div class="dynamic-list">
-                            <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
-                                <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
-                            </div>
-                            <div id="whatif-non-essential-expenses-settings"></div>
-                        </div>
-                        <button class="add-btn" id="whatif-add-nonessential">+ Add Non-Essential</button>
-                    </div>
-                    <div class="settings-section" style="margin-top: 20px;">
-                        <div class="settings-title">Scenario Assets</div>
-                        <div class="dynamic-list">
-                            <div class="list-header" style="grid-template-columns: 2fr 1.5fr auto;">
-                                <span>Asset Name</span> <span>Current Balance</span> <span>Action</span>
-                            </div>
-                            <div id="whatif-assets-settings"></div>
-                        </div>
-                        <button class="add-btn" id="whatif-add-asset">+ Add Asset</button>
-                    </div>
-                    <div class="settings-section" style="margin-top: 20px;">
-                        <div class="settings-title">Scenario Liabilities</div>
-                        <div class="dynamic-list">
-                            <div class="list-header" style="grid-template-columns: 2fr 1.5fr 1fr auto;">
-                                <span>Liability Name</span> <span>Current Balance</span> <span>Interest Rate (%)</span> <span>Action</span>
-                            </div>
-                            <div id="whatif-liabilities-settings"></div>
-                        </div>
-                        <button class="add-btn" id="whatif-add-liability">+ Add Liability</button>
-                    </div>
-                    <div class="settings-section" style="margin-top: 20px;">
-                        <div class="settings-title">Scenario FI Settings</div>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="whatif-fi-multiple-set">FI Multiple (× annual expenses)</label>
-                                <input type="number" class="form-input" id="whatif-fi-multiple-set" step="0.1" min="1" autocomplete="off">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="whatif-expected-return-set">Expected Annual Return (%)</label>
-                                <input type="number" class="form-input" id="whatif-expected-return-set" step="0.1" min="0" autocomplete="off">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="settings-section" style="margin-top: 20px;">
-                        <div class="settings-title">Scenario Allocation (Buckets)</div>
-                        <p class="form-hint" style="margin: 0 0 12px; color: var(--text-color-secondary); font-size: 0.9em;">
-                            Edits here only affect this scenario, not your real allocation. Set a current balance + goal on a bucket to project its time-to-reach in the results.
-                        </p>
-                        <div class="dynamic-list">
-                            <div class="list-header" style="grid-template-columns: 2fr 0.8fr 1fr 1fr auto;">
-                                <span>Allocation Name</span> <span>%</span> <span>Current Funds</span> <span>Goal (opt)</span> <span>Action</span>
-                            </div>
-                            <div id="whatif-allocation-settings"></div>
-                        </div>
-                        <button class="add-btn" id="whatif-add-allocation">+ Add Bucket</button>
-                        <p style="margin-top: 10px; color: var(--text-color-secondary); font-size: 0.9em;">
-                            Total: <span id="whatif-total-percent">0.0%</span> (should equal 100%)
-                        </p>
-                    </div>
-                    <div style="display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 25px 0;">
-                        <button class="btn" id="run-whatif-calculation">Calculate Scenario</button>
-                        <button class="btn btn-secondary" id="reset-whatif-to-current">Reset to current</button>
-                    </div>
-                    <div class="scenario-results" id="whatif-results-display">
-                        <h3>Scenario Results</h3>
-                        <p>Your "What If" results will appear here after calculation.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Phase D.6 — the Settings tab was removed once empty: data-entry lives in per-tab
-                 settings modals, and currency + Save/Reset Defaults + Export/Import moved into the
-                 appearance modal (#gui-settings-modal), opened by the topbar gear. -->
+            <!-- D2: the Settings screen renders here (src/ui/settings-screen.js). Shown by the gear; any tab hides it. -->
+            <section id="settings-root" class="screen" aria-labelledby="settings-title"></section>
         </main>
     </div>
+    <div id="sheet-root"></div>
+    <div id="setup-root"></div>
 
-    <!-- A.4 — GUI Settings modal. The dialog body keeps id="guiSettings" so the existing
-         swatch/colour-picker delegation and B.6 live-preview listeners keep working unchanged. -->
-    <div class="modal-backdrop" id="gui-settings-modal" hidden>
-        <div class="modal modal--resizable" role="dialog" aria-modal="true" aria-labelledby="gui-settings-title">
-            <div class="modal-header">
-                <h2 id="gui-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Settings</h2>
-                <button class="modal-close" id="close-gui-settings" aria-label="Close appearance settings">
-                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-                </button>
-            </div>
-            <div class="modal-body" id="guiSettings">
-                <!-- J2 — two-tab appearance panel (Themes | Customize), modelled on Odysseus.
-                     Existing input ids are preserved so the colour/typography wiring,
-                     swatch delegation and live-preview listeners keep working unchanged. -->
-                <div class="appearance-tabs" role="tablist" aria-label="Appearance sections">
-                    <button type="button" class="appearance-tab active" role="tab" id="atab-themes" data-atab="themes" aria-selected="true" aria-controls="apanel-themes">
-                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="19" cy="13" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="10" cy="20" r="2.5"/></svg>
-                        Themes
-                    </button>
-                    <button type="button" class="appearance-tab" role="tab" id="atab-customize" data-atab="customize" aria-selected="false" aria-controls="apanel-customize" tabindex="-1">
-                        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.06 11.9l-3.5 3.5a2.85 2.85 0 1 0 4.03 4.03l8.49-8.49a4.5 4.5 0 1 0-6.36-6.36L3.18 12.62"/><path d="M14 7l3 3"/></svg>
-                        Customize
-                    </button>
-                </div>
-
-                <!-- Tab: Themes -->
-                <div class="appearance-panel" id="apanel-themes" role="tabpanel" aria-labelledby="atab-themes">
-                    <p class="theme-section-title">Default Themes</p>
-                    <div id="theme-switcher-container" class="theme-switcher" role="group" aria-label="Theme presets"></div>
-                    <!-- Your Themes — saved custom themes (populated in J3). -->
-                    <div id="your-themes-card" hidden>
-                        <p class="theme-section-title">Your Themes</p>
-                        <div id="your-themes-container" class="theme-switcher" role="group" aria-label="Your saved themes"></div>
-                    </div>
-                </div>
-
-                <!-- Tab: Customize -->
-                <div class="appearance-panel" id="apanel-customize" role="tabpanel" aria-labelledby="atab-customize" hidden>
-                    <div class="settings-section">
-                        <div class="settings-title">Colours</div>
-                        <!-- J2 — tight base tier; everything else (2nd-stop gradients, content
-                             bg, tab/muted/header-text, tints) is derived from these. Power users
-                             open "More colours" to pin the rest. Round swatches = native colour
-                             inputs (.color-dot). Ids map to GUI_COLOR_FIELDS in events.js. -->
-                        <div class="color-grid">
-                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-bg"><span>Background</span></label>
-                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-surface"><span>Surface (cards)</span></label>
-                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-text"><span>Text</span></label>
-                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-heading"><span>Headings</span></label>
-                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-accent"><span>Accent</span></label>
-                            <label class="color-field"><input type="color" class="color-dot" id="gui-col-border"><span>Border</span></label>
-                        </div>
-                        <details class="more-colours">
-                            <summary>More colours</summary>
-                            <div class="color-grid">
-                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-muted"><span>Muted / sub-heading</span></label>
-                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-positive"><span>Positive (gains)</span></label>
-                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-negative"><span>Negative (losses)</span></label>
-                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-neutral"><span>Neutral (info)</span></label>
-                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-essential"><span>Essential spend</span></label>
-                                <label class="color-field"><input type="color" class="color-dot" id="gui-col-warning"><span>Warning</span></label>
-                            </div>
-                        </details>
-                    </div>
-                    <div class="settings-section">
-                        <div class="settings-title">Colour Harmony</div>
-                        <!-- J3 — pick an accent + a harmony rule → auto-derive a full base
-                             palette (generateHarmonyBase in theme.js) and apply it through the
-                             one applyGuiStylesToPage chokepoint. Save it under "Your Themes" to keep. -->
-                        <p class="settings-hint">Pick an accent and a harmony rule to auto-generate a matching palette, preview it, then apply it as your base colours.</p>
-                        <div class="harmony-controls">
-                            <label class="color-field"><input type="color" class="color-dot" id="harmony-accent"><span>Accent</span></label>
-                            <div class="form-group">
-                                <label class="form-label" for="harmony-type">Harmony</label>
-                                <select class="form-select" id="harmony-type">
-                                    <option value="complementary">Complementary</option>
-                                    <option value="analogous">Analogous</option>
-                                    <option value="triadic">Triadic</option>
-                                    <option value="monochromatic">Monochromatic</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="harmony-mode">Mode</label>
-                                <select class="form-select" id="harmony-mode">
-                                    <option value="dark">Dark</option>
-                                    <option value="light">Light</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="harmony-preview" id="harmony-preview" aria-hidden="true"></div>
-                        <div class="settings-actions" style="margin-top: 12px; padding-top: 0; border-top: none;">
-                            <button class="btn btn-secondary" id="harmony-apply-btn">Apply palette</button>
-                        </div>
-                    </div>
-                    <!-- Font & Background — typography and the decorative backdrop merged into one
-                         section (Odysseus's "Font & Layout"). Existing input ids are preserved so the
-                         font/effect wiring keeps working unchanged. -->
-                    <div class="settings-section">
-                        <div class="settings-title">Font &amp; Background</div>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="gui-font-family">Font Family</label>
-                                <select class="form-select" id="gui-font-family">
-                                    <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI (Default)</option>
-                                    <option value="Arial, Helvetica, sans-serif">Arial</option>
-                                    <option value="Verdana, Geneva, sans-serif">Verdana</option>
-                                    <option value="'Times New Roman', Times, serif">Times New Roman</option>
-                                    <option value="'Courier New', Courier, monospace">Courier New</option>
-                                    <option value="Georgia, serif">Georgia</option>
-                                    <option value="'Lucida Sans Unicode', 'Lucida Grande', sans-serif">Lucida Sans Unicode</option>
-                                    <option value="'Trebuchet MS', Helvetica, sans-serif">Trebuchet MS</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="gui-base-font-size">Base Font Size (px)</label>
-                                <input type="number" class="form-input" id="gui-base-font-size" min="10" max="24" step="1">
-                            </div>
-                        </div>
-                        <div class="form-grid" style="margin-top: 15px;">
-                            <div class="form-group">
-                                <label class="form-label" for="gui-bg-effect">Background effect</label>
-                                <select class="form-select" id="gui-bg-effect">
-                                    <option value="none">None</option>
-                                    <option value="constellations">Constellations</option>
-                                    <option value="petals">Petals</option>
-                                    <option value="rain">Rain</option>
-                                    <option value="synapse">Synapse</option>
-                                    <option value="sparkles">Sparkles</option>
-                                    <option value="embers">Embers</option>
-                                    <!-- Perlin Flow temporarily disabled — the flow-field look is unresolved
-                                         (an issue inherited from the Odysseus original). Code is kept in
-                                         theme.js (_ftPerlinFlow) to revisit later; just unlisted here. -->
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label" for="gui-bg-effect-color">Effect colour</label>
-                                <div class="effect-colour-row">
-                                    <label class="settings-inline-check"><input type="checkbox" id="gui-bg-effect-accent"> Match accent colour</label>
-                                    <input type="color" class="color-dot" id="gui-bg-effect-color">
-                                </div>
-                            </div>
-                        </div>
-                        <p class="settings-hint">The background effect is a subtle animated backdrop. A lighter version runs on phones; it turns off when your system prefers reduced motion.</p>
-                        <!-- J3 — custom font upload (browser-side: FontFace + localStorage; no
-                             server/font folder). Uploaded fonts join the Font Family dropdown above. -->
-                        <div class="form-group" style="margin-top: 14px;">
-                            <label class="form-label">Custom font</label>
-                            <input type="file" id="gui-font-file" accept=".ttf,.otf,.woff,.woff2" style="display: none;">
-                            <button type="button" class="btn btn-secondary" id="gui-font-upload-btn">Upload font…</button>
-                            <p class="settings-hint">Add a .ttf / .otf / .woff / .woff2 file (max 2&nbsp;MB). Stored on this device only; it joins the Font Family list above.</p>
-                            <p class="theme-save-error" id="gui-font-error" role="alert" hidden></p>
-                            <div id="custom-fonts-list" class="custom-fonts-list"></div>
-                        </div>
-                    </div>
-                    <div class="settings-section">
-                        <div class="settings-title">General</div>
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label" for="currency-select">Currency</label>
-                                <select class="form-select" id="currency-select">
-                                    <option value="AUD">AUD - Australian Dollar</option>
-                                    <option value="USD">USD - US Dollar</option>
-                                    <option value="EUR">EUR - Euro</option>
-                                    <option value="GBP">GBP - British Pound</option>
-                                    <option value="CAD">CAD - Canadian Dollar</option>
-                                    <option value="NZD">NZD - New Zealand Dollar</option>
-                                    <option value="JPY">JPY - Japanese Yen</option>
-                                    <option value="CHF">CHF - Swiss Franc</option>
-                                    <option value="CNY">CNY - Chinese Yuan</option>
-                                    <option value="INR">INR - Indian Rupee</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="settings-section">
-                        <div class="settings-title">Save / Share theme</div>
-                        <p class="settings-hint">Save your current colours + font as a reusable theme (it appears under “Your Themes”), or share it as a file.</p>
-                        <div class="theme-save-row">
-                            <label class="visually-hidden" for="theme-save-name">Theme name</label>
-                            <input type="text" class="form-input" id="theme-save-name" placeholder="Theme name…" maxlength="32">
-                            <button class="btn btn-secondary" id="theme-save-btn">Save theme</button>
-                        </div>
-                        <p class="theme-save-error" id="theme-save-error" role="alert" hidden></p>
-                        <div class="settings-actions" style="margin-top: 12px; padding-top: 0; border-top: none;">
-                            <button class="btn btn-secondary" id="theme-export-btn">Export theme (JSON)</button>
-                            <input type="file" id="theme-import-file" accept=".json" style="display: none;">
-                            <button class="btn btn-secondary" id="theme-import-btn">Import theme (JSON)</button>
-                        </div>
-                    </div>
-                    <div class="settings-section">
-                        <div class="settings-title">Save, Reset &amp; Backup</div>
-                        <p class="settings-hint">Appearance changes (theme, colours, fonts) save automatically. Defaults = your whole setup (data + appearance) used as a reset point. Backup = a JSON file of everything.</p>
-                        <div class="settings-actions" style="margin-top: 12px; padding-top: 0; border-top: none;">
-                            <button class="btn btn-secondary" id="reset-gui-settings">Reset Appearance</button>
-                            <button class="btn btn-secondary" id="set-current-default">Save as My Defaults</button>
-                            <button class="btn btn-secondary" id="reset-to-defaults">Reset to Factory Defaults</button>
-                            <button class="btn btn-secondary" id="export-json-gui">Export Backup (JSON)</button>
-                            <input type="file" id="json-import-gui" accept=".json" style="display: none;">
-                            <button class="btn btn-secondary" id="import-json-gui-btn">Import Backup (JSON)</button>
-                            <button class="btn btn-secondary" id="export-csv-transactions">Export Transactions (CSV)</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Phase D.1 — Income settings modal. Opened by the gear button on the Income tab.
-         Holds the Income Sources + Tax Brackets data entry relocated from the Settings tab.
-         The inner ids (income-sources-settings, tax-brackets-settings) are unchanged so the
-         existing render + document-level delegated handlers keep working. -->
-    <div class="modal-backdrop" id="income-settings-modal" hidden>
-        <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="income-settings-title">
-            <div class="modal-header">
-                <h2 id="income-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="15 7 21 7 21 13"/></svg> Income &amp; Tax Settings</h2>
-                <button class="modal-close" id="close-income-settings" aria-label="Close income settings">
-                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="settings-section">
-                    <div class="settings-title">Income Sources
-                        <details class="info-tip"><summary aria-label="More info">ⓘ</summary><div class="info-tip-body">Tax is calculated based on 'Invoiced Pay' (Priority) or 'Tax Removed'. If neither, tax is 0. Clear 'Invoiced Pay' to use 'Tax Removed'.</div></details>
-                    </div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 0.4fr 0.9fr 1.2fr 0.8fr 0.8fr 1fr 0.6fr 0.8fr 0.5fr;">
-                            <span>Primary</span> <span>Type</span> <span>Name</span> <span>Annual Gross</span> <span>Schedule</span> <span>Net Pay / Cycle (Post Tax)</span> <span>Hours/Cycle</span> <span>Tax Removed / Cycle</span> <span>Action</span>
-                        </div>
-                        <div id="income-sources-settings"></div>
-                    </div>
-                    <button class="add-btn" id="add-income-source">+ Add Income Source</button>
-                    <!-- Payslip PDF autofill target — one shared picker; the clicked row's
-                         index is stashed by the handler before opening it. -->
-                    <input type="file" id="payslip-file" accept=".pdf,application/pdf" hidden>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">Income statement</div>
-                    <p class="settings-hint" style="margin-bottom: 12px;">A printable statement of your income events — month by month, with per-client totals and hourly rates where you've tracked hours. Handy for rental applications, lenders, or your accountant.</p>
-                    <div class="income-statement-controls">
-                        <label class="form-label" for="income-statement-period">Period</label>
-                        <select class="form-select" id="income-statement-period">
-                            <option value="3">Last 3 months</option>
-                            <option value="6" selected>Last 6 months</option>
-                            <option value="12">Last 12 months</option>
-                            <option value="fy">This financial year</option>
-                        </select>
-                        <button type="button" class="btn btn-secondary" id="open-income-statement">Open income statement</button>
-                    </div>
-                    <p class="settings-hint" id="income-statement-note" style="margin-top: 8px;"></p>
-                </div>
-                <!-- Static reference only — not legal advice, and deliberately NOT auto-updating.
-                     Rates change every 1 July; the card says so and points at the source. -->
-                <details class="settings-section award-reference" id="award-reference">
-                    <summary class="award-reference-summary">Hospitality award quick reference (HIGA) — minimum hourly rates</summary>
-                    <div class="award-reference-body">
-                        <p class="settings-hint">Approximate <strong>Hospitality Industry (General) Award</strong> adult minimums as at 1 July 2025. Reference only — not legal advice. Rates change every 1 July and depend on your exact classification; always check <strong>fairwork.gov.au</strong> or the P.A.C.T. pay calculator.</p>
-                        <div class="award-table-wrap">
-                            <table class="award-table">
-                                <thead>
-                                    <tr><th scope="col">Classification</th><th scope="col">Full/part-time</th><th scope="col">Casual (+25%)</th></tr>
-                                </thead>
-                                <tbody>
-                                    <tr><td>Introductory</td><td>$24.95</td><td>$31.19</td></tr>
-                                    <tr><td>Level 2 (e.g. food &amp; beverage attendant gr. 2)</td><td>$26.13</td><td>$32.66</td></tr>
-                                    <tr><td>Level 3 (e.g. F&amp;B attendant gr. 3, cook gr. 1)</td><td>$26.96</td><td>$33.70</td></tr>
-                                    <tr><td>Level 4 (e.g. cook gr. 3 — trade)</td><td>$28.36</td><td>$35.45</td></tr>
-                                    <tr><td>Level 5 (e.g. cook gr. 4)</td><td>$30.09</td><td>$37.61</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="award-table-wrap" style="margin-top: 10px;">
-                            <table class="award-table">
-                                <thead>
-                                    <tr><th scope="col">When you work</th><th scope="col">Full/part-time</th><th scope="col">Casual</th></tr>
-                                </thead>
-                                <tbody>
-                                    <tr><td>Saturday</td><td>125% of base</td><td>150% of base</td></tr>
-                                    <tr><td>Sunday</td><td>150% of base</td><td>175% of base</td></tr>
-                                    <tr><td>Public holiday</td><td>225% of base</td><td>250% of base</td></tr>
-                                    <tr><td>Weeknights 7pm–midnight</td><td>+10% of standard rate/hr</td><td>same loading applies</td></tr>
-                                    <tr><td>Weeknights midnight–7am</td><td>+15% of standard rate/hr</td><td>same loading applies</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <p class="settings-hint" style="margin-top: 10px;">Use the <strong>Pen.</strong> flag on an income event to mark shifts paid at penalty rates — with a base hourly rate set, Ledger shows how much of your pay came from loadings. It never calculates entitlements for you.</p>
-                    </div>
-                </details>
-                <div class="settings-section">
-                    <div class="settings-title">
-                        Tax Brackets (used for estimates)
-                        <span id="tax-brackets-info">These progressive brackets estimate tax on gross income. They calculate net income for any source where 'Net Pay/Cycle' and 'Tax Removed/Cycle' are left blank. If you enter either of those, your manual value takes precedence.</span>
-                    </div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 1fr 1fr 1fr auto;">
-                            <span>Min Income</span> <span>Max Income</span> <span>Tax Rate %</span> <span>Action</span>
-                        </div>
-                        <div id="tax-brackets-settings"></div>
-                    </div>
-                    <button class="add-btn" id="add-tax-bracket">+ Add Tax Bracket</button>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">Tax details
-                        <details class="info-tip"><summary aria-label="More info">ⓘ</summary><div class="info-tip-body">These improve the tax <strong>estimate</strong> for salaried income when you haven't entered your actual net pay. If you enter real payslip figures, those always win — they already include Medicare and HELP.</div></details>
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="tax-fy-select">Financial year (rates)</label>
-                            <select class="form-select" id="tax-fy-select"></select>
-                            <p class="settings-hint">Picking a year loads its official ATO brackets above.</p>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="tax-help-balance">HELP/HECS balance</label>
-                            <input type="number" class="form-input" id="tax-help-balance" min="0" step="100" placeholder="0 = no HELP debt">
-                            <p class="settings-hint">Adds compulsory repayments to the estimate and unlocks the payoff projection on the Income tab.</p>
-                        </div>
-                    </div>
-                    <div class="import-toggles">
-                        <label class="settings-inline-check"><input type="checkbox" id="tax-medicare-check"> Include the 2% Medicare levy in estimates</label>
-                        <label class="settings-inline-check"><input type="checkbox" id="tax-help-include"> Include HELP repayments in estimates</label>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Phase D.2 — Expenses settings modal (gear button on the Expenses tab). -->
-    <div class="modal-backdrop" id="expenses-settings-modal" hidden>
-        <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="expenses-settings-title">
-            <div class="modal-header">
-                <h2 id="expenses-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 7 9 13 13 9 21 17"/><polyline points="15 17 21 17 21 11"/></svg> Expenses Settings</h2>
-                <button class="modal-close" aria-label="Close expenses settings">
-                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="settings-section">
-                    <div class="settings-title">Essential Expenses</div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
-                            <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
-                        </div>
-                        <div id="essential-expenses-settings-list"></div>
-                    </div>
-                    <button class="add-btn" id="add-essential-expense-settings">+ Add Essential Expense</button>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">Non-Essential Expenses</div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr auto;">
-                            <span>Expense Name</span> <span>Amount</span> <span>Frequency</span> <span>Action</span>
-                        </div>
-                        <div id="non-essential-expenses-settings-list"></div>
-                    </div>
-                    <button class="add-btn" id="add-non-essential-expense-settings">+ Add Non-Essential Expense</button>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">Upcoming bills
-                        <details class="info-tip"><summary aria-label="More info">ⓘ</summary><div class="info-tip-body">Bills are <strong>reminders</strong> — they show on your Home feed when they're coming up, and roll to the next date automatically. They don't change your expense totals, so if a bill is a regular cost, keep it in the expense lists above too.</div></details>
-                    </div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 2fr 1fr 1fr 1.2fr auto;">
-                            <span>Bill Name</span> <span>Amount</span> <span>Repeats</span> <span>Next Due</span> <span>Action</span>
-                        </div>
-                        <div id="bills-settings"></div>
-                    </div>
-                    <button class="add-btn" id="add-bill">+ Add Bill</button>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">Categories &amp; budgets
-                        <details class="info-tip"><summary aria-label="More info">ⓘ</summary><div class="info-tip-body">Categories power CSV import auto-matching and the budget envelopes. <strong>Keywords</strong> are comma-separated snippets matched against transaction descriptions (first category in the list wins). Set a <strong>monthly budget</strong> to get an envelope with a burn bar on the Expenses tab.</div></details>
-                    </div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 1.4fr 1fr 0.6fr 3fr auto;">
-                            <span>Category</span> <span>Monthly Budget</span> <span>Essential</span> <span>Keywords (comma-separated)</span> <span>Action</span>
-                        </div>
-                        <div id="categories-settings"></div>
-                    </div>
-                    <button class="add-btn" id="add-category">+ Add Category</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Phase D.3 — Savings settings modal (gear button on the Savings tab): Assets + Allocation + FI. -->
-    <div class="modal-backdrop" id="savings-settings-modal" hidden>
-        <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="savings-settings-title">
-            <div class="modal-header">
-                <h2 id="savings-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg> Savings, Assets &amp; FI Settings</h2>
-                <button class="modal-close" aria-label="Close savings settings">
-                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="settings-section">
-                    <div class="settings-title">Assets</div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 2fr 1.5fr auto;">
-                            <span>Asset Name</span> <span>Current Balance</span> <span>Action</span>
-                        </div>
-                        <div id="assets-settings"></div>
-                    </div>
-                    <button class="add-btn" id="add-asset">+ Add Asset</button>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">Money Allocation Percentages</div>
-                    <details class="info-more allocation-explainer">
-                        <summary>How the buckets work</summary>
-                        <p>This follows the <strong>Barefoot Investor</strong> (Scott Pape) three-bucket system: give every dollar of your take-home pay a job. Together the buckets cover daily life, your safety net, and your future.</p>
-                        <ul>
-                            <li><strong>Blow</strong> — day-to-day living. Pape suggests four sub-accounts:
-                                <ul>
-                                    <li><strong>Daily Expenses (60%)</strong> — everyday bills, groceries, transport</li>
-                                    <li><strong>Splurge (10%)</strong> — guilt-free fun money</li>
-                                    <li><strong>Smile (10%)</strong> — short-term savings (holidays, concerts, gadgets)</li>
-                                    <li><strong>Fire Extinguisher (20%)</strong> — attacks debt first, then fills Mojo, then super, then flows into Grow</li>
-                                </ul>
-                            </li>
-                            <li><strong>Mojo</strong> — safety-net cash. Start with $2,000, build to 3–6 months of expenses. Hands off unless it's a real emergency.</li>
-                            <li><strong>Grow</strong> — long-term wealth: super, shares, property, or a side business.</li>
-                        </ul>
-                        <p>Make it your own — create whatever categories make sense for you. The only rule: your allocations must total 100%.</p>
-                    </details>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 2fr 0.8fr 1fr 1fr 0.6fr auto;">
-                            <span>Allocation Name</span> <span>%</span> <span>Current Funds</span> <span>Goal (opt)</span> <span>Tax pot</span> <span>Action</span>
-                        </div>
-                        <div id="allocation-settings"></div>
-                    </div>
-                    <button class="add-btn" id="add-allocation-category">+ Add Category</button>
-                    <p class="settings-hint" style="margin-top: 8px;">Tick <strong>Tax pot</strong> on the bucket where you park money for tax — the Savings tab compares its balance against the estimated liability on your variable income.</p>
-                    <p style="margin-top: 10px; color: var(--text-color-secondary); font-size: 0.9em;">
-                        Total: <span id="total-percent">0.0%</span> (should equal 100%)
-                    </p>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">
-                        Financial Independence Settings
-                        <details class="info-tip"><summary aria-label="More info">ⓘ</summary><div class="info-tip-body">
-                            This section helps estimate when you might reach Financial Independence (FI).
-                            <br>• <b>FI Multiple:</b> How many years of expenses you need saved (e.g., 25 means a 4% withdrawal rate).
-                            <br>• <b>Expected Return:</b> Your estimated average annual investment return after inflation.
-                        </div></details>
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="fi-multiple">FI Multiple (e.g., 25 for 4% rule)</label>
-                            <input type="number" class="form-input" id="fi-multiple" step="0.1" min="1" autocomplete="off">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="expected-return">Expected Annual Return (%)</label>
-                            <input type="number" class="form-input" id="expected-return" step="0.1" min="0" autocomplete="off">
-                        </div>
-                    </div>
-                    <p class="settings-hint">Small changes compound: a 1% higher expected return — or trimming annual expenses — can bring your FI date forward by years. Adjust these and watch "Years to FI" on the Savings tab respond.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Phase D.4 — Liabilities settings modal (gear button on the Liabilities tab). -->
-    <div class="modal-backdrop" id="liabilities-settings-modal" hidden>
-        <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="liabilities-settings-title">
-            <div class="modal-header">
-                <h2 id="liabilities-settings-title"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg> Liabilities Settings</h2>
-                <button class="modal-close" aria-label="Close liabilities settings">
-                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="settings-section" style="border-left-color: var(--color-negative);">
-                    <div class="settings-title">Liabilities Management</div>
-                    <div class="dynamic-list">
-                        <div class="list-header" style="grid-template-columns: 2fr 1.5fr 1fr auto;">
-                            <span>Liability Name</span> <span>Current Balance</span> <span>Interest Rate (%)</span> <span>Action</span>
-                        </div>
-                        <div id="liabilities-settings"></div>
-                    </div>
-                    <button class="add-btn" id="add-liability">+ Add Liability</button>
-                    <div style="margin-top: 20px; text-align: right; font-size: 1.2em; font-weight: 600;">
-                        Total Liabilities: <span id="total-liabilities-settings" style="color: var(--color-negative);"></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Ledger — first-run onboarding. Shown once on a fresh install; every step
-         says why it matters. Sample data is the no-commitment way in. -->
-    <div class="modal-backdrop" id="onboarding-modal" hidden>
-        <div class="modal onboarding" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
-            <div class="modal-body">
-                <div class="onboarding-step" id="onboard-step-welcome">
-                    <h2 id="onboarding-title" class="onboarding-h">Welcome to Ledger</h2>
-                    <p class="onboarding-p">Your money has a story — income, spending, milestones, the lot.
-                    Ledger keeps it all on this device (nothing is uploaded, ever) and tells it back to you straight.</p>
-                    <div class="onboarding-choices">
-                        <button type="button" class="btn onboarding-primary" id="onboard-setup">Set up my numbers</button>
-                        <button type="button" class="btn btn-secondary" id="onboard-sample">Explore with sample data</button>
-                    </div>
-                    <button type="button" class="onboarding-skip" id="onboard-skip">Skip for now — I'll poke around myself</button>
-                </div>
-
-                <div class="onboarding-step" id="onboard-step-income" hidden>
-                    <h2 class="onboarding-h">First, your income</h2>
-                    <p class="onboarding-p">Your take-home pay drives everything else. Enter your before-tax salary
-                    and Ledger estimates the rest with current ATO rates — Medicare levy included.</p>
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label class="form-label" for="onboard-income-name">What should we call it?</label>
-                        <input type="text" class="form-input" id="onboard-income-name" value="My job" maxlength="60">
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="onboard-income-gross">Salary before tax (per year)</label>
-                            <input type="number" class="form-input" id="onboard-income-gross" min="0" step="1000" placeholder="e.g. 85000">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="onboard-income-schedule">How often are you paid?</label>
-                            <select class="form-select" id="onboard-income-schedule">
-                                <option value="weekly">Weekly</option>
-                                <option value="fortnightly" selected>Fortnightly</option>
-                                <option value="monthly">Monthly</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="onboarding-nav">
-                        <button type="button" class="btn onboarding-primary" id="onboard-income-next">Next</button>
-                        <button type="button" class="btn btn-secondary" id="onboard-income-back">Back</button>
-                    </div>
-                </div>
-
-                <div class="onboarding-step" id="onboard-step-spend" hidden>
-                    <h2 class="onboarding-h">Roughly, what goes out?</h2>
-                    <p class="onboarding-p">Ballpark is fine — you can refine every line later. What's left over
-                    is your savings rate, the single biggest lever you have.</p>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="onboard-spend-essential">Essentials per week (rent, food, bills…)</label>
-                            <input type="number" class="form-input" id="onboard-spend-essential" min="0" step="10" placeholder="e.g. 650">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="onboard-spend-fun">Fun money per week (everything else)</label>
-                            <input type="number" class="form-input" id="onboard-spend-fun" min="0" step="10" placeholder="e.g. 150">
-                        </div>
-                    </div>
-                    <div class="onboarding-nav">
-                        <button type="button" class="btn onboarding-primary" id="onboard-spend-next">Next</button>
-                        <button type="button" class="btn btn-secondary" id="onboard-spend-back">Back</button>
-                    </div>
-                </div>
-
-                <div class="onboarding-step" id="onboard-step-done" hidden>
-                    <h2 class="onboarding-h">You're set</h2>
-                    <p class="onboarding-p" id="onboard-summary"></p>
-                    <p class="onboarding-p">Want the full picture? Import a CSV export from your bank — it stays on
-                    this device, gets auto-categorised, and fills your feed with real history.</p>
-                    <div class="onboarding-choices">
-                        <button type="button" class="btn onboarding-primary" id="onboard-finish">Take me home</button>
-                        <button type="button" class="btn btn-secondary" id="onboard-import">Import a bank CSV</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Ledger — bank CSV import. Sandboxed flow: parse → map columns → preview
          (with per-row errors) → explicit commit. Nothing is stored until the user
@@ -1196,10 +113,10 @@
             </div>
             <div class="modal-body">
                 <div id="import-drop" class="import-drop" tabindex="0">
-                    <p class="import-drop-title">Drop your bank's CSV export here</p>
+                    <p class="import-drop-title">Drop your bank's CSV or Excel export here</p>
                     <p class="import-drop-sub">or</p>
                     <button type="button" class="btn btn-secondary" id="import-browse">Choose a file…</button>
-                    <input type="file" id="import-file" accept=".csv,text/csv,text/plain" hidden>
+                    <input type="file" id="import-file" accept=".csv,text/csv,text/plain,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
                     <p class="settings-hint">Everything is read right here in your browser — the file never leaves this device.</p>
                 </div>
 
@@ -1253,8 +170,8 @@
     </div>
 
     <!-- Ledger — bank PDF import. Same sandboxed shape as the CSV flow: parse →
-         detect bank → preview → explicit commit (with undo). PDF.js loads from the
-         CDN on demand the first time this modal is used; the PDF itself never
+         detect bank → preview → explicit commit (with undo). PDF.js is bundled and loads on demand
+         the first time this modal is used; the PDF itself never
          leaves the device. -->
     <div class="modal-backdrop" id="pdf-import-modal" hidden>
         <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="pdf-import-title">
@@ -1270,7 +187,7 @@
                     <p class="import-drop-sub">or</p>
                     <button type="button" class="btn btn-secondary" id="pdf-import-browse">Choose a file…</button>
                     <input type="file" id="pdf-import-file" accept=".pdf,application/pdf" hidden>
-                    <p class="settings-hint">Works with CommBank, NAB, Westpac, ANZ, ING, Up and Bendigo statements (plus a generic reader for other banks). Everything is read right here in your browser — the file never leaves this device. The PDF reader library loads from a CDN the first time, so that step needs internet.</p>
+                    <p class="settings-hint">Works with CommBank, NAB, Westpac, ANZ, ING, Up and Bendigo statements (plus a generic reader for other banks). Everything is read right here in your browser — the file never leaves this device. The PDF reader is built in, so it works offline.</p>
                 </div>
 
                 <div id="pdf-import-status" role="status" aria-live="polite"></div>

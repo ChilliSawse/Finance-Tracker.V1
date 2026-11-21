@@ -1,0 +1,464 @@
+// FI engine (owner: F3). Pure: no DOM, no storage, inputs never mutated.
+// Contract: docs/PHASE1-CONTRACT.md. Used by F6 (Future screen), F7 (What If), F8.
+//
+// Convention (settled, FT-R-89 and slice F 2.3): yearly steps, contributions at year end,
+// growth on the opening pool, today's dollars, every rate real = nominal minus
+// `fiSettings.inflation` by simple subtraction (the mock's 7% - 2.5% = 4.5%).
+// Debts and HELP are run in nominal dollars for the year and deflated to today's dollars at the end.
+//
+// Money in `data` is dollars (legacy fields) and bucket amounts come from `getBuckets` in cents.
+// Everything returned here is dollars, except where a name says Cents.
+//
+// Two layers: `runPlan(start, inputsFor, opts)` is the plain engine (the tests drive it with
+// given pools and flows); `projectNetWorth`, `yearsToFI` and `fiSummary` read a data object and
+// call it. With scenario `changes`, the data is resolved for each year through `resolve`
+// (default F1's `resolveAt`), so flows and the FI number follow the plan as it stands that year.
+// Opening balances (assets, debts, HELP) come from the data as it is today.
+
+import { assetValueAt, effectiveAnnualRate, debtStep, debtRateAt, PERIODS_PER_YEAR } from './assets-debts.js';
+import { resolveAt as defaultResolve } from './scenario.js';
+import { planTotals } from './plan.js';
+import { calculateTotals } from './calculations.js';
+import { calculateHelpRepayment, getTaxYear } from './tax-au.js';
+import { addMonthsClamped, parseIso, toIso } from './pay-cycle.js';
+import { mojoLivingCosts, mojoSteps } from './fire.js';
+import { getBuckets } from '../state/saving-model.js';
+import { t } from '../i18n/strings.js';
+
+/** Past this many years from now a plan is "not at this pace". */
+export const MAX_YEARS = 100;
+/** Super is locked until the preservation age (FT-R-92). */
+export const PRESERVATION_AGE = 60;
+
+const DEFAULT_INFLATION = 2.5;
+const DEFAULT_RETURN = 7;
+const DEFAULT_MULTIPLE = 25;
+
+const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
+const num = (x) => (isNum(x) ? x : 0);
+const clone = (x) => JSON.parse(JSON.stringify(x));
+const round2 = (x) => Math.round(x * 100) / 100;
+const todayIsoOf = (today) => toIso(parseIso(today == null ? new Date() : today));
+
+// ---------- the plain engine ----------
+
+/**
+ * Real growth of one asset for one year, from its balance. Cash: its effective interest less
+ * inflation; invested: its own expected return (or the plan's default) less inflation;
+ * appreciating: its growth rate less inflation (blank = flat real). An asset whose kind is only
+ * suggested is cash at 0% real (F2's rule). Depreciating assets are not stepped here.
+ * Goes through F2's `assetValueAt` with the rate already made real, so the rounding is its own.
+ */
+function stepAsset(asset, kind, bal, inflationPct, defaultReturnPct) {
+    if (asset.kindSuggested) return round2(bal);
+    if (kind === 'cash') {
+        if (!isNum(asset.interestRate)) return round2(bal);
+        const real = effectiveAnnualRate(asset.interestRate, asset.interestFrequency) * 100 - inflationPct;
+        return assetValueAt({ kind: 'cash', balance: bal, interestRate: real, interestFrequency: 'yearly' }, 1);
+    }
+    if (kind === 'invested') {
+        const nominal = isNum(asset.expectedReturn) ? asset.expectedReturn : defaultReturnPct;
+        return assetValueAt({ kind: 'invested', balance: bal, expectedReturn: nominal - inflationPct }, 1);
+    }
+    if (kind === 'appreciating') {
+        if (!isNum(asset.growthRate)) return round2(bal);
+        return assetValueAt({ kind: 'appreciating', balance: bal, growthRate: asset.growthRate - inflationPct }, 1);
+    }
+    return round2(bal);
+}
+
+/** The kind an asset counts as: a suggested kind is cash until confirmed. */
+function kindOf(asset) {
+    if (!asset || asset.kindSuggested) return 'cash';
+    return ['cash', 'invested', 'appreciating', 'depreciating'].includes(asset.kind) ? asset.kind : 'cash';
+}
+
+/** One year of a debt in nominal dollars (its own compounding, minimum and fixed-rate end); returns the year-end balance. */
+function stepDebtYear(debt, balance, dateIso) {
+    let cents = Math.max(0, Math.round(num(balance) * 100));
+    if (cents === 0) return 0;
+    const compounding = debt.compounding || 'monthly';
+    const freq = debt.repaymentFrequency || 'monthly';
+    const m = PERIODS_PER_YEAR[freq] || 12;
+    const paymentCents = Math.max(0, Math.round(num(debt.minRepayment) * 100));
+    const ratePct = debtRateAt(debt, dateIso);
+    for (let i = 0; i < m && cents > 0; i++) {
+        cents = debtStep({ balanceCents: cents, ratePct, compounding, repaymentFrequency: freq, paymentCents }).balanceCents;
+    }
+    return cents / 100;
+}
+
+/**
+ * Solve inside the crossing year: opening pool P, real rate r, contribution A at year end as a
+ * continuous annuity, to reach `target`. Exact for one pool (the old `calculateYearsToFI` formula);
+ * returns a fraction in (0, 1].
+ */
+function fractionInYear(P, r, A, target) {
+    const linear = A > 0 ? (target - P) / A : 1;
+    let f;
+    if (Math.abs(r) < 1e-12) f = linear;
+    else {
+        const num_ = target * r + A, den = P * r + A;
+        f = den > 0 && num_ > 0 ? Math.log(num_ / den) / Math.log(1 + r) : linear;
+    }
+    if (!Number.isFinite(f)) f = linear;
+    return Math.min(1, Math.max(0, f));
+}
+
+/**
+ * Run the plan year by year.
+ *
+ * start: { openInvested, openCash (pools that flows add to; default 0), assets: [raw asset],
+ *   debts: [raw liability, with id], helpBalance, sinks: [ {type:'debt', id} | {type:'mojo'|'home'|'saver', capacity}
+ *   | {type:'super'} ], }  Fire money goes down the sinks in order, the rest to the invested pool.
+ * inputsFor(k) -> { dateIso, inflationPct, expectedReturnPct, fiNumber, fireYear, superYear, helpIncome, helpIndexationPct }
+ *   for year k (k = 0 is now), used for the year k to k + 1 (and its FI number for the year-end of k + 1 in `path[k+1]`).
+ * opts: { years (path length to produce, default 30), untilFI (keep going to MAX_YEARS until FI is found, default true) }
+ *
+ * @returns {{path:Array, yearsToFI:number}}
+ */
+export function runPlan(start, inputsFor, opts = {}) {
+    const horizon = opts.years == null ? 30 : Math.max(0, Math.floor(opts.years));
+    const untilFI = opts.untilFI !== false;
+    const assets = (start.assets || []).map((a) => ({ a, kind: kindOf(a), bal: num(a.balance) }));
+    const debts = (start.debts || []).map((d) => ({ d, bal: Math.max(0, num(d.balance)) }));
+    const sinks = (start.sinks || []).map((s) => ({ ...s, left: s.type === 'debt' ? null : Math.max(0, num(s.capacity)) }));
+    let help = Math.max(0, num(start.helpBalance));
+    let pool = { invested: num(start.openInvested), cash: num(start.openCash) };
+
+    const snapshot = (k, inp, extra) => {
+        let cash = pool.cash, invested = pool.invested, appreciating = 0, depreciating = 0;
+        for (const x of assets) {
+            if (x.kind === 'depreciating') depreciating += assetValueAt({ ...x.a, kindSuggested: false }, k);
+            else if (x.kind === 'cash') cash += x.bal;
+            else if (x.kind === 'invested') invested += x.bal;
+            else appreciating += x.bal;
+        }
+        const debtTotal = debts.reduce((s, x) => s + x.bal, 0);
+        const fiNetWorth = cash + invested + appreciating - debtTotal - help;
+        return {
+            year: k, fiNetWorth, netWorth: fiNetWorth + depreciating, cash, invested, appreciating, depreciating,
+            debts: debtTotal, help, fiNumber: inp.fiNumber, ...extra,
+        };
+    };
+
+    const first = inputsFor(0);
+    const path = [snapshot(0, first, { fire: 0, super: 0, growth: 0 })];
+    const number0 = num(first.fiNumber);
+    if (number0 <= 0 || path[0].fiNetWorth >= number0) return { path, yearsToFI: 0 };
+
+    let anyFlow = false;
+    let yearsToFI = Infinity;
+    for (let y = 0; y < MAX_YEARS; y++) {
+        if (y >= horizon && (!untilFI || Number.isFinite(yearsToFI))) break;
+        const inp = inputsFor(y);
+        const infl = isNum(inp.inflationPct) ? inp.inflationPct : DEFAULT_INFLATION;
+        const retPct = isNum(inp.expectedReturnPct) ? inp.expectedReturnPct : DEFAULT_RETURN;
+        const realInv = (retPct - infl) / 100;
+        const deflate = 1 + infl / 100;
+        const before = path[path.length - 1];
+
+        // Growth on the opening pools and assets.
+        pool = { invested: pool.invested * (1 + realInv), cash: pool.cash };
+        for (const x of assets) if (x.kind !== 'depreciating') x.bal = stepAsset(x.a, x.kind, x.bal, infl, retPct);
+
+        // Debts (their own schedule), then HELP (indexation less the repayment taken through tax).
+        const debtEnd = debts.map((x) => stepDebtYear(x.d, x.bal, inp.dateIso));
+        const idx = isNum(inp.helpIndexationPct) ? inp.helpIndexationPct / 100 : 0;
+        help = Math.max(0, help * (1 + idx) - Math.max(0, num(inp.helpRepayment))) / deflate;
+
+        // Year-end money: Fire down the sinks in order, super and the rest to the invested pool.
+        let fireLeft = Math.max(0, num(inp.fireYear));
+        const superYear = Math.max(0, num(inp.superYear));
+        for (const s of sinks) {
+            if (fireLeft <= 0) break;
+            if (s.type === 'debt') {
+                const i = debts.findIndex((x) => x.d.id === s.id);
+                if (i < 0) continue;
+                const pay = Math.min(fireLeft, debtEnd[i]);
+                debtEnd[i] -= pay;
+                fireLeft -= pay;
+            } else if (s.type === 'mojo' || s.type === 'home' || s.type === 'saver') {
+                const pay = Math.min(fireLeft, s.left);
+                s.left -= pay;
+                pool.cash += pay;
+                fireLeft -= pay;
+            } else if (s.type === 'super') {
+                break; // open-ended: this and everything after goes to the invested pool
+            }
+        }
+        debts.forEach((x, i) => { x.bal = debtEnd[i] / deflate; });
+        const fireTotal = Math.max(0, num(inp.fireYear));
+        pool.invested += fireLeft + superYear;
+
+        const contrib = fireTotal + superYear;
+        if (contrib > 0) anyFlow = true;
+        const next = snapshot(y + 1, inputsFor(y + 1), { fire: fireTotal, super: superYear, growth: 0 });
+        next.growth = next.fiNetWorth - before.fiNetWorth - contrib;
+        path.push(next);
+
+        if (!Number.isFinite(yearsToFI) && anyFlow && next.fiNetWorth >= next.fiNumber && next.fiNumber > 0) {
+            const P = before.fiNetWorth;
+            const r = P > 1e-9 ? next.growth / P : realInv;
+            const A = next.fiNetWorth - P * (1 + r);
+            yearsToFI = y + fractionInYear(P, r, A, next.fiNumber);
+        }
+    }
+    return { path: path.slice(0, Math.max(horizon, 0) + 1), yearsToFI };
+}
+
+// ---------- reading a data object ----------
+
+function safe(fn, fallback) {
+    try { return fn(); } catch (e) { return fallback; }
+}
+
+function bucketPerPayCents(buckets, role) {
+    return buckets.filter((b) => b.parentId == null && b.role === role).reduce((s, b) => s + num(b.perPayCents), 0);
+}
+
+/** Gross a year and super a year, per source, from the engine's own calculation. */
+function incomeFigures(d, dateIso) {
+    const probe = clone(d);
+    safe(() => calculateTotals(probe, { today: parseIso(dateIso) }), null);
+    const sources = Array.isArray(probe.incomeSources) ? probe.incomeSources : [];
+    const rows = sources.map((s) => {
+        const gross = num(s && s._calculatedGrossAnnual);
+        const pct = isNum(s && s.superPct) ? s.superPct : 0;
+        return { gross, superYear: round2(gross * pct / 100), superPct: s && s.superPct };
+    });
+    const primary = rows[num(d.primaryIncomeIndex)] || rows[0] || { gross: 0 };
+    return { rows, superYear: rows.reduce((s, r) => s + r.superYear, 0), primaryGross: primary.gross };
+}
+
+/**
+ * Everything one year needs, from a data object as it stands on `dateIso`.
+ * fiNumber = multiple x a year of Daily plus Splurge (per pay amounts from getBuckets), the planned
+ * essentials plus non-essentials when the model has neither role. Smile is not counted.
+ */
+function yearInputs(d, dateIso) {
+    const fs = d && d.fiSettings ? d.fiSettings : {};
+    const multiple = isNum(fs.multiple) && fs.multiple > 0 ? fs.multiple : DEFAULT_MULTIPLE;
+    const pt = safe(() => planTotals(d), null) || { cyclesPerYear: 26, essentialPerCycle: 0, nonEssentialPerCycle: 0 };
+    const cycles = pt.cyclesPerYear || 26;
+    const buckets = safe(() => getBuckets(d, dateIso), []);
+    const hasSpendRole = buckets.some((b) => b.parentId == null && (b.role === 'daily' || b.role === 'splurge'));
+    const spendYear = hasSpendRole
+        ? ((bucketPerPayCents(buckets, 'daily') + bucketPerPayCents(buckets, 'splurge')) * cycles) / 100
+        : (num(pt.essentialPerCycle) + num(pt.nonEssentialPerCycle)) * cycles;
+    const inc = incomeFigures(d, dateIso);
+    const ts = d && d.taxSettings ? d.taxSettings : {};
+    const helpOn = ts.includeHelpInEstimate !== false;
+    const help = safe(() => getTaxYear().help, null);
+    return {
+        dateIso,
+        inflationPct: isNum(fs.inflation) ? fs.inflation : DEFAULT_INFLATION,
+        expectedReturnPct: isNum(fs.expectedReturn) ? fs.expectedReturn : DEFAULT_RETURN,
+        multiple,
+        spendYear,
+        fiNumber: round2(spendYear * multiple),
+        fireYear: (bucketPerPayCents(buckets, 'fire') * cycles) / 100,
+        superYear: inc.superYear,
+        helpRepayment: helpOn && help ? calculateHelpRepayment(inc.primaryGross, help) : 0,
+        helpIndexationPct: help ? num(help.indexationPercentDefault) : 0,
+        cycles,
+        buckets,
+    };
+}
+
+/** The Mojo target in dollars (the top ladder step), 0 when there is none. */
+function mojoCapacity(d, buckets, pt) {
+    const row = buckets.find((b) => b.parentId == null && b.role === 'mojo');
+    if (!row) return 0;
+    const mojo = (d.savingModel && d.savingModel.mojo) || {};
+    const living = mojoLivingCosts({
+        essentialPerPayCents: Math.round(num(pt.essentialPerCycle) * 100), cyclesPerYear: pt.cyclesPerYear || 26, basis: mojo.basis || 'auto',
+    });
+    const ladder = mojoSteps(mojo, living, num(row.balanceCents));
+    return ladder.targetCents > 0 ? Math.max(0, ladder.targetCents - num(row.balanceCents)) / 100 : 0;
+}
+
+/** Fire sinks from E2's target list, in order. A skipped or unknown target is left out. */
+function fireSinks(d, buckets) {
+    const targets = d.savingModel && d.savingModel.fire && Array.isArray(d.savingModel.fire.targets) ? d.savingModel.fire.targets : [];
+    const libs = Array.isArray(d.liabilities) ? d.liabilities : [];
+    const pt = safe(() => planTotals(d), null) || { cyclesPerYear: 26, essentialPerCycle: 0 };
+    const out = [];
+    for (const tg of targets) {
+        if (!tg || tg.skip) continue;
+        if (tg.type === 'debt') {
+            const l = libs.find((x) => x && String(x.id) === String(tg.liabilityId));
+            if (l) out.push({ type: 'debt', id: l.id });
+        } else if (tg.type === 'mojo') {
+            out.push({ type: 'mojo', capacity: mojoCapacity(d, buckets, pt) });
+        } else if (tg.type === 'home' || tg.type === 'saver') {
+            const goal = num(tg.goalCents), saved = num(tg.savedCents);
+            if (goal > 0) out.push({ type: tg.type, capacity: Math.max(0, goal - saved) / 100 });
+        } else if (tg.type === 'super') {
+            out.push({ type: 'super' });
+        }
+    }
+    return out;
+}
+
+/** The opening state from a data object. */
+function startFrom(d, base) {
+    const libs = (Array.isArray(d.liabilities) ? d.liabilities : []).filter((l) => l && num(l.balance) > 0);
+    const debts = libs.map((l, i) => ({ ...l, id: l.id != null ? l.id : `debt-${i}` }));
+    const assets = (Array.isArray(d.assets) ? d.assets : []).filter((a) => a && typeof a === 'object');
+    const sinks = fireSinks({ ...d, liabilities: debts }, base.buckets);
+    return {
+        assets, debts, sinks,
+        helpBalance: Math.max(0, num(parseFloat(d.taxSettings && d.taxSettings.helpBalance))),
+    };
+}
+
+/** Does a dated change apply on `dateIso`? `from <= date < until`, an open end meaning no end. */
+function activeOn(change, dateIso) {
+    if (!change || typeof change !== 'object') return false;
+    if (change.from && dateIso < change.from) return false;
+    if (change.until && dateIso >= change.until) return false;
+    return true;
+}
+
+/**
+ * Build the per-year input function for a data object and optional scenario changes.
+ * Without changes, the data is read once. With them, `resolve(data, changes, date)` runs once per
+ * distinct set of active changes (not once per year), so a long path costs a few resolutions.
+ */
+function makeInputs(data, opts) {
+    const todayIso = todayIsoOf(opts.today);
+    const changes = Array.isArray(opts.changes) ? opts.changes : [];
+    const resolve = typeof opts.resolve === 'function' ? opts.resolve : defaultResolve;
+    const cache = new Map();
+    const dateAt = (k) => (k === 0 ? todayIso : addMonthsClamped(todayIso, 12 * k));
+    const inputsFor = (k) => {
+        const dateIso = dateAt(k);
+        if (!changes.length) {
+            if (!cache.has('base')) cache.set('base', yearInputs(data, todayIso));
+            return { ...cache.get('base'), dateIso };
+        }
+        const key = changes.map((c, i) => (activeOn(c, dateIso) ? i : '')).join(',');
+        if (!cache.has(key)) cache.set(key, yearInputs(resolve(data, changes, dateIso), dateIso));
+        return { ...cache.get(key), dateIso };
+    };
+    return { inputsFor, todayIso };
+}
+
+/**
+ * The path of net worth and the FI-counted net worth, a year at a time.
+ * opts: { years (30), today, changes, resolve }.
+ * @returns {{path:Array<{year,fiNetWorth,netWorth,cash,invested,appreciating,depreciating,debts,help,fiNumber,fire,super,growth}>,
+ *   yearsToFI:number, fiNumber:number, today:string}}
+ */
+export function projectNetWorth(data, opts = {}) {
+    const d = data && typeof data === 'object' ? data : {};
+    const { inputsFor, todayIso } = makeInputs(d, opts);
+    const base = inputsFor(0);
+    const run = runPlan(startFrom(d, base), inputsFor, { years: opts.years == null ? 30 : opts.years, untilFI: true });
+    return { path: run.path, yearsToFI: run.yearsToFI, fiNumber: base.fiNumber, today: todayIso };
+}
+
+/** Years until the FI-counted net worth reaches the FI number: fractional, 0 when reached, Infinity when never. */
+export function yearsToFI(data, opts = {}) {
+    const d = data && typeof data === 'object' ? data : {};
+    const { inputsFor } = makeInputs(d, opts);
+    const base = inputsFor(0);
+    return runPlan(startFrom(d, base), inputsFor, { years: 0, untilFI: true }).yearsToFI;
+}
+
+/** The FI number in dollars: `fiSettings.multiple` x a year of Daily plus Splurge (see `yearInputs`). */
+export function fiNumber(data, opts = {}) {
+    const d = data && typeof data === 'object' ? data : {};
+    return yearInputs(d, todayIsoOf(opts.today)).fiNumber;
+}
+
+/** The FI number from the amounts themselves: per pay dollars of Daily and Splurge, pays a year, multiple. */
+export function fiNumberFrom({ dailyPerPay = 0, splurgePerPay = 0, cyclesPerYear = 26, multiple = DEFAULT_MULTIPLE } = {}) {
+    return Math.round((Math.round(dailyPerPay * 100) + Math.round(splurgePerPay * 100)) * cyclesPerYear * multiple) / 100;
+}
+
+/** What goes toward FI each year: {fire, super, total} in dollars (Smile is not counted). */
+export function goingTowardsPerYear(data, opts = {}) {
+  const d = data && typeof data === 'object' ? data : {};
+  const inp = yearInputs(d, todayIsoOf(opts.today));
+  return { fire: round2(inp.fireYear), super: round2(inp.superYear), total: round2(inp.fireYear + inp.superYear) };
+}
+
+/** Planned savings rate as a percent of net pay: every save bucket (Smile, Fire and the rest) over the pay. 0 with no pay. */
+export function savingsRatePlanned(data, opts = {}) {
+    const d = data && typeof data === 'object' ? data : {};
+    const buckets = safe(() => getBuckets(d, todayIsoOf(opts.today)), []).filter((b) => b.parentId == null);
+    const net = buckets.reduce((s, b) => s + num(b.perPayCents), 0);
+    if (net <= 0) return 0;
+    const save = buckets.filter((b) => b.kind === 'save').reduce((s, b) => s + num(b.perPayCents), 0);
+    return Math.round((save / net) * 1000) / 10;
+}
+
+/**
+ * Ages at FI, only when birth years are given (`data.people[].birthYear`). Age = years from the
+ * birth year to the year FI is reached (the crossing year, rounded up).
+ * `superNote` is true when anyone is under 60 then (FT-R-92). Null when there is no birth year or no FI date.
+ * @returns {null|{ages:Array<{name:string, age:number}>, superNote:boolean}}
+ */
+export function fiAge(data, years, opts = {}) {
+    if (!Number.isFinite(years)) return null;
+    const people = (data && Array.isArray(data.people) ? data.people : []).filter((p) => p && isNum(p.birthYear));
+    if (!people.length) return null;
+    const nowYear = parseIso(todayIsoOf(opts.today)).getFullYear();
+    const ages = people.map((p) => ({ name: typeof p.name === 'string' ? p.name : '', age: nowYear - p.birthYear + Math.ceil(years) }));
+    return { ages, superNote: ages.some((a) => a.age < PRESERVATION_AGE) };
+}
+
+/**
+ * Everything the Future screen shows, in one run.
+ * @returns {{fiNumber, yearsToFI, path, today, now:{netWorth, fiNetWorth, help, depreciating, debts},
+ *   going:{fire,super,total}, savingsRate:number, fiAge:?object, notes:string[], nudges:Array<{id,name}>}}
+ */
+export function fiSummary(data, opts = {}) {
+    const d = data && typeof data === 'object' ? data : {};
+    const proj = projectNetWorth(d, opts);
+    const p0 = proj.path[0];
+    const base = yearInputs(d, proj.today);
+    const notes = ['notModelled'];
+    const age = fiAge(d, proj.yearsToFI, { today: proj.today });
+    if (age && age.superNote) notes.push('superPreservation');
+    if (p0.help > 0) notes.push('includesHelp');
+    if (p0.depreciating > 0) notes.push('losesValue');
+    const libs = (Array.isArray(d.liabilities) ? d.liabilities : []).filter((l) => l && num(l.balance) > 0);
+    if (libs.length) notes.push('spendingBias');
+    const nudges = libs.filter((l) => !isNum(l.minRepayment) && num(l.interestRate) > 0).map((l) => ({ id: 'minRepayment', name: l.name || '' }));
+    return {
+        fiNumber: proj.fiNumber, yearsToFI: proj.yearsToFI, path: proj.path, today: proj.today,
+        now: { netWorth: p0.netWorth, fiNetWorth: p0.fiNetWorth, help: p0.help, depreciating: p0.depreciating, debts: p0.debts },
+        going: { fire: round2(base.fireYear), super: round2(base.superYear), total: round2(base.fireYear + base.superYear) },
+        savingsRate: savingsRatePlanned(d, { today: proj.today }),
+        fiAge: age, notes, nudges, multiple: base.multiple, spendYear: round2(base.spendYear),
+        realReturnPct: round2(base.expectedReturnPct - base.inflationPct), inflationPct: base.inflationPct,
+    };
+}
+
+const money = (n) => `A$${Math.round(Math.abs(n)).toLocaleString('en-AU')}`;
+
+/**
+ * Explain this number: plain lines with the same figures the summary carries.
+ * @param {object} data
+ * @param {{summary?:object, today?:*, changes?:Array, resolve?:Function}} [opts]
+ * @returns {Array<{id:string, text:string}>}
+ */
+export function explainFi(data, opts = {}) {
+    const s = opts.summary || fiSummary(data, opts);
+    const lines = [];
+    const add = (id, key, params) => lines.push({ id, text: t(key, params) });
+    add('number', 'f.fi.explain.number', { number: money(s.fiNumber), multiple: s.multiple, spend: money(s.spendYear) });
+    add('going', 'f.fi.explain.going', { fire: money(s.going.fire), super: money(s.going.super) });
+    add('rate', 'f.fi.explain.rate', { real: s.realReturnPct, inflation: s.inflationPct });
+    add('now', 'f.fi.explain.now', { fiNetWorth: money(s.now.fiNetWorth) });
+    if (s.notes.includes('includesHelp')) add('help', 'f.fi.explain.help', { amount: money(s.now.help) });
+    if (s.notes.includes('losesValue')) add('losesValue', 'f.fi.explain.losesValue', { amount: money(s.now.depreciating) });
+    if (s.notes.includes('superPreservation')) add('superPreservation', 'f.fi.explain.superPreservation', { age: PRESERVATION_AGE });
+    if (s.notes.includes('spendingBias')) add('spendingBias', 'f.fi.explain.spendingBias');
+    add('notModelled', 'f.fi.explain.notModelled');
+    for (const n of s.nudges) add('minRepayment', 'f.fi.explain.minRepayment', { name: n.name });
+    return lines;
+}

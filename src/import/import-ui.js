@@ -8,9 +8,10 @@
 
 import { store } from '../state/store.js';
 import { getElement, getValue, setHTML, escapeHtml, formatCurrency } from '../utils.js';
-import { parseCsv, detectColumns, normaliseRows } from './csv.js';
+import { parseCsv, detectColumns, normaliseRows, CSV_LIMITS, CsvLimitError } from './csv.js';
 import { categoriseDescription } from '../state/categories.js';
-import { makeTransaction, addTransactions, deleteImportBatch } from '../state/transactions.js';
+import { resolveCategory, commitImportRows, rematchBills } from '../state/rules.js';
+import { makeTransaction, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
 import { renderHomeFeed } from '../ui/feed.js';
@@ -56,7 +57,7 @@ function saveMapping(signature, config) {
     if (!signature) return;
     const all = readSavedMappings();
     all[signature] = config;
-    try { localStorage.setItem(MAPPINGS_KEY, JSON.stringify(all)); } catch (_) {}
+    try { localStorage.setItem(MAPPINGS_KEY, JSON.stringify(all)); } catch (_) { /* storage full or blocked: skip, deliberate */ }
 }
 
 // ---- UI state readers ----
@@ -79,7 +80,8 @@ function currentConfig() {
 }
 
 function columnOptions(rows, hasHeader, selectedIndex) {
-    const width = Math.max(...rows.slice(0, 5).map(r => r.length));
+    // Capped: one <option> per column, five selects, so a pathological first row must not explode the DOM.
+    const width = Math.min(CSV_LIMITS.maxCols, Math.max(...rows.slice(0, 5).map(r => r.length)));
     const sample = hasHeader && rows.length > 1 ? rows[1] : rows[0];
     let html = '<option value="">—</option>';
     for (let i = 0; i < width; i++) {
@@ -132,10 +134,10 @@ function buildNormalised() {
         date: cfg.date, description: cfg.description,
         amount: cfg.amount, debit: cfg.debit, credit: cfg.credit,
     };
-    const { transactions, errors } = normaliseRows(draft.rows, mapping, {
+    const { transactions, errors, outOfRange } = normaliseRows(draft.rows, mapping, {
         skipHeader: cfg.hasHeader, invert: cfg.invert,
     });
-    return { cfg, transactions, errors };
+    return { cfg, transactions, errors, outOfRange };
 }
 
 function categoryOptions(selectedId) {
@@ -146,7 +148,7 @@ function categoryOptions(selectedId) {
 
 function renderPreview() {
     if (!draft) return;
-    const { transactions, errors } = buildNormalised();
+    const { transactions, errors, outOfRange } = buildNormalised();
     draft.normalised = transactions;
 
     const previewEl = getElement('import-preview');
@@ -155,7 +157,7 @@ function renderPreview() {
     } else {
         const shown = transactions.slice(0, PREVIEW_ROWS);
         const rowsHtml = shown.map((t, i) => {
-            const catId = t.categoryId || categoriseDescription(t.description, store.financeData.categories);
+            const catId = t.categoryId || categoriseDescription(t.description, store.financeData.categories, store.financeData.rules);
             t.categoryId = catId;
             return `<tr>
                 <td class="import-cell-date">${escapeHtml(t.date)}</td>
@@ -190,6 +192,7 @@ function renderPreview() {
                     rowWord: t(allErrors.length === 1 ? 'import.errors.rowOne' : 'import.errors.rowMany'),
                 })}</p>
                 <ul>${items}${more}</ul>
+                ${outOfRange ? `<p class="import-errors-title">${escapeHtml(t('d.import.outOfRange', { count: outOfRange }))}</p>` : ''}
             </div>`;
     } else {
         errorsEl.innerHTML = '';
@@ -205,59 +208,106 @@ function renderPreview() {
 }
 
 // ---- file intake ----
+function showImportError(key) {
+    setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${escapeHtml(t(key))}</p></div>`);
+}
+
+function startDraft(rows, errors, file) {
+    if (!rows.length) { showImportError('import.emptyFile'); return; }
+    draft = { rows, parseErrors: errors, fileName: file.name, normalised: [] };
+    setHTML('import-result', '');
+    getElement('import-drop').hidden = true;
+    getElement('import-config').hidden = false;
+
+    const detected = detectColumns(rows);
+    const signature = mappingSignature(rows, detected.headerRow);
+    draft.signature = signature;
+    const saved = signature ? readSavedMappings()[signature] : null;
+    populateConfigForm(detected, saved);
+
+    const nameInput = getElement('import-source-name');
+    if (nameInput && !nameInput.value) {
+        nameInput.value = (saved && saved.sourceName) || file.name.replace(/\.(csv|xlsx)$/i, '').slice(0, 40);
+    }
+    renderPreview();
+}
+
+const isXlsx = (file) => /\.xlsx$/i.test(file.name || '') || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+async function handleXlsx(file) {
+    try {
+        const { readXlsx } = await import('./xlsx.js');
+        const { rows } = await readXlsx(await file.arrayBuffer());
+        startDraft(rows, [], file);
+    } catch (_err) {
+        // Every failure (corrupt, password-protected, too big, unsafe) gets the same clear message.
+        showImportError('import.xlsxFailed');
+    }
+}
+
+function showLimitError(key, params) {
+    setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${escapeHtml(t(key, params))}</p></div>`);
+}
+
 function handleFile(file) {
     if (!file) return;
+    // Size check before any read, so a huge file never reaches memory.
+    if (file.size > CSV_LIMITS.maxFileBytes) {
+        showLimitError('d.import.fileTooLarge', { limit: Math.round(CSV_LIMITS.maxFileBytes / 1048576) + ' MB' });
+        return;
+    }
+    if (isXlsx(file)) { handleXlsx(file); return; }
     const reader = new FileReader();
     reader.onload = (e) => {
-        const { rows, errors } = parseCsv(String(e.target.result || ''));
-        if (!rows.length) {
-            setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.emptyFile')}</p></div>`);
+        let parsed;
+        try {
+            parsed = parseCsv(String(e.target.result || ''));
+        } catch (err) {
+            if (!(err instanceof CsvLimitError)) throw err;
+            if (err.code === 'too-large') showLimitError('d.import.fileTooLarge', { limit: Math.round(CSV_LIMITS.maxFileBytes / 1048576) + ' MB' });
+            else if (err.code === 'too-many-rows') showLimitError('d.import.csvTooManyRows');
+            else showLimitError('d.import.csvTooWide');
             return;
         }
-        draft = { rows, parseErrors: errors, fileName: file.name, normalised: [] };
-        setHTML('import-result', '');
-        getElement('import-drop').hidden = true;
-        getElement('import-config').hidden = false;
-
-        const detected = detectColumns(rows);
-        const signature = mappingSignature(rows, detected.headerRow);
-        draft.signature = signature;
-        const saved = signature ? readSavedMappings()[signature] : null;
-        populateConfigForm(detected, saved);
-
-        const nameInput = getElement('import-source-name');
-        if (nameInput && !nameInput.value) {
-            nameInput.value = (saved && saved.sourceName) || file.name.replace(/\.csv$/i, '').slice(0, 40);
-        }
-        renderPreview();
+        startDraft(parsed.rows, parsed.errors, file);
     };
-    reader.onerror = () => {
-        setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.readFailed')}</p></div>`);
-    };
+    reader.onerror = () => showImportError('import.readFailed');
     reader.readAsText(file);
 }
 
 // ---- commit ----
+// FT-R-57: one line per manual entry merged with its bank row.
+function mergeLines(merges) {
+    return merges.map(m => `<p class="import-success-sub">${t('b.merge.line', { desc: escapeHtml(m.description || m.bankDescription), amount: formatCurrency(Math.abs(m.amountCents) / 100), date: escapeHtml(m.date) })}</p>`).join('');
+}
+
 async function commitImport() {
     if (!draft || !draft.normalised.length) return;
     const cfg = currentConfig();
     const sourceName = (getValue('import-source-name') || '').trim();
     const batchId = crypto.randomUUID();
 
-    const txns = draft.normalised.map(t => makeTransaction({
-        date: t.date,
-        description: t.description,
-        amountCents: t.amountCents,
-        categoryId: t.categoryId || categoriseDescription(t.description, store.financeData.categories),
-        source: 'csv',
-        importBatchId: batchId,
-    }));
+    const txns = draft.normalised.map(t => {
+        const c = resolveCategory(t.description, t.categoryId, store.financeData.categories, store.financeData.rules);
+        return makeTransaction({
+            date: t.date,
+            description: t.description,
+            amountCents: t.amountCents,
+            categoryId: c.categoryId,
+            status: c.status,
+            source: 'csv',
+            importBatchId: batchId,
+        });
+    });
 
     const commitBtn = getElement('import-commit');
     commitBtn.disabled = true;
-    let result;
+    let result, merges = [];
     try {
-        result = await addTransactions(txns);
+        const done = await commitImportRows(txns);
+        merges = done.merges;
+        result = done.result;
+        await rematchBills(store.financeData);
     } catch (err) {
         setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.saveFailed', { message: escapeHtml(String(err && err.message || err)) })}</p></div>`);
         commitBtn.disabled = false;
@@ -271,7 +321,7 @@ async function commitImport() {
         try {
             const ev = await logEvent('import', { batchId, count: result.added, sourceName });
             eventId = ev.id;
-        } catch (_) {}
+        } catch (err) { console.warn('Ledger: import step failed', err); }
     }
     lastCommit = { batchId, eventId, added: result.added };
 
@@ -286,6 +336,7 @@ async function commitImport() {
         <div class="import-success">
             <p class="import-success-title">${t('import.success.title', { count: result.added, txnWord: txnWord(result.added), dupNote })}</p>
             <p class="import-success-sub">${t('import.success.sub')}</p>
+            ${mergeLines(merges)}
             <div class="settings-actions" style="border-top: none; padding-top: 8px; margin-top: 4px;">
                 <button class="btn btn-secondary" id="import-another">${t('import.another')}</button>
                 ${result.added > 0 ? `<button class="btn btn-secondary" id="import-undo">${t('import.undo')}</button>` : ''}
@@ -294,7 +345,8 @@ async function commitImport() {
 
     await refreshSpendCache();
     updateAllUI();
-    if (store.activeTab === 'home') renderHomeFeed();
+    if (result.added > 0) (await import('../ui/activity.js')).openActivityToReview(); // P3b: Activity loads when needed; A7: land on Activity with To review on
+    else if (store.activeTab === 'today') renderHomeFeed();
 }
 
 async function undoLastImport() {
@@ -302,7 +354,7 @@ async function undoLastImport() {
     try {
         await deleteImportBatch(lastCommit.batchId);
         if (lastCommit.eventId) await deleteEvent(lastCommit.eventId);
-    } catch (_) {}
+    } catch (err) { console.warn('Ledger: import step failed', err); }
     setHTML('import-result', `
         <div class="import-success">
             <p class="import-success-title">${t('import.undo.done', { count: lastCommit.added })}</p>
@@ -313,12 +365,12 @@ async function undoLastImport() {
     lastCommit = null;
     await refreshSpendCache();
     updateAllUI();
-    if (store.activeTab === 'home') renderHomeFeed();
+    if (store.activeTab === 'today') renderHomeFeed();
 }
 
 // ---- wiring ----
 export function setupImport() {
-    setupModal('import-modal', 'open-import', resetDraft);
+    setupModal('import-modal', 'import-modal-open', resetDraft);
 
     const drop = getElement('import-drop');
     const fileInput = getElement('import-file');
@@ -369,4 +421,11 @@ export function setupImport() {
         else if (e.target.id === 'import-another') resetDraft();
         else if (e.target.id === 'import-undo') undoLastImport();
     });
+}
+
+/** Opens the CSV / Excel import window and reads this file in it (used by the single Import statement button). */
+export function startCsvImport(file) {
+    const opener = document.getElementById('import-modal-open');
+    if (opener) opener.click();
+    handleFile(file);
 }

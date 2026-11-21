@@ -1,21 +1,21 @@
-// Bank PDF import flow + payslip autofill — a sibling of import-ui.js with the
+// Bank PDF import flow (+ the payslip reader) — a sibling of import-ui.js with the
 // same shape: module-local draft state, one exported setup function, nothing
 // written until the user explicitly commits. Reuses the CSV pipeline's pure
-// helpers and the exact same commit path (makeTransaction → addTransactions →
+// helpers and the exact same commit path (makeTransaction → commitImportRows →
 // logEvent → refreshSpendCache → updateAllUI), so PDF rows behave identically
 // to CSV rows everywhere downstream.
 
 import { store } from '../state/store.js';
-import { getElement, getValue, setHTML, escapeHtml, formatCurrency, getPayCyclesPerYear } from '../utils.js';
+import { getElement, getValue, setHTML, escapeHtml, formatCurrency } from '../utils.js';
 import { categoriseDescription } from '../state/categories.js';
-import { makeTransaction, addTransactions, deleteImportBatch } from '../state/transactions.js';
+import { resolveCategory, commitImportRows, rematchBills } from '../state/rules.js';
+import { makeTransaction, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
 import { renderHomeFeed } from '../ui/feed.js';
-import { renderIncomeSourcesSettings } from '../ui/settings-forms.js';
 import { refreshSpendCache } from '../state/spend-cache.js';
-import { updateAllUI, updateDataAndUI } from '../ui/render.js';
-import { loadPdfJs, openPdfDocument, extractPagesLines } from './pdfjs-loader.js';
+import { updateAllUI } from '../ui/render.js';
+import { loadPdfJs, openPdfDocument, extractPagesLines, PDF_LIMITS, PdfLimitError } from './pdfjs-loader.js';
 import { parseStatementPages } from './pdf-statement.js';
 import { parsePayslipLines } from './payslip.js';
 import { t } from '../i18n/strings.js';
@@ -72,6 +72,13 @@ function renderPreview() {
     if (!draft) return;
     const txns = draft.transactions;
 
+    const skippedEl = getElement('pdf-import-errors');
+    if (skippedEl) {
+        skippedEl.innerHTML = draft.skipped
+            ? `<div class="import-errors-box"><p class="import-errors-title">${escapeHtml(t('d.import.skippedLines', { count: draft.skipped }))}</p></div>`
+            : '';
+    }
+
     const note = getElement('pdf-import-detect-note');
     if (note) {
         note.textContent = draft.bank
@@ -85,7 +92,7 @@ function renderPreview() {
     } else {
         const shown = txns.slice(0, PREVIEW_ROWS);
         const rowsHtml = shown.map((txn, i) => {
-            const catId = txn.categoryId || categoriseDescription(txn.description, store.financeData.categories);
+            const catId = txn.categoryId || categoriseDescription(txn.description, store.financeData.categories, store.financeData.rules);
             txn.categoryId = catId;
             return `<tr>
                 <td class="import-cell-date">${escapeHtml(txn.date)}</td>
@@ -122,6 +129,10 @@ function renderPreview() {
 // demand, translates pdf.js's failure modes into friendly copy via onError,
 // returns positioned page lines or null.
 async function readPdfPages(file, onStatus, onError) {
+    if (file.size > PDF_LIMITS.maxFileBytes) {
+        onError(escapeHtml(t('d.import.fileTooLarge', { limit: Math.round(PDF_LIMITS.maxFileBytes / 1048576) + ' MB' })));
+        return null;
+    }
     onStatus(`<span class="spinner" aria-hidden="true"></span>${t('pdf.loading')}`);
     let pdfjs;
     try {
@@ -144,8 +155,8 @@ async function readPdfPages(file, onStatus, onError) {
         pages = await extractPagesLines(pdf, (page, total) => {
             onStatus(`<span class="spinner" aria-hidden="true"></span>${t('pdf.parsingPage', { page, total })}`);
         });
-    } catch (_) {
-        onError(t('pdf.corrupt'));
+    } catch (err) {
+        onError(err instanceof PdfLimitError ? escapeHtml(t('d.import.pdfTooManyPages')) : t('pdf.corrupt'));
         return null;
     } finally {
         pdf.destroy().catch(() => {});
@@ -182,25 +193,37 @@ async function handleStatementFile(file) {
 
 // ---- commit / undo (identical flow to the CSV importer) ----
 
+// FT-R-57: one line per manual entry merged with its bank row.
+function mergeLines(merges) {
+    return merges.map(m => `<p class="import-success-sub">${t('b.merge.line', { desc: escapeHtml(m.description || m.bankDescription), amount: formatCurrency(Math.abs(m.amountCents) / 100), date: escapeHtml(m.date) })}</p>`).join('');
+}
+
 async function commitImport() {
     if (!draft || !draft.transactions.length) return;
     const sourceName = (getValue('pdf-import-source-name') || '').trim();
     const batchId = crypto.randomUUID();
 
-    const txns = draft.transactions.map(txn => makeTransaction({
-        date: txn.date,
-        description: txn.description,
-        amountCents: txn.amountCents,
-        categoryId: txn.categoryId || categoriseDescription(txn.description, store.financeData.categories),
-        source: 'pdf',
-        importBatchId: batchId,
-    }));
+    const txns = draft.transactions.map(txn => {
+        const c = resolveCategory(txn.description, txn.categoryId, store.financeData.categories, store.financeData.rules);
+        return makeTransaction({
+            date: txn.date,
+            description: txn.description,
+            amountCents: txn.amountCents,
+            categoryId: c.categoryId,
+            status: c.status,
+            source: 'pdf',
+            importBatchId: batchId,
+        });
+    });
 
     const commitBtn = getElement('pdf-import-commit');
     commitBtn.disabled = true;
-    let result;
+    let result, merges = [];
     try {
-        result = await addTransactions(txns);
+        const done = await commitImportRows(txns);
+        merges = done.merges;
+        result = done.result;
+        await rematchBills(store.financeData);
     } catch (err) {
         setHTML('pdf-import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.saveFailed', { message: escapeHtml(String(err && err.message || err)) })}</p></div>`);
         commitBtn.disabled = false;
@@ -212,7 +235,7 @@ async function commitImport() {
         try {
             const ev = await logEvent('import', { batchId, count: result.added, sourceName });
             eventId = ev.id;
-        } catch (_) {}
+        } catch (err) { console.warn('Ledger: import step failed', err); }
     }
     lastCommit = { batchId, eventId, added: result.added };
 
@@ -227,6 +250,7 @@ async function commitImport() {
         <div class="import-success">
             <p class="import-success-title">${t('import.success.title', { count: result.added, txnWord: txnWord(result.added), dupNote })}</p>
             <p class="import-success-sub">${t('import.success.sub')}</p>
+            ${mergeLines(merges)}
             <div class="settings-actions" style="border-top: none; padding-top: 8px; margin-top: 4px;">
                 <button class="btn btn-secondary" id="pdf-import-another">${t('import.another')}</button>
                 ${result.added > 0 ? `<button class="btn btn-secondary" id="pdf-import-undo">${t('import.undo')}</button>` : ''}
@@ -235,7 +259,8 @@ async function commitImport() {
 
     await refreshSpendCache();
     updateAllUI();
-    if (store.activeTab === 'home') renderHomeFeed();
+    if (result.added > 0) (await import('../ui/activity.js')).openActivityToReview(); // P3b: Activity loads when needed; A7: land on Activity with To review on
+    else if (store.activeTab === 'today') renderHomeFeed();
 }
 
 async function undoLastImport() {
@@ -243,7 +268,7 @@ async function undoLastImport() {
     try {
         await deleteImportBatch(lastCommit.batchId);
         if (lastCommit.eventId) await deleteEvent(lastCommit.eventId);
-    } catch (_) {}
+    } catch (err) { console.warn('Ledger: import step failed', err); }
     setHTML('pdf-import-result', `
         <div class="import-success">
             <p class="import-success-title">${t('import.undo.done', { count: lastCommit.added })}</p>
@@ -254,68 +279,31 @@ async function undoLastImport() {
     lastCommit = null;
     await refreshSpendCache();
     updateAllUI();
-    if (store.activeTab === 'home') renderHomeFeed();
+    if (store.activeTab === 'today') renderHomeFeed();
 }
 
-// ---- payslip autofill (income settings modal) ----
+// ---- payslip reading (the income sheet's check panel uses it) ----
 
-let payslipSourceIndex = null;
-
-function payslipStatus(index, html) {
-    const el = getElement(`payslip-status-${index}`);
-    if (el) el.innerHTML = html;
-}
-
-async function handlePayslipFile(file) {
-    const index = payslipSourceIndex;
-    payslipSourceIndex = null;
-    if (!file || index == null) return;
-    const source = store.financeData.incomeSources[index];
-    if (!source) return;
-
-    const onStatus = (html) => payslipStatus(index, html);
-    const onError = (message) => payslipStatus(index, `<span style="color: var(--color-negative);">${message}</span>`);
-    onStatus(`<span class="spinner" aria-hidden="true"></span>${t('payslip.parsing')}`);
+/**
+ * Reads a payslip PDF and returns the parsed figures (net, tax, gross, help ...), or null with the
+ * reason sent to onError. Writes nothing: the income sheet's check panel (C6) and the settings
+ * autofill both use it.
+ */
+export async function readPayslip(file, onStatus, onError) {
     const pages = await readPdfPages(file, onStatus, onError);
-    if (!pages) return;
-
-    const lines = pages.flat().map(l => l.text);
-    const parsed = parsePayslipLines(lines);
+    if (!pages) return null;
+    const parsed = parsePayslipLines(pages.flat().map(l => l.text));
     if (parsed.net == null && parsed.tax == null && parsed.gross == null) {
         onError(t('payslip.nothingFound'));
-        return;
+        return null;
     }
-
-    // Apply: per-cycle figures land directly; gross annualises via the pay
-    // schedule (payslip's own frequency wins when it names one).
-    if (parsed.schedule) source.paySchedule = parsed.schedule;
-    const cycles = getPayCyclesPerYear(source.paySchedule);
-    if (parsed.net != null) source.invoicedPayPostTax = +parsed.net.toFixed(2);
-    if (parsed.tax != null) source.taxRemoved = +parsed.tax.toFixed(2);
-    let grossPart = '';
-    if (parsed.gross != null && source.incomeType !== 'selfEmployed') {
-        source.grossAnnual = +(parsed.gross * cycles).toFixed(2);
-        grossPart = t('payslip.grossPart', { gross: formatCurrency(source.grossAnnual) });
-    }
-    const superPart = parsed.super != null
-        ? t('payslip.superPart', { superAmt: formatCurrency(parsed.super) })
-        : '';
-
-    renderIncomeSourcesSettings();
-    updateDataAndUI();
-    // Re-render rebuilt the row tools — write the status after it.
-    payslipStatus(index, `<span style="color: var(--color-positive);">${t('payslip.applied', {
-        net: formatCurrency(parsed.net || 0),
-        tax: formatCurrency(parsed.tax || 0),
-        grossPart,
-        superPart,
-    })}</span>`);
+    return parsed;
 }
 
 // ---- wiring ----
 
 export function setupPdfImport() {
-    setupModal('pdf-import-modal', 'open-pdf-import', resetDraft);
+    setupModal('pdf-import-modal', 'pdf-import-modal-open', resetDraft);
 
     const drop = getElement('pdf-import-drop');
     const fileInput = getElement('pdf-import-file');
@@ -357,18 +345,11 @@ export function setupPdfImport() {
         else if (e.target.id === 'pdf-import-another') resetDraft();
         else if (e.target.id === 'pdf-import-undo') undoLastImport();
     });
+}
 
-    // Payslip autofill: the per-source buttons are re-rendered with the list,
-    // so delegate at the document level (same pattern as settings-events).
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.payslip-upload-btn');
-        if (!btn) return;
-        payslipSourceIndex = parseInt(btn.dataset.parentIndex, 10);
-        const payslipInput = getElement('payslip-file');
-        if (payslipInput) { payslipInput.value = ''; payslipInput.click(); }
-    });
-    const payslipInput = getElement('payslip-file');
-    if (payslipInput) {
-        payslipInput.addEventListener('change', () => handlePayslipFile(payslipInput.files && payslipInput.files[0]));
-    }
+/** Opens the PDF statement window and reads this file in it (used by the single Import statement button). */
+export function startPdfImport(file) {
+    const opener = document.getElementById('pdf-import-modal-open');
+    if (opener) opener.click();
+    return handleStatementFile(file);
 }

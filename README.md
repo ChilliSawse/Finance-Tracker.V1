@@ -6,7 +6,7 @@ Ledger opens on an activity feed, not a spreadsheet: *"You imported 47 transacti
 
 **Project:** finance-tracker · **Part:** finance-tracker · **System page:** none (no system page covers this project)
 
-Version 1.3.0 (`package.json`, name `ledger`). Changes by version are in [`CHANGELOG.md`](CHANGELOG.md).
+Version 2.0.0 (`package.json`, name `ledger`). Changes by version are in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Features
 
@@ -71,7 +71,7 @@ Vanilla JavaScript (no framework), ES modules, Vite build, Workbox-generated ser
 | `src/calc/` | Pure, DOM-free maths: `tax-au.js` (Australian brackets, Medicare, HELP), `calculations.js`, `income-events.js` |
 | `src/import/` | Bank CSV import (`csv.js`, `import-ui.js`) and PDF statement and payslip import (`pdf-*.js`, `payslip.js`) |
 | `src/events/` | Delegated event handlers: setup, settings, import and export |
-| `src/ui/` | Rendering by tab (`render.js`, `render-tabs.js`), tab switching (`tabs.js`), the activity feed, What If, modals, onboarding |
+| `src/ui/` | Rendering by tab (`render.js`), tab switching (`tabs.js`), the activity feed, What If, modals, onboarding |
 | `src/theme/` | The theme engine (`theme.js`, `appearance.js`) |
 | `src/i18n/` | The string catalogue and `t()` |
 | `src/pwa.js`, `vite.config.js`, `public/` | The offline service worker, build config, manifest and icons |

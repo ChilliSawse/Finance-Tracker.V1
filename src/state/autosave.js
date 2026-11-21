@@ -3,9 +3,12 @@
 // is unchanged (financeTrackerData_v2) — real saves in the wild depend on it.
 
 import { store } from './store.js';
-import { cloneDefaultFinanceData, cloneDefaultGuiSettings, defaultGuiSettings } from './defaults.js';
-import { migrateIncomeSourceTypes, migrateAllocationFields, migrateLedgerFields, migrateVariableIncomeFields } from './migrations.js';
-import { migrateGuiTheme, migrateGuiColorFields, pickFirstRunTheme, THEMES } from '../theme/theme.js';
+import { cloneDefaultFinanceData, cloneDefaultGuiSettings } from './defaults.js';
+import { runMigrationChain } from './migration-chain.js';
+import { migrateGuiAppearance } from '../theme/theme.js';
+import { showToast } from '../ui/toast.js';
+import { t } from '../i18n/strings.js';
+import { SAVE_KEY, sanitizeFinanceData, sanitizeGuiSettings, quarantineCorruptSave, removeLegacyPartsCopy } from './sanitize.js';
 
 export class FinanceAutoSave {
     constructor() {
@@ -58,6 +61,7 @@ export class FinanceAutoSave {
             unsaved: 'Unsaved changes'
         };
         this.statusIndicator.textContent = statusText[status] || 'All changes saved';
+        this.statusIndicator.title = this.statusIndicator.textContent; // sighted hint when only the dot shows on narrow phones
     }
 
     getDataHash() {
@@ -86,8 +90,9 @@ export class FinanceAutoSave {
         }
     }
 
+    /** Returns true when the data was written, false when the save failed (S9: a restore treats false as a failed restore). */
     forceSave() {
-        this.performSave();
+        return this.performSave();
     }
 
     performSave() {
@@ -100,76 +105,78 @@ export class FinanceAutoSave {
             };
             localStorage.setItem('financeTrackerData_v2', JSON.stringify(combinedData));
             this.lastSaveHash = this.getDataHash(); // Update hash after successful save
+            this._quotaWarned = false; // saving works again, so a later full-storage failure may warn again
             setTimeout(() => this.updateSaveStatus('saved'), 500); // UI feedback
+            return true;
         } catch (error) {
             console.error('Auto-save to localStorage failed:', error);
             this.updateSaveStatus('error');
-            // Storage full: say what happened and what to do, once per session —
-            // not on every retried save.
+            // Storage full: a persistent notice (D2) that stays until dismissed, once until a save works again,
+            // not on every retried save. It says what to do first: back up.
             if (error && error.name === 'QuotaExceededError' && !this._quotaWarned) {
                 this._quotaWarned = true;
-                alert("[STORAGE FULL] Your latest changes couldn't be saved — this device's storage for Ledger is full.\n\n"
-                    + '1. Open Settings → Save, Reset & Backup → Export Backup (JSON) so nothing is lost.\n'
-                    + '2. Free space by removing a custom font or saved themes (they take the most room).\n\n'
-                    + 'Saving will resume automatically once there is space.');
+                showToast(t('d.storage.full'), 'error', 0);
             }
+            return false;
         }
     }
 
     loadData() {
-        try {
-            const savedDataString = localStorage.getItem('financeTrackerData_v2');
-            if (savedDataString) {
-                const loadedBundle = JSON.parse(savedDataString);
-                if (loadedBundle && loadedBundle.financeData && loadedBundle.guiSettings) {
-                    store.financeData = loadedBundle.financeData;
-                    store.guiSettingsData = loadedBundle.guiSettings;
-                    // Migrate older saves that predate the theme system
-                    if (!store.guiSettingsData.theme) store.guiSettingsData.theme = 'midnight';
-                    if (!store.guiSettingsData.colorPositive) store.guiSettingsData.colorPositive = defaultGuiSettings.colorPositive;
-                    if (!store.guiSettingsData.colorNegative) store.guiSettingsData.colorNegative = defaultGuiSettings.colorNegative;
-                    if (!store.guiSettingsData.colorNeutral) store.guiSettingsData.colorNeutral = defaultGuiSettings.colorNeutral;
-                    // J1 — repoint saves on removed presets ('default'/'dark') to the closest
-                    // survivor and refresh the colour overlay so the old palette can't bleed through.
-                    migrateGuiTheme(store.guiSettingsData);
-                    migrateGuiColorFields(store.guiSettingsData);
-                    migrateIncomeSourceTypes(store.financeData); // Backfill incomeType on legacy saves
-                    migrateAllocationFields(store.financeData); // Stage 0 — backfill allocation goal/funds
-                    migrateLedgerFields(store.financeData); // Ledger — tax settings, categories, bills
-                    migrateVariableIncomeFields(store.financeData); // Variable income — events/baseHourlyRate
-                    // Rebrand: the heading editor was removed pre-Ledger, so every save
-                    // carries the old default strings — safe to upgrade them in place.
-                    if (store.guiSettingsData.mainHeading === 'Personal Finance Dashboard') {
-                        store.guiSettingsData.mainHeading = defaultGuiSettings.mainHeading;
-                        store.guiSettingsData.subHeading = defaultGuiSettings.subHeading;
+        // S9: the retired localStorage rows copy (every transaction in plain text) is removed.
+        try { removeLegacyPartsCopy(localStorage); } catch (error) { console.error('Could not remove the old safety copy:', error); }
+        // S1: what happened while loading, for a later UI step (main.js shows the notices once).
+        store.loadStatus = { corruptKey: null, migrationAborted: false, migrationErrors: [], failed: false };
+        let raw = null;
+        try { raw = localStorage.getItem(SAVE_KEY); } catch (error) {
+            console.error('Could not read localStorage:', error);
+        }
+        if (raw) {
+            try {
+                const loadedBundle = JSON.parse(raw);
+                if (loadedBundle && loadedBundle.financeData && loadedBundle.guiSettings
+                    && typeof loadedBundle.financeData === 'object' && typeof loadedBundle.guiSettings === 'object') {
+                    // S1: prototype keys, non-finite numbers and a hostile currency never reach the store.
+                    const financeData = sanitizeFinanceData(loadedBundle.financeData);
+                    const guiSettings = sanitizeGuiSettings(loadedBundle.guiSettings);
+                    // A4: old theme names, colour fields and the retired mode land on a palette and a colour mode.
+                    migrateGuiAppearance(guiSettings);
+                    store.financeData = financeData;
+                    store.guiSettingsData = guiSettings;
+                    // The four legacy migrations, then the Phase 1 steps (backup, one forceSave).
+                    const result = runMigrationChain(store.financeData, {
+                        raw, source: 'load', forceSave: () => this.forceSave(),
+                    });
+                    if (result && result.aborted) {
+                        // L5: carry on with the committed state; the flag lets the UI tell the user.
+                        store.loadStatus.migrationAborted = true;
+                        store.loadStatus.migrationErrors = result.errors || [];
                     }
                     this.lastSaveHash = this.getDataHash();
                     this.updateSaveStatus('saved');
                     return true;
                 }
+                // Parsed but not a bundle: keep a copy, same as unparseable.
+                this._setAsideCorruptSave(raw);
+            } catch (error) {
+                console.error('Failed to load data from localStorage (v2):', error);
+                this._setAsideCorruptSave(raw);
             }
-        } catch (error) {
-            console.error('Failed to load data from localStorage (v2):', error);
         }
         // Fallback to default if load fails or no data
         store.financeData = cloneDefaultFinanceData();
         store.guiSettingsData = cloneDefaultGuiSettings();
-        // First run: respect the system colour scheme — dark systems open in
-        // midnight instead of the warm sunrise default. Mirrors a preset click
-        // (write the 8 base colours; overrides stay empty).
-        const firstTheme = pickFirstRunTheme();
-        if (firstTheme !== store.guiSettingsData.theme && THEMES[firstTheme]) {
-            const p = THEMES[firstTheme];
-            Object.assign(store.guiSettingsData, {
-                theme: firstTheme,
-                primaryBgStart: p.bg, cardBgStart: p.panel, textColor: p.fg,
-                borderColor: p.border, accentColor: p.accent,
-                colorPositive: p.positive, colorNegative: p.negative, colorNeutral: p.neutral,
-            });
-        }
         this.lastSaveHash = this.getDataHash();
         this.updateSaveStatus('saved'); // Consider it 'saved' as it's default
         return false;
+    }
+
+    // M4: copy the raw string aside (once) before anything can overwrite it.
+    _setAsideCorruptSave(raw) {
+        store.loadStatus.failed = true;
+        try {
+            const { key } = quarantineCorruptSave(raw, localStorage);
+            store.loadStatus.corruptKey = key;
+        } catch (e) { /* storage unavailable */ }
     }
 
     onDataChange() {

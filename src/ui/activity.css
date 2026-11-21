@@ -1,0 +1,169 @@
+/* Activity screen (A7). Ported from mock round 2 activity.css (page grid, day groups, This pay so far, Where it went); tokens only, no hex. The mock's quick-add and Today touch-up blocks belong to A8 and A6. */
+/* ---------- page grid ---------- */
+.toolbar .search { width: 320px; }
+.act { align-items: start; row-gap: 24px; }
+.act-list { grid-column: 1 / span 8; grid-row: 1; min-width: 0; }
+.act-sum  { grid-column: 9 / span 4; grid-row: 1; position: sticky; top: 24px; }
+.act-where { grid-column: 1 / -1; grid-row: 2; }
+
+/* ---------- day groups (frontend-design layout) ---------- */
+.act-list { container-type: inline-size; container-name: list; }
+.day + .day { margin-top: 20px; }
+.day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 0 4px 8px; }
+.day-head h2 { margin: 0; font-size: var(--fs-body); line-height: 20px; font-weight: 700; }
+.day-head .total { font-size: var(--fs-small); color: var(--muted); white-space: nowrap; }
+.day-head .total b { color: var(--text); font-weight: 700; }
+.day-head .total .plus { font-weight: 700; }
+.day .card { padding: 4px var(--card-pad); }
+.day.coming .card { background: transparent; border: 1px dashed var(--control); }
+
+/* one transaction: payee / source | category / status line | amount */
+.txn {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) 120px;
+  grid-template-areas: "n cat m" "src st m";
+  column-gap: 20px; row-gap: 2px; align-items: center;
+  min-height: 64px; padding: 12px 0;
+  border-top: 1px solid var(--rule);
+}
+.txn:first-child { border-top: 0; }
+.txn .n { grid-area: n; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.txn { isolation: isolate; }
+/* hover/focus highlight runs edge to edge of the card (Chilli, 5 Nov) */
+.txn .n::after { content: ""; position: absolute; inset: 0 calc(-1 * var(--bleed, var(--card-pad))); z-index: -1; transition: background 150ms; }
+.txn:hover .n::after { background: var(--raised); }
+.day .card { overflow: hidden; }
+.txn .n:focus-visible { outline: 0; }
+.txn .n:focus-visible::after { outline: 2px solid var(--accent); outline-offset: -2px; }
+.txn .src { grid-area: src; font-size: var(--fs-small); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.txn .cat { grid-area: cat; font-size: var(--fs-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.txn .cat .k { color: var(--muted); }
+.txn .st { grid-area: st; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-size: var(--fs-small); }
+.txn .st:empty { display: none; }
+.txn .st a { position: relative; z-index: 1; color: var(--accent); font-weight: 600; }
+.txn .st a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.txn .money { grid-area: m; text-align: right; font-weight: 600; }
+.coming .txn .money { color: var(--muted); font-weight: 500; }
+.coming .txn .money.is-due { color: var(--text); font-weight: 600; }
+/* rows with no status line: centre the category against the payee/source pair */
+.txn:has(.st:empty) .cat { grid-row: 1 / span 2; }
+
+/* status pills: always words; the bucket pill carries its own name on its own colour */
+.pill.soon { background: var(--neutral-bg); color: var(--neutral-ink); }
+.pill .tick { margin-right: 4px; }
+
+/* the list card narrower than ~640: stack, like the phone */
+@container list (max-width: 640px) {
+  .txn {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "n m" "cat src" "st st";
+    column-gap: 12px; row-gap: 3px; padding: 12px 0;
+  }
+  .txn:has(.st:empty) .cat { grid-row: auto; }
+  .txn .src { text-align: right; }
+  .txn .cat { color: var(--muted); }
+  .txn .cat .k { color: inherit; }
+  .txn .st { margin-top: 4px; }
+}
+
+/* ---------- This pay so far (+ the two boxes) ---------- */
+.act-sum h2 { margin: 0 0 12px; font-size: var(--fs-section); line-height: 22px; font-weight: 600; }
+.sum-body { display: grid; gap: 16px; }
+.sum-dl { margin: 0; }
+.sum-dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid var(--rule); }
+.sum-dl > div:first-child { border-top: 0; padding-top: 0; }
+.sum-dl dt { color: var(--muted); font-size: var(--fs-small); }
+.sum-dl dd { margin: 0; font-weight: 600; }
+.sum-dl .left { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 2px; }
+.sum-dl .left dt { color: var(--text); font-weight: 600; font-size: var(--fs-body); }
+.sum-dl .left dd { font-size: var(--fs-fig); line-height: 26px; font-weight: 700; }
+.boxes { display: grid; gap: 12px; align-content: start; }
+.box { border-radius: var(--r-tile); padding: 14px 16px; }
+.box h3 { margin: 0 0 4px; font-size: var(--fs-body); line-height: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.box p { margin: 0 0 12px; font-size: var(--fs-small); line-height: 18px; }
+.box-review { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); }
+.box-review ul { list-style: none; margin: 0 0 12px; padding: 0; font-size: var(--fs-small); }
+.box-review li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.box-review li span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.box-review .btn { height: 36px; border-color: var(--warn-line); background: var(--surface); color: var(--text); }
+.box-covered { background: var(--raised); }
+.box-covered p { color: var(--muted); }
+.box-covered ul { list-style: none; margin: 0; padding: 0; }
+.box-covered li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 6px 0; }
+.box-covered li + li { border-top: 1px solid var(--border); }
+.box-covered .who { font-weight: 600; font-size: var(--fs-body); }
+.box-covered .money { font-weight: 600; }
+.tag { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: var(--r-pill); font-size: var(--fs-small); font-weight: 600; white-space: nowrap; justify-self: start; }
+
+/* the summary card is wide (one-column layouts): figures left, boxes right */
+.act-sum { container-type: inline-size; container-name: sum; }
+@container sum (min-width: 620px) {
+  .sum-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+}
+
+/* ---------- Where it went this pay (Taste; categories wrap and stack) ---------- */
+.act-where .card-head { margin-bottom: 4px; }
+.wi-top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 32px; margin-bottom: 20px; }
+.wi-top .total { margin: 0; font-size: var(--fs-fig); line-height: 28px; font-weight: 700; }
+.wi-top .total-sub { margin: 2px 0 0; color: var(--muted); font-size: var(--fs-small); }
+.wi-top .wi-kind { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 28px; }
+.wi-top .wi-kind li { display: flex; flex-direction: column; }
+.wi-top .wi-kind .k { font-size: var(--fs-small); color: var(--muted); }
+.wi-top .wi-kind .money { font-weight: 600; }
+.wi-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 12px; }
+.wi-grid li { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: var(--r-tile); background: var(--raised); min-width: 0; }
+.wi-grid .nm { font-weight: 600; }
+.wi-grid .v { font-size: var(--fs-section); line-height: 22px; font-weight: 700; }
+.wi-grid .s { font-size: var(--fs-small); color: var(--muted); }
+.wi-grid .bar { margin-top: 10px; height: 6px; border-radius: var(--r-pill); background: var(--active); overflow: hidden; }
+.wi-grid .bar i { display: block; height: 100%; min-width: 4px; border-radius: var(--r-pill); background: var(--mark); }
+.wi-grid li.unsorted { background: var(--warn-bg); color: var(--warn-ink); }
+.wi-grid li.unsorted .s { color: inherit; }
+.wi-grid li.unsorted .bar { background: var(--warn-line); }
+
+/* ---------- one column below 1280 ---------- */
+@media (max-width: 1280px) {
+  .act { grid-template-columns: minmax(0, 1fr); }
+  .act-sum { grid-column: 1; grid-row: 1; position: static; }
+  .act-list { grid-column: 1; grid-row: 2; }
+  .act-where { grid-column: 1; grid-row: 3; }
+}
+
+/* ---------- phone ---------- */
+@media (max-width: 1023px) {
+  .act { row-gap: 20px; }
+  .day .card { padding: 2px 16px; --bleed: 16px; }
+  .txn { min-height: 68px; }
+  .box-review .btn { height: 44px; }
+  .toolbar .search { width: 100%; }
+  .wi-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .wi-grid li { padding: 12px; }
+}
+
+
+/* ---------- A7 additions ---------- */
+/* the row name is a button (it opens the edit sheet), not a link */
+.txn button.n { background: none; border: 0; padding: 0; text-align: left; font: inherit; font-weight: 600; color: inherit; cursor: pointer; }
+.txn .st .st-act { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; }
+.txn .cat { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.txn .cat > svg.i { width: 14px; height: 14px; color: var(--muted); }
+.txn .cat .cat-name { overflow: hidden; text-overflow: ellipsis; }
+.txn .cat .k { white-space: nowrap; }
+.pill svg.i { width: 12px; height: 12px; margin-right: 4px; }
+.pill.tag { background: var(--neutral-bg); color: var(--neutral-ink); }
+.box h3 svg.i { width: 16px; height: 16px; }
+.box-review .money { font-weight: 600; }
+.wi-grid .nm { display: flex; align-items: center; gap: 6px; }
+.wi-grid .nm svg.i { width: 14px; height: 14px; color: var(--muted); flex: none; }
+.wi-grid li.unsorted .nm svg.i { color: inherit; }
+.act-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.act-empty p { margin: 0; color: var(--muted); }
+.act-skel { padding: 24px 0; }
+.search svg.i { flex: none; }
+.chip:focus-visible, .btn:focus-visible, .txn button:focus-visible, .search input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.txn button.n:focus-visible { outline: 0; }
+.chip .c { font-weight: 700; }
+@container list (max-width: 640px) {
+  .txn .cat { color: var(--muted); }
+}

@@ -7,10 +7,19 @@
 //   description:   string (as imported/entered)
 //   amountCents:   integer — NEGATIVE = money out, POSITIVE = money in
 //   categoryId:    string (financeData.categories id; 'other' fallback)
-//   source:        'csv' | 'manual'
+//   source:        'csv' | 'pdf' | 'manual' | 'sample'
 //   importBatchId: string | null (groups one CSV import; enables undo)
-//   hash:          dedupe key (date|normalised description|amountCents)
+//   hash:          dedupe key (date|normalised description|amountCents);
+//                  manual rows use 'manual|' + id so identical entries both store.
+//                  Kept on edit (it is the bank row's identity, not its text).
 //   createdAt:     ISO datetime
+// Optional (absent on legacy rows; readers default them via normaliseTransaction):
+//   status:     'review' | 'ok'  (default 'ok')
+//   bucketId:   explicit bucket for this purchase
+//   billMatch:  { planId, dueDate, by: 'auto' | 'user' } | null
+//   note:       string (default '')
+//   updatedAt:  ISO datetime (default = createdAt)
+//   reconciled: true on a manual row merged with a bank row (FT-R-56)
 // }
 
 import { openDb, withStore } from './db.js';
@@ -21,29 +30,74 @@ export function transactionHash(date, description, amountCents) {
     return `${date}|${desc}|${amountCents}`;
 }
 
-export function makeTransaction({ date, description, amountCents, categoryId = 'other', source = 'manual', importBatchId = null }) {
-    return {
-        id: crypto.randomUUID(),
+export function makeTransaction({ date, description, amountCents, categoryId = 'other', source = 'manual', importBatchId = null,
+    status, bucketId, billMatch, note }) {
+    const cents = Math.round(amountCents || 0);
+    const id = crypto.randomUUID();
+    const row = {
+        id,
         date,
         description: description || '',
-        amountCents: Math.round(amountCents || 0),
+        amountCents: cents,
         categoryId,
         source,
         importBatchId,
-        hash: transactionHash(date, description, Math.round(amountCents || 0)),
+        hash: source === 'manual' ? 'manual|' + id : transactionHash(date, description, cents),
         createdAt: new Date().toISOString(),
     };
+    if (status !== undefined) row.status = status;
+    if (bucketId !== undefined) row.bucketId = bucketId;
+    if (billMatch !== undefined) row.billMatch = billMatch;
+    if (note !== undefined) row.note = note;
+    return row;
 }
 
+export function transactionStatus(row) {
+    return row && row.status === 'review' ? 'review' : 'ok';
+}
+
+// Defaults for the optional fields, without mutating the stored row.
+export function normaliseTransaction(row) {
+    return { ...row, status: transactionStatus(row), note: row.note || '', updatedAt: row.updatedAt || row.createdAt };
+}
+
+/** True for a real calendar date 'YYYY-MM-DD' (checked by a Date.UTC round trip, not by parsing). */
+export function isValidIsoDate(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof iso === 'string' ? iso : '');
+    if (!m) return false;
+    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+    if (y < 1000) return false;
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+}
+
+
 /**
- * Bulk-insert with dedupe: rows whose hash already exists in the store (or is
- * repeated within the batch) are skipped, so re-importing an overlapping CSV
- * export is safe.
+ * Bulk-insert with count-based dedupe (L8). Imported rows (csv/pdf) with the same
+ * date, description and amount are numbered in file order: the 1st keeps the
+ * plain hash, the 2nd gets "#2", and so on. A row is skipped only when that
+ * numbered hash is already stored, so two genuine identical coffees in one
+ * statement both import, a re-import adds nothing, and an overlapping later
+ * statement adds only the rows it has beyond what is stored.
+ * Rows with an impossible date are skipped and counted in `invalid` (only present when > 0).
  * @param {Array} txns - transactions from makeTransaction().
- * @returns {Promise<{added:number, duplicates:number}>}
+ * A12b: this does NOT merge imported rows into manual rows. That is `commitImportRows` in rules.js,
+ * the one merge pass; `merged` is always 0 here so callers can add the merge count to it.
+ * @returns {Promise<{added:number, duplicates:number, merged:number, invalid?:number}>}
  */
-export async function addTransactions(txns) {
-    if (!txns.length) return { added: 0, duplicates: 0 };
+export async function addTransactions(input) {
+    if (!input.length) return { added: 0, duplicates: 0, merged: 0 };
+    let invalid = 0;
+    const occurrence = new Map();
+    const txns = [];
+    for (const t of input) {
+        if (!isValidIsoDate(t.date)) { invalid++; continue; }
+        if (t.source === 'manual' || t.source === 'sample') { txns.push(t); continue; }
+        const n = (occurrence.get(t.hash) || 0) + 1;
+        occurrence.set(t.hash, n);
+        txns.push(n === 1 ? t : { ...t, hash: `${t.hash}#${n}` });
+    }
+    if (!txns.length) return { added: 0, duplicates: 0, merged: 0, ...(invalid ? { invalid } : {}) };
     const db = await openDb();
     return new Promise((resolve, reject) => {
         const tx = db.transaction('transactions', 'readwrite');
@@ -60,12 +114,12 @@ export async function addTransactions(txns) {
             seen.add(t.hash);
             const check = hashIndex.getKey(t.hash);
             check.onsuccess = () => {
-                if (check.result !== undefined) duplicates++;
-                else { store.add(t); added++; }
+                if (check.result !== undefined) { duplicates++; return; }
+                store.add(t); added++;
             };
         });
 
-        tx.oncomplete = () => resolve({ added, duplicates });
+        tx.oncomplete = () => resolve({ added, duplicates, merged: 0, ...(invalid ? { invalid } : {}) });
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error || new Error('addTransactions aborted'));
     });
@@ -87,6 +141,7 @@ export async function listTransactions(opts = {}) {
     let result = rows;
     if (categoryId) result = result.filter(r => r.categoryId === categoryId);
     result.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+    result = result.map(normaliseTransaction);
     return limit ? result.slice(0, limit) : result;
 }
 
@@ -94,8 +149,23 @@ export async function countTransactions() {
     return withStore('transactions', 'readonly', (store) => store.count());
 }
 
+// Edit keeps the stored hash (the bank row's identity) and stamps updatedAt.
 export async function updateTransaction(txn) {
-    return withStore('transactions', 'readwrite', (store) => store.put(txn));
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction('transactions', 'readwrite');
+        const store = tx.objectStore('transactions');
+        const get = store.get(txn.id);
+        get.onsuccess = () => {
+            const prev = get.result;
+            const next = { ...txn, updatedAt: new Date().toISOString() };
+            if (prev) next.hash = prev.hash;
+            store.put(next);
+        };
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error('updateTransaction aborted'));
+    });
 }
 
 export async function deleteTransaction(id) {
@@ -132,4 +202,17 @@ export async function monthlySpendByCategory(month) {
         spend.set(r.categoryId, (spend.get(r.categoryId) || 0) + (-r.amountCents));
     }
     return spend;
+}
+
+// Backup helpers (slice D's full backup calls these). Raw rows, no defaults added.
+export async function exportAllTransactions() {
+    return withStore('transactions', 'readonly', (store) => store.getAll());
+}
+
+// Restore: upserts by id, keeps each row's hash as given, no dedupe.
+export async function importTransactions(rows) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) return { imported: 0 };
+    await withStore('transactions', 'readwrite', (store) => { list.forEach(r => store.put(r)); });
+    return { imported: list.length };
 }

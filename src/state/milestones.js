@@ -11,7 +11,7 @@ import { formatCurrency } from '../utils.js';
 // UI layers (toasts, confetti-adjacent things) listen for this without the
 // state layer having to know about them.
 function announce(detail) {
-    try { document.dispatchEvent(new CustomEvent('ledger:milestone', { detail })); } catch (_) {}
+    try { document.dispatchEvent(new CustomEvent('ledger:milestone', { detail })); } catch (err) { console.warn('Ledger: milestone event failed', err); }
 }
 
 const MILESTONES_KEY = 'ft-milestones';
@@ -27,7 +27,7 @@ function readState() {
     catch (_) { return {}; }
 }
 function writeState(s) {
-    try { localStorage.setItem(MILESTONES_KEY, JSON.stringify(s)); } catch (_) {}
+    try { localStorage.setItem(MILESTONES_KEY, JSON.stringify(s)); } catch (_) { /* storage full or blocked: skip, deliberate */ }
 }
 
 function netWorthThreshold(value) {

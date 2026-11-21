@@ -1,0 +1,26 @@
+/* Salary and Set-hours sheets (C6). Tokens only; the --sh-* names come from sheet.css. */
+
+.ils-link {
+    align-self: flex-start; min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer;
+    font: inherit; font-weight: 600; color: var(--sh-accent); text-decoration: underline;
+}
+.ils-sec { margin: 6px 0 0; font-size: 1rem; font-weight: 700; color: var(--sh-ink); }
+.ils-card {
+    display: flex; flex-direction: column; gap: 8px; padding: 14px;
+    border: 1px solid var(--sh-line); border-radius: 12px; background: var(--sh-surface);
+}
+.ils-card-title { margin: 0; font-size: 1rem; font-weight: 700; color: var(--sh-ink); }
+.ils-muted { margin: 0; font-size: 0.85rem; color: var(--sh-muted); }
+.ils-kv { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.ils-kv > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.ils-kv dt { color: var(--sh-muted); font-size: 0.9rem; }
+.ils-kv dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.ils-slip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ils-slip-f { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ils-result { display: flex; flex-direction: column; gap: 6px; }
+.ils-result:empty { display: none; }
+.ils-line { margin: 0; font-variant-numeric: tabular-nums; }
+.ils-msg { margin: 0; font-weight: 600; color: var(--sh-ink); border-left: 3px solid var(--sh-warm); padding-left: 10px; }
+.ils-ok { margin: 0; font-weight: 700; color: var(--sh-accent); }
+.ils-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+

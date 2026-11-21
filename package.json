@@ -1,7 +1,7 @@
 {
   "name": "ledger",
   "private": true,
-  "version": "1.3.0",
+  "version": "2.0.0",
   "description": "Ledger — a warm, offline-first personal finance tracker (vanilla JS PWA)",
   "type": "module",
   "repository": {
@@ -11,10 +11,17 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:ci": "node tools/ci-tests.mjs",
+    "check:coldload": "node tools/z1-coldload.mjs",
+    "build:themes": "node scripts/build-themes.mjs"
   },
   "devDependencies": {
+    "playwright-core": "1.65.1",
     "vite": "^8.1.3",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^2.0.0"
+  },
+  "dependencies": {
+    "pdfjs-dist": "6.5.438"
   }
 }

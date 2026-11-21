@@ -10,32 +10,18 @@
 // and pre-Ledger alert strings remain inline — see NOTES.md for the migration
 // inventory.
 
-export const en = {
-    // Home greeting
-    'greeting.lateNight': 'Up late?',
-    'greeting.morning': 'Good morning',
-    'greeting.afternoon': 'Good afternoon',
-    'greeting.evening': 'Good evening',
-    'insight.gettingStarted': "Let's get your money story started.",
-    'insight.overspending': 'Spending is running ahead of income right now — worth a look at the Expenses tab.',
-    'insight.netWorthUp': 'Net worth is up {pct}% this month. Keep it rolling.',
-    'insight.savingsStrong': "You're saving {rate}% of your income. That's the good stuff.",
-    'insight.savingsSome': "You're saving {rate}% of your income — every point counts.",
-    'insight.default': "Here's what's happening with your money.",
+import { enA } from './en-a.js';
+import { enB } from './en-b.js';
+import { enC } from './en-c.js';
+import { enD } from './en-d.js';
+import { enE } from './en-e.js';
+import { enF } from './en-f.js';
 
-    // Pulse tiles
-    'pulse.netWorth': 'Net worth',
-    'pulse.savingsRate': 'Savings rate',
-    'pulse.leftover': 'Left over each fortnight',
-    'pulse.leftoverSub': 'after tax and all expenses',
-    'pulse.onTarget': 'on target',
-    'pulse.deltaSuffix': ' this month',
+export const en = {
+    // Per-slice catalogues (Phase 1): each slice edits only its own file.
+    ...enA, ...enB, ...enC, ...enD, ...enE, ...enF,
 
     // Coming up (bills)
-    'upcoming.title': 'Coming up',
-    'upcoming.summary': '{count} {billWord} · {total} in the next fortnight',
-    'upcoming.billOne': 'bill',
-    'upcoming.billMany': 'bills',
     'bills.dueToday': 'today',
     'bills.dueTomorrow': 'tomorrow',
     'bills.dueInDays': 'in {days} days',
@@ -55,21 +41,12 @@ export const en = {
     'feed.billDue': '<strong>{name}</strong> is due {due} — {amount}.',
     'feed.billDueSoon': 'soon',
     'feed.incomeAdded': 'You added <strong>{name}</strong>{amountPart}.',
-    'feed.empty.title': 'Your story starts here',
-    'feed.empty.sub': "As things happen — a bank import, a milestone, a bill coming up — they'll show up in this feed. Add your income and expenses to get the first entries rolling.",
 
     // Toasts
     'toast.milestone.netWorth': 'Nice one — net worth just crossed {threshold}.',
     'toast.milestone.savingsRate': 'Looking good — your savings rate hit {threshold}%.',
-    'toast.onboarding.done': "You're all set — this feed fills up as your story unfolds.",
     'toast.sample.loaded': 'Meet Alex and Sam — a sample household with {count} transactions to explore.',
     'toast.sample.loadedNoTxns': 'Meet Alex and Sam — a sample household to explore.',
-
-    // Onboarding summary
-    'onboard.summary.plain': 'Your numbers are in — refine any of them from the tabs whenever you like.',
-    'onboard.summary.saving': "On those numbers you're keeping about {fortnightly} a fortnight — a {rate}% savings rate. That's the number Ledger helps you grow.",
-    'onboard.summary.overspending': 'On those numbers, spending is running ahead of income by about {fortnightly} a fortnight. Ledger will help you see exactly where it goes.',
-    'onboard.sample.loading': 'Setting things up…',
 
     // CSV import flow
     'import.detect.saved': "We've used the column matching you saved for this file shape — adjust it if anything looks off.",
@@ -85,6 +62,7 @@ export const en = {
     'import.commit': 'Import {count} {txnWord}',
     'import.commit.empty': 'Import',
     'import.emptyFile': 'That file looks empty — is it the right CSV export?',
+    'import.xlsxFailed': "Could not read this workbook. Export it as CSV from your bank or Excel and import that instead.",
     'import.readFailed': "Couldn't read that file. Try exporting it from your bank again.",
     'import.saveFailed': 'Saving failed: {message}. Nothing was imported.',
     'import.success.title': 'Done — {count} {txnWord} imported.{dupNote}',
@@ -95,13 +73,7 @@ export const en = {
     'import.another': 'Import another file',
     'import.undo': 'Undo this import',
 
-    // Spending / year cards
-    'spend.subtitle': 'Looks like {category} is your biggest expense this month.',
-    'spend.everythingElse': 'Everything else',
-    'spend.total': 'Total spent',
-
     // Variable income — event editor (income settings modal)
-    'varInc.fromEvents': '— from events —',
     'varInc.eventsTitle': 'Income events — {name}',
     'varInc.fyTotal': '{fy}: {net} net · {count} {eventWord}',
     'varInc.eventOne': 'event',
@@ -114,21 +86,9 @@ export const en = {
     'varInc.baseRate': 'Base hourly rate (optional)',
     'varInc.baseRateHint': 'Used only to show how much of a penalty-rate shift came from loadings. Never calculates award entitlements.',
 
-    // Variable income — Income tab card
-    'varInc.card.subtitle': 'Variable income · {fy} so far: {gross} gross',
-    'varInc.card.recent': 'Recent events',
-    'varInc.card.noEvents': 'No income events yet — add your first one via "Edit income & tax".',
-    'varInc.card.byLabel': 'By client / venue ({fy})',
-    'varInc.card.cashSplit': '{bank} banked + {cash} cash',
-    'varInc.card.hours': '{hours} hrs · {rate}/hr effective',
-    'varInc.card.penaltySplit': '{base} base + {loading} loadings on penalty shifts',
-    'varInc.card.penaltyBadge': 'penalty rates',
-    'varInc.card.gstBadge': 'incl. GST',
-    'varInc.card.cashBadge': 'cash',
-    'varInc.provision.title': 'Tax to set aside ({fy})',
+    // Variable income — tax provision text (Future)
     'varInc.provision.body': 'On your pace so far ({projGross}/yr gross), the year’s tax on this income comes to about {projTax}. By today that’s {toDate} — {withheld} is already withheld, so aim to have {still} put aside.',
     'varInc.provision.bodyCovered': 'On your pace so far ({projGross}/yr gross), the year’s tax on this income comes to about {projTax}. What’s already been withheld ({withheld}) covers the {toDate} you’d need by today. Nice.',
-    'varInc.provision.gstNote': 'GST collected so far: {gst} — that’s the ATO’s, not income; keep it separate for your BAS.',
 
     // Volatility section (Home tab)
     'vol.title': 'Income history',
@@ -151,16 +111,7 @@ export const en = {
     'vol.notEnoughHistory': "Not enough history yet — I'll let you know once you have a full year of income events.",
     'vol.monthAria': '{month}: {amount}',
 
-    // Coaster card (Dashboard)
-    'coast.months': 'You could coast for about {months} on what you’ve saved.',
-    'coast.detail': '{assets} in assets ÷ {spend}/month average spending (last 3 months of transactions).',
-    'coast.noExpenses': 'Add some expenses to see your coaster estimate — import a bank CSV/PDF so Ledger knows your average month.',
-    'coast.monthOne': 'month',
-    'coast.monthMany': 'months',
-
-    // Tax provision card (Savings tab)
-    'taxpot.checkboxTitle': 'Use this bucket as your tax provision pot',
-    'taxpot.none': 'Tag an allocation bucket as your Tax pot (Edit assets, allocation & FI) to compare it against the estimated liability.',
+    // Tax provision card (Future)
     'taxpot.onTrack': '{name} holds {balance} — ahead of the {target} you’d want set aside by today. Nice buffer.',
     'taxpot.behind': '{name} holds {balance} — about {gap} short of the {target} you’d want set aside by today.',
     'taxpot.noEstimate': 'No variable income this financial year yet, so there’s nothing to provision against.',
@@ -171,7 +122,7 @@ export const en = {
 
     // PDF import
     'pdf.loading': 'Loading PDF reader…',
-    'pdf.loadFailed': "Couldn't load the PDF reader — check your internet connection and try again.",
+    'pdf.loadFailed': "Could not read that PDF. If it's a scanned image, export a CSV from your bank instead.",
     'pdf.parsingPage': 'Parsing page {page} of {total}…',
     'pdf.password': 'This PDF is password-protected — remove the password (print to PDF works) and try again.',
     'pdf.corrupt': "That file doesn't look like a readable PDF — try exporting it from your bank again.",
@@ -181,10 +132,5 @@ export const en = {
     'pdf.detectedGeneric': "Didn't recognise the bank, so I used the generic reader — {count} transactions found. Double-check the amounts and signs below.",
 
     // Payslip autofill
-    'payslip.uploadBtn': 'Upload payslip (PDF)…',
-    'payslip.parsing': 'Reading payslip…',
-    'payslip.applied': 'Filled from payslip: net {net} · tax {tax}{grossPart}{superPart}',
-    'payslip.grossPart': ' · gross {gross}/yr',
-    'payslip.superPart': ' · super {superAmt} (not added to figures)',
     'payslip.nothingFound': "Couldn't find pay figures in that PDF — is it a payslip? You can enter the numbers by hand.",
 };

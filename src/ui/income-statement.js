@@ -10,6 +10,7 @@ import {
     fyRange, activeFyKey, monthLabel,
 } from '../calc/income-events.js';
 import { t } from '../i18n/strings.js';
+import { escNum } from './html.js';
 
 function isoToday() {
     const d = new Date();
@@ -64,8 +65,8 @@ export function openIncomeStatement(periodChoice = '6') {
         const year = key.slice(0, 4);
         return `<tr>
             <td>${escapeHtml(monthLabel(key))} ${escapeHtml(year)}</td>
-            <td>${totals.count}</td>
-            <td>${totals.hours > 0 ? totals.hours : '—'}</td>
+            <td>${escNum(totals.count)}</td>
+            <td>${totals.hours > 0 ? escNum(totals.hours) : '—'}</td>
             <td>${formatCurrency(totals.gross)}</td>
             <td>${formatCurrency(totals.tax)}</td>
             <td>${totals.gst > 0 ? formatCurrency(totals.gst) : '—'}</td>
@@ -77,8 +78,8 @@ export function openIncomeStatement(periodChoice = '6') {
     const clients = labelSummary(events);
     const clientRows = clients.map(row => `<tr>
         <td>${escapeHtml(row.label)}</td>
-        <td>${row.count}</td>
-        <td>${row.hours > 0 ? row.hours : '—'}</td>
+        <td>${escNum(row.count)}</td>
+        <td>${row.hours > 0 ? escNum(row.hours) : '—'}</td>
         <td>${row.effectiveRate != null ? formatCurrency(row.effectiveRate) + '/hr' : '—'}</td>
         <td>${row.cash > 0 ? `${formatCurrency(row.bank)} + ${formatCurrency(row.cash)} cash` : formatCurrency(row.bank)}</td>
         <td>${formatCurrency(row.net)}</td>
@@ -127,7 +128,7 @@ export function openIncomeStatement(periodChoice = '6') {
         <thead><tr><th>Month</th><th>Events</th><th>Hours</th><th>Gross</th><th>Tax withheld</th><th>GST collected</th><th>Net income</th></tr></thead>
         <tbody>${monthRows}</tbody>
         <tfoot><tr>
-            <td>Total</td><td>${grand.count}</td><td>${grand.hours > 0 ? grand.hours : '—'}</td>
+            <td>Total</td><td>${escNum(grand.count)}</td><td>${grand.hours > 0 ? escNum(grand.hours) : '—'}</td>
             <td>${formatCurrency(grand.gross)}</td><td>${formatCurrency(grand.tax)}</td>
             <td>${grand.gst > 0 ? formatCurrency(grand.gst) : '—'}</td><td>${formatCurrency(grand.net)}</td>
         </tr></tfoot>
@@ -147,11 +148,3 @@ export function openIncomeStatement(periodChoice = '6') {
 }
 
 /** Wire the button in the income settings modal. Called once at startup. */
-export function setupIncomeStatement() {
-    const btn = getElement('open-income-statement');
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-        const period = getElement('income-statement-period');
-        openIncomeStatement(period ? period.value : '6');
-    });
-}

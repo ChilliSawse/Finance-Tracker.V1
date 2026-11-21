@@ -4,3 +4,12 @@ graphify-out/
 .playwright-mcp/
 *.local
 .claude/
+
+# Real bank, payslip and statement files for the acceptance harness stay local, never committed.
+real-files/
+
+# G6W12-7: tool output and downloaded backups can hold personal data.
+sweep-shots/
+z1-firstuse-shots/
+finance-data-backup-*.json
+ledger-saved-data-*.json

@@ -9,7 +9,12 @@ import {
     parseAmountToCents,
     parseDateToIso,
     normaliseRows,
+    toIsoIfValid,
+    CSV_LIMITS,
+    CsvLimitError,
 } from './csv.js';
+import { parseStatementPages } from './pdf-statement.js';
+import { grossDecision } from './payslip.js';
 
 export const CSV_TEST_CASES = [
     {
@@ -243,6 +248,130 @@ export const CSV_TEST_CASES = [
             const result = normaliseRows(rows, mapping, {});
             assert('only the real row kept', result.transactions.length, 1);
             assert('no errors for junk rows', result.errors, []);
+        },
+    },
+    {
+        name: 'D3a: synthetic CBA-style headerless layout (fake data) still imports unchanged',
+        fn(assert) {
+            const text = '03/01/2025,"-45.50","WOOLWORTHS 1234 FAKETOWN","+1204.50"\n04/01/2025,"+1850.00","FAKE EMPLOYER PAY","+3054.50"\n';
+            const { rows, errors } = parseCsv(text);
+            const det = detectColumns(rows);
+            const { transactions } = normaliseRows(rows, det.mapping, { skipHeader: det.headerRow });
+            assert('no parse errors', errors, []);
+            assert('headerless', det.headerRow, false);
+            assert('amounts', transactions.map((t) => t.amountCents), [-4550, 185000]);
+            assert('dates', transactions.map((t) => t.date), ['2025-01-03', '2025-01-04']);
+        },
+    },
+    {
+        name: 'D3a: synthetic debit/credit header layout (fake data) still imports unchanged',
+        fn(assert) {
+            const text = 'Date,Transaction Details,Debit,Credit,Balance\n3 Jan 2025,FAKE CAFE,12.30,,500.00\n4 Jan 2025,FAKE REFUND,,20.00,520.00\n';
+            const { rows } = parseCsv(text);
+            const det = detectColumns(rows);
+            const { transactions, errors } = normaliseRows(rows, det.mapping, { skipHeader: det.headerRow });
+            assert('header found', det.headerRow, true);
+            assert('no errors', errors, []);
+            assert('signed cents', transactions.map((t) => t.amountCents), [-1230, 2000]);
+        },
+    },
+    {
+        name: 'S3.M6 CSV caps: file size, line length, column count, rows',
+        fn(assert) {
+            const code = (text) => { try { parseCsv(text); return 'ok'; } catch (e) { return e instanceof CsvLimitError ? e.code : 'other'; } };
+            assert('normal file', code('a,b\n1,2\n'), 'ok');
+            assert('too many columns', code(','.repeat(CSV_LIMITS.maxCols + 5)), 'too-many-columns');
+            assert('exactly the column cap is fine', code(','.repeat(CSV_LIMITS.maxCols - 1)), 'ok');
+            assert('line too long', code('x'.repeat(CSV_LIMITS.maxLineChars + 10)), 'line-too-long');
+            assert('long quoted field across lines still counted per line', code('"' + ('x'.repeat(100) + '\n').repeat(500) + '"'), 'ok');
+            assert('file too large', code('a'.repeat(CSV_LIMITS.maxFileBytes + 1)), 'too-large');
+            assert('too many rows', code('a\n'.repeat(CSV_LIMITS.maxRows + 1)), 'too-many-rows');
+        },
+    },
+    {
+        name: 'S3.L1 amount parsing is linear on hostile cells',
+        fn(assert) {
+            const t0 = Date.now();
+            assert('spaces between letters', parseAmountToCents('a' + ' '.repeat(300000) + 'b'), null);
+            assert('spaces before CR', parseAmountToCents('x' + ' '.repeat(300000) + 'CR'), null);
+            assert('many CRs', parseAmountToCents('CR'.repeat(100000)), null);
+            assert('fast', Date.now() - t0 < 500, true);
+            assert('CR/DR still work', [parseAmountToCents('12.50 CR'), parseAmountToCents('$12.50DR.'), parseAmountToCents('CR')], [1250, -1250, null]);
+            assert('long date cell', parseDateToIso('1' + ' '.repeat(5000) + '/1/2026'), null);
+        },
+    },
+    {
+        name: 'S3.L2 amounts must be finite and safe in cents; skipped rows are counted',
+        fn(assert) {
+            assert('400 digits', parseAmountToCents('9'.repeat(400)), null);
+            assert('20 digits', parseAmountToCents('12345678901234567890.00'), null);
+            assert('largest safe amount', parseAmountToCents('90071992547409.91'), 9007199254740991);
+            assert('one cent past it', parseAmountToCents('90071992547409.92'), null);
+            assert('ordinary', parseAmountToCents('1,234.56'), 123456);
+            const rows = [
+                ['Date', 'Description', 'Amount'],
+                ['01/02/2026', 'OK ROW', '-10.00'],
+                ['02/02/2026', 'HUGE', '9'.repeat(400)],
+                ['03/02/2026', 'HUGE2', '-12345678901234567890.00'],
+                ['04/02/2026', 'JUNK', 'abc'],
+            ];
+            const res = normaliseRows(rows, { date: 0, description: 1, amount: 2, debit: null, credit: null }, { skipHeader: true });
+            assert('good row survives', res.transactions.map((t) => t.amountCents), [-1000]);
+            assert('out-of-range count excludes plain junk', res.outOfRange, 2);
+            assert('three errors', res.errors.length, 3);
+            const split = normaliseRows([['01/02/2026', 'X', '9'.repeat(30), '']], { date: 0, description: 1, amount: null, debit: 2, credit: 3 });
+            assert('split columns too', [split.transactions.length, split.outOfRange], [0, 1]);
+        },
+    },
+    {
+        name: 'S3.L3 calendar dates are validated without relying on engine leniency',
+        fn(assert) {
+            assert('31 Feb', toIsoIfValid(2026, 2, 31), null);
+            assert('29 Feb 2026', toIsoIfValid(2026, 2, 29), null);
+            assert('29 Feb 2028', toIsoIfValid(2028, 2, 29), '2028-02-29');
+            assert('31 Apr', toIsoIfValid(2026, 4, 31), null);
+            assert('fractions', toIsoIfValid(2026, 1.5, 3), null);
+            assert('csv 31/02/2026', parseDateToIso('31/02/2026'), null);
+            const L = (...p) => ({ y: 0, items: p.map(([x, str]) => ({ x, str })), text: p.map((q) => q[1]).join(' ') });
+            const page = [
+                L([50, 'Account activity 2026']),
+                L([50, '31 Jan'], [150, 'COFFEE'], [400, '-4.50']),
+                L([50, '31 Feb'], [150, 'IMPOSSIBLE'], [400, '-5.00']),
+                L([50, '29 Feb'], [150, 'NO LEAP DAY'], [400, '-6.00']),
+                L([50, '30 Apr'], [150, 'TEA'], [400, '-3.00']),
+            ];
+            const res = parseStatementPages([page]);
+            assert('only real dates', res.transactions.map((t) => t.date.slice(5) + ' ' + t.description), ['01-31 COFFEE', '04-30 TEA']);
+            assert('impossible ones counted as skipped', res.skipped, 2);
+        },
+    },
+    {
+        name: 'S3.M6 PDF line grouping sorts then sweeps (fast, same lines)',
+        async fn(assert) {
+            const { groupRows } = await import('./pdfjs-loader.js');
+            const it = (x, y, str) => ({ str, transform: [1, 0, 0, 1, x, y] });
+            const rows = groupRows([it(200, 100.4, 'b'), it(50, 100, 'a'), it(50, 90, 'c'), it(10, 500, 'top'), it(5, 5, ' ')]);
+            assert('top line first, blanks dropped', rows.map((r) => r.items.map((i) => i.str).sort()), [['top'], ['a', 'b'], ['c']]);
+            const many = [];
+            for (let i = 0; i < 60000; i++) many.push(it(i % 500, i * 7, 'w' + i));
+            const t0 = Date.now();
+            const big = groupRows(many);
+            assert('60k distinct baselines', big.length, 60000);
+            assert('fast (not quadratic)', Date.now() - t0 < 1500, true);
+        },
+    },
+    {
+        name: 'S3.L7 payslip gross is only written unseen when it is read, not estimated, and nothing differs',
+        fn(assert) {
+            const read = { gross: 2000, tax: 400, net: 1600, grossDerived: false };
+            assert('fresh source, read gross: writes', grossDecision(read, { grossAnnual: 0 }, 'fortnightly', 26).needsConfirm, false);
+            assert('same as stored: writes', grossDecision(read, { grossAnnual: 52000, paySchedule: 'fortnightly' }, 'fortnightly', 26).needsConfirm, false);
+            assert('different from stored: asks', grossDecision(read, { grossAnnual: 70000, paySchedule: 'fortnightly' }, 'fortnightly', 26).needsConfirm, true);
+            const est = { gross: 2000, tax: 400, net: 1600, grossDerived: true };
+            assert('estimated: always asks', grossDecision(est, { grossAnnual: 0 }, 'fortnightly', 26).needsConfirm, true);
+            assert('proposed annual', grossDecision(est, {}, 'fortnightly', 26).proposedAnnual, 52000);
+            assert('failed parse: nothing proposed', grossDecision({ gross: null, grossDerived: false }, { grossAnnual: 52000 }, 'weekly', 52), { proposedAnnual: null, stored: false, needsConfirm: false });
+            assert('infinite gross: nothing proposed', grossDecision({ gross: Infinity }, {}, 'weekly', 52).proposedAnnual, null);
         },
     },
 ];

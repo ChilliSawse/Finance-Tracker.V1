@@ -1,0 +1,107 @@
+/* Quick-add (A8). Tokens only. Generic pieces (.seg .chip .cats .input .amount .field-label .cat-note .effect
+   .two .save .icon-btn) come from styles/base.css; this adds the panel, the Bucket row and the docking.
+   The panel is .qa-panel, never .sheet, so it cannot collide with D1's .sheet-layer .sheet. */
+
+.qa-layer { position: fixed; inset: 0; z-index: 2400; pointer-events: none; }
+.qa-scrim { position: absolute; inset: 0; background: var(--scrim); pointer-events: auto; }
+.qa-panel {
+  position: absolute; pointer-events: auto; display: flex; flex-direction: column; gap: 18px;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  padding: 22px 24px 24px; overflow-y: auto; overscroll-behavior: contain;
+  /* phone: bottom sheet */
+  left: 0; right: 0; bottom: 0; max-height: 92vh; border-radius: var(--r-card) var(--r-card) 0 0;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  animation: slide-up 260ms var(--ease) both;
+}
+.qa-panel > * { flex-shrink: 0; min-width: 0; }
+.qa-handle { align-self: center; width: 40px; height: 4px; margin: -10px 0 -6px; border-radius: 2px; background: var(--control); }
+.qa-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.qa-head h2 { margin: 0; font-size: 18px; font-weight: 700; }
+.qa-panel .icon-btn { width: 44px; height: 44px; border: 0; }
+.qa-panel .seg button { min-height: 36px; }
+
+.qa-amount .field-label-sm { display: block; font-size: var(--fs-small); color: var(--muted); font-weight: 600; }
+.qa-amount-input {
+  display: block; width: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--text);
+  font: inherit; font-size: var(--fs-hero); line-height: 44px; font-weight: 700; letter-spacing: -0.02em;
+}
+.qa-amount-input::placeholder { color: var(--muted); }
+.qa-amount:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.qa-panel .chip { gap: 8px; min-height: 40px; }
+.qa-panel .chip svg.i { width: 16px; height: 16px; }
+.qa-panel :is(button, input, select, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.qa-panel .input input, .qa-panel .input select { min-height: 40px; font: inherit; color: var(--text); }
+.qa-panel .input select { border: 0; outline: 0; background: transparent; width: 100%; }
+
+/* Repeat */
+.qa-repeat { display: grid; gap: 10px; }
+.qa-check { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: start; gap: 10px; min-height: 44px; cursor: pointer; }
+.qa-check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); }
+.qa-check-text { display: grid; gap: 2px; }
+.qa-check-name { font-weight: 600; }
+.qa-check-text .muted { font-size: var(--fs-small); }
+.qa-freq { display: none; }
+.qa-repeat.on .qa-freq { display: flex; }
+
+/* Bucket row */
+.bucket-row { border: 1px solid var(--border); border-radius: var(--r-tile); }
+.bucket-row[hidden] { display: none; }
+.bucket-row > summary {
+  list-style: none; cursor: pointer; min-height: 52px;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px;
+  padding: 10px 14px; border-radius: var(--r-tile);
+}
+.bucket-row > summary::-webkit-details-marker { display: none; }
+.bucket-row > summary:hover { background: var(--raised); }
+.bucket-row .lbl { font-size: var(--fs-body); font-weight: 600; }
+.bucket-row .now { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: var(--fs-small); color: var(--muted); }
+.bucket-row .act-word { color: var(--accent); font-weight: 600; font-size: var(--fs-body); }
+.bucket-row .act-word .when-open { display: none; }
+.bucket-row[open] .act-word .when-open { display: inline; }
+.bucket-row[open] .act-word .when-shut { display: none; }
+.bucket-row[open] > summary { border-bottom: 1px solid var(--rule); border-radius: var(--r-tile) var(--r-tile) 0 0; }
+.qa-tag { display: inline-block; padding: 1px 10px; border-radius: var(--r-pill); font-weight: 700; background: var(--qa-bg); color: var(--qa-ink); }
+.bucket-pick { margin: 0; padding: 12px 14px 14px; border: 0; min-width: 0; }
+.bucket-pick legend { padding: 0; margin-bottom: 8px; font-size: var(--fs-small); color: var(--muted); }
+.bk-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.bk {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: 12px;
+  padding: 8px 12px 8px 38px; min-height: 52px; border-radius: 12px; border: 2px solid transparent; cursor: pointer;
+  background: var(--qa-bg); color: var(--qa-ink);
+}
+.bk input { position: absolute; left: 12px; top: 50%; margin: -8px 0 0; width: 16px; height: 16px; accent-color: currentColor; }
+.bk .bn { font-weight: 700; font-size: var(--fs-body); line-height: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk .bv { font-size: var(--fs-small); font-weight: 600; text-align: right; }
+.bk .bw { grid-column: 1 / -1; font-size: var(--fs-small); line-height: 16px; opacity: 0.85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk:has(input:checked) { border-color: currentColor; }
+.bk:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.one-only { margin: 10px 0 0; font-size: var(--fs-small); color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.one-only svg.i { width: 14px; height: 14px; }
+.bucket-row.needs { border-color: var(--warn-line); background: var(--warn-bg); color: var(--warn-ink); }
+.bucket-row.needs > summary:hover { background: transparent; }
+.bucket-row.needs .now, .bucket-row.needs .act-word, .bucket-row.needs .bucket-pick legend { color: var(--warn-ink); }
+.bucket-row.needs .bk { box-shadow: 0 0 0 1px var(--border); }
+
+.qa-panel .save[disabled] { background: var(--active); color: var(--muted); cursor: not-allowed; filter: none; transform: none; }
+.qa-panel .save-why { margin: -10px 0 0; text-align: center; font-size: var(--fs-small); color: var(--muted); }
+.qa-panel .save-why:empty { display: none; }
+.qa-delete { align-self: center; min-height: 44px; color: var(--negative); }
+
+/* 1024 to 1280: a side panel over the scrim */
+@media (min-width: 1024px) {
+  .qa-panel { left: auto; top: 16px; right: 16px; bottom: auto; width: 440px; max-height: calc(100vh - 32px); border-radius: var(--r-card); animation-name: slide-in; }
+  .qa-handle { display: none; }
+}
+/* 1281 and up: docked beside the list, no scrim, the page stays usable */
+@media (min-width: 1281px) {
+  .qa-scrim { display: none; }
+  .qa-layer { pointer-events: none; }
+  body.qa-open .canvas { padding-right: 480px; }
+}
+/* scrolling is locked while the panel is modal */
+body.qa-open { overflow: hidden; }
+@media (min-width: 1281px) { body.qa-open { overflow: visible; } }
+@media (max-width: 420px) { .qa-panel { padding-left: 16px; padding-right: 16px; } .qa-panel .two { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .qa-panel { animation: none; } }
+.qa-amount { text-align: left; }
+.qa-panel .qa-amount-input:focus-visible { outline: 0; }

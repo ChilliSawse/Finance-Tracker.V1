@@ -1,0 +1,35 @@
+/* Monthly review (E9): a Plan sub-screen. Tokens and slot classes only; layout from the existing card, tile and bar rules. */
+.rv-link { margin: 0 0 16px; }
+#plan.review-open > :not(.title-row):not(#plan-review-screen) { display: none; }
+#plan:not(.review-open) #plan-review-screen { display: none; }
+.rv-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.rv-pick { display: flex; align-items: center; gap: 8px; }
+.rv-pick-l { color: var(--muted); font-size: var(--fs-small, 13px); }
+.rv-month { min-height: 44px; }
+.rv .btn { min-height: 44px; }
+.rv-title h2 { margin: 0; font-size: 20px; line-height: 26px; font-weight: 700; }
+.rv-title h2:focus { outline: none; }
+.rv-title p { margin: 4px 0 16px; color: var(--muted); font-size: var(--fs-small, 13px); }
+.rv-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap, 16px); align-items: start; }
+@media (min-width: 1000px) { .rv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.rv-card { min-width: 0; }
+.rv-nodata { margin-bottom: 16px; color: var(--muted); }
+.rv-rows, .rv-cats, .rv-tiles { list-style: none; margin: 0; padding: 0; }
+.rv-rows { display: grid; gap: 16px; }
+.rv-line { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.rv-lab { font-weight: 600; overflow-wrap: anywhere; }
+.rv-fig { font-weight: 700; text-align: right; }
+.rv-sub { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: var(--fs-small, 13px); margin-top: 2px; }
+.rv-bar { height: 8px; border-radius: var(--r-pill, 999px); background: var(--raised); overflow: hidden; margin-top: 8px; color: var(--accent); }
+.rv-bar i { display: block; height: 100%; border-radius: var(--r-pill, 999px); background: currentColor; }
+.rv-h3 { margin: 20px 0 8px; font-size: var(--fs-body, 14px); font-weight: 600; }
+.rv-cats li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--border); font-size: var(--fs-small, 13px); }
+.rv-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.rv-tile { min-height: 0; min-width: 0; }
+.rv-tile .t span { overflow-wrap: anywhere; }
+.rv-note, .rv-lead { margin: 12px 0 0; color: var(--muted); font-size: var(--fs-small, 13px); }
+.rv-lead { margin: 0 0 12px; }
+.rv-empty { margin: 0; }
+.rv-today { margin-bottom: 16px; }
+.rv-today .btn { min-height: 44px; }
+.rv button:focus-visible, .rv select:focus-visible, .rv-link button:focus-visible, .rv-today button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
