@@ -81,7 +81,7 @@ export const TEST_GROUPS = [
     { name: 'assets-debts', env: 'pure', cases: ASSETS_DEBTS_TEST_CASES },
     { name: 'fi', env: 'pure', cases: FI_TEST_CASES },
     { name: 'goal-planner', env: 'pure', cases: GOAL_PLANNER_TEST_CASES },
-    { name: 'scenario-ui', env: 'browser', cases: SCENARIO_UI_TEST_CASES },
+    { name: 'scenario-ui', env: 'pure', cases: SCENARIO_UI_TEST_CASES },
     { name: 'sanitize', env: 'pure', cases: SANITIZE_TEST_CASES },
     { name: 'html', env: 'pure', cases: HTML_TEST_CASES },
     { name: 'activity', env: 'pure', cases: ACTIVITY_TEST_CASES },
