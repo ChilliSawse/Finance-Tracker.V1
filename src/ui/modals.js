@@ -1,6 +1,7 @@
 // Reusable modal shell + per-page settings modals (from main.js).
 
 import { getElement } from '../utils.js';
+import { getFocusables, trapTab } from './focus.js';
 import { initializeGuiSettingsForm } from '../theme/appearance.js';
 import {
     renderIncomeSourcesSettings, renderTaxBracketsSettings, renderAssetsSettings,
@@ -11,9 +12,7 @@ import {
 // A.4 / Phase D — reusable modal shell: open/close, focus trap, focus restore.
 // `onOpen` runs each time the modal opens (e.g. to (re)populate it).
 export function getModalFocusables(modal) {
-    return Array.from(modal.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )).filter(el => !el.disabled && el.offsetParent !== null);
+    return getFocusables(modal); // the helper lives in focus.js, shared with the sheet
 }
 
 export function setupModal(modalId, openBtnId, onOpen) {
@@ -26,12 +25,7 @@ export function setupModal(modalId, openBtnId, onOpen) {
 
     const onKey = (e) => {
         if (e.key === 'Escape') { e.preventDefault(); close(); return; }
-        if (e.key !== 'Tab') return;
-        const f = getModalFocusables(modal);
-        if (f.length === 0) return;
-        const first = f[0], last = f[f.length - 1];
-        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        trapTab(e, modal);
     };
 
     function open() {

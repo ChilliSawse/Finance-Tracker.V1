@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D1 demo - sheet, undo toast, dialog (not shipped)</title>
+<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="../../src/ui/sheet.css">
+<style>body { padding: 24px; } li { margin: 6px 0; } button.row { font: inherit; cursor: pointer; }</style>
+</head>
+<body>
+<h1>D1 demo (sample data only)</h1>
+<p>Serve the repo root (for example <code>npx vite</code>) and open <code>/docs/demo/d1-demo.html</code>.</p>
+<ul id="list"></ul>
+<p>
+  <button id="add" type="button">Add item</button>
+  <button id="erase" type="button">Erase all data (dialog)</button>
+  <button id="stay" type="button">Storage full (persistent toast)</button>
+</p>
+<script type="module">
+import { openSheet, deleteWithUndo, weeklyAmountRule, runPlausibility } from '../../src/ui/sheet.js';
+import { showToast } from '../../src/ui/toast.js';
+import { confirmDialog } from '../../src/ui/confirm.js';
+
+const items = [
+  { name: 'Rent', amount: 1120, frequency: 'fortnightly' },
+  { name: 'Netflix', amount: 22.99, frequency: 'monthly' },
+  { name: 'Gym', amount: 15, frequency: 'weekly' },
+];
+const rule = weeklyAmountRule({ field: 'amount', frequencyField: 'frequency' });
+const list = document.getElementById('list');
+
+function render() {
+  list.textContent = '';
+  items.forEach((it, i) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'row'; b.dataset.index = String(i);
+    b.textContent = `${it.name} - A$${it.amount.toFixed(2)} ${it.frequency}`;
+    li.appendChild(b);
+    list.appendChild(li);
+  });
+}
+
+function edit(index) {
+  const isNew = index == null;
+  const item = isNew ? { name: '', amount: 0, frequency: 'monthly' } : items[index];
+  openSheet({
+    title: isNew ? 'Add item' : item.name,
+    fields: [
+      { key: 'name', label: 'Name', type: 'text', required: true },
+      { key: 'amount', label: 'Amount', type: 'money', hint: 'Try 7000 a week.' },
+      { key: 'frequency', label: 'How often', type: 'select', options: ['weekly', 'fortnightly', 'monthly'] },
+    ],
+    values: item,
+    validate: (v) => (v.amount != null && v.amount < 0 ? { amount: 'Amounts cannot be negative' } : {}),
+    plausibility: (v) => runPlausibility([rule], v),
+    onSave: (v) => { if (isNew) items.push(v); else items[index] = v; render(); showToast('Saved', 'success'); },
+    onDelete: isNew ? undefined : () => deleteWithUndo(items, index, { message: `${item.name} deleted`, onChange: render }),
+  });
+}
+
+// One delegated listener for the whole page.
+document.addEventListener('click', async (e) => {
+  const row = e.target.closest('button.row');
+  if (row) return edit(Number(row.dataset.index));
+  if (e.target.id === 'add') return edit(null);
+  if (e.target.id === 'stay') return showToast('Storage is full. Export a backup.', 'error', 0);
+  if (e.target.id === 'erase') {
+    const ok = await confirmDialog({ title: 'Erase all data?', body: 'This cannot be undone.', confirmLabel: 'Erase', danger: true });
+    showToast(ok ? 'Confirmed' : 'Cancelled');
+  }
+});
+render();
+</script>
+</body>
+</html>

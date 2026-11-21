@@ -49,7 +49,7 @@ export const TEST_GROUPS = [
     { name: 'tax-owed', env: 'pure', cases: TAX_OWED_TEST_CASES },
     { name: 'income-migration', env: 'pure', cases: INCOME_MIGRATION_TEST_CASES },
     { name: 'payslip-check', env: 'pure', cases: PAYSLIP_CHECK_TEST_CASES },
-    { name: 'sheet', env: 'browser', cases: SHEET_TEST_CASES },
+    { name: 'sheet', env: 'pure', cases: SHEET_TEST_CASES },
     { name: 'xlsx', env: 'pure', cases: XLSX_TEST_CASES },
     { name: 'saving-model', env: 'pure', cases: SAVING_MODEL_TEST_CASES },
     { name: 'fire', env: 'pure', cases: FIRE_TEST_CASES },
