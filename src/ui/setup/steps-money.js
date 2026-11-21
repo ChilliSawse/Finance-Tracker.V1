@@ -1,14 +1,14 @@
 // Setup money steps (Phase 1 step C7, M-15): essentials (bills included), non-essentials and debts.
 // Plan items are written through B4's addPlanItem (via A9a's savePlanItem), the category's
 // essential flag decides which list a line is in. Debts are liabilities with ids (E4's
-// newLiabilityId) taking balance, rate and minRepayment. Every step can be skipped and a skip
-// writes nothing. F5's newDebt later replaces makeDebt below (one place to repoint).
+// newDebt) taking balance, rate and minRepayment. Every step can be skipped and a skip
+// writes nothing. makeDebt builds the row with F5's newDebt.
 
 import { t } from '../../i18n/strings.js';
 import { esc } from '../html.js';
 import { formatCurrency } from '../../utils.js';
 import { planTotals, netPerPayCents } from '../../calc/plan.js';
-import { newLiabilityId } from '../../state/bucket-migration.js';
+import { newDebt } from '../plan-assets-debts.js';
 import { removePlanItem } from '../../state/plan.js';
 import { planItemSheetSpec, savePlanItem, nextDue, shortDate, FREQUENCIES } from '../plan-lists.js';
 import { openSheet } from '../sheet.js';
@@ -70,10 +70,11 @@ export function makeDebt(data, fields = {}) {
     const name = String(fields.name || '').trim();
     const placeholder = data.liabilities.findIndex((l) => l && l.id === PLACEHOLDER_DEBT_ID && l.name === 'New Liability' && !Number(l.balance) && !Number(l.interestRate));
     if (placeholder >= 0) data.liabilities.splice(placeholder, 1);
-    const debt = {
-        id: newLiabilityId(data.liabilities, name),
-        name, balance: Number(fields.balance) || 0, interestRate: Number(fields.interestRate) || 0, minRepayment: Number(fields.minRepayment) || 0,
-    };
+    // F5: the shared factory (id, label guess and every detail field).
+    const debt = newDebt(data.liabilities, {
+        name, balance: Number(fields.balance) || 0, interestRate: Number(fields.interestRate) || 0,
+        minRepayment: Number(fields.minRepayment) > 0 ? Number(fields.minRepayment) : null,
+    });
     data.liabilities.push(debt);
     return debt;
 }

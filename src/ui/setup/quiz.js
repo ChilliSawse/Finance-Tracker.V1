@@ -8,6 +8,7 @@
 import { t } from '../../i18n/strings.js';
 import { esc } from '../html.js';
 import { registerSetupStep, STEP_ORDER } from './registry.js';
+import { newIncomeSourceId } from '../../state/asset-debt-migration.js';
 
 const KNOWN_NAMES = new Set(['', 'New Income Source', 'New Income']);
 
@@ -81,8 +82,9 @@ export function answersFromData(data) {
 
 // ---------- pure: writing the answers ----------
 
-function blankSource(name) {
+function blankSource(name, list = []) {
     return {
+        id: newIncomeSourceId(list, name), // F5: ids at creation (the migration guard will not fill them later)
         name, incomeType: 'salaried', grossAnnual: 0, paySchedule: 'fortnightly', hoursPerCycle: 0, taxRemoved: null, invoicedPayPostTax: null,
         hourlyRate: null, hoursPerWeek: null, superPct: null, basis: 'salary', taxCheck: null,
         withholding: { claimsTaxFree: true, hasStudyDebt: null, medicareExemption: false, extraPerPay: 0 },
@@ -101,7 +103,7 @@ export function applyQuiz(data, answers) {
         let s = data.incomeSources[i];
         const added = !s;
         if (!s) {
-            s = blankSource(t('c.setup.job.n', { n: i + 1 }));
+            s = blankSource(t('c.setup.job.n', { n: i + 1 }), data.incomeSources);
             data.incomeSources.push(s);
         }
         if (KNOWN_NAMES.has(String(s.name || ''))) s.name = i === 0 ? t('c.setup.job.first') : t('c.setup.job.n', { n: i + 1 });

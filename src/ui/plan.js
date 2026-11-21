@@ -19,6 +19,7 @@ import { getBuckets } from '../state/saving-model.js';
 import { listTransactions, updateTransaction } from '../state/transactions.js';
 import { refreshSpendCache } from '../state/spend-cache.js';
 import { iconSvgHtml } from './icon-paths.js';
+import { checkItems, checkCardHtml, confirmSuggestion } from './plan-assets-debts.js';
 import {
     planListsModel, listBodyHtml, payBodyHtml, capsHtml, reviewCardHtml, countText, planItemSheetSpec,
     savePlanItem, deletePlanItem, newIncomeSource, clearReview, markReviewed,
@@ -108,14 +109,14 @@ function openItem(id, kind) {
 
 const todayIso = () => getSpendCache().today || localIso();
 
-function openDebtAsset(kind, index) {
+function openDebtAsset(kind, index, carry = null) {
     const data = store.financeData;
     const key = kind === 'debt' ? 'liabilities' : 'assets';
     const row = index == null ? null : (data[key] || [])[index];
     if (index != null && !row) return;
-    const spec = debtAssetSheetSpec(kind, row);
-    openSheet({
-        title: spec.title, fields: spec.fields, values: spec.values, validate: spec.validate,
+    const spec = debtAssetSheetSpec(kind, row, { today: todayIso(), carry });
+    const handle = openSheet({
+        title: spec.title, fields: spec.fields, values: spec.values, validate: spec.validate, plausibility: spec.plausibility,
         onSave(values) {
             const res = saveDebtAsset(data, kind, index, values);
             if (!res.ok) return false;
@@ -130,6 +131,27 @@ function openDebtAsset(kind, index) {
             undoToast(res);
         } : undefined,
     });
+    // F5: the questions depend on the kind (or the interest type), so the sheet reopens with what was typed so far.
+    if (spec.reopenOn && spec.reopenOn.length) {
+        handle.layer.addEventListener('change', (e) => {
+            const k = e.target && e.target.dataset ? e.target.dataset.key : null;
+            if (k && spec.reopenOn.includes(k)) openDebtAsset(kind, index, handle.getValues());
+        });
+    }
+}
+
+/** "Check these N" card: confirm one or all (only the flag clears), or open the row to change it. */
+function checkAct(b) {
+    const data = store.financeData;
+    if (b.dataset.checkOpen) {
+        const [type, i] = b.dataset.checkOpen.split(':');
+        openDebtAsset(type === 'debt' ? 'debt' : 'asset', Number(i));
+        return;
+    }
+    const res = confirmSuggestion(data, b.dataset.checkAll ? 'all' : b.dataset.checkConfirm);
+    if (!res.ok) return;
+    updateDataAndUI();
+    undoToast(res);
 }
 
 function bucketList(data) {
@@ -212,7 +234,7 @@ function openIncome(index) {
 
 function addIncome() {
     const data = store.financeData;
-    data.incomeSources.push(newIncomeSource());
+    data.incomeSources.push(newIncomeSource(data.incomeSources));
     updateDataAndUI();
     openIncome(data.incomeSources.length - 1);
 }
@@ -235,6 +257,7 @@ function wire(root) {
         else if (b.dataset.assetAdd) openDebtAsset('asset', null);
         else if (b.dataset.catOpen) openCategory(b.dataset.catOpen);
         else if (b.dataset.catAdd) openCategory(null);
+        else if (b.dataset.checkConfirm || b.dataset.checkOpen || b.dataset.checkAll) checkAct(b);
         else if (b.dataset.planReviewDone) { clearReview(store.financeData); updateDataAndUI(); }
         else if (b.id === 'p-top') {
             const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -270,7 +293,7 @@ function fillLists() {
     put('assets', debtAssetBodyHtml(assets));
     put('cats', categoriesBodyHtml(cats));
     const review = document.getElementById('plan-review');
-    if (review) review.innerHTML = reviewCardHtml(model.review);
+    if (review) review.innerHTML = reviewCardHtml(model.review) + checkCardHtml(checkItems(store.financeData));
     const cur = (n) => formatCurrency(Math.round(n * 100) / 100);
     setFig('pay', cur(model.pay.takeHome), t('a.plan.takeHome'));
     setFig('essential', cur(model.essentials.perPay), countText('essential', model.essentials.count));

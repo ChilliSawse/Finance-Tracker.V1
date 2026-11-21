@@ -9,7 +9,7 @@ export const defaultFinanceData = {
     currency: "AUD",
     primaryIncomeIndex: 0,
     incomeSources: [
-        { name: "New Income Source", incomeType: "salaried", grossAnnual: 0, paySchedule: "fortnightly", hoursPerCycle: 0, taxRemoved: null, invoicedPayPostTax: null,
+        { id: "inc-new-income-source", name: "New Income Source", incomeType: "salaried", grossAnnual: 0, paySchedule: "fortnightly", hoursPerCycle: 0, taxRemoved: null, invoicedPayPostTax: null,
             // C4: income fields. No tax year is stored (FT-R-86); the year comes from the date.
             hourlyRate: null, hoursPerWeek: null, superPct: null, basis: "salary", taxCheck: null,
             withholding: { claimsTaxFree: true, hasStudyDebt: null, medicareExemption: false, extraPerPay: 0 } }
