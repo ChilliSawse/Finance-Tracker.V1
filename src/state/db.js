@@ -22,14 +22,36 @@ export function configureDb(name) {
     dbPromise = null;
 }
 
+// G6W15-7: the app tells the user about two database situations through one document event,
+// 'ledger:db-notice' (detail.kind 'reload' or 'blocked'); pwa.js shows it in the update banner.
+export const DB_NOTICE_EVENT = 'ledger:db-notice';
+function announce(kind) {
+    if (typeof document === 'undefined' || typeof CustomEvent === 'undefined') return;
+    document.dispatchEvent(new CustomEvent(DB_NOTICE_EVENT, { detail: { kind } }));
+}
+
 export function openDb() {
     if (dbPromise) return dbPromise;
-    dbPromise = new Promise((resolve, reject) => {
-        if (typeof indexedDB === 'undefined') {
+    const idb = typeof indexedDB === 'undefined' ? undefined : indexedDB;
+    const attempt = connectDb(idb, dbName, announce);
+    dbPromise = attempt;
+    // A failed open is not kept: the next call tries again (an old tab that hit a VersionError used to stay broken until reload).
+    attempt.catch(() => { if (dbPromise === attempt) dbPromise = null; });
+    return attempt;
+}
+
+// One open of the database against the given IndexedDB factory. `notify(kind)` is called with 'reload' when another tab
+// changes the schema under this one (the handle is closed first so that tab can proceed) and 'blocked' when this open's
+// upgrade is held up by another tab. Exported so the handlers can be tested with a fake factory.
+export function connectDb(idb, name, notify) {
+    return new Promise((resolve, reject) => {
+        if (!idb) {
             reject(new Error('IndexedDB is not available in this browser.'));
             return;
         }
-        const req = indexedDB.open(dbName, DB_VERSION);
+        const req = idb.open(name, DB_VERSION);
+        // An upgrade waits while another tab still holds the old version open.
+        req.onblocked = () => { if (notify) notify('blocked'); };
         req.onupgradeneeded = () => {
             const db = req.result;
             if (!db.objectStoreNames.contains('transactions')) {
@@ -53,13 +75,17 @@ export function openDb() {
         };
         req.onsuccess = () => {
             const db = req.result;
-            // If another tab upgrades the schema, release our handle so it can proceed.
-            db.onversionchange = () => { db.close(); dbPromise = null; };
+            // If another tab upgrades the schema, release our handle so it can proceed, and ask for a reload:
+            // this tab's code is the old one. A delete (newVersion null) only releases the handle.
+            db.onversionchange = (e) => {
+                db.close();
+                if (dbPromise && name === dbName) dbPromise = null;
+                if (notify && e && e.newVersion !== null) notify('reload');
+            };
             resolve(db);
         };
         req.onerror = () => reject(req.error);
     });
-    return dbPromise;
 }
 
 // Run `fn(store)` inside a transaction on one store; resolves with fn's result

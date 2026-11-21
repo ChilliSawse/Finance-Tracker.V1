@@ -6,9 +6,23 @@
 // automatically. The explicit "Update Now" banner UX is preserved: Workbox
 // waits (registerType 'prompt') until the user opts in.
 
+import { t } from './i18n/strings.js';
+import { DB_NOTICE_EVENT } from './state/db.js';
+
 let deferredPrompt = null;
 
+// G6W15-7: db.js announces 'ledger:db-notice' when another tab upgraded the database ('reload': this tab runs old code) or
+// holds it open during an upgrade ('blocked'). Both reuse the update banner.
+export function showDbNotice(kind) {
+    if (kind === 'reload') {
+        showUpdateNotification(() => window.location.reload(), { title: t('d.db.reloadTitle'), message: t('d.db.reloadBody'), action: t('d.db.reloadAction') });
+    } else if (kind === 'blocked') {
+        showUpdateNotification(() => {}, { title: t('d.db.blockedTitle'), message: t('d.db.blockedBody'), action: null });
+    }
+}
+
 export function setupPwaUpdateListeners() {
+    document.addEventListener(DB_NOTICE_EVENT, (e) => showDbNotice(e && e.detail && e.detail.kind));
     // 'virtual:pwa-register' only exists when Vite serves/builds the app. GitHub
     // Pages currently serves the raw source (legacy branch mode, no build step),
     // where a STATIC import of it kills the entire module graph — no JS runs at
@@ -29,7 +43,10 @@ export function setupPwaUpdateListeners() {
 
 // Exported so the banner can be shown and tested without a real service worker update.
 // Every colour comes from the theme tokens through the .update-banner classes in base.css.
-export function showUpdateNotification(onUpdate) {
+// `text` is optional (G6W15-7, the database notices reuse this banner): { title, message, action, later }.
+// `action` null leaves out the main button (a notice with nothing to press but Later).
+export function showUpdateNotification(onUpdate, text) {
+    const tx = Object.assign({ title: 'Update Available', message: 'A new version of the app is ready.', action: 'Update Now', later: 'Later' }, text);
     const existing = document.getElementById('update-notification');
     if (existing) existing.remove();
 
@@ -44,11 +61,11 @@ export function showUpdateNotification(onUpdate) {
 
     const heading = document.createElement('div');
     heading.className = 'update-banner-title';
-    heading.textContent = 'Update Available';
+    heading.textContent = tx.title;
 
     const msg = document.createElement('div');
     msg.className = 'update-banner-msg';
-    msg.textContent = 'A new version of the app is ready.';
+    msg.textContent = tx.message;
 
     const actions = document.createElement('div');
     actions.className = 'update-banner-actions';
@@ -56,7 +73,7 @@ export function showUpdateNotification(onUpdate) {
     const updateBtn = document.createElement('button');
     updateBtn.type = 'button';
     updateBtn.className = 'update-banner-btn primary';
-    updateBtn.textContent = 'Update Now';
+    updateBtn.textContent = tx.action || '';
     updateBtn.addEventListener('click', () => {
         banner.textContent = 'Updating… please wait a moment.';
         banner.classList.add('is-updating');
@@ -66,10 +83,10 @@ export function showUpdateNotification(onUpdate) {
     const dismissBtn = document.createElement('button');
     dismissBtn.type = 'button';
     dismissBtn.className = 'update-banner-btn';
-    dismissBtn.textContent = 'Later';
+    dismissBtn.textContent = tx.later;
     dismissBtn.addEventListener('click', dismissUpdateNotification);
 
-    actions.append(updateBtn, dismissBtn);
+    if (tx.action) actions.append(updateBtn, dismissBtn); else actions.append(dismissBtn);
     inner.append(heading, msg, actions);
     banner.appendChild(inner);
     document.body.appendChild(banner);
