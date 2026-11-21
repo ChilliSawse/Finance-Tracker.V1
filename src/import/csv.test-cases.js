@@ -245,4 +245,29 @@ export const CSV_TEST_CASES = [
             assert('no errors for junk rows', result.errors, []);
         },
     },
+    {
+        name: 'D3a: synthetic CBA-style headerless layout (fake data) still imports unchanged',
+        fn(assert) {
+            const text = '03/01/2025,"-45.50","WOOLWORTHS 1234 FAKETOWN","+1204.50"\n04/01/2025,"+1850.00","FAKE EMPLOYER PAY","+3054.50"\n';
+            const { rows, errors } = parseCsv(text);
+            const det = detectColumns(rows);
+            const { transactions } = normaliseRows(rows, det.mapping, { skipHeader: det.headerRow });
+            assert('no parse errors', errors, []);
+            assert('headerless', det.headerRow, false);
+            assert('amounts', transactions.map((t) => t.amountCents), [-4550, 185000]);
+            assert('dates', transactions.map((t) => t.date), ['2025-01-03', '2025-01-04']);
+        },
+    },
+    {
+        name: 'D3a: synthetic debit/credit header layout (fake data) still imports unchanged',
+        fn(assert) {
+            const text = 'Date,Transaction Details,Debit,Credit,Balance\n3 Jan 2025,FAKE CAFE,12.30,,500.00\n4 Jan 2025,FAKE REFUND,,20.00,520.00\n';
+            const { rows } = parseCsv(text);
+            const det = detectColumns(rows);
+            const { transactions, errors } = normaliseRows(rows, det.mapping, { skipHeader: det.headerRow });
+            assert('header found', det.headerRow, true);
+            assert('no errors', errors, []);
+            assert('signed cents', transactions.map((t) => t.amountCents), [-1230, 2000]);
+        },
+    },
 ];
