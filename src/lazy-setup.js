@@ -67,10 +67,18 @@ export function needsFirstRunSetup(hadSavedData, onboarded = alreadyOnboarded())
     return !hadSavedData && !onboarded;
 }
 
-/** Load Setup for a first run: wires it and opens the welcome screen. */
-export function startFirstRunSetup(ensure = ensureOnboarding) {
+/**
+ * Load Setup for a first run: wires it and opens the welcome screen. Until Setup has opened (or failed to load) the page
+ * behind it is hidden by `body.setup-pending` (shell.css), so a new user sees the ground colour and then Setup, never a
+ * frame of Today in between (P3e). The class is cleared whatever happens, so a failed load still shows Today.
+ */
+export function startFirstRunSetup(ensure = ensureOnboarding, doc = typeof document === 'undefined' ? null : document) {
     firstRun = true;
-    return ensure().catch((err) => console.error('Setup could not be loaded', err));
+    const body = doc && doc.body;
+    if (body) body.classList.add('setup-pending');
+    return ensure()
+        .catch((err) => console.error('Setup could not be loaded', err))
+        .finally(() => { if (body) body.classList.remove('setup-pending'); });
 }
 
 /**

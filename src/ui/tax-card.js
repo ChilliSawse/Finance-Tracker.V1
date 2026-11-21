@@ -10,7 +10,7 @@ import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
 import { taxTablesStatus, pastFirstQuarter } from '../calc/tax-tables/index.js';
 import { esc } from './html.js';
-import { layoutFor, openIncomeSheet } from './income-layout.js';
+// P3e: the salary sheet (income-layout.js) loads when Check is pressed, so Today does not download it at startup.
 
 /** null | {kind:'stale'|'july', fy}. A dismissed card stays hidden for that year; stale never hides. */
 export function taxCardModel(now, data) {
@@ -56,8 +56,10 @@ function wire(slot) {
             if (store.autoSave) store.autoSave.onDataChange();
             renderTaxCard();
         } else if (b.hasAttribute('data-tax-check')) {
-            const i = (store.financeData.incomeSources || []).findIndex((s) => layoutFor(s));
-            if (i >= 0) openIncomeSheet(i);
+            import('./income-layout.js').then(({ layoutFor, openIncomeSheet }) => {
+                const i = (store.financeData.incomeSources || []).findIndex((s) => layoutFor(s));
+                if (i >= 0) openIncomeSheet(i);
+            }).catch((err) => console.error('Salary sheet could not be loaded', err));
         }
     });
 }
