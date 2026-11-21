@@ -30,7 +30,8 @@ import {
 // (note `allocation` is singular).
 const SETTINGS_COLLECTIONS = [
     'incomeSources', 'taxBrackets', 'assets', 'liabilities',
-    'allocation', 'essentialExpenses', 'nonEssentialExpenses', 'bills', 'categories'
+    'allocation', 'essentialExpenses', 'nonEssentialExpenses', 'bills', 'categories',
+    'plan', 'rules'
 ];
 
 export function handleSettingsClickEvents(event) {
