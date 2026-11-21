@@ -4,16 +4,28 @@
 
 import { store } from '../state/store.js';
 import { getElement, fitAllAmounts } from '../utils.js';
-import { renderActiveTab, refreshTab } from './render.js';
+import { renderActiveTab, isTabReady, ensureTabLoaded } from './render.js';
 import { resolveTab, scopeLine, nextTabIndex, DEFAULT_TAB } from './nav-model.js';
 
 export { VALID_TABS, LEGACY_TAB_MAP, resolveTab } from './nav-model.js';
 
 const TAB_SELECTOR = '[role="tablist"] [role="tab"]';
 
+let showSeq = 0;
+
 // Accepts a current or legacy tab name (e.g. dashboard cards still say 'income').
+// A tab that is ready (already rendered, or its module loaded) switches synchronously. Otherwise the
+// switch waits for its module so the screen never opens blank; the latest request wins. Returns a promise.
 export function showTab(name) {
     const tabName = resolveTab(name);
+    const ticket = ++showSeq;
+    if (isTabReady(tabName)) { applyTab(tabName); return Promise.resolve(); }
+    return ensureTabLoaded(tabName)
+        .catch((err) => { console.error('tab failed to load', err); }) // show it anyway; the next open retries
+        .then(() => { if (ticket === showSeq) applyTab(tabName); });
+}
+
+function applyTab(tabName) {
     document.querySelectorAll('.screen').forEach(screen => {
         screen.classList.toggle('active', screen.id === tabName);
     });
@@ -47,7 +59,7 @@ export function restoreActiveTab() {
         // The sidebar no longer collapses (FT-R-62); drop the dead preference.
         localStorage.removeItem('ft-sidebar-collapsed');
     } catch (_) { /* storage unavailable: start on the default tab */ }
-    showTab(tab);
+    return showTab(tab);
 }
 
 // Sidebar scope line ("Paid fortnightly"), derived from the primary income source; hidden when unset.
