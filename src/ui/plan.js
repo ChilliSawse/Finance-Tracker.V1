@@ -32,10 +32,18 @@ const localIso = () => { const d = new Date(); return `${d.getFullYear()}-${Stri
 let query = '';
 let wired = false;
 
+// A11: the placeholder slots offer one action until A9b fills them.
+function slotActionHtml(id) {
+    const label = t(`a.plan.slotGo.${id}`);
+    return id === 'cats'
+        ? `<button type="button" class="btn ghost p-add" data-open-settings>${esc(label)}</button>`
+        : `<button type="button" class="btn ghost p-add" data-plan-go="future">${esc(label)}</button>`;
+}
+
 function sectionHtml([id, step, key]) {
     let body = `<div class="p-body" data-body="${id}"></div>`;
     if (id === 'model') body = '';
-    else if (MOUNT_ID[id]) body = `<div id="${MOUNT_ID[id]}" class="p-slot"><p class="muted p-empty">${esc(t(SLOT_TEXT[id]))}</p></div>`;
+    else if (MOUNT_ID[id]) body = `<div id="${MOUNT_ID[id]}" class="p-slot"><p class="muted p-empty">${esc(t(SLOT_TEXT[id]))}</p>${slotActionHtml(id)}</div>`;
     return `<details class="p-sec" id="plan-sec-${id}" open><summary class="p-sec-head">`
         + `<span class="l"><span class="step" aria-hidden="true">${step}</span><h2>${esc(t(`a.plan.sec.${key}`))}</h2><p>${esc(t(`a.plan.sec.${key}Note`))}</p></span>`
         + `<span class="fig" data-fig="${id}"></span><span class="p-chev" aria-hidden="true"></span></summary>${body}</details>`;
@@ -127,6 +135,7 @@ function wire(root) {
         } else if (b.dataset.planAdd) openItem(null, b.dataset.planAdd);
         else if (b.dataset.incomeOpen !== undefined) openIncome(Number(b.dataset.incomeOpen));
         else if (b.dataset.incomeAdd) addIncome();
+        else if (b.dataset.planGo) { const tab = document.querySelector(`[data-tab-target="${b.dataset.planGo}"]`); if (tab) tab.click(); }
         else if (b.dataset.planReviewDone) { clearReview(store.financeData); updateDataAndUI(); }
         else if (b.id === 'p-top') {
             const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

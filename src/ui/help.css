@@ -1,0 +1,14 @@
+/* Help "?" button and sheet text (A11). Tokens only. */
+.help-btn {
+    flex: 0 0 auto; display: inline-grid; place-items: center;
+    width: 44px; height: 44px; min-width: 44px; padding: 0;
+    font: inherit; font-weight: 700; font-size: 1.05rem; line-height: 1;
+    color: var(--ink-2, var(--text-color-secondary, GrayText)); background: transparent;
+    border: 1px solid var(--b3, var(--border-color, GrayText)); border-radius: 50%; cursor: pointer;
+}
+.help-btn:hover { color: var(--ink, var(--text-color-primary, CanvasText)); border-color: var(--accent, var(--accent-color, Highlight)); }
+.help-btn:focus-visible { outline: 2px solid var(--accent, var(--accent-color, Highlight)); outline-offset: 2px; }
+.title-row > .help-btn { align-self: flex-start; }
+.sheet .help-h { margin: 6px 0 0; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--sh-muted); }
+.sheet .help-p { margin: 0; line-height: 1.5; }
+.sheet .help-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; line-height: 1.5; }

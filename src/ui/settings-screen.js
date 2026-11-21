@@ -21,6 +21,7 @@ import { MODES } from '../theme/palettes.js';
 import { actionExportDataJSON, actionExportTransactionsCSV, handleJSONImport } from '../events/import-export.js';
 import { eraseAllData } from '../events/settings-events.js';
 import { canInstall, promptInstall } from '../pwa.js';
+import { mountHelpButton } from './help.js'; // A11
 
 /* global __APP_VERSION__ */
 const VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
@@ -279,6 +280,7 @@ function buildShell() {
     h1.tabIndex = -1;
     left.append(h1, el('p', '', t('d.settings.lede')));
     title.appendChild(left);
+    mountHelpButton('settings', title); // A11
 
     const wrap = el('div', 's-wrap');
     const find = el('label', 's-find');

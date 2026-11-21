@@ -118,7 +118,7 @@ export const enD = {
     'd.settings.privacy.value': 'Nothing leaves this device',
     'd.settings.privacy.detail': 'Ledger keeps your figures on this device. There is no account and nothing is sent anywhere. Backups are files you keep yourself.',
     'd.settings.licence': 'Licence',
-    'd.settings.licence.value': 'All rights reserved',
+    'd.settings.licence.value': 'Ledger will be free and open source (AGPL-3.0) at its public launch.',
     'd.settings.version': 'Version',
     'd.settings.fairwork': 'Fair Work pay calculator',
     'd.settings.fairwork.value': 'Opens fairwork.gov.au',

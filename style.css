@@ -942,84 +942,7 @@ body {
     display: block;
 }
 
-/* Info Section Styles */
-.info-section {
-    background: var(--info-bg);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 25px;
-    border-left: 4px solid var(--info-border);
-}
-
-.info-section h3 {
-    color: var(--accent-color);
-    margin: 0;
-    font-size: 1.2em;
-}
-
-.info-section p {
-    color: var(--text-color-primary);
-    line-height: 1.5;
-    margin-bottom: 8px;
-}
-
-.info-section ul {
-    margin-left: 20px;
-    color: var(--text-color-primary);
-}
-
-.info-section li {
-    margin-bottom: 5px;
-}
-
-/* Collapsible info sections (Phase C) */
-.info-section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.info-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--accent-color);
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background-color 0.2s ease;
-}
-
-.info-toggle:hover {
-    background: rgba(0, 0, 0, 0.06);
-}
-
-.info-toggle:focus-visible {
-    outline: 2px solid var(--accent-color);
-    outline-offset: 2px;
-}
-
-.info-chevron {
-    transition: transform 0.2s ease;
-}
-
-.info-section.collapsed .info-chevron {
-    transform: rotate(-90deg);
-}
-
-.info-section-body {
-    margin-top: 12px;
-}
-
-.info-section.collapsed .info-section-body {
-    display: none;
-}
-
+/* Info expanders (.info-more) are still used by the allocation explainer; the old info-guide panels went in A11. */
 .info-more {
     margin-top: 6px;
 }
@@ -1057,20 +980,6 @@ body {
 }
 .info-more > :last-child {
     margin-bottom: 0;
-}
-
-.info-dismiss {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-top: 14px;
-    font-size: 0.85em;
-    color: var(--text-color-secondary);
-    cursor: pointer;
-}
-
-.info-dismiss input {
-    cursor: pointer;
 }
 
 /* Settings Tab Styles */
@@ -1731,10 +1640,6 @@ input[type="date"]::-webkit-date-and-time-value {
     :where(.legacy) .btn {
         width: 100%;
         max-width: 300px;
-    }
-
-    .info-section {
-        padding: 15px;
     }
 
     .scenario-card {

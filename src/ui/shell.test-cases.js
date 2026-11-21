@@ -3,6 +3,7 @@
 // A5.2: the sidebar scope line and the tab keyboard model (pure helpers in nav-model.js).
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 
+import { helpModel, HELP_SCREENS } from './help.js';
 import { VALID_TABS, LEGACY_TAB_MAP, resolveTab, scopeLine, nextTabIndex, DEFAULT_TAB } from './nav-model.js';
 
 const src = (over) => ({ incomeType: 'salaried', grossAnnual: 90000, paySchedule: 'fortnightly', ...over });
@@ -69,6 +70,20 @@ export const SHELL_TEST_CASES = [
             assert('end', nextTabIndex('End', 0, 4), 3);
             assert('other key', nextTabIndex('a', 0, 4), -1);
             assert('focus not on a tab', nextTabIndex('ArrowDown', -1, 4), -1);
+        },
+    },
+    {
+        name: 'A11.1 each of the six screens has help words, and an unknown screen has none',
+        fn(assert) {
+            assert('screens', HELP_SCREENS, ['today', 'activity', 'plan', 'future', 'settings', 'setup']);
+            for (const id of HELP_SCREENS) {
+                const m = helpModel(id);
+                assert(`${id} title`, !!m.title && !m.title.startsWith('a.help.'), true);
+                assert(`${id} what`, !!m.what && !m.what.startsWith('a.help.'), true);
+                assert(`${id} has jobs`, m.jobs.length > 0 && m.jobs.every((j) => j && !j.startsWith('a.help.')), true);
+            }
+            assert('future is short', helpModel('future').jobs.length <= 2, true);
+            assert('unknown', helpModel('nope'), null);
         },
     },
 ];

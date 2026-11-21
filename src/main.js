@@ -22,7 +22,7 @@ import { setupEventListeners } from './events/setup.js';
 import { updateAllUI } from './ui/render.js';
 import {
     restoreActiveTab, renderScopeLine, setupTabKeyboardNav, setupCardLinks,
-    setupDashboardEmptyActions, setupExpenseSearch, setupInfoSections,
+    setupDashboardEmptyActions, setupExpenseSearch,
 } from './ui/tabs.js';
 import { setupPageSettingsModals } from './ui/modals.js';
 import { setupImport } from './import/import-ui.js';
@@ -36,6 +36,8 @@ import './ui/sheet.css'; // D1 — sheet, undo toast and dialog styles
 import './ui/quick-add.css'; // A8 — Quick-add panel
 import './ui/activity.css'; // A7 — Activity screen styles
 import './ui/plan.css'; // A9a — Plan screen
+import './ui/help.css'; // A11 — the "?" button and help sheet
+import { mountHelpButtons } from './ui/help.js';
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
 import { showLoadNotices, showRecoveryPanel } from './events/import-export.js';
@@ -68,7 +70,7 @@ function boot() {
     setupDashboardEmptyActions(); // F.1 — welcome empty-state action cards
     setupCardLinks(); // F.2 — dashboard cards link to their tab
     setupExpenseSearch(); // H.2 — expense name filter
-    setupInfoSections(); // C.1 — collapsible info guides
+    mountHelpButtons(); // A11 — one "?" per screen
 
     updateAllUI();
     renderScopeLine(); // A5 — sidebar "Paid fortnightly", hidden when unset
