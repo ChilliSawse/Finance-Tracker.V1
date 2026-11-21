@@ -27,6 +27,7 @@ import {
 } from './ui/tabs.js';
 import { setupImport } from './import/import-ui.js';
 import { setupPdfImport } from './import/pdf-ui.js';
+import { setupImportEntry } from './import/import-entry.js';
 import { rollForwardBills, generateBillDueEvents } from './state/bills.js';
 import { refreshSpendCache } from './state/spend-cache.js';
 import { setupOnboarding } from './ui/onboarding.js';
@@ -70,6 +71,7 @@ function boot() {
     setupTabKeyboardNav();
     setupImport(); // Ledger — bank CSV import (Tools)
     setupPdfImport(); // Variable income — bank PDF import + payslip autofill (Tools)
+    setupImportEntry(); // one Import statement button routes CSV, XLSX and PDF
     mountHelpButtons(); // A11 — one "?" per screen
 
     updateAllUI();

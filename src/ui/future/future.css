@@ -119,3 +119,11 @@
   .fu-fi-big { font-size: var(--fs-title); line-height: 34px; }
   .fu-fi-tag { transform: translate(-100%, -130%); }
 }
+
+/* K4 (conformance 3.5): the What if... button on the title row and the promo card in the FI card (mock future.css). */
+#future .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+#future .btn-primary:hover { background: var(--accent); filter: brightness(0.94); }
+.fu-root .wi-entry { margin-top: 20px; padding: 16px; border-radius: var(--r-tile); background: var(--raised); display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.fu-root .wi-entry p { margin: 0; color: var(--muted); }
+.fu-root .wi-entry b { color: var(--text); }
+#future .title-row { flex-wrap: wrap; }

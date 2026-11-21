@@ -85,6 +85,13 @@ export function headlineParams(h) {
 
 // ---------- FI card ----------
 
+const SPARK = '<svg class="i" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 2v3M8 11v3M2 8h3M11 8h3M3.8 3.8l2 2M10.2 10.2l2 2M3.8 12.2l2-2M10.2 5.8l2-2"/></svg>';
+
+/** The What if button (title row and promo card): opens a new scenario through data-fu-new. */
+export function whatIfButtonHtml() {
+    return `<button type="button" class="btn btn-primary fu-whatif" data-fu-new="1">${SPARK}${esc(t('f.future.wi.button'))}</button>`;
+}
+
 export function fiCardHtml(m) {
     const s = m.summary;
     const ages = s.fiAge ? s.fiAge.ages.map((a) => (a.name ? `${a.name} ${a.age}` : String(a.age))).join(', ') : '';
@@ -105,7 +112,8 @@ export function fiCardHtml(m) {
         + `<p class="fine">${esc(t('f.future.assume', { real: s.realReturnPct, inflation: s.inflationPct }))}</p>`
         + `<ul class="fu-notes">${notes.map((n) => `<li>${esc(n)}</li>`).join('')}${nudges}</ul>`
         + `<div class="fu-actions"><button type="button" class="btn" data-fu-explain="1">${esc(t('f.future.fi.explain'))}</button>`
-        + `<button type="button" class="btn" data-fu-assume="1">${esc(t('f.future.assumptions'))}</button></div></section>`;
+        + `<button type="button" class="btn" data-fu-assume="1">${esc(t('f.future.assumptions'))}</button></div>`
+        + `<div class="wi-entry"><p><b>${esc(t('f.future.wi.promoTitle'))}</b> ${esc(t('f.future.wi.promoBody'))}</p>${whatIfButtonHtml()}</div></section>`;
 }
 
 // ---------- saved scenarios ----------
@@ -137,7 +145,7 @@ export function goalsCardHtml(m) {
   const g = m.goals;
   if (!g) return '';
   const head = `<div class="card-head"><h2 id="fu-h-goals">${esc(t('f.future.goals.title'))}</h2>${g.rows.length ? `<span class="aside">${esc(t('f.future.goals.aside', { total: cents(g.totalCents) }))}</span>` : ''}</div>`;
-  if (!g.rows.length) return `<section class="card fu-goals" aria-labelledby="fu-h-goals">${head}<p class="muted">${esc(g.undated ? t('f.future.goals.undatedOnly', { n: g.undated }) : t('f.future.goals.empty'))}</p></section>`;
+  if (!g.rows.length) return `<section class="card fu-goals" aria-labelledby="fu-h-goals">${head}<p class="muted">${esc(g.undated ? t(g.undated === 1 ? 'f.future.goals.undatedOnly.one' : 'f.future.goals.undatedOnly', { n: g.undated }) : t('f.future.goals.empty'))}</p></section>`;
   const dots = g.positions.map((p) => `<span class="fu-tl-dot" style="left:${escNum(p)}%"></span>`).join('');
   const aria = t('f.future.goals.aria', { from: dayShort(g.start), to: dayShort(g.end), list: g.rows.map((r) => `${r.name} ${dayShort(r.due)}`).join(', ') });
   const list = g.rows.map((r) => {
@@ -149,7 +157,7 @@ export function goalsCardHtml(m) {
   }).join('');
   return `<section class="card fu-goals" aria-labelledby="fu-h-goals">${head}<div class="fu-tl" role="img" aria-label="${esc(aria)}"><span class="fu-tl-today"></span>${dots}</div>`
     + `<div class="fu-tl-cap" aria-hidden="true"><span>${esc(t('f.future.goals.today'))}</span><span>${esc(dayShort(g.end))}</span></div><ul class="rows fu-goal-list">${list}</ul>`
-    + `<p class="fine">${esc(t('f.future.goals.fine', { funds: cents(g.smileFundsCents), perPay: cents(g.smilePerPayCents) }))}${g.undated ? ` ${esc(t('f.future.goals.undated', { n: g.undated }))}` : ''}</p></section>`;
+    + `<p class="fine">${esc(t('f.future.goals.fine', { funds: cents(g.smileFundsCents), perPay: cents(g.smilePerPayCents) }))}${g.undated ? ` ${esc(t(g.undated === 1 ? 'f.future.goals.undated.one' : 'f.future.goals.undated', { n: g.undated }))}` : ''}</p></section>`;
 }
 
 // ---------- things that lose value, and HELP ----------

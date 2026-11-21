@@ -371,7 +371,7 @@ async function undoLastImport() {
 
 // ---- wiring ----
 export function setupImport() {
-    setupModal('import-modal', 'open-import', resetDraft);
+    setupModal('import-modal', 'import-modal-open', resetDraft);
 
     const drop = getElement('import-drop');
     const fileInput = getElement('import-file');
@@ -422,4 +422,11 @@ export function setupImport() {
         else if (e.target.id === 'import-another') resetDraft();
         else if (e.target.id === 'import-undo') undoLastImport();
     });
+}
+
+/** Opens the CSV / Excel import window and reads this file in it (used by the single Import statement button). */
+export function startCsvImport(file) {
+    const opener = document.getElementById('import-modal-open');
+    if (opener) opener.click();
+    handleFile(file);
 }

@@ -353,7 +353,7 @@ export const enA = {
     'a.help.today.job4': 'Tap a bill under Coming up to see it, or a bucket to see its balance.',
     'a.help.activity.title': 'Activity',
     'a.help.activity.what': 'Activity is every transaction, plus the bills coming up. This is where you check what actually happened.',
-    'a.help.activity.job1': 'Add one by hand with Add, or use Import CSV or Import PDF for a bank statement.',
+    'a.help.activity.job1': 'Add one by hand with Add, or use Import statement for a bank CSV, Excel or PDF file.',
     'a.help.activity.job2': 'Search by name, or use the filters to find a transaction.',
     'a.help.activity.job3': 'Tap a row to fix its category, amount or date. Delete can be undone.',
     'a.help.activity.job4': 'Use the To review filter to check the rows Ledger was not sure about.',

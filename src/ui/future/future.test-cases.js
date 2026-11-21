@@ -6,6 +6,7 @@ import { buildSampleHousehold } from '../../state/sample-data.js';
 import { migrateAssetDebtDetail } from '../../state/asset-debt-migration.js';
 import { yearsToFI, fiNumber, projectNetWorth } from '../../calc/fi.js';
 import { enF } from '../../i18n/en-f.js';
+import { t, plural } from '../../i18n/strings.js';
 import {
     futureModel, chartGeometry, chartIds, scenarioList, peopleSlots, withPeople, assumptionValues, validateAssumptions,
     applyAssumptions, restoreAssumptions, MAX_ON_CHART, HORIZONS, niceStep,
@@ -22,6 +23,34 @@ const sc = (id, over = {}) => ({ id, name: `Scenario ${id}`, pinned: false, arch
 const countIn = (s, needle) => s.split(needle).length - 1;
 
 export const FUTURE_TEST_CASES = [
+    {
+        name: 'K4.1 Future shows the What if button and the promo card, both opening a new scenario',
+        fn(assert) {
+            const html = buildFutureHtml(futureModel(sample(), { today: TODAY }), { loaded: true });
+            assert('promo card present', html.includes('class="wi-entry"'), true);
+            assert('promo heading', html.includes('Try a change without touching your plan.'), true);
+            assert('button label', html.includes('What if…?'), true);
+            assert('button opens a new scenario', /class="btn btn-primary fu-whatif" data-fu-new="1"/.test(html), true);
+            assert('button is not icon-only: icon hidden from readers', html.includes('aria-hidden="true" focusable="false"'), true);
+            assert('promo sits in the FI card', html.indexOf('fu-fi') < html.indexOf('wi-entry') && html.indexOf('wi-entry') < html.indexOf('fu-scen'), true);
+        },
+    },
+    {
+        name: 'K4.2 count strings read right for exactly one (no "1 changes", "1 goals")',
+        fn(assert) {
+            const bad = /1 (changes|goals|details|of these are)/;
+            const one = (k) => t(k, { count: 1, n: 1 });
+            const lines = [
+                plural(1, 'f.wi.step.adjust.sub.one', 'f.wi.step.adjust.sub'), plural(1, 'f.wi.dropped.one', 'f.wi.dropped'),
+                plural(1, 'f.wi.adjust.gone.one', 'f.wi.adjust.gone'), plural(1, 'f.res.mr.missing.one', 'f.res.mr.missing'),
+                plural(1, 'f.res.mr.conflicts.one', 'f.res.mr.conflicts'), plural(1, 'f.res.mr.virtual.one', 'f.res.mr.virtual'),
+                plural(1, 'f.res.mr.failed.one', 'f.res.mr.failed'), one('f.future.goals.undated.one'), one('f.future.goals.undatedOnly.one'),
+            ];
+            for (const s of lines) assert(`singular: ${s}`, bad.test(s), false);
+            assert('adjust tile', lines[0], 'Your 1 change');
+            assert('many still plural', plural(3, 'f.wi.step.adjust.sub.one', 'f.wi.step.adjust.sub'), 'Your 3 changes');
+        },
+    },
     {
         name: 'F6.1 every figure is what F3 computes (years to FI, FI number, the path), not the mock',
         fn(assert) {
