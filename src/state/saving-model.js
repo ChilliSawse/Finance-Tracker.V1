@@ -143,7 +143,7 @@ export function getBuckets(data, today) { // eslint-disable-line no-unused-vars
         if (goalCents > 0) { entry.goal = goalCents; entry.left = Math.max(0, goalCents - bal); }
         if (r.role === 'fire' && ms) { const a = activeTarget(d, ms.bal, ms.ladder.targetCents); if (a) entry.target = a; }
         if (r.role === 'mojo' && ms && ms.ladder.active) {
-            entry.target = { id: ms.ladder.active.id, type: 'mojo', label: ms.ladder.active.kind, amountCents: ms.ladder.active.amountCents, progress: ms.ladder.progressPct };
+            entry.target = { id: ms.ladder.active.id, type: 'mojo', label: ms.ladder.active.kind, amountCents: ms.ladder.active.amountCents, progress: Math.min(1, ms.ladder.progressPct / 100) };
             entry.left = Math.max(0, ms.ladder.active.amountCents - bal);
         }
         out.push(entry);

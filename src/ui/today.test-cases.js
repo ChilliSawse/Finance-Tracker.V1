@@ -43,6 +43,21 @@ const MOCK_FIGURES = ['422', '2,063.06', '1,430.45', '210.39', '632.61', '106,65
 
 export const TODAY_TEST_CASES = [
     {
+        name: 'T2 Mojo tile reads the percent once (starter 1,400 of 2,000 is 70%, not 7000%)',
+        fn(assert) {
+            const mojoAlloc = [...ALLOC, { id: 'mojo', role: 'mojo', name: 'Mojo', percentage: 0, currentBalance: 1400 }];
+            const data = mkData({ allocation: mojoAlloc, savingModel: { mojo: { starter: 200000, months: 0, steps: [] } } });
+            const b = getBuckets(data).find((x) => x.role === 'mojo');
+            assert('progress is a fraction', b.target.progress, 0.7);
+            const { html } = run(data, ROWS_A);
+            assert('tile says 70%', html.includes('starter · 70% paid'), true);
+            assert('no 7000', html.includes('7000'), false);
+            const over = mkData({ allocation: mojoAlloc.map((r) => (r.role === 'mojo' ? { ...r, currentBalance: 2500 } : r)), savingModel: { mojo: { starter: 200000, months: 0, steps: [] } } });
+            const ho = run(over, ROWS_A).html;
+            assert('over target never exceeds 100%', /\b(1\d\d|[2-9]\d\d)% paid/.test(ho), false);
+        },
+    },
+    {
         name: 'A6.1 not ready shows a skeleton, never a figure',
         fn(assert) {
             const html = buildTodayHtml({ ready: false }, null);
