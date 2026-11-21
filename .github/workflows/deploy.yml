@@ -25,6 +25,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # FT-R-100: a red tests.html suite stops the job here, before the Pages artifact exists, so nothing deploys.
+      - name: Install the test browser
+        run: npx playwright-core install --with-deps chromium
+      - name: Run tests.html headless against dist
+        run: npm run test:ci
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

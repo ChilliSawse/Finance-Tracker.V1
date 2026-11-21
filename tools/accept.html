@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger acceptance harness</title>
+<!-- D4. NOT shipped: vite.config.js builds only index.html and tests.html. Run it with `npm run dev`
+     and open /tools/accept.html. Pick a bank CSV, XLSX, PDF statement or payslip PDF: the REAL import
+     code runs on it in this tab (nothing is uploaded; the file never leaves the browser) and the report
+     below holds only counts, true/false and fixed words. Safe to paste back into a chat. -->
+<style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 24px auto; padding: 0 16px; color: #222; }
+    h1 { font-size: 1.2rem; }
+    fieldset { border: 1px solid #ccc; margin: 12px 0; padding: 8px 12px; }
+    pre { background: #f4f4f4; padding: 12px; min-height: 6em; white-space: pre-wrap; border-radius: 6px; }
+    button { font: inherit; padding: 6px 12px; margin-right: 6px; }
+</style>
+</head>
+<body>
+<h1>Ledger acceptance harness</h1>
+<p>Runs the real CSV, XLSX, PDF and payslip import code on a file you pick. The report has no amounts, descriptions, names or account numbers.</p>
+<fieldset>
+    <legend>PDF type</legend>
+    <label><input type="radio" name="pdfkind" value="auto" checked> Auto</label>
+    <label><input type="radio" name="pdfkind" value="statement"> Bank statement</label>
+    <label><input type="radio" name="pdfkind" value="payslip"> Payslip</label>
+</fieldset>
+<p><input type="file" id="file" accept=".csv,.xlsx,.pdf,text/csv"></p>
+<p>
+    <button id="sample-csv">Run on synthetic CSV</button>
+    <button id="sample-xlsx">XLSX</button>
+    <button id="sample-pdf">Statement PDF</button>
+    <button id="sample-payslip">Payslip PDF</button>
+</p>
+<pre id="report" aria-live="polite">No report yet.</pre>
+<p><button id="copy" disabled>Copy report</button> <span id="copied" role="status"></span></p>
+<script type="module">
+import { parseCsv, CSV_LIMITS } from '../src/import/csv.js';
+import { readXlsx } from '../src/import/xlsx.js';
+import { loadPdfJs, openPdfDocument, extractPagesLines, PDF_LIMITS } from '../src/import/pdfjs-loader.js';
+import { configureDb, deleteDb } from '../src/state/db.js';
+import { addTransactions } from '../src/state/transactions.js';
+import { buildXlsx } from './make-xlsx.mjs';
+import { reportFromRows, reportFromStatementPages, reportFromPayslipLines, renderReport } from './accept-core.mjs';
+import { CSV_FIXTURE, XLSX_ROWS, buildStatementPdf, buildPayslipPdf } from './accept-fixtures.mjs';
+
+const reportEl = document.getElementById('report');
+const copyBtn = document.getElementById('copy');
+
+// Real add-then-add-again on a scratch IndexedDB (never the app's own database).
+async function reimport(txns) {
+    configureDb('ft-accept-scratch');
+    await deleteDb();
+    try {
+        await addTransactions(txns);
+        return await addTransactions(txns.map((t) => ({ ...t, id: crypto.randomUUID() })));
+    } finally {
+        await deleteDb();
+        configureDb();
+    }
+}
+
+function show(text) {
+    reportEl.textContent = text; // fixed-vocabulary text, still never innerHTML
+    copyBtn.disabled = false;
+    document.getElementById('copied').textContent = '';
+}
+function fail(msg) { reportEl.textContent = msg; copyBtn.disabled = true; }
+
+async function pdfPages(bytes) {
+    if (bytes.byteLength > PDF_LIMITS.maxFileBytes) throw new Error('PDF too large');
+    const pdfjs = await loadPdfJs();
+    const pdf = await openPdfDocument(pdfjs, bytes);
+    try { return await extractPagesLines(pdf); } finally { pdf.destroy().catch((e) => console.warn('pdf destroy', e)); }
+}
+
+async function runPdf(bytes) {
+    const pages = await pdfPages(bytes);
+    const kind = document.querySelector('input[name=pdfkind]:checked').value;
+    const lines = () => pages.flat().map((l) => l.text);
+    if (kind === 'payslip') return reportFromPayslipLines(lines());
+    const stmt = await reportFromStatementPages(pages, { reimport });
+    if (kind === 'statement' || stmt.rows > 0) return stmt;
+    return reportFromPayslipLines(lines());
+}
+
+async function run(name, bytes) {
+    try {
+        let r;
+        if (/\.pdf$/i.test(name)) r = await runPdf(bytes);
+        else if (/\.xlsx$/i.test(name)) r = await reportFromRows('xlsx', (await readXlsx(bytes)).rows, { reimport });
+        else {
+            if (bytes.byteLength > CSV_LIMITS.maxFileBytes) throw new Error('CSV too large');
+            const parsed = parseCsv(new TextDecoder().decode(bytes));
+            r = await reportFromRows('csv', parsed.rows, { parseErrors: parsed.errors.length, reimport });
+        }
+        show(renderReport(r));
+    } catch (err) {
+        // Only the error class is shown: an error message could quote file text.
+        fail('Could not read this file (' + (err && err.name ? err.name : 'Error') + ').');
+    }
+}
+
+document.getElementById('file').addEventListener('change', async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) await run(f.name, new Uint8Array(await f.arrayBuffer()));
+});
+document.getElementById('sample-csv').addEventListener('click', () => run('sample.csv', new TextEncoder().encode(CSV_FIXTURE)));
+document.getElementById('sample-xlsx').addEventListener('click', async () => run('sample.xlsx', await buildXlsx({ rows: XLSX_ROWS })));
+document.getElementById('sample-pdf').addEventListener('click', () => run('sample.pdf', buildStatementPdf()));
+document.getElementById('sample-payslip').addEventListener('click', () => {
+    document.querySelector('input[name=pdfkind][value=payslip]').checked = true;
+    run('payslip.pdf', buildPayslipPdf());
+});
+copyBtn.addEventListener('click', async () => {
+    const out = document.getElementById('copied');
+    try { await navigator.clipboard.writeText(reportEl.textContent); out.textContent = 'Copied.'; }
+    catch (err) { out.textContent = 'Copy blocked here: select the text and copy it by hand.'; console.warn('clipboard', err); }
+});
+</script>
+</body>
+</html>
