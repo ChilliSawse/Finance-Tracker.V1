@@ -83,3 +83,11 @@
   .p-body { padding: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .p-top, .p-chev::before, .p-sec > summary { transition: none; } }
+
+/* A9b: category rows and the category sheet's icon preview. Tokens only. */
+.p-cat-ico { display: inline-flex; vertical-align: -3px; margin-right: 8px; color: var(--accent); }
+.p-cat-ico svg.i, .cat-preview-ico svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.cat-preview { display: flex; margin-bottom: 8px; }
+.cat-preview-ico { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--raised); color: var(--accent); }
+.cat-preview-ico svg.i { width: 20px; height: 20px; }
+.p-cat .often { max-width: 22ch; white-space: normal; }

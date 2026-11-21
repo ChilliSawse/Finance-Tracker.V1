@@ -14,6 +14,12 @@ import { perCycle, perMonth, netPerPayCents } from '../calc/plan.js';
 import { billOccurrences } from '../calc/pay-cycle.js';
 import { addPlanItem, updatePlanItem, removePlanItem, convertToBill } from '../state/plan.js';
 import { weeklyAmountRule } from './sheet.js';
+import { categoryIcon } from '../state/categories.js';
+import { newLiabilityId } from '../state/bucket-migration.js';
+import { relinkCategory } from '../state/saving-model.js';
+import { assetSheetSpec, debtSheetSpec, newAsset, newDebt } from './plan-assets-debts.js';
+import { categoryBucketField, bucketIdFromField } from './bucket-sheets.js';
+import { iconSvgHtml, CATEGORY_ICON_NAMES } from './icon-paths.js';
 
 export const FREQUENCIES = ['weekly', 'fortnightly', 'monthly', 'quarterly', 'yearly'];
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -316,4 +322,252 @@ export function clearReview(data) {
 export function markReviewed(data, id) {
     const m = data.planMigration;
     if (m && Array.isArray(m.reviewBills)) m.reviewBills = m.reviewBills.filter((x) => x !== id);
+}
+
+// ====================================================================================
+// A9b: Debts, Assets and Categories
+// ====================================================================================
+
+const clone = (v) => JSON.parse(JSON.stringify(v));
+const failed = (code) => ({ ok: false, code, message: '', onUndo() {}, onExpire: undefined });
+
+/** Put `list` back to `before` in place (the array keeps its identity, so other holders still see it). */
+function restoreList(list, before) {
+    list.splice(0, list.length, ...clone(before));
+}
+
+// ---------- Debts and Assets (rows live in data.liabilities / data.assets; sheets from plan-assets-debts.js) ----------
+
+export const LIST_KEYS = { debt: 'liabilities', asset: 'assets' };
+
+function listRows(data, kind) {
+    const list = Array.isArray(data[LIST_KEYS[kind]]) ? data[LIST_KEYS[kind]] : [];
+    return list.map((r, index) => ({ r, index })).filter((x) => x.r);
+}
+
+/** Debts or Assets rows for the list, the total and the count. */
+export function debtAssetModel(data, kind) {
+    const rows = listRows(data || {}, kind).map(({ r, index }) => ({
+        index, id: r.id || '', name: r.name || '', balance: Number(r.balance) || 0, rate: kind === 'debt' ? Number(r.interestRate) || 0 : null,
+    }));
+    return { kind, rows, count: rows.length, total: rows.reduce((s, r) => s + r.balance, 0) };
+}
+
+export function debtAssetBodyHtml(model) {
+    const k = model.kind;
+    const rows = model.rows.map((r) => {
+        const sub = k === 'debt' ? t('a.plan.debt.rate', { rate: String(r.rate) }) : t('a.plan.asset.sub');
+        return `<li><button type="button" class="p-row" data-${k}-open="${escNum(r.index)}">`
+            + `<span class="p-main"><span class="n">${esc(r.name || t('a.plan.list.unnamed'))}</span><span class="d">${esc(sub)}</span></span>`
+            + `<span class="often"></span>${moneyHtml(r.balance)}<span class="chev" aria-hidden="true"></span></button></li>`;
+    }).join('');
+    return (rows ? `<ul class="p-list">${rows}</ul>` : `<p class="muted p-empty">${esc(t(`a.plan.${k}.empty`))}</p>`)
+        + `<div class="p-total"><span class="muted">${esc(t(`a.plan.${k}.total`))}</span>${moneyHtml(model.total)}</div>`
+        + `<button type="button" class="btn ghost p-add" data-${k}-add="1">${esc(t(`a.plan.${k}.add`))}</button>`;
+}
+
+export function debtAssetCount(kind, n) {
+    return n === 1 ? t(`a.plan.${kind}.count1`) : t(`a.plan.${kind}.count`, { count: n });
+}
+
+/**
+ * The openSheet spec for a debt or an asset. F5 fills plan-assets-debts.js with the final fields; until then
+ * (the stub has none) the three plain fields below carry the sheet, so the list works today.
+ */
+export function debtAssetSheetSpec(kind, row = null) {
+    const stub = kind === 'debt' ? debtSheetSpec(row) : assetSheetSpec(row);
+    const editing = !!row;
+    const fields = stub.fields && stub.fields.length ? stub.fields : [
+        { key: 'name', label: t('a.plan.list.name'), type: 'text', required: true },
+        { key: 'balance', label: t(`a.plan.${kind}.balance`), type: 'money', required: true },
+        ...(kind === 'debt' ? [{ key: 'interestRate', label: t('a.plan.debt.interest'), type: 'percent', hint: t('a.plan.debt.interestHint') }] : []),
+    ];
+    const blank = kind === 'debt' ? newDebt() : newAsset();
+    const base = editing ? row : { ...blank, name: '', balance: null };
+    const values = { ...(stub.values || {}), ...base };
+    const title = stub.title || (editing ? t('a.plan.list.edit', { name: row.name || t('a.plan.list.unnamed') }) : t(`a.plan.${kind}.addTitle`));
+    return {
+        title, fields, values,
+        validate(v) {
+            const errors = {};
+            if (!String(v.name || '').trim()) errors.name = t('a.plan.err.name');
+            if (v.balance == null || !(Number(v.balance) >= 0)) errors.balance = t('a.plan.err.amount');
+            if (kind === 'debt' && v.interestRate != null && !(Number(v.interestRate) >= 0)) errors.interestRate = t('a.plan.err.rate');
+            return errors;
+        },
+    };
+}
+
+/** Add (index null) or edit one debt or asset. Undo restores the whole list. The caller renders and saves. */
+export function saveDebtAsset(data, kind, index, values) {
+    const key = LIST_KEYS[kind];
+    if (!Array.isArray(data[key])) data[key] = [];
+    const list = data[key];
+    const before = clone(list);
+    const name = String(values.name || '').trim();
+    const balance = Number(values.balance) || 0;
+    if (index == null) {
+        const row = kind === 'debt'
+            ? { ...newDebt(), id: newLiabilityId(list, name), name, balance, interestRate: Number(values.interestRate) || 0 }
+            : { ...newAsset(), name, balance };
+        list.push(row);
+        return { ok: true, item: row, message: t('a.plan.list.added', { name }), onUndo() { restoreList(list, before); }, onExpire: undefined };
+    }
+    const row = list[index];
+    if (!row) return failed('missing');
+    // Fields F5 adds travel through: every sheet value except an id writes back.
+    for (const k of Object.keys(values)) if (k !== 'id') row[k] = values[k];
+    row.name = name; row.balance = balance;
+    if (kind === 'debt') row.interestRate = Number(values.interestRate) || 0;
+    return { ok: true, item: row, message: t('a.plan.list.changed', { name }), onUndo() { restoreList(list, before); }, onExpire: undefined };
+}
+
+export function deleteDebtAsset(data, kind, index) {
+    const list = data[LIST_KEYS[kind]];
+    if (!Array.isArray(list) || !list[index]) return failed('missing');
+    const before = clone(list);
+    const [row] = list.splice(index, 1);
+    return { ok: true, item: row, message: t('a.plan.list.removed', { name: row.name || t('a.plan.list.unnamed') }), onUndo() { restoreList(list, before); }, onExpire: undefined };
+}
+
+// ---------- Categories ----------
+
+const PROTECTED = new Set(['other', 'income', 'other-essential']);
+const isProtected = (c) => !!c && (PROTECTED.has(c.id) || c.kind === 'transfer');
+
+/** Where a category is used outside the transaction store: plan lines, learned rules, legacy bills. */
+export function categoryUse(data, id, txns = 0) {
+    const d = data || {};
+    const plan = (d.plan || []).filter((p) => p && p.categoryId === id).length;
+    const rules = (d.rules || []).filter((r) => r && r.categoryId === id).length;
+    const bills = (d.bills || []).filter((b) => b && b.categoryId === id).length;
+    const tx = Number(txns) || 0;
+    return { plan, rules, bills, txns: tx, total: plan + rules + bills + tx };
+}
+
+/** Category rows for the Plan list. `buckets` is getBuckets() output (names only). */
+export function categoriesModel(data, { buckets = [] } = {}) {
+    const names = new Map((buckets || []).filter(Boolean).map((b) => [String(b.id), b.name || '']));
+    const rows = (data.categories || []).filter((c) => c && c.id).map((c) => {
+        const link = c.bucketId != null && names.has(String(c.bucketId)) ? names.get(String(c.bucketId)) : '';
+        return {
+            id: c.id, name: c.name || c.id, icon: categoryIcon(c), essential: !!c.essential,
+            cap: parseFloat(c.monthlyBudget) || 0, keywords: Array.isArray(c.keywords) ? c.keywords.length : 0,
+            bucket: link, isProtected: isProtected(c), use: categoryUse(data, c.id),
+        };
+    });
+    return { rows, count: rows.length };
+}
+
+export function categoriesBodyHtml(model) {
+    const rows = model.rows.map((r) => {
+        const bits = [r.essential ? t('a.plan.cat.essential') : t('a.plan.cat.non')];
+        if (r.keywords) bits.push(t(r.keywords === 1 ? 'a.plan.cat.keyword1' : 'a.plan.cat.keywords', { count: r.keywords }));
+        const link = r.bucket ? t('a.plan.cat.draws', { bucket: r.bucket }) : t('a.plan.cat.follows');
+        const cap = r.cap > 0 ? t('a.plan.cat.cap', { amount: formatCurrency(cents(r.cap)) }) : t('a.plan.cat.noCap');
+        return `<li><button type="button" class="p-row p-cat" data-cat-open="${esc(r.id)}">`
+            + `<span class="p-main"><span class="n"><span class="p-cat-ico">${iconSvgHtml(r.icon)}</span>${esc(r.name)}</span><span class="d">${esc(bits.join(' · '))}</span></span>`
+            + `<span class="often">${esc(link)}</span><span class="money">${esc(cap)}</span><span class="chev" aria-hidden="true"></span></button></li>`;
+    }).join('');
+    return (rows ? `<ul class="p-list">${rows}</ul>` : `<p class="muted p-empty">${esc(t('a.plan.cat.empty'))}</p>`)
+        + `<button type="button" class="btn ghost p-add" data-cat-add="1">${esc(t('a.plan.cat.add'))}</button>`;
+}
+
+export function categoryCount(n) {
+    return n === 1 ? t('a.plan.cat.count1') : t('a.plan.cat.count', { count: n });
+}
+
+export const parseKeywords = (text) => [...new Set(String(text || '').split(',').map((k) => k.trim().toLowerCase()).filter(Boolean))];
+
+/** The category sheet: name, icon, essential tick, envelope cap, keywords and E7's bucket field (FT-R-70). */
+export function categorySheetSpec(data, { category = null, buckets = [] } = {}) {
+    const editing = !!category;
+    const cat = category || { name: '', icon: 'tag', essential: false, monthlyBudget: 0, keywords: [], bucketId: null };
+    const { value: bucketValue, ...bucketSpec } = categoryBucketField(cat, buckets);
+    const fields = [
+        { key: 'name', label: t('a.plan.cat.name'), type: 'text', required: true },
+        { key: 'icon', label: t('a.plan.cat.icon'), type: 'select', hint: t('a.plan.cat.iconHint'),
+            options: CATEGORY_ICON_NAMES.map((n) => ({ value: n, label: t(`a.plan.cat.icons.${n}`) })) },
+        { key: 'essential', label: t('a.plan.cat.essentialTick'), type: 'toggle', hint: t('a.plan.cat.essentialHint') },
+        { key: 'monthlyBudget', label: t('a.plan.cat.capLabel'), type: 'money', hint: t('a.plan.cat.capHint') },
+        { key: 'keywords', label: t('a.plan.cat.keywordsLabel'), type: 'text', hint: t('a.plan.cat.keywordsHint') },
+        bucketSpec,
+    ];
+    const values = {
+        name: cat.name || '', icon: categoryIcon(cat), essential: !!cat.essential,
+        monthlyBudget: parseFloat(cat.monthlyBudget) || 0, keywords: (Array.isArray(cat.keywords) ? cat.keywords : []).join(', '), bucketId: bucketValue,
+    };
+    return {
+        title: editing ? t('a.plan.cat.edit', { name: cat.name || cat.id }) : t('a.plan.cat.addTitle'),
+        fields, values,
+        validate(v) {
+            const errors = {};
+            if (!String(v.name || '').trim()) errors.name = t('a.plan.err.name');
+            if (v.monthlyBudget != null && !(Number(v.monthlyBudget) >= 0)) errors.monthlyBudget = t('a.plan.err.amount');
+            return errors;
+        },
+    };
+}
+
+/**
+ * Save the category sheet: a new category (category null) or an edit. The bucket link goes through E5's
+ * relinkCategory (FT-R-70), so a link to a gone bucket is refused with nothing written. One undo restores the list.
+ */
+export function saveCategory(data, category, values, { id } = {}) {
+    if (!Array.isArray(data.categories)) data.categories = [];
+    const list = data.categories;
+    const before = clone(list);
+    const name = String(values.name || '').trim();
+    const link = bucketIdFromField(values.bucketId);
+    const fields = {
+        name, icon: CATEGORY_ICON_NAMES.includes(values.icon) ? values.icon : 'tag', essential: !!values.essential,
+        monthlyBudget: Number(values.monthlyBudget) || 0, keywords: parseKeywords(values.keywords),
+    };
+    let target = category;
+    if (!target) {
+        const rand = globalThis.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2);
+        target = { id: id || `cat-${rand.slice(0, 8)}`, ...fields, bucketId: null };
+        const other = list.findIndex((c) => c && c.id === 'other'); // keywords match in order, so new ones go before the catch-all
+        if (other >= 0) list.splice(other, 0, target); else list.push(target);
+    }
+    if ((target.bucketId == null ? null : String(target.bucketId)) !== link) {
+        const r = relinkCategory(data, target.id, link);
+        if (!r.ok) { restoreList(list, before); return failed(r.code || 'bucket'); }
+    }
+    Object.assign(target, fields);
+    return {
+        ok: true, item: target, message: t(category ? 'a.plan.cat.changed' : 'a.plan.cat.added', { name }),
+        onUndo() { restoreList(list, before); }, onExpire: undefined,
+    };
+}
+
+/** Categories a row can move to when this one is deleted: every other category except income and transfers. */
+export function moveTargets(data, fromId) {
+    return (data.categories || []).filter((c) => c && c.id && c.id !== fromId && c.id !== 'income' && c.kind !== 'transfer')
+        .map((c) => ({ value: c.id, label: c.name || c.id }));
+}
+
+/**
+ * Delete a category. Refused for the structural ones and, with no `moveTo`, while anything still uses it
+ * (`code:'used'` and `use`). With `moveTo` the plan lines, learned rules and legacy bills move first; the
+ * caller moves the stored transactions (async) and passes their count in `txns`. One undo restores it all.
+ */
+export function deleteCategory(data, id, { moveTo = null, txns = 0 } = {}) {
+    const list = data.categories || [];
+    const index = list.findIndex((c) => c && c.id === id);
+    if (index < 0) return failed('missing');
+    if (isProtected(list[index])) return failed('protected');
+    const use = categoryUse(data, id, txns);
+    if (use.total > 0 && !moveTo) return { ...failed('used'), use };
+    if (moveTo && !list.some((c) => c && c.id === moveTo && c.id !== id)) return failed('target');
+    const keys = ['categories', 'plan', 'rules', 'bills'];
+    const before = Object.fromEntries(keys.map((k) => [k, clone(data[k] || [])]));
+    if (moveTo) {
+        for (const k of ['plan', 'rules', 'bills']) for (const r of data[k] || []) if (r && r.categoryId === id) r.categoryId = moveTo;
+    }
+    const [row] = list.splice(index, 1);
+    return {
+        ok: true, item: row, use, message: t('a.plan.cat.removed', { name: row.name || id }),
+        onUndo() { for (const k of keys) if (Array.isArray(data[k])) restoreList(data[k], before[k]); }, onExpire: undefined,
+    };
 }

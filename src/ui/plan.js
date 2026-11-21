@@ -2,8 +2,7 @@
 // Non-essentials, Bills, Debts, Assets, the bucket section (E6 fills #plan-buckets), then
 // Categories last. Every section is a collapsible <details> built once, so open and closed
 // state survives re-renders; only the section bodies are redrawn. A9b fills the Debts,
-// Assets and Categories mounts (#plan-debts, #plan-assets, #plan-categories) and replaces
-// the placeholder text.
+// Assets and Categories mounts (#plan-debts, #plan-assets, #plan-categories).
 
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
@@ -11,13 +10,19 @@ import { getSpendCache } from '../state/spend-cache.js';
 import { esc } from './html.js';
 import { formatCurrency } from '../utils.js';
 import { openSheet } from './sheet.js';
-import { showUndoToast } from './toast.js';
+import { showUndoToast, showToast } from './toast.js';
 import { openIncomeSheet } from './income-layout.js';
 import { mountBuckets } from './plan-buckets.js';
 import { updateDataAndUI } from './render.js';
+import { getBuckets } from '../state/saving-model.js';
+import { listTransactions, updateTransaction } from '../state/transactions.js';
+import { refreshSpendCache } from '../state/spend-cache.js';
+import { iconSvgHtml } from './icon-paths.js';
 import {
     planListsModel, listBodyHtml, payBodyHtml, capsHtml, reviewCardHtml, countText, planItemSheetSpec,
     savePlanItem, deletePlanItem, newIncomeSource, clearReview, markReviewed,
+    debtAssetModel, debtAssetBodyHtml, debtAssetCount, debtAssetSheetSpec, saveDebtAsset, deleteDebtAsset,
+    categoriesModel, categoriesBodyHtml, categoryCount, categorySheetSpec, saveCategory, deleteCategory, moveTargets,
 } from './plan-lists.js';
 
 // id, step number, string key
@@ -25,25 +30,16 @@ const SECTIONS = [
     ['pay', 1, 'pay'], ['essential', 2, 'essential'], ['non', 3, 'non'], ['bills', 4, 'bills'],
     ['debts', 5, 'debts'], ['assets', 6, 'assets'], ['model', 7, 'model'], ['cats', 8, 'cats'],
 ];
-const SLOT_TEXT = { debts: 'a.plan.slotDebts', assets: 'a.plan.slotAssets', cats: 'a.plan.slotCats' };
 const MOUNT_ID = { debts: 'plan-debts', assets: 'plan-assets', cats: 'plan-categories' };
 
 const localIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 let query = '';
 let wired = false;
 
-// A11: the placeholder slots offer one action until A9b fills them.
-function slotActionHtml(id) {
-    const label = t(`a.plan.slotGo.${id}`);
-    return id === 'cats'
-        ? `<button type="button" class="btn ghost p-add" data-open-settings>${esc(label)}</button>`
-        : `<button type="button" class="btn ghost p-add" data-plan-go="future">${esc(label)}</button>`;
-}
-
 function sectionHtml([id, step, key]) {
     let body = `<div class="p-body" data-body="${id}"></div>`;
     if (id === 'model') body = '';
-    else if (MOUNT_ID[id]) body = `<div id="${MOUNT_ID[id]}" class="p-slot"><p class="muted p-empty">${esc(t(SLOT_TEXT[id]))}</p>${slotActionHtml(id)}</div>`;
+    else if (MOUNT_ID[id]) body = `<div id="${MOUNT_ID[id]}" class="p-body" data-body="${id}"></div>`;
     return `<details class="p-sec" id="plan-sec-${id}" open><summary class="p-sec-head">`
         + `<span class="l"><span class="step" aria-hidden="true">${step}</span><h2>${esc(t(`a.plan.sec.${key}`))}</h2><p>${esc(t(`a.plan.sec.${key}Note`))}</p></span>`
         + `<span class="fig" data-fig="${id}"></span><span class="p-chev" aria-hidden="true"></span></summary>${body}</details>`;
@@ -109,6 +105,103 @@ function openItem(id, kind) {
     });
 }
 
+const todayIso = () => getSpendCache().today || localIso();
+
+function openDebtAsset(kind, index) {
+    const data = store.financeData;
+    const key = kind === 'debt' ? 'liabilities' : 'assets';
+    const row = index == null ? null : (data[key] || [])[index];
+    if (index != null && !row) return;
+    const spec = debtAssetSheetSpec(kind, row);
+    openSheet({
+        title: spec.title, fields: spec.fields, values: spec.values, validate: spec.validate,
+        onSave(values) {
+            const res = saveDebtAsset(data, kind, index, values);
+            if (!res.ok) return false;
+            updateDataAndUI();
+            undoToast(res);
+            return undefined;
+        },
+        onDelete: row ? () => {
+            const res = deleteDebtAsset(data, kind, index);
+            if (!res.ok) return;
+            updateDataAndUI();
+            undoToast(res);
+        } : undefined,
+    });
+}
+
+function bucketList(data) {
+    try { return getBuckets(data, todayIso()); } catch (_) { return []; }
+}
+
+function openCategory(id) {
+    const data = store.financeData;
+    const cat = id ? (data.categories || []).find((c) => c && c.id === id) : null;
+    if (id && !cat) return;
+    const spec = categorySheetSpec(data, { category: cat, buckets: bucketList(data) });
+    const preview = document.createElement('div');
+    preview.className = 'cat-preview';
+    const setPreview = (name) => { preview.innerHTML = `<span class="cat-preview-ico">${iconSvgHtml(name)}</span>`; };
+    setPreview(spec.values.icon);
+    const canDelete = cat && !['other', 'income', 'other-essential'].includes(cat.id) && cat.kind !== 'transfer';
+    const sheet = openSheet({
+        title: spec.title, fields: spec.fields, values: spec.values, validate: spec.validate, content: [preview],
+        onSave(values) {
+            const res = saveCategory(data, cat, values);
+            if (!res.ok) { showToast(t('a.plan.cat.errBucket')); return false; }
+            updateDataAndUI();
+            undoToast(res);
+            return undefined;
+        },
+        onDelete: canDelete ? () => { deleteCategoryFlow(cat.id); } : undefined,
+    });
+    const form = sheet && sheet.el;
+    if (form) form.addEventListener('change', (e) => { if (e.target && e.target.closest && e.target.closest('[data-field="icon"]')) setPreview(e.target.value); });
+}
+
+/** Delete a category: straight away when nothing uses it, else block and offer a move (the delete guard). */
+async function deleteCategoryFlow(id) {
+    const data = store.financeData;
+    let rows = [];
+    try { rows = await listTransactions({ categoryId: id }); } catch (_) { rows = []; }
+    const res = deleteCategory(data, id, { txns: rows.length });
+    if (res.ok) { updateDataAndUI(); undoToast(res); return; }
+    if (res.code !== 'used') return;
+    const cat = (data.categories || []).find((c) => c && c.id === id);
+    const targets = moveTargets(data, id);
+    const body = document.createElement('p');
+    body.className = 'muted';
+    body.textContent = t('a.plan.cat.usedBody', { count: res.use.total, plan: res.use.plan, txns: res.use.txns, rules: res.use.rules, bills: res.use.bills });
+    openSheet({
+        title: t('a.plan.cat.usedTitle', { name: cat ? cat.name : id }),
+        fields: [{ key: 'moveTo', label: t('a.plan.cat.moveLabel'), type: 'select', required: true, options: targets }],
+        values: { moveTo: (targets.find((o) => o.value === 'other') || targets[0] || { value: '' }).value },
+        content: [body], saveLabel: t('a.plan.cat.moveSave'),
+        validate: (v) => (v.moveTo ? {} : { moveTo: t('d.sheet.required') }),
+        onSave(values) { moveAndDelete(id, values.moveTo, rows); return undefined; },
+    });
+}
+
+async function moveAndDelete(id, moveTo, rows) {
+    const data = store.financeData;
+    const originals = rows.map((r) => ({ ...r }));
+    try { for (const r of rows) await updateTransaction({ ...r, categoryId: moveTo }); } catch (err) { console.error('move failed', err); }
+    const res = deleteCategory(data, id, { moveTo, txns: rows.length });
+    if (!res.ok) return;
+    try { await refreshSpendCache({ data }); } catch (_) { /* the cache refreshes on the next load */ }
+    updateDataAndUI();
+    showUndoToast({
+        message: res.message,
+        onUndo: async () => {
+            res.onUndo();
+            try { for (const r of originals) await updateTransaction(r); await refreshSpendCache({ data }); } catch (_) { /* rows keep the moved category */ }
+            updateDataAndUI();
+        },
+        onExpire: res.onExpire,
+    });
+}
+
 function openIncome(index) {
     let opened = false;
     try { opened = openIncomeSheet(index) !== false; } catch (err) { console.error('income sheet failed', err); }
@@ -135,7 +228,12 @@ function wire(root) {
         } else if (b.dataset.planAdd) openItem(null, b.dataset.planAdd);
         else if (b.dataset.incomeOpen !== undefined) openIncome(Number(b.dataset.incomeOpen));
         else if (b.dataset.incomeAdd) addIncome();
-        else if (b.dataset.planGo) { const tab = document.querySelector(`[data-tab-target="${b.dataset.planGo}"]`); if (tab) tab.click(); }
+        else if (b.dataset.debtOpen !== undefined) openDebtAsset('debt', Number(b.dataset.debtOpen));
+        else if (b.dataset.debtAdd) openDebtAsset('debt', null);
+        else if (b.dataset.assetOpen !== undefined) openDebtAsset('asset', Number(b.dataset.assetOpen));
+        else if (b.dataset.assetAdd) openDebtAsset('asset', null);
+        else if (b.dataset.catOpen) openCategory(b.dataset.catOpen);
+        else if (b.dataset.catAdd) openCategory(null);
         else if (b.dataset.planReviewDone) { clearReview(store.financeData); updateDataAndUI(); }
         else if (b.id === 'p-top') {
             const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -164,6 +262,12 @@ function fillLists() {
     put('essential', listBodyHtml('essential', model.essentials, q));
     put('non', listBodyHtml('non', model.nonEssentials, q) + capsHtml(model.caps, cache.ready && cache.count > 0));
     put('bills', listBodyHtml('bills', model.bills, q));
+    const debts = debtAssetModel(store.financeData, 'debt');
+    const assets = debtAssetModel(store.financeData, 'asset');
+    const cats = categoriesModel(store.financeData, { buckets: bucketList(store.financeData) });
+    put('debts', debtAssetBodyHtml(debts));
+    put('assets', debtAssetBodyHtml(assets));
+    put('cats', categoriesBodyHtml(cats));
     const review = document.getElementById('plan-review');
     if (review) review.innerHTML = reviewCardHtml(model.review);
     const cur = (n) => formatCurrency(Math.round(n * 100) / 100);
@@ -171,6 +275,9 @@ function fillLists() {
     setFig('essential', cur(model.essentials.perPay), countText('essential', model.essentials.count));
     setFig('non', cur(model.nonEssentials.perPay), countText('non', model.nonEssentials.count));
     setFig('bills', cur(model.bills.perPay), countText('bills', model.bills.count));
+    setFig('debts', cur(debts.total), debtAssetCount('debt', debts.count));
+    setFig('assets', cur(assets.total), debtAssetCount('asset', assets.count));
+    setFig('cats', String(cats.count), categoryCount(cats.count));
 }
 
 export function renderPlan(totals) {
