@@ -55,6 +55,18 @@ try {
                     wide: (() => { for (const el of document.querySelectorAll('body *')) { const r = el.getBoundingClientRect(); if (r.width && r.right > devW + 1 && getComputedStyle(el).position !== 'fixed') return el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.split(/\s+/)[0] : ''); } return null; })(),
                 }), w);
                 rec.overflowX = o.sw > o.iw + 1;
+                // At desktop widths the screen must sit in the main column, to the right of the sidebar, and show in the first viewport.
+                if (w >= 1024) {
+                    const lay = await page.evaluate((vh) => {
+                        const side = document.querySelector('.side'); const scr = document.querySelector('.screen.active');
+                        if (!side || !scr) return { missing: true };
+                        const sr = side.getBoundingClientRect(); const r = scr.getBoundingClientRect();
+                        return { left: Math.round(r.left), sideRight: Math.round(sr.right), top: Math.round(r.top), vh };
+                    }, h);
+                    if (lay.missing) rec.errors.push('layout: no sidebar or no active screen');
+                    else if (lay.left < lay.sideRight - 1) rec.errors.push(`layout: main content starts at x=${lay.left}, left of the sidebar edge (${lay.sideRight})`);
+                    else if (lay.top >= lay.vh - 100) rec.errors.push(`layout: main content starts at y=${lay.top}, below the first viewport (${lay.vh})`);
+                }
                 if (rec.overflowX) rec.widest = o.wide;
                 await page.screenshot({ path: join(out, `${screen}-${w}${dark ? '-dark' : ''}.png`) });
                 if (screen === 'settings') await page.keyboard.press('Escape');
