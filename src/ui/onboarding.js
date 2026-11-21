@@ -313,8 +313,6 @@ function onChange(e) {
 function onKeydown(e) {
     if (!session || e.key !== 'Escape') return;
     if (document.querySelector('.sheet-layer, .ledger-dialog')) return; // the sheet or dialog on top closes first
-    const modal = document.getElementById('income-settings-modal');
-    if (modal && !modal.hidden) return;
     closeSetup();
 }
 

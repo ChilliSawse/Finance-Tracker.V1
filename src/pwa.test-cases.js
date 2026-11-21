@@ -3,7 +3,8 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 
 import { applyAppearance, loadTheme } from './theme/theme.js';
-import { showUpdateNotification } from './pwa.js';
+import { showUpdateNotification, showDbNotice } from './pwa.js';
+import { t } from './i18n/strings.js';
 
 // Source text of a repo file: from disk under Node, over fetch in the browser (null if neither works).
 async function repoText(rel) {
@@ -152,6 +153,25 @@ export const PWA_TEST_CASES = [
                 assert('Update Now calls the updater once and shows the wait state', [updated, banner.classList.contains('is-updating'), banner.textContent], [1, true, 'Updating… please wait a moment.']);
                 showUpdateNotification(() => {});
                 assert('a second call replaces the first', banner.isConnected, false);
+            });
+        },
+    },
+    {
+        name: 'S11.6 the database notices reuse the update banner: reload offers Reload, blocked offers only Later',
+        fn(assert) {
+            withFakeDom(setupFakes, () => {
+                const tagOf = (e) => (e.tagName || '').toLowerCase();
+                const btnsOf = (b) => walk(b).filter((e) => tagOf(e) === 'button');
+                showDbNotice('reload');
+                let banner = document.getElementById('update-notification');
+                assert('reload: the banner says the app was updated in another tab', walk(banner).some((e) => e.textContent === t('d.db.reloadBody')), true);
+                assert('reload: Reload (primary) and Later', btnsOf(banner).map((b) => [b.textContent, b.className]), [[t('d.db.reloadAction'), 'update-banner-btn primary'], ['Later', 'update-banner-btn']]);
+                showDbNotice('blocked');
+                banner = document.getElementById('update-notification');
+                assert('blocked: tells the user to close other tabs', walk(banner).some((e) => e.textContent === t('d.db.blockedBody')), true);
+                assert('blocked: nothing to press but Later', btnsOf(banner).map((b) => b.textContent), ['Later']);
+                showDbNotice('nonsense');
+                assert('an unknown kind leaves the banner alone', document.getElementById('update-notification') === banner, true);
             });
         },
     },

@@ -147,7 +147,13 @@ const isNode = typeof process !== 'undefined' && Array.isArray(process.argv) && 
 if (isNode && process.argv[1].replace(/\\/g, '/').endsWith('/scripts/build-themes.mjs')) {
     const nodeFs = 'node:fs';
     const fs = await import(/* @vite-ignore */ nodeFs);
-    const read = (rel) => fs.readFileSync(new URL(`../${rel}`, import.meta.url), 'utf8');
+    // G6W15-8: paths are built with node:path, not `new URL(..., import.meta.url)`: Vite bundles every file such a URL could match
+    // (README, lockfile, HTML) into dist/assets when the tests page imports this file.
+    const nodeUrl = 'node:url', nodePath = 'node:path';
+    const { fileURLToPath } = await import(/* @vite-ignore */ nodeUrl);
+    const path = await import(/* @vite-ignore */ nodePath);
+    const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
     const themes = JSON.parse(read('src/theme/themes.json'));
     const css = buildCss(themes);
     const rows = contrastRows(themes);
@@ -155,13 +161,13 @@ if (isNode && process.argv[1].replace(/\\/g, '/').endsWith('/scripts/build-theme
     console.log(`${buildTokenSets(themes).length} token sets, ${rows.length} contrast pairs, ${fails.length} failures`);
     for (const f of fails) console.error(`FAIL ${f.set}: ${f.label} ${f.ratio}:1 (needs ${f.need})`);
     if (fails.length) process.exit(1);
-    const target = new URL('../src/styles/tokens.generated.css', import.meta.url);
+    const target = path.join(root, 'src/styles/tokens.generated.css');
     if (process.argv.includes('--check')) {
         const current = fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : '';
         if (current !== css) { console.error('tokens.generated.css is out of date: run npm run build:themes'); process.exit(1); }
         console.log('tokens.generated.css is current');
     } else {
-        fs.mkdirSync(new URL('../src/styles/', import.meta.url), { recursive: true });
+        fs.mkdirSync(path.join(root, 'src/styles'), { recursive: true });
         fs.writeFileSync(target, css);
         console.log('wrote src/styles/tokens.generated.css');
     }

@@ -28,6 +28,11 @@ jobs:
         run: npx playwright-core install --with-deps chromium
       - name: Run tests.html headless against dist
         run: npm run test:ci
+      # The gate needs tests.html in dist; the public site does not. Rebuild without it (and without its chunks and precache entries).
+      - name: Rebuild without the test page
+        run: npm run build
+        env:
+          FT_NO_TESTS: "1"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

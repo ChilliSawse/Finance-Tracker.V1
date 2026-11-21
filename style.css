@@ -166,32 +166,6 @@ body {
     max-width: 95vw;
 }
 
-/* Let cramped dynamic lists scroll horizontally instead of crushing inputs. */
-.modal--wide .dynamic-list,
-.modal--resizable .dynamic-list {
-    overflow: auto;
-}
-
-.modal--wide .list-header,
-.modal--wide .list-item,
-.modal--resizable .list-header,
-.modal--resizable .list-item {
-    min-width: 720px;
-}
-
-/* Stage 3 — What If simulated dashboard: delta badges + result lines. */
-
-.card-subtitle {
-    color: var(--text-color-secondary);
-    font-size: 0.85em;
-    word-wrap: break-word;
-}
-
-/* Bucket cells may never paint over a neighbour — worst case (figure at the
-   auto-fit floor AND the shrunken font floor) clips inside its own card. */
-
-/* Stage 0 — per-bucket savings goal progress + time-to-reach. */
-
 /* Settings Tab Styles */
 .settings-section {
     background: var(--card-bg-gradient-end);
@@ -204,10 +178,6 @@ body {
 
 /* What If scenario cards (the only page-level settings-sections) get the same translucency
    as .card so the background effect shows through them too. Modal sections stay solid. */
-#whatIf .settings-section:not(.settings-section--group) {
-    background: var(--card-bg-gradient-end); /* fallback: solid */
-    background: color-mix(in srgb, var(--card-bg-gradient-end) var(--card-opacity), transparent);
-}
 
 .settings-title {
     font-size: 1.2em;
@@ -218,17 +188,6 @@ body {
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-}
-
-#tax-brackets-info {
-    font-size: 0.75em;
-    font-weight: normal;
-    margin-left: 10px;
-    color: var(--text-color-secondary);
-    background-color: var(--info-bg);
-    padding: 5px 8px;
-    border-radius: 5px;
-    word-wrap: break-word;
 }
 
 .form-grid {
@@ -286,60 +245,6 @@ body {
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-.dynamic-list {
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    max-height: 350px;
-    overflow: auto;
-}
-
-.list-header {
-    display: grid;
-    gap: 8px;
-    padding: 8px 12px;
-    background: var(--card-bg-gradient-end);
-    border-bottom: 2px solid var(--border-color);
-    font-weight: 600;
-    font-size: 0.75em;
-    color: var(--text-color-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-}
-
-.list-item {
-    display: grid;
-    align-items: center;
-    gap: 8px;
-    padding: 12px;
-    border-bottom: 1px solid var(--border-color);
-    background: var(--card-bg-gradient-start);
-}
-
-.list-item:last-child {
-    border-bottom: none;
-}
-
-.list-item input, .list-item select {
-    padding: 6px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--card-bg-gradient-end);
-    color: var(--text-color-primary);
-    width: 100%;
-    font-size: 0.85em;
-    min-width: 0;
-}
-
-/* Grid/flex children keep a min-content floor by default — a wrapped control
-   (e.g. the bills due-date input in its <span>) can push past the card edge
-   on phones unless the wrapper itself is allowed to shrink. */
-.list-item > span {
-    min-width: 0;
-}
-
 /* Date inputs: iOS gives them an unshrinkable UA width, centred text, and a
    grey system look that ignores the theme. Flatten to the themed field style;
    the picker still opens on tap. min-height stops the iOS empty-value collapse
@@ -352,22 +257,6 @@ input[type="date"] {
 }
 input[type="date"]::-webkit-date-and-time-value {
     text-align: left;
-}
-
-.delete-btn {
-    background: var(--negative);
-    color: var(--accent-ink);
-    border: none;
-    padding: 6px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.75em;
-    justify-self: center;
-    white-space: nowrap;
-    transition: background-color 0.2s ease;
-}
-.delete-btn:hover {
-    filter: brightness(0.9);
 }
 
 /* B.4 — Inline confirmation popover (non-blocking replacement for window.confirm) */
@@ -405,73 +294,11 @@ input[type="date"]::-webkit-date-and-time-value {
     margin: 0;
 }
 
-.tax-bracket-item { /* This class was defined but not used in original HTML, now used for consistency */
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 8px;
-    padding: 10px 12px;
-    background: var(--card-bg-gradient-start);
-    border-bottom: 1px solid var(--border-color);
-}
-
-.tax-bracket-item:last-child {
-    border-bottom: none;
-}
-
 /* Info "ⓘ" disclosures — native <details> that expand INLINE (like the
    "How the buckets work" .info-more expander), instead of a floating tooltip
    that clipped off-screen on phones. Closed: an inline ⓘ next to the heading.
    Open: the whole control becomes a full-width block so the body reads cleanly
    below it. */
-.info-tip {
-    display: inline-block;
-    margin-left: 6px;
-    vertical-align: middle;
-}
-
-.info-tip[open] {
-    display: block;
-    margin: 8px 0 0;
-    /* .settings-title is a wrapping flexbox — full basis drops the open panel
-       onto its own full-width line below the heading. Ignored in block parents. */
-    flex-basis: 100%;
-}
-
-.info-tip > summary {
-    cursor: pointer;
-    color: var(--accent-color);
-    font-weight: bold;
-    font-size: 1.1em;
-    list-style: none;        /* hide the default disclosure triangle */
-    width: fit-content;
-}
-
-.info-tip > summary::-webkit-details-marker {
-    display: none;
-}
-
-.info-tip > summary:focus-visible {
-    outline: 2px solid var(--accent-color);
-    outline-offset: 2px;
-    border-radius: 4px;
-}
-
-.info-tip-body {
-    margin-top: 8px;
-    padding: 12px 14px;
-    background: var(--info-bg);
-    border: 1px solid var(--info-border);
-    border-radius: 8px;
-    /* Reset inherited heading styling (.settings-title / .time-label are bold,
-       large, sometimes uppercase) so the explanation reads as body text. */
-    font-size: 0.9rem;
-    font-weight: normal;
-    text-transform: none;
-    letter-spacing: normal;
-    line-height: 1.5;
-    color: var(--text-color-primary);
-    text-align: left;
-}
 @media (max-width: 768px) {
 
     .form-grid {
@@ -479,50 +306,7 @@ input[type="date"]::-webkit-date-and-time-value {
         gap: 10px;
     }
 
-    /* Allocation buckets stack in one column below the tablet breakpoint —
-       two-up left long labels + nowrap figures overlapping (issue #7, pass 2). */
-
-    .list-header, .list-item {
-        font-size: 0.8em;
-        padding: 8px;
-        gap: 6px;
-    }
-    
-    /* Ensure dynamic list items are responsive */
-    .dynamic-list .list-item,
-    .tax-bracket-item { /* Applied to tax-bracket-item as well */
-        grid-template-columns: repeat(3, 1fr) auto; /* Adjust as needed, this is a common pattern */
-    }
-
     /* Special handling for income sources list on mobile if it's too wide */
-    #income-sources-settings .list-header,
-    #income-sources-settings .list-item {
-        grid-template-columns: 1fr; /* Stack elements */
-        gap: 10px;
-    }
-    #income-sources-settings .list-item > * { /* Make all direct children full width */
-        width: 100%;
-        margin-bottom: 5px; /* Space between stacked items */
-    }
-     #income-sources-settings .list-item input[type="radio"] {
-        width: auto; /* Radio button doesn't need to be full width */
-        justify-self: start; /* Align to start */
-    }
-    #income-sources-settings .list-item .delete-btn {
-        width: auto; /* Button doesn't need to be full width */
-        justify-self: end; /* Align to end */
-        margin-top: 5px;
-    }
-
-    .list-item .delete-btn {
-        font-size: 0.7em;
-        padding: 4px 8px;
-    }
-
-    .list-header { /* Allow horizontal scroll for headers if content is too wide */
-        overflow-x: auto;
-        white-space: nowrap;
-    }
 
     .settings-actions {
         flex-direction: column;
@@ -541,109 +325,20 @@ input[type="date"]::-webkit-date-and-time-value {
         flex-direction: column;
         align-items: flex-start;
     }
-
-    #tax-brackets-info {
-        margin-left: 0;
-        margin-top: 5px;
-    }
-
-    /* Further adjustments for very small screens if needed */
-    .dynamic-list .list-item,
-    .tax-bracket-item {
-        grid-template-columns: 1fr auto; /* Simpler layout for very small screens */
-    }
-    .dynamic-list .list-item > *:not(:last-child), /* All but delete button */
-    .tax-bracket-item > *:not(:last-child) {
-        margin-bottom: 5px;
-    }
-    
-    /* Income sources on very small screens */
-    #income-sources-settings .list-header,
-    #income-sources-settings .list-item {
-        grid-template-columns: 1fr; /* Stack all elements */
-    }
 }
 /* --- Mobile form & data-entry fixes (phones, Phase A follow-up) --- */
 @media (max-width: 640px) {
     /* iOS Safari zooms into any focused control whose font-size is < 16px (then
        the user has to pinch back out). Force 16px on every text-entry control so
        tapping a field no longer zooms — without disabling user zoom. */
-    input, select, textarea, .form-input, .form-select, .list-item input, .list-item select, .tax-bracket-item input, .tax-bracket-item select {
+    input, select, textarea, .form-input, .form-select {
         font-size: 16px;
-    }
-
-    /* The dynamic lists set grid-template-columns INLINE (per row, from JS), which
-       beats any media-query CSS — so rows never stacked, overflowed sideways, and
-       the sticky header scrolled independently of the fields. Force every row to a
-       single stacked column (only !important can override the inline style). */
-    .list-item,
-    .tax-bracket-item {
-        /* minmax(0,1fr) (not 1fr) + min-width:0 on the items defeats the grid
-           "blowout": a plain 1fr track keeps a min-content floor, so the row
-           grew to ~696px (hidden horizontal scroll) instead of fitting. */
-        grid-template-columns: minmax(0, 1fr) !important;
-        gap: 12px;
-        padding: 14px 12px;
-    }
-
-    .list-item > *,
-    .tax-bracket-item > * {
-        min-width: 0;
-    }
-
-    /* Desktop forces a 720px min-width on rows inside wide/resizable modals so
-       inputs aren't crushed (it scrolls horizontally instead). On a phone that
-       IS the horizontal scroll — drop the floor so rows fit the screen. */
-    .modal--wide .list-item,
-    .modal--resizable .list-item,
-    .modal--wide .list-header,
-    .modal--resizable .list-header {
-        min-width: 0;
-    }
-
-    /* Column headers are redundant once each stacked field shows its own label. */
-    .dynamic-list .list-header {
-        display: none;
-    }
-
-    /* Reveal the per-field labels that are .visually-hidden on desktop, so each
-       stacked field is identified (Name / Gross Annual / Net Pay / Cycle, …). */
-    .list-item span > label,
-    .tax-bracket-item span > label {
-        position: static;
-        width: auto;
-        height: auto;
-        margin: 0 0 4px;
-        clip: auto;
-        overflow: visible;
-        white-space: normal;
-        display: block;
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.3px;
-        text-transform: uppercase;
-        color: var(--text-color-secondary);
-    }
-
-    /* Full-width, easily-tappable delete button at the foot of each stacked row. */
-    .list-item .delete-btn,
-    .tax-bracket-item .delete-btn {
-        justify-self: stretch;
-        width: 100%;
-        padding: 10px;
-        font-size: 0.85em;
     }
 
 }
 
 /* --- Mobile display polish (phones, on-device follow-up) --- */
 @media (max-width: 640px) {
-    /* Allocation buckets ("$1,389.63/fortnight") are too long to fit a 2-up cell
-       even at the auto-fit floor — and iOS renders the font wider than desktop
-       Chrome, so they overflow on-device. Give each its own full-width row so the
-       figure shows at a comfortable size. Auto-fit (fitAllAmounts) still applies
-       as the universal backstop for every other card. Covers the dashboard
-       Income Allocation card and the What If simulated dashboard (same class). */
 }
 
 .visually-hidden {
@@ -677,8 +372,6 @@ input[type="date"]::-webkit-date-and-time-value {
     top: 0;
 }
 
-/* tabular-nums for all financial figures */
-
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -701,9 +394,6 @@ input[type="date"]::-webkit-date-and-time-value {
     margin-top: 3px;
     line-height: 1.3;
 }
-
-/* ── Ledger: Home feed + pulse tiles + sparklines ─────────────────────────
-   All colours are theme tokens — every preset and custom theme keeps working. */
 
 /* ── Ledger: CSV import flow ────────────────────────────────────────────── */
 .import-drop {
@@ -807,9 +497,6 @@ input[type="date"]::-webkit-date-and-time-value {
     #ledger-toast { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
 
-/* ── UA-default cleanup (pass 2, issues #8/#9) ─────────────────────────
-   Controls the browser styles itself, pulled into the theme. */
-
 /* Number inputs: the OS spinner buttons can't be themed — remove them.
    Typing, arrow keys, and validation still work (issue #8, app-wide). */
 input[type="number"]::-webkit-outer-spin-button,
@@ -872,108 +559,6 @@ input[type="search"] {
     outline: 2px solid var(--accent-color);
     outline-offset: 2px;
 }
-
-/* ── Ledger: variable income (events editor, badges, award reference) ────── */
-.income-events-editor {
-    margin: 0 0 14px;
-    padding: 12px 14px 14px;
-    border: 1px solid var(--border-color);
-    border-left: 4px solid var(--accent-color);
-    border-radius: 0 0 10px 10px;
-    background: var(--card-bg-gradient-end);
-}
-.income-events-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    flex-wrap: wrap;
-    gap: 4px 16px;
-    margin-bottom: 8px;
-}
-.income-events-title { font-weight: 650; color: var(--heading-color); font-size: 0.95em; }
-.income-events-fy-total { font-size: 0.85em; color: var(--text-color-secondary); font-variant-numeric: tabular-nums; }
-.income-events-meta {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px 12px;
-    margin-bottom: 10px;
-}
-.income-events-meta .form-label { margin: 0; }
-.income-events-meta .settings-hint { margin: 0; flex-basis: 100%; }
-.income-baserate-input {
-    width: 110px;
-    padding: 6px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--card-bg-gradient-start);
-    color: var(--text-color-primary);
-    font-size: 0.85em;
-}
-.income-event-row {
-    grid-template-columns: 1.1fr 1.6fr 0.9fr 0.8fr 0.7fr 0.8fr 0.45fr 0.45fr auto;
-}
-.income-events-list .list-header { padding: 6px 12px; }
-.income-event-check {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-    font-size: 0.7em;
-    color: var(--text-color-secondary);
-}
-.income-event-check input[type="checkbox"] { width: auto; }
-.income-events-empty {
-    margin: 6px 0 10px;
-    font-size: 0.9em;
-    color: var(--text-color-secondary);
-    text-align: center;
-}
-.income-row-tools {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px 14px;
-    padding: 4px 12px 10px;
-    border-bottom: 1px solid var(--border-color);
-    background: var(--card-bg-gradient-start);
-}
-.income-row-tools .settings-hint { margin: 0; }
-.btn-small { padding: 5px 12px; font-size: 0.8em; }
-
-/* Award reference — a collapsed <details> block; keyboard-accessible for free. */
-.award-reference { padding: 0; }
-.award-reference-summary {
-    cursor: pointer;
-    font-weight: 650;
-    color: var(--heading-color);
-    padding: 14px 18px;
-    list-style-position: inside;
-}
-.award-reference-summary:hover { color: var(--accent-color); }
-.award-reference-body { padding: 0 18px 16px; }
-.award-table-wrap { border: 1px solid var(--border-color); border-radius: 10px; overflow-x: auto; }
-.award-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.award-table th {
-    background: var(--card-bg-gradient-end);
-    text-align: left;
-    padding: 8px 12px;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-color-secondary);
-    border-bottom: 1px solid var(--border-color);
-}
-.award-table td { padding: 7px 12px; border-bottom: 1px solid var(--border-color); }
-.award-table tr:last-child td { border-bottom: none; }
-
-.income-statement-controls {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px 14px;
-}
-.income-statement-controls .form-select { max-width: 220px; }
 
 /* ── Ledger: income volatility section (Home) ────────────────────────────── */
 .volatility-card {
@@ -1089,12 +674,5 @@ input[type="search"] {
 /* ── Mobile: event editor + import previews ──────────────────────────────── */
 @media (max-width: 640px) {
     /* Event rows stack vertically like the other settings rows do. */
-    .income-events-list .list-header { display: none; }
-    .income-event-row { grid-template-columns: 1fr; }
-    .income-event-check { flex-direction: row; justify-content: flex-start; gap: 8px; font-size: 0.85em; }
-    .income-event-row .delete-btn { justify-self: stretch; }
-    .income-events-meta { align-items: flex-start; flex-direction: column; }
     .vol-col-label { font-size: 0.5rem; }
-    .income-statement-controls { align-items: stretch; flex-direction: column; }
-    .income-statement-controls .form-select { max-width: none; }
 }

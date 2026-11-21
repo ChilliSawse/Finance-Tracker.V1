@@ -180,5 +180,10 @@ export const enD = {
     'a12b.tax.medicare': 'Include the Medicare levy in the tax estimate',
     'a12b.tax.helpInclude': 'Include HELP repayments in the tax estimate',
     'a12b.tax.helpBalance': 'HELP balance',
+    'd.db.reloadTitle': 'Ledger was updated',
+    'd.db.reloadBody': 'Ledger was updated in another tab. Reload this tab to keep going.',
+    'd.db.reloadAction': 'Reload',
+    'd.db.blockedTitle': 'Close your other Ledger tabs',
+    'd.db.blockedBody': 'Ledger needs your other tabs closed to finish updating. Close them and it will carry on.',
     'a12b.tax.helpHint': 'Turns on the HELP repayment estimate and the payoff card on Future.',
 };

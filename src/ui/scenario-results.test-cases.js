@@ -102,9 +102,9 @@ export const SCENARIO_RESULTS_TEST_CASES = [
             assert('no digit in an F8b string outside a placeholder', bad, []);
             // Source scan (Node only): no A$ amount or four-digit year typed in the F8b modules.
             if (typeof process !== 'undefined' && process.versions && process.versions.node && !hasDom) {
-                return import('node:fs').then((fs) => {
+                return Promise.all([import('node:fs'), import('node:url'), import('node:path')]).then(([fs, { fileURLToPath }, path]) => {
                     for (const f of ['results.js', 'explain.js', 'compare.js', 'make-real.js']) {
-                        const src = fs.readFileSync(new URL(`./scenario/${f}`, import.meta.url), 'utf8');
+                        const src = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'scenario', f), 'utf8') // G6W15-8: not a URL glob, which Vite would bundle into dist/assets;
                         const code = src.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
                         assert(`${f}: no typed money`, /A\$\s?\d|\$\d/.test(code), false);
                         assert(`${f}: no typed date`, /['"`]20\d\d-\d\d-\d\d/.test(code), false);

@@ -95,7 +95,6 @@
 .box-covered .who { font-weight: 600; font-size: var(--fs-body); }
 .box-covered .money { font-weight: 600; }
 .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 9px; border-radius: var(--r-pill); font-size: var(--fs-small); font-weight: 600; white-space: nowrap; justify-self: start; }
-.sum-foot { margin: 0; font-size: var(--fs-small); color: var(--muted); }
 
 /* the summary card is wide (one-column layouts): figures left, boxes right */
 .act-sum { container-type: inline-size; container-name: sum; }

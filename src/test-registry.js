@@ -40,6 +40,7 @@ import { SCENARIO_MAKE_REAL_SAFETY_TEST_CASES } from './ui/scenario/make-real-sa
 import { SANITIZE_TEST_CASES } from './state/sanitize.test-cases.js';
 import { HTML_TEST_CASES } from './ui/html.test-cases.js';
 import { ACTIVITY_TEST_CASES } from './ui/activity.test-cases.js';
+import { DB_TEST_CASES } from './state/db.test-cases.js';
 import { TODAY_TEST_CASES } from './ui/today.test-cases.js';
 import { INCOME_LAYOUT_TEST_CASES } from './ui/income-layout.test-cases.js';
 import { TAX_CARD_TEST_CASES } from './ui/tax-card.test-cases.js';
@@ -95,6 +96,7 @@ export const TEST_GROUPS = [
     { name: 'sanitize', env: 'pure', cases: SANITIZE_TEST_CASES },
     { name: 'html', env: 'pure', cases: HTML_TEST_CASES },
     { name: 'activity', env: 'pure', cases: ACTIVITY_TEST_CASES },
+    { name: 'db', env: 'pure', cases: DB_TEST_CASES },
     { name: 'today', env: 'pure', cases: TODAY_TEST_CASES },
     { name: 'income-layout', env: 'pure', cases: INCOME_LAYOUT_TEST_CASES },
     { name: 'tax-card', env: 'pure', cases: TAX_CARD_TEST_CASES },
