@@ -4,8 +4,9 @@
 
 import {
     layoutFor, sheetValuesFor, draftSource, applyIncomeValues, readoutFor, describeCheck,
-    patchForFix, payAnchorFromNext, grossAnnualFrom, recordPayslipCheck,
+    patchForFix, payAnchorFromNext, grossAnnualFrom, recordPayslipCheck, openIncomeSheet,
 } from './income-layout.js';
+import { store } from '../state/store.js';
 import { acceptPayslipJob } from '../state/income-migration.js';
 
 const TODAY = '2026-03-10';
@@ -114,6 +115,24 @@ export const INCOME_LAYOUT_TEST_CASES = [
             assert('bad date falls back to today', recordPayslipCheck(s, true, 'x', TODAY) && s.taxCheck.date, TODAY);
             assert('non-boolean ignored', recordPayslipCheck(s, 'yes', '2026-03-06', TODAY), false);
             assert('no source', recordPayslipCheck(null, true, '2026-03-06', TODAY), false);
+        },
+    },
+    {
+        name: 'K2.7 running the payslip check in the sheet stores {date, matched} on the source',
+        fn(assert) {
+            if (typeof document === 'undefined') return;
+            const saved = store.financeData;
+            const src = emp({ incomeType: 'salaried', grossAnnual: 65000 });
+            store.financeData = { primaryIncomeIndex: 0, incomeSources: [src], taxSettings: {} };
+            try {
+                assert('opened', openIncomeSheet(0), true);
+                const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+                set('ils-slip-date', '2026-03-06');
+                set('ils-slip-tax', '1');
+                assert('a result is stored', !!src.taxCheck && typeof src.taxCheck.matched === 'boolean', true);
+                assert('with the payslip date', src.taxCheck && src.taxCheck.date, '2026-03-06');
+                document.querySelector('[data-sheet-action="close"]').click();
+            } finally { store.financeData = saved; }
         },
     },
     {

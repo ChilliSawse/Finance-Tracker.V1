@@ -382,7 +382,7 @@ export function openIncomeSheet(index, opts = {}) {
 }
 
 function decorate(handle, ctx) {
-    const { layout, today, data, initial } = ctx;
+    const { layout, today, data, initial, source, draft } = ctx;
     const form = handle.el.querySelector('form.sheet-body');
     const field = (k) => handle.el.querySelector(`[data-field="${k}"]`);
     const control = (k) => handle.el.querySelector(`[data-key="${k}"]`);
