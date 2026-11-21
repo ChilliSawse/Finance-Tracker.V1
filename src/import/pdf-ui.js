@@ -8,6 +8,7 @@
 import { store } from '../state/store.js';
 import { getElement, getValue, setHTML, escapeHtml, formatCurrency, getPayCyclesPerYear } from '../utils.js';
 import { categoriseDescription } from '../state/categories.js';
+import { resolveCategory, mergeManualRows, rematchBills } from '../state/rules.js';
 import { makeTransaction, addTransactions, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
@@ -93,7 +94,7 @@ function renderPreview() {
     } else {
         const shown = txns.slice(0, PREVIEW_ROWS);
         const rowsHtml = shown.map((txn, i) => {
-            const catId = txn.categoryId || categoriseDescription(txn.description, store.financeData.categories);
+            const catId = txn.categoryId || categoriseDescription(txn.description, store.financeData.categories, store.financeData.rules);
             txn.categoryId = catId;
             return `<tr>
                 <td class="import-cell-date">${escapeHtml(txn.date)}</td>
@@ -194,25 +195,38 @@ async function handleStatementFile(file) {
 
 // ---- commit / undo (identical flow to the CSV importer) ----
 
+// FT-R-57: one line per manual entry merged with its bank row.
+function mergeLines(merges) {
+    return merges.map(m => `<p class="import-success-sub">${t('b.merge.line', { desc: escapeHtml(m.description || m.bankDescription), amount: formatCurrency(Math.abs(m.amountCents) / 100), date: escapeHtml(m.date) })}</p>`).join('');
+}
+
 async function commitImport() {
     if (!draft || !draft.transactions.length) return;
     const sourceName = (getValue('pdf-import-source-name') || '').trim();
     const batchId = crypto.randomUUID();
 
-    const txns = draft.transactions.map(txn => makeTransaction({
-        date: txn.date,
-        description: txn.description,
-        amountCents: txn.amountCents,
-        categoryId: txn.categoryId || categoriseDescription(txn.description, store.financeData.categories),
-        source: 'pdf',
-        importBatchId: batchId,
-    }));
+    const txns = draft.transactions.map(txn => {
+        const c = resolveCategory(txn.description, txn.categoryId, store.financeData.categories, store.financeData.rules);
+        return makeTransaction({
+            date: txn.date,
+            description: txn.description,
+            amountCents: txn.amountCents,
+            categoryId: c.categoryId,
+            status: c.status,
+            source: 'pdf',
+            importBatchId: batchId,
+        });
+    });
 
     const commitBtn = getElement('pdf-import-commit');
     commitBtn.disabled = true;
-    let result;
+    let result, merges = [];
     try {
-        result = await addTransactions(txns);
+        const m = await mergeManualRows(txns);
+        merges = m.merges;
+        result = await addTransactions(m.rows);
+        result.merged = (result.merged || 0) + merges.length;
+        await rematchBills(store.financeData);
     } catch (err) {
         setHTML('pdf-import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.saveFailed', { message: escapeHtml(String(err && err.message || err)) })}</p></div>`);
         commitBtn.disabled = false;
@@ -239,6 +253,7 @@ async function commitImport() {
         <div class="import-success">
             <p class="import-success-title">${t('import.success.title', { count: result.added, txnWord: txnWord(result.added), dupNote })}</p>
             <p class="import-success-sub">${t('import.success.sub')}</p>
+            ${mergeLines(merges)}
             <div class="settings-actions" style="border-top: none; padding-top: 8px; margin-top: 4px;">
                 <button class="btn btn-secondary" id="pdf-import-another">${t('import.another')}</button>
                 ${result.added > 0 ? `<button class="btn btn-secondary" id="pdf-import-undo">${t('import.undo')}</button>` : ''}

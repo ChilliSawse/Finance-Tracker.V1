@@ -6,7 +6,7 @@
 import { store } from './store.js';
 import { cloneDefaultFinanceData } from './defaults.js';
 import { CURRENT_TAX_YEAR } from '../calc/tax-au.js';
-import { categoriseDescription } from './categories.js';
+import { resolveCategory } from './categories.js';
 import { makeTransaction, addTransactions } from './transactions.js';
 import { logEvent } from './eventlog.js';
 import { runMigrationChain } from './migration-chain.js';
@@ -156,14 +156,18 @@ export async function loadSampleData() {
     try { localStorage.setItem(SAMPLE_FLAG_KEY, '1'); } catch (_) {}
 
     const rows = sampleTransactionRows();
-    const txns = rows.map(r => makeTransaction({
-        date: r.date,
-        description: r.description,
-        amountCents: r.amountCents,
-        categoryId: categoriseDescription(r.description, store.financeData.categories),
-        source: 'sample',
-        importBatchId: SAMPLE_BATCH_ID,
-    }));
+    const txns = rows.map(r => {
+        const c = resolveCategory(r.description, null, store.financeData.categories, store.financeData.rules);
+        return makeTransaction({
+            date: r.date,
+            description: r.description,
+            amountCents: r.amountCents,
+            categoryId: c.categoryId,
+            status: c.status,
+            source: 'sample',
+            importBatchId: SAMPLE_BATCH_ID,
+        });
+    });
     let added = 0;
     try {
         const res = await addTransactions(txns);
