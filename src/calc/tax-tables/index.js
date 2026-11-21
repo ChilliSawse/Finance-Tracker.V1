@@ -63,16 +63,22 @@ export function resolveTablesForDate(date) {
  * Status for the Settings row and the July card.
  * @param {Date|string} now
  * @param {{taxCheck?:{fy:string, done:boolean}, incomeSources?:object[]}} [data] - taxCheck is written by C8 once a
- *   payslip confirms take-home for that year. With no record, the check is due only for a payslip-job source, July to September.
+ *   payslip confirms take-home for that year. With no record, the check is due for a payslip-job source in any month (U2), until a payslip is checked or the card is dismissed for the year.
  * @returns {{activeFy:string, stale:boolean, checkDue:boolean}}
  */
 export function taxTablesStatus(now, data) {
     const { fy, stale } = resolveTablesForDate(now);
     const tc = data && data.taxCheck;
     const confirmed = !!(tc && tc.fy === fy && tc.done);
-    // No record yet (a payslip was never checked): a payslip-job source still gets the July card, through July to September of the year.
-    const firstYear = !tc && hasPayslipJob(data) && inFirstQuarter(now);
+    // No record yet (a payslip was never checked): a payslip-job source still gets the card, in any month of the year (U2).
+    const firstYear = !tc && hasPayslipJob(data);
     return { activeFy: fy, stale, checkDue: !stale && (!!tc || firstYear) && !confirmed };
+}
+
+/** True from October on: the card's heading changes from "New tax year" to a plain ask (U2). */
+export function pastFirstQuarter(now) {
+    const p = ymdOf(now);
+    return !!p && !(p.m >= 7 && p.m <= 9);
 }
 
 /** True when an income source is paid from a payslip: an employee source with pay set (not Variable, not Self-employed). */
@@ -82,8 +88,3 @@ export function hasPayslipJob(data) {
         && (Number(s.grossAnnual) > 0 || Number(s.hourlyRate) > 0));
 }
 
-/** July, August or September: the first quarter of an income year. */
-function inFirstQuarter(now) {
-    const p = ymdOf(now);
-    return !!p && p.m >= 7 && p.m <= 9;
-}

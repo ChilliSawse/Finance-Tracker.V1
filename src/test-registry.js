@@ -25,6 +25,7 @@ import { FIRE_TEST_CASES } from './calc/fire.test-cases.js';
 import { SMILE_REVIEW_TEST_CASES } from './calc/smile-review.test-cases.js';
 import { BUCKET_MIGRATION_TEST_CASES } from './state/bucket-migration.test-cases.js';
 import { SHELL_TEST_CASES } from './ui/shell.test-cases.js';
+import { RENDER_LAZY_TEST_CASES } from './ui/render.test-cases.js';
 import { STATE_API_TEST_CASES } from './state/state-api.test-cases.js';
 import { SETUP_TEST_CASES } from './ui/setup.test-cases.js';
 import { QUICK_ADD_TEST_CASES } from './ui/quick-add.test-cases.js';
@@ -83,6 +84,7 @@ export const TEST_GROUPS = [
     { name: 'smile-review', env: 'pure', cases: SMILE_REVIEW_TEST_CASES },
     { name: 'bucket-migration', env: 'pure', cases: BUCKET_MIGRATION_TEST_CASES },
     { name: 'shell', env: 'pure', cases: SHELL_TEST_CASES },
+    { name: 'render-lazy', env: 'browser', cases: RENDER_LAZY_TEST_CASES }, // P3a
     { name: 'state-api', env: 'pure', cases: STATE_API_TEST_CASES },
     { name: 'setup', env: 'pure', cases: SETUP_TEST_CASES },
     { name: 'quick-add', env: 'pure', cases: QUICK_ADD_TEST_CASES },
