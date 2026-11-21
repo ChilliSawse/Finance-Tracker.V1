@@ -190,7 +190,7 @@ export const enA = {
     'a.today.ratePlanned': 'Savings rate (planned)',
     'a.today.rateActual': 'Savings rate (actual)',
     'a.today.rateCapPlanned': 'planned from your split',
-    'a.today.rateCapActual': 'of this pay so far',
+    'a.today.rateCapActual': 'last pay, {from} to {to}',
     'a.today.essential': 'Essential so far',
     'a.today.nonEssential': 'Non-essential so far',
     'a.today.thisPay': 'this pay',

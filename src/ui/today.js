@@ -11,7 +11,7 @@ import { getSpendCache } from '../state/spend-cache.js';
 import { todayModel } from '../state/today-model.js';
 import { getBuckets } from '../state/saving-model.js';
 import { calculateTotals } from '../calc/calculations.js';
-import { inferPayAnchor, billOccurrences, billStatus, addDays, daysBetween } from '../calc/pay-cycle.js';
+import { inferPayAnchor, billOccurrences, billStatus, addDays, daysBetween, getCycle } from '../calc/pay-cycle.js';
 import { effectiveBucket, SPENDABLE_POOL } from '../calc/plan.js';
 import { formatCurrency } from '../utils.js';
 import { esc, escNum } from './html.js';
@@ -54,16 +54,46 @@ function incomeThisCycle(cycleRows) {
     return { total, latest };
 }
 
-/** Savings rate, labelled by where it came from (FT-R-59). Actual once pay has landed this cycle. */
-export function savingsRateFigure(model, ctx) {
-    const { total } = incomeThisCycle(ctx.cycleRows);
-    if (total > 0) {
-        const cats = new Map((ctx.data.categories || []).map((c) => [c.id, c]));
-        const out = ctx.cycleRows.filter((r) => r.amountCents < 0 && !isTransfer(r, cats.get(r.categoryId)))
-            .reduce((a, r) => a - r.amountCents, 0);
-        return { kind: 'actual', value: Math.round(((total - out) / total) * 100) };
+/**
+ * The cycle (or month, in month mode) just before the current one: { start, end } with end exclusive.
+ * Steps back from the current cycle's own start, so an inferred pay day works the same as a set one.
+ */
+function previousPeriod(model, data) {
+    const cur = model.cycle;
+    const day = addDays(cur.start, -1);
+    if (cur.mode !== 'cycle') {
+        const [y, m] = day.split('-');
+        return { start: `${y}-${m}-01`, end: cur.start };
     }
+    const sources = (data && data.incomeSources) || [];
+    const src = sources[(data && data.primaryIncomeIndex) || 0] || sources[0] || {};
+    const anchor = /^d{4}-d{2}-d{2}$/.test(String(src.payAnchor || '')) ? src.payAnchor : cur.start;
+    const p = getCycle({ ...src, payAnchor: anchor }, day);
+    return { start: p.start, end: p.end };
+}
+
+/**
+ * Savings rate, labelled by where it came from (FT-R-59). Planned (from the plan) until at least one
+ * COMPLETE pay cycle (month, in month mode) of transactions exists. Then actual for the last completed
+ * cycle, never the one in progress, with that cycle's dates (`from`, `to` inclusive).
+ * "Complete" = the history reaches back to that cycle's first day and income landed in it.
+ */
+export function savingsRateFigure(model, ctx) {
     const planned = ctx.totals && Number.isFinite(ctx.totals.savingsRate) ? ctx.totals.savingsRate : 0;
+    const rows = Array.isArray(ctx.rows) ? ctx.rows : [];
+    if (rows.length && model && model.cycle) {
+        const prev = previousPeriod(model, ctx.data);
+        const earliest = rows.reduce((m, r) => (r.date && (m === null || r.date < m) ? r.date : m), null);
+        if (earliest !== null && earliest <= prev.start) {
+            const inPrev = rows.filter((r) => r.date >= prev.start && r.date < prev.end);
+            const income = inPrev.filter((r) => r.amountCents > 0 && r.categoryId === 'income').reduce((a, r) => a + r.amountCents, 0);
+            if (income > 0) {
+                const cats = new Map(((ctx.data && ctx.data.categories) || []).map((c) => [c.id, c]));
+                const out = inPrev.filter((r) => r.amountCents < 0 && !isTransfer(r, cats.get(r.categoryId))).reduce((a, r) => a - r.amountCents, 0);
+                return { kind: 'actual', value: Math.round(((income - out) / income) * 100), from: prev.start, to: addDays(prev.end, -1) };
+            }
+        }
+    }
     return { kind: 'planned', value: Math.round(planned) };
 }
 
@@ -253,7 +283,7 @@ function heroHtml(model, ctx, buckets) {
           </div>
         </div>
         <ul class="figs">
-          <li><div class="k">${t(rate.kind === 'actual' ? 'a.today.rateActual' : 'a.today.ratePlanned')}</div><div class="v num">${escNum(rate.value)}%</div><div class="s">${t(rate.kind === 'actual' ? 'a.today.rateCapActual' : 'a.today.rateCapPlanned')}</div></li>
+          <li><div class="k">${t(rate.kind === 'actual' ? 'a.today.rateActual' : 'a.today.ratePlanned')}</div><div class="v num">${escNum(rate.value)}%</div><div class="s">${rate.kind === 'actual' ? t('a.today.rateCapActual', { from: esc(dayShort(rate.from)), to: esc(dayShort(rate.to)) }) : t('a.today.rateCapPlanned')}</div></li>
           <li><div class="k">${t('a.today.essential')}</div><div class="v money">${esc(money(model.essentialSoFarCents))}</div><div class="s">${t('a.today.thisPay')}</div></li>
           <li><div class="k">${t('a.today.nonEssential')}</div><div class="v money">${esc(money(model.nonEssentialSoFarCents))}</div><div class="s">${t('a.today.thisPay')}</div></li>
           ${netWorth == null ? '' : `<li><div class="k">${t('a.today.netWorth')}</div><div class="v money">${esc(moneyWhole(netWorth))}</div><div class="s">${t('a.today.netWorthCap')}</div></li>`}
@@ -291,7 +321,17 @@ function tileHtml(b, mb) {
     } else {
         value = b.balanceCents;
         const t0 = b.target;
-        if (b.goal > 0) {
+        const saver = t0 && Number(t0.goalCents) > 0 ? t0 : null; // the active Fire target's own saved and goal (T1)
+        if (saver) {
+            value = Number(saver.savedCents) || 0;
+            const p = Math.min(100, (value / saver.goalCents) * 100);
+            sub = t('a.today.ofGoal', { goal: esc(moneyWhole(saver.goalCents)), pct: escNum(Math.round(p)) });
+            extra = barHtml(p, name);
+        } else if (b.role === 'fire' && t0 && t0.label) {
+            const p = Number.isFinite(t0.progress) ? t0.progress * 100 : null;
+            sub = p == null ? t('a.today.fireNow', { label: esc(t0.label) }) : t('a.today.fireNowPct', { label: esc(t0.label), pct: escNum(Math.round(p)) });
+            if (p != null) extra = barHtml(p, t0.label);
+        } else if (b.goal > 0) {
             const p = Math.min(100, (b.balanceCents / b.goal) * 100);
             sub = t('a.today.ofGoal', { goal: esc(moneyWhole(b.goal)), pct: escNum(Math.round(p)) });
             extra = barHtml(p, name);
