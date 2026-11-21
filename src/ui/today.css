@@ -1,0 +1,72 @@
+/* Today (A6): the day-by-day chart, skeleton, nudge and small additions to the base Today layout.
+   Tokens only. The hero, gauge, bills, buckets and story styles come from styles/base.css. */
+.today { grid-template-areas: "hero hero hero hero hero hero hero hero due due due due"
+                              "buckets buckets buckets buckets buckets buckets buckets buckets story story story story"
+                              "trend trend trend trend trend trend trend trend trend trend trend trend"; }
+.a-trend { grid-area: trend; }
+@media (max-width: 1279px) { .today { grid-template-areas: "hero" "due" "buckets" "trend" "story"; } }
+
+/* the old Dashboard panel is replaced by this screen; A13 deletes its markup */
+#dashboard.legacy-panel { display: none; }
+
+.today-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+table.today-sr { border-collapse: collapse; }
+
+button.link, button.pill { font: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button.link { color: var(--accent); font-weight: 600; font-size: var(--fs-body); }
+button.link:hover { text-decoration: underline; text-underline-offset: 3px; }
+button.pill.review { padding: 0 9px; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); font-size: var(--fs-small); font-weight: 600; }
+.today button:focus-visible, .today-nudge button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hero-review { margin: 10px 0 0; }
+.hero-fig.is-over { color: var(--negative); }
+.tile .after { margin-top: 4px; opacity: 0.85; }
+.split .p10 { justify-content: center; padding: 0 4px; }
+.story + .story li:first-child { border-top: 1px solid var(--rule); padding-top: 14px; }
+.story:empty { display: none; }
+.story-card .muted, .due-card .muted { margin: 0 0 12px; }
+
+.today-nudge { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: var(--gap); }
+.today-nudge h2 { margin: 0; font-size: var(--fs-section); font-weight: 600; }
+.today-nudge p { margin: 4px 0 0; }
+.today-empty h2 { margin: 0 0 6px; font-size: var(--fs-section); }
+@media (max-width: 640px) { .today-nudge { flex-direction: column; align-items: stretch; } }
+
+/* skeleton */
+.sk { border-radius: var(--r-inner); background: var(--active); margin-bottom: 14px; animation: sk-pulse 1.4s ease-in-out infinite; }
+.sk-title { width: 40%; height: 18px; } .sk-fig { width: 60%; height: 42px; } .sk-line { width: 80%; height: 14px; }
+.sk-bar { height: 14px; } .sk-row { height: 44px; } .sk-tiles { height: 110px; }
+@keyframes sk-pulse { 50% { opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+
+/* day-by-day chart */
+.t-key { list-style: none; margin: -4px 0 16px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: var(--fs-small); color: var(--muted); }
+.t-key li { display: inline-flex; align-items: center; gap: 8px; }
+.t-key b { color: var(--text); font-weight: 700; }
+.t-key i { display: inline-block; width: 18px; height: 10px; border-radius: 3px; }
+.t-key .k-line { height: 3px; background: var(--daily-mid); }
+.t-key .k-bar { background: var(--daily-ink); }
+.t-key .k-proj { height: 0; border-top: 2px dashed var(--muted); border-radius: 0; }
+.t-key .k-bill { width: 0; height: 12px; border-left: 2px dotted var(--control); border-radius: 0; }
+.t-plot { position: relative; }
+.t-chart { display: block; width: 100%; height: 220px; overflow: visible; }
+.t-base { stroke: var(--border); stroke-width: 1; }
+.t-bill { stroke: var(--control); stroke-width: 1.5; stroke-dasharray: 2 4; }
+.t-bar { fill: var(--daily-ink); opacity: 0.85; }
+.t-area { fill: var(--daily-bg); opacity: 0.7; }
+.t-line { fill: none; stroke: var(--daily-mid); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.t-proj { fill: none; stroke: var(--muted); stroke-width: 2; stroke-dasharray: 6 5; }
+.t-today { stroke: var(--text); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.5; }
+.t-x { display: grid; margin-top: 8px; font-size: 12px; color: var(--muted); text-align: center; }
+.t-x span { white-space: nowrap; overflow: hidden; }
+.t-x .is-today { color: var(--text); font-weight: 700; }
+[data-dense] .t-x span:not(.key):not(.wk) { visibility: hidden; }
+.t-note { margin: 14px 0 0; color: var(--muted); font-size: var(--fs-small); }
+@container (max-width: 640px) {
+  .t-chart { height: 160px; }
+  .t-x span:not(.key) { visibility: hidden; }
+  .t-x { font-size: 11px; }
+}
+.t-x span.key { overflow: visible; }
+.t-x span:first-child { justify-self: start; }
+.t-x span:last-child { justify-self: end; }
+.t-x span.is-today { justify-self: center; }

@@ -10,6 +10,7 @@ import './styles/base.css';
 import '../style.css';
 import './theme/appearance.css'; // A4: stripped appearance modal
 import './ui/shell.css'; // A5 — sidebar, phone bottom bar, screens
+import './ui/today.css'; // A6 — Today screen
 import { store } from './state/store.js';
 import { FinanceAutoSave } from './state/autosave.js';
 import { loadTheme } from './theme/theme.js';
