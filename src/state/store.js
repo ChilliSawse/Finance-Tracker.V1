@@ -35,5 +35,5 @@ export const store = {
     autoSave: null,
 
     // The visible tab — ui/render.js uses it to re-render only what's on screen.
-    activeTab: 'dashboard',
+    activeTab: 'today',
 };

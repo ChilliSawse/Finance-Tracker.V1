@@ -8,6 +8,7 @@ import './styles/legacy-aliases.css';
 import './styles/fonts.css';
 import './styles/base.css';
 import '../style.css';
+import './ui/shell.css'; // A5 — sidebar, phone bottom bar, screens
 import { store } from './state/store.js';
 import { FinanceAutoSave } from './state/autosave.js';
 import { loadTheme, registerStoredCustomFonts, applyBackgroundEffect, applyBgEffectColor } from './theme/theme.js';
@@ -16,9 +17,8 @@ import { initializeGuiSettingsForm } from './theme/appearance.js';
 import { setupEventListeners } from './events/setup.js';
 import { updateAllUI } from './ui/render.js';
 import {
-    restoreActiveTab, setupSidebar, setupTabKeyboardNav, setupCardLinks,
+    restoreActiveTab, renderScopeLine, setupTabKeyboardNav, setupCardLinks,
     setupDashboardEmptyActions, setupExpenseSearch, setupInfoSections,
-    setupMobileNavOverflow,
 } from './ui/tabs.js';
 import { setupGuiModal, setupDraggableModal, setupPageSettingsModals } from './ui/modals.js';
 import { setupImport } from './import/import-ui.js';
@@ -52,8 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupPwaInstallListeners();
     setupTabKeyboardNav();
-    setupSidebar();   // A.3 — collapse toggle + restore
-    setupMobileNavOverflow(); // ≤640px — "More" sheet on the bottom bar
     setupGuiModal();  // A.4 — appearance modal
     setupDraggableModal('gui-settings-modal'); // draggable, corner-resizable appearance window
     setupPageSettingsModals(); // Phase D — per-page settings modals
@@ -66,7 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
     setupInfoSections(); // C.1 — collapsible info guides
 
     updateAllUI();
-    restoreActiveTab(); // A.3 — restore last-viewed section (defaults to Home)
+    renderScopeLine(); // A5 — sidebar "Paid fortnightly", hidden when unset
+    restoreActiveTab(); // A.3 — restore last-viewed section (legacy names mapped; defaults to Today)
 
     setupMilestoneToasts(); // Ledger — celebration toasts
     setupOnboarding(hadSavedData); // Ledger — first-run guided setup / sample data

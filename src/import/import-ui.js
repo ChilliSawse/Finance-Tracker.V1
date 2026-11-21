@@ -294,7 +294,7 @@ async function commitImport() {
 
     await refreshSpendCache();
     updateAllUI();
-    if (store.activeTab === 'home') renderHomeFeed();
+    if (store.activeTab === 'today') renderHomeFeed();
 }
 
 async function undoLastImport() {
@@ -313,7 +313,7 @@ async function undoLastImport() {
     lastCommit = null;
     await refreshSpendCache();
     updateAllUI();
-    if (store.activeTab === 'home') renderHomeFeed();
+    if (store.activeTab === 'today') renderHomeFeed();
 }
 
 // ---- wiring ----

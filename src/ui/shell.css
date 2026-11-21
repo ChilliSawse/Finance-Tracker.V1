@@ -1,0 +1,70 @@
+/* A5 shell: the one <nav role="tablist"> is the desktop sidebar and, below 1024 px, the phone bottom bar.
+   Tokens only. The generic shell classes (.app, .side, .brand, .scope, .add-btn, .topbar, .title-row)
+   come from styles/base.css; this file adds what the single-nav, button-based shell needs. */
+
+/* keep the app above the decorative background-effect canvas (z-index 0) */
+.app { position: relative; z-index: 1; }
+
+/* screens: only the active one shows; legacy panels inside a screen always show */
+.screen { display: none; }
+.screen.active { display: block; }
+.legacy-panel { display: block; }
+.title-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* sidebar nav (buttons, not links) */
+.nav .nav-tab {
+  display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; width: 100%;
+  border: 0; border-radius: 10px; background: transparent; color: var(--muted);
+  font: inherit; text-align: left; cursor: pointer; transition: background 150ms;
+}
+.nav .nav-tab:hover { background: var(--raised); color: var(--text); }
+.nav .nav-tab[aria-selected="true"] { background: var(--active); color: var(--text); font-weight: 600; }
+.nav .nav-tab:focus-visible, .side-link:focus-visible, .plus-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav .plus-tab { display: none; }
+
+/* footer: status, privacy line, temporary Install link, Settings */
+.side-link {
+  display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; width: 100%;
+  border: 0; border-radius: 10px; background: transparent; color: var(--muted);
+  font: inherit; text-align: left; cursor: pointer; transition: background 150ms;
+}
+.side-link:hover { background: var(--raised); color: var(--text); }
+.side-status:empty { display: none; }
+.header.side-status #save-status-indicator {
+  position: static; padding: 0 12px; border-radius: 0; background: transparent;
+  color: var(--muted); font-size: var(--fs-small); font-weight: 500; line-height: 16px;
+}
+.header.side-status #save-status-indicator::before {
+  content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%;
+  background: var(--muted); vertical-align: middle;
+}
+.header.side-status #save-status-indicator.saved::before { background: var(--positive); }
+.header.side-status #save-status-indicator.error::before { background: var(--negative); }
+
+/* phone and tablet: bottom bar below 1024 px (FT-R-63) */
+@media (max-width: 1023px) {
+  .app .side { display: contents; }
+  .side > :not(nav), .side > .side-foot { display: none; }
+  .side > .side-foot { display: block; }
+  .side-foot > :not(.side-status) { display: none; }
+  .side-status {
+    position: fixed; top: 0; right: 64px; height: 56px; z-index: 11;
+    display: flex; align-items: center;
+  }
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; height: 72px; padding: 0 8px 8px;
+    display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; gap: 0;
+    background: var(--surface); border-top: 1px solid var(--border);
+  }
+  .nav .nav-tab {
+    flex-direction: column; justify-content: center; gap: 3px; height: auto; min-height: 52px; padding: 0;
+    background: transparent; font-size: var(--fs-small); font-weight: 500; text-align: center;
+  }
+  .nav .nav-tab[aria-selected="true"] { background: transparent; color: var(--text); font-weight: 700; }
+  .nav .nav-tab svg.i { width: 20px; height: 20px; }
+  .nav .plus-tab {
+    display: grid; place-items: center; justify-self: center; width: 56px; height: 56px; margin-top: -8px;
+    border: 0; border-radius: 50%; background: var(--accent); color: var(--accent-ink); cursor: pointer;
+  }
+  .nav .plus-tab svg.i { width: 24px; height: 24px; stroke-width: 2; }
+}

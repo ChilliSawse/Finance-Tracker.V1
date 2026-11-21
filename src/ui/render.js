@@ -9,24 +9,19 @@
 import { store } from '../state/store.js';
 import { calculateTotals } from '../calc/calculations.js';
 import { setText, formatCurrency, fitAllAmounts } from '../utils.js';
-import {
-    updateDashboardUI, updateIncomeTabUI, updateExpensesTabUI,
-    updateSavingsTabUI, updateLiabilitiesTabUI,
-} from './render-tabs.js';
-import { renderHomeFeed } from './feed.js';
+import { renderToday } from './today.js';
+import { renderActivity } from './activity.js';
+import { renderPlan } from './plan.js';
+import { renderFuture } from './future.js';
 import { recordDailySnapshot } from '../state/snapshots.js';
 import { checkMilestones } from '../state/milestones.js';
 
 const TAB_RENDERERS = {
-    // Home is async (event log is IndexedDB); fire-and-forget — it renders
-    // greeting/pulse synchronously enough and fills the feed when ready.
-    home: () => { renderHomeFeed(); },
-    dashboard: updateDashboardUI,
-    income: updateIncomeTabUI,
-    expenses: updateExpensesTabUI,
-    savings: updateSavingsTabUI,
-    liabilities: updateLiabilitiesTabUI,
-    // whatIf renders on demand (Calculate Scenario) — not data-driven.
+    today: renderToday,
+    activity: renderActivity,
+    plan: renderPlan,
+    future: renderFuture,
+    // The old What If panel is not rendered (A5); F6/F7 replace it.
 };
 
 const dirty = new Set();
