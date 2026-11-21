@@ -3,8 +3,16 @@
 
 import {
     canRemoveIncomeSource, removeIncomeSource, otherIncomeFields, otherIncomeValues, applyOtherIncome,
-    applyEvent, removeEvent, applyTaxDetails,
+    applyEvent, removeEvent, applyTaxDetails, hasPayslipJobOffer, declinePayslipJobOffer, acceptPayslipJobWithUndo,
+    openOtherIncomeSheet,
 } from './income-other.js';
+import { store } from '../state/store.js';
+
+
+const flagged = () => ({
+    name: 'Cafe', incomeType: 'selfEmployed', paySchedule: 'fortnightly', invoicedPayPostTax: 2000, taxRemoved: 500,
+    basis: 'selfEmployed', migrationPrompt: 'payslip-job', withholding: { claimsTaxFree: true, hasStudyDebt: null, medicareExemption: false, extraPerPay: 0 },
+});
 
 const two = () => ({
     primaryIncomeIndex: 1,
@@ -59,6 +67,42 @@ export const INCOME_OTHER_TEST_CASES = [
         assert('removed', s.incomeEvents.length, 1);
         res.onUndo();
         assert('undone in place', s.incomeEvents.map((e) => e.label), ['B', 'A2']);
+    } },
+    { name: 'K2.1 a flagged Self-employed source is offered the Salary layout; unflagged ones are not', fn(assert) {
+        assert('flagged', hasPayslipJobOffer(flagged()), true);
+        assert('plain self-employed', hasPayslipJobOffer({ incomeType: 'selfEmployed' }), false);
+        assert('missing source', hasPayslipJobOffer(null), false);
+    } },
+    { name: 'K2.2 Accept switches the layout, Undo puts the source back exactly (flag included)', fn(assert) {
+        const s = flagged();
+        const before = JSON.stringify(s);
+        const undoIt = acceptPayslipJobWithUndo(s);
+        assert('switched to Salary', [s.incomeType, s.basis, s.grossAnnual, s.migrationPrompt], ['salaried', 'salary', 65000, undefined]);
+        assert('undo offered', typeof undoIt, 'function');
+        undoIt();
+        assert('restored, flag back', JSON.stringify(s), before);
+        assert('nothing to accept when unflagged', acceptPayslipJobWithUndo({ incomeType: 'selfEmployed' }), null);
+    } },
+    { name: 'K2.3 Not now clears the flag for good', fn(assert) {
+        const s = flagged();
+        assert('declined', declinePayslipJobOffer(s), true);
+        assert('flag gone, source otherwise unchanged', [s.migrationPrompt, s.incomeType, s.invoicedPayPostTax], [undefined, 'selfEmployed', 2000]);
+        assert('no offer any more', hasPayslipJobOffer(s), false);
+        assert('declining twice does nothing', declinePayslipJobOffer(s), false);
+    } },
+    { name: 'K2.4 the sheet for a flagged source shows the offer card with Accept and Not now', fn(assert) {
+        if (typeof document === 'undefined') return;
+        const saved = store.financeData;
+        store.financeData = { primaryIncomeIndex: 0, incomeSources: [flagged(), { name: 'Plain', incomeType: 'selfEmployed', paySchedule: 'weekly' }] };
+        try {
+            assert('opened', openOtherIncomeSheet(0), true);
+            assert('offer card shown', !!document.querySelector('[data-offer="payslip-job"]'), true);
+            assert('two buttons', [...document.querySelectorAll('[data-offer] [data-offer-action]')].map((b) => b.dataset.offerAction), ['accept', 'dismiss']);
+            document.querySelector('[data-sheet-action="close"]').click();
+            assert('opened plain', openOtherIncomeSheet(1), true);
+            assert('no offer on an unflagged source', !!document.querySelector('[data-offer="payslip-job"]'), false);
+            document.querySelector('[data-sheet-action="close"]').click();
+        } finally { store.financeData = saved; }
     } },
     { name: 'A12b.5 tax details write Medicare, HELP in the estimate and the HELP balance', fn(assert) {
         const d = {};

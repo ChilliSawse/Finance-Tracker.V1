@@ -39,6 +39,8 @@
 .p-total .money { font-weight: 700; }
 .p-add { margin-top: 12px; }
 .p-body .pill { margin-left: 6px; vertical-align: 1px; }
+.p-row .p-check.is-ok { color: var(--accent); font-weight: 600; }
+.p-row .p-check.is-warn { color: var(--warn-ink); font-weight: 600; }
 
 .p-caps { margin-top: var(--gap); }
 .p-caps h3 { margin: 0; font-size: var(--fs-section); }

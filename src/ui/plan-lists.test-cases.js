@@ -97,6 +97,28 @@ export const PLAN_LISTS_TEST_CASES = [
         },
     },
     {
+        name: 'K2.6 the Pay row shows the payslip check (escaped) and "Check this" on a flagged source',
+        fn(assert) {
+            const d = mk();
+            d.incomeSources.push({ name: 'Side <i>', incomeType: 'selfEmployed', paySchedule: 'weekly', invoicedPayPostTax: 500, taxRemoved: 90, migrationPrompt: 'payslip-job' });
+            d.incomeSources[0].taxCheck = { date: '2026-11-14', matched: true };
+            let html = payBodyHtml(planListsModel(d, { today: TODAY }).pay);
+            assert('matched line with the date', /Matches your payslip, [^<]*14 Nov/.test(html), true);
+            assert('marked as ok', html.includes('p-check is-ok'), true);
+            assert('flagged source says Check this', html.includes('Check this'), true);
+            assert('no raw tag', html.includes('<i>') || html.includes('<b>'), false);
+            d.incomeSources[0].taxCheck = { date: '2026-11-14', matched: false };
+            html = payBodyHtml(planListsModel(d, { today: TODAY }).pay);
+            assert('differs line', /Differs from your payslip, [^<]*14 Nov/.test(html), true);
+            d.incomeSources[0].taxCheck = { date: '<img src=x>', matched: true };
+            html = payBodyHtml(planListsModel(d, { today: TODAY }).pay);
+            assert('a malformed stored date shows no status', html.includes('Matches your payslip'), false);
+            delete d.incomeSources[0].taxCheck;
+            html = payBodyHtml(planListsModel(d, { today: TODAY }).pay);
+            assert('never checked shows nothing', html.includes('payslip,'), false);
+        },
+    },
+    {
         name: 'A9a.1 add, edit, delete and undo go through the plan API',
         fn(assert) {
             const d = mk();

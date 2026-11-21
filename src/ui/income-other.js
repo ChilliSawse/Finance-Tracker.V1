@@ -15,6 +15,7 @@ import { showToast, showUndoToast } from './toast.js';
 import { makeIncomeEvent, sumEvents, fyRange, activeFyKey } from '../calc/income-events.js';
 import { AU_TAX_YEARS } from '../calc/tax-au.js';
 import { formatCurrency } from '../utils.js';
+import { acceptPayslipJob } from '../state/income-migration.js';
 
 const CYCLES = ['weekly', 'fortnightly', 'monthly', 'quarterly'];
 
@@ -39,6 +40,32 @@ export function removeIncomeSource(data, index) {
         message: t('a12b.income.removed', { name: row.name || t('a12b.income.unnamed') }),
         onUndo() { data.incomeSources.splice(index, 0, row); data.primaryIncomeIndex = primary; },
         onExpire: undefined,
+    };
+}
+
+/** True while a source carries the C4 flag that asks whether to switch it to the Salary layout. */
+export function hasPayslipJobOffer(source) {
+    return !!source && source.migrationPrompt === 'payslip-job';
+}
+
+/** "Not now" / "Keep as is": the flag goes for good, so the question is never asked again. */
+export function declinePayslipJobOffer(source) {
+    if (!hasPayslipJobOffer(source)) return false;
+    delete source.migrationPrompt;
+    return true;
+}
+
+/**
+ * Accepts the offer (the Salary layout, via C4's acceptPayslipJob). Returns an Undo that puts the source back exactly
+ * as it was, flag included, or null when there was nothing to accept.
+ */
+export function acceptPayslipJobWithUndo(source) {
+    if (!hasPayslipJobOffer(source)) return null;
+    const before = structuredClone(source);
+    if (!acceptPayslipJob(source)) return null;
+    return () => {
+        for (const k of Object.keys(source)) delete source[k];
+        Object.assign(source, before);
     };
 }
 
@@ -217,6 +244,42 @@ export function openIncomeEventSheet(sourceIndex, eventIndex, then) {
     });
 }
 
+/** The card at the top of a flagged Self-employed sheet: switch to the Salary layout, or leave it as it is. */
+function offerBlock(index, close) {
+    const wrap = node('section', 'ils-card');
+    wrap.dataset.offer = 'payslip-job';
+    wrap.appendChild(node('h3', 'ils-card-title', t('c.income.offer.title')));
+    wrap.appendChild(node('p', 'ils-muted', t('c.income.offer.body')));
+    const acts = node('div', 'ils-acts');
+    const accept = node('button', 'btn', t('c.income.offer.accept'));
+    accept.type = 'button';
+    accept.dataset.offerAction = 'accept';
+    accept.addEventListener('click', async () => {
+        const source = store.financeData.incomeSources[index];
+        const revert = acceptPayslipJobWithUndo(source);
+        if (!revert) return;
+        close();
+        await persist();
+        showUndoToast({
+            message: t('c.income.offer.done', { name: source.name || t('a12b.income.unnamed') }),
+            onUndo: async () => { revert(); await persist(); },
+        });
+        const { openIncomeSheet } = await import('./income-layout.js');
+        openIncomeSheet(index);
+    });
+    const keep = node('button', 'btn ghost', t('c.income.offer.dismiss'));
+    keep.type = 'button';
+    keep.dataset.offerAction = 'dismiss';
+    keep.title = t('c.income.offer.keep');
+    keep.addEventListener('click', async () => {
+        if (declinePayslipJobOffer(store.financeData.incomeSources[index])) await persist();
+        wrap.remove();
+    });
+    acts.append(accept, keep);
+    wrap.appendChild(acts);
+    return wrap;
+}
+
 /** The editor for a Self-employed or Variable source (C6's sheets only cover Salary and Set-hours). */
 export function openOtherIncomeSheet(index) {
     const data = store.financeData;
@@ -224,6 +287,8 @@ export function openOtherIncomeSheet(index) {
     if (!source || typeof document === 'undefined') return false;
     const reopen = () => setTimeout(() => openOtherIncomeSheet(index), 0);
     const content = [];
+    let sheet = null;
+    if (hasPayslipJobOffer(source)) content.push(offerBlock(index, () => { if (sheet) sheet.close(); }));
     if (source.incomeType === 'variable') content.push(eventsBlock(source, (i) => openIncomeEventSheet(index, i, reopen)));
     const stmt = node('button', 'btn ghost', t('a12b.income.statement'));
     stmt.type = 'button';
@@ -232,7 +297,7 @@ export function openOtherIncomeSheet(index) {
         openIncomeStatement('6');
     });
     content.push(stmt);
-    openSheet({
+    sheet = openSheet({
         title: t('a12b.income.title', { name: source.name || '' }),
         fields: otherIncomeFields(source), values: otherIncomeValues(data, index), content,
         validate: (v) => (String(v.name || '').trim() ? {} : { name: t('d.sheet.required') }),
