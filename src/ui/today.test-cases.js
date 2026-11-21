@@ -5,6 +5,9 @@
 import { buildTodayModel } from '../state/today-model.js';
 import { buildTodayHtml, skeletonHtml, needsPayDayNudge, savingsRateFigure, dayByDay } from './today.js';
 import { formatCurrency } from '../utils.js';
+import { getBuckets } from '../state/saving-model.js';
+import { legacySampleFinanceData } from '../state/sample-data.js';
+import { runMigrationChain } from '../state/migration-chain.js';
 
 const ALLOC = [
     { id: 'daily', role: 'daily', name: 'Daily expenses', percentage: 60 }, { id: 'splurge', role: 'splurge', name: 'Splurge', percentage: 10 },
@@ -74,15 +77,65 @@ export const TODAY_TEST_CASES = [
         },
     },
     {
-        name: 'A6.1 savings rate says planned or actual (FT-R-59)',
+        name: 'T1 savings rate is planned until one complete cycle exists, then actual for the last completed cycle (FT-R-59)',
         fn(assert) {
-            const withPay = run(mkData(), ROWS_A);
-            const noPay = run(mkData(), [row('2026-11-02', 'groceries', 40)]);
-            assert('actual once pay landed', savingsRateFigure(withPay.model, withPay.ctx).kind, 'actual');
-            assert('planned before pay', savingsRateFigure(noPay.model, noPay.ctx), { kind: 'planned', value: 12 });
-            assert('actual label', withPay.html.includes('Savings rate (actual)'), true);
-            assert('planned label', noPay.html.includes('Savings rate (planned)'), true);
-            assert('mock caption gone', withPay.html.includes('Smile + Fire'), false);
+            // Only the current cycle so far: planned, even with pay landed and spend (the old "92% actual").
+            const young = run(mkData(), ROWS_A);
+            assert('planned with only the current cycle', savingsRateFigure(young.model, young.ctx), { kind: 'planned', value: 12 });
+            assert('planned label', young.html.includes('Savings rate (planned)'), true);
+            assert('no actual label', young.html.includes('Savings rate (actual)'), false);
+            // History starts mid previous cycle (not complete): still planned.
+            const part = run(mkData(), [...ROWS_A, row('2026-10-20', 'dining', 10)]);
+            assert('planned when history starts inside the previous cycle', savingsRateFigure(part.model, part.ctx).kind, 'planned');
+            // A complete previous cycle 17 Oct to 30 Oct: income 3,000, spend 2,400, transfer 500 ignored.
+            const prior = [{ id: 'p0', date: '2026-10-17', categoryId: 'income', amountCents: 300000 }, row('2026-10-18', 'rent', 1500),
+                row('2026-10-25', 'groceries', 900), row('2026-10-26', 'transfer', 500)];
+            const full = run(mkData(), [...prior, ...ROWS_A]);
+            const f = savingsRateFigure(full.model, full.ctx);
+            assert('actual for the last completed cycle', [f.kind, f.value, f.from, f.to], ['actual', 20, '2026-10-17', '2026-10-30']);
+            assert('actual label', full.html.includes('Savings rate (actual)'), true);
+            assert('caption carries the cycle dates', full.html.includes('last pay, 17 Oct to 30 Oct'), true);
+            // The in-progress cycle's own pay and spend never move it.
+            const more = run(mkData(), [...prior, ...ROWS_A, row('2026-11-04', 'dining', 900)]);
+            assert('in-progress spend ignored', savingsRateFigure(more.model, more.ctx).value, 20);
+            // Complete history but no income in the previous cycle: planned.
+            const noInc = run(mkData(), [row('2026-10-18', 'rent', 100), ...ROWS_A]);
+            assert('no income in the cycle gives planned', savingsRateFigure(noInc.model, noInc.ctx).kind, 'planned');
+        },
+    },
+    {
+        name: 'T1 month mode uses the last completed month',
+        fn(assert) {
+            const monthData = mkData({ incomeSources: [{ incomeType: 'variable', paySchedule: 'monthly', grossAnnual: 90000 }] });
+            const rows = [{ id: 'i1', date: '2026-10-01', categoryId: 'income', amountCents: 400000 }, row('2026-10-10', 'rent', 1000),
+                row('2026-10-20', 'groceries', 1000), { id: 'i2', date: '2026-11-02', categoryId: 'income', amountCents: 400000 }, row('2026-11-03', 'rent', 3500)];
+            const r = run(monthData, rows);
+            const f = savingsRateFigure(r.model, r.ctx);
+            assert('mode is month', r.model.cycle.mode, 'month');
+            assert('October, not November so far', [f.kind, f.value, f.from, f.to], ['actual', 50, '2026-10-01', '2026-10-31']);
+            const early = run(monthData, rows.filter((x) => x.date >= '2026-10-02'));
+            assert('history starting after 1 Oct gives planned', savingsRateFigure(early.model, early.ctx).kind, 'planned');
+        },
+    },
+    {
+        name: 'T1 sample household Fire and Smile tiles show the active target and goal progress',
+        fn(assert) {
+            const d = legacySampleFinanceData();
+            const mem = new Map();
+            const storage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)) };
+            const res = runMigrationChain(d, { raw: JSON.stringify(d), source: 'load', storage });
+            assert('chain ran', res.aborted, false);
+            const fire = getBuckets(d, '2026-11-21').find((b) => b.role === 'fire');
+            assert('fire target carries saved and goal', [fire.target.savedCents, fire.target.goalCents], [800000, 1000000]);
+            const { html } = run(d, ROWS_A);
+            const tiles = html.split('class="tile ');
+            const fireTile = tiles.find((x) => x.startsWith('b-fire'));
+            const smileTile = tiles.find((x) => x.startsWith('b-smile'));
+            assert('fire value 8,000', fireTile.includes(cur(800000)), true);
+            assert('fire of goal 80%', fireTile.includes(`of ${formatCurrency(10000, undefined, 0)} · 80%`), true);
+            assert('fire is not 0%', fireTile.includes('· 0%'), false);
+            assert('smile value 1,200', smileTile.includes(cur(120000)), true);
+            assert('smile of goal 30%', smileTile.includes(`of ${formatCurrency(4000, undefined, 0)} · 30%`), true);
         },
     },
     {

@@ -87,7 +87,10 @@ function activeTarget(data, mojoBalanceCents, ladderTarget) {
     if (!targets) return null;
     const st = fireStatus(targets, data.liabilities, { balanceCents: mojoBalanceCents, targetCents: ladderTarget });
     const a = st.targets.find((x) => x.id === st.activeId);
-    return a ? { id: a.id, type: a.type, label: a.label, progress: a.progress } : null;
+    if (!a) return null;
+    const out = { id: a.id, type: a.type, label: a.label, progress: a.progress };
+    if (a.type === 'saver' || a.type === 'home') { out.goalCents = Math.round(num(a.goalCents)); out.savedCents = Math.round(num(a.savedCents)); }
+    return out;
 }
 
 function mojoState(data, living) {
