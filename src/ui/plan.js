@@ -14,6 +14,7 @@ import { openSheet } from './sheet.js';
 import { showUndoToast } from './toast.js';
 import { openIncomeSheet } from './income-layout.js';
 import { mountBuckets } from './plan-buckets.js';
+import { mountReview } from './review.js';
 import { updateDataAndUI } from './render.js';
 import {
     planListsModel, listBodyHtml, payBodyHtml, capsHtml, reviewCardHtml, countText, planItemSheetSpec,
@@ -182,4 +183,5 @@ export function renderPlan(totals) {
     fillLists();
     const mount = document.getElementById('plan-buckets');
     if (mount) mountBuckets(mount);
+    mountReview();
 }
