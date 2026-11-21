@@ -14,7 +14,6 @@ import { initializeSettingsUI } from '../ui/settings-forms.js';
 import { collectParts, buildBackupBundle, prepareBackup, commitBackup, carriesParts } from '../state/backup.js';
 import '../state/scenarios.js'; // F1: registers the scenarios part of the backup bundle
 import { showTab } from '../ui/tabs.js';
-import { updateFinanceDataFromFISettingsInputs } from './settings-events.js';
 
 function downloadText(text, filename, type = 'application/json') {
     const url = URL.createObjectURL(new Blob([text], { type }));
@@ -27,7 +26,6 @@ function downloadText(text, filename, type = 'application/json') {
 
 // D2: one backup holds the settings plus the transactions and events (bundle version 2, state/backup.js).
 export async function actionExportDataJSON() {
-    updateFinanceDataFromFISettingsInputs(); // Ensure FI settings are captured
     const { rows, failed } = await collectParts();
     const bundle = buildBackupBundle({ financeData: store.financeData, guiSettings: store.guiSettingsData, partRows: rows });
     downloadText(JSON.stringify(bundle, null, 2), `finance-data-backup-${new Date().toISOString().slice(0, 10)}.json`);

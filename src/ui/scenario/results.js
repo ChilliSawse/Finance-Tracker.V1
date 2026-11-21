@@ -17,6 +17,7 @@ import { netPerPayCents } from '../../calc/plan.js';
 import { fmtMoney, fmtDate } from './starters.js';
 import { openExplain } from './explain.js';
 import { renderMakeRealBar, renderMakeRealButton } from './make-real.js';
+import { getAnswer } from './answer-top.js';
 
 export const PRESETS = ['everyday', 'goals', 'safety', 'debt', 'decision', 'longRange'];
 export const DEFAULT_PRESET = 'decision';
@@ -112,7 +113,7 @@ function goalValue(g, smilePerPay) {
  * The model behind the cards, the table and the Compare view.
  * @returns {{today, date, now, scen, rows:Array<{id,group,kind,label,better,role,now:{v,text},scen:{v,text},goalId?}>, cards:Array}}
  */
-export function buildResultSet(data, changes, today) {
+export function buildResultSet(data, changes, today, answer = null) {
     const date = scenarioDate(changes, today);
     const now = sideFigures(data, [], today, today);
     const scen = sideFigures(data, changes, today, date);
@@ -167,8 +168,26 @@ export function buildResultSet(data, changes, today) {
     add('fiYears', 'long', 'years', t('f.res.row.fiYears'), 'low', ...[now, scen].map((s) => (s.summary ? val(s.summary.yearsToFI, yearsText(s.summary.yearsToFI)) : val(null, ''))));
     add('fiNumber', 'long', 'money', t('f.res.row.fiNumber'), null, ...both((s) => (s.summary ? toCents(s.summary.fiNumber) : null)));
 
+    if (answer) applyAnswer(set, answer);
     set.cards = buildCards(set);
     return set;
+}
+
+/**
+ * The option picked in F8a's top half (read from `getAnswer`, not recomputed): Splurge drops to what the planner
+ * left it, Smile reaches what the goals need, and take-home rises by the extra earnings. All cents come from F4's plan.
+ */
+function applyAnswer(set, answer) {
+    const { option, plan } = answer;
+    if (!isObj(option) || !isObj(plan)) return;
+    const row = (id) => set.rows.find((r) => r.id === id);
+    const put = (r, c) => { if (r && r.scen.v != null) r.scen = moneyVal(c); };
+    if (plan.gapCents > 0) {
+        put(row('splurge'), option.splurgeLeftCents);
+        put(row('smile'), plan.requiredPerPayCents);
+        const take = row('takeHome');
+        if (take && option.earnedCents > 0) take.scen = moneyVal(take.scen.v + option.earnedCents);
+    }
 }
 
 const CARD_ORDER = ['smile', 'splurge', 'takeHome', 'savingsRate', 'daily', 'fire', 'fiYears'];
@@ -304,6 +323,13 @@ function tableEl(set) {
     return det;
 }
 
+let current = null; // the bottom half on screen, redrawn when F8a's option changes
+if (typeof document !== 'undefined') {
+    document.addEventListener('ft:answer-change', (e) => {
+        if (current && current.container.isConnected && e.detail && current.ctx.scenario.id === e.detail.scenarioId) renderAnswerBottom(current.container, current.ctx);
+    });
+}
+
 /** The part of the Answer under F8a's top: What changes, Show all numbers, and the Make this real bar. */
 export function renderAnswerBottom(container, ctx) {
     container.textContent = '';
@@ -312,7 +338,9 @@ export function renderAnswerBottom(container, ctx) {
         container.appendChild(el('p', 'muted', t('f.res.empty')));
         return;
     }
-    const set = buildResultSet(data, scenario.changes, today);
+    const answer = getAnswer(scenario.id);
+    const set = buildResultSet(data, scenario.changes, today, answer);
+    current = { container, ctx };
     const sec = el('section', 'res-sec');
     sec.setAttribute('aria-labelledby', 'res-wc-h');
     const head = el('div', 'sec-head');
@@ -339,8 +367,8 @@ export { renderMakeRealButton };
 if (typeof document !== 'undefined') {
     import('./index.js').then(async (m) => {
         const { renderCompare } = await import('./compare.js');
-        m.registerScenarioView('answer', renderAnswerBottom, { order: 200 });
-        m.registerScenarioView('compare', renderCompare, { order: 200 });
-        m.registerScenarioView('make-real', renderMakeRealButton, { order: 200 });
+        m.registerScenarioView('answer', renderAnswerBottom, { order: 10 });
+        m.registerScenarioView('compare', renderCompare);
+        m.registerScenarioView('make-real', renderMakeRealButton);
     }).catch((err) => console.error('What If result views could not be registered', err));
 }

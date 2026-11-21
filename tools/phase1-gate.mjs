@@ -81,7 +81,9 @@ try {
         for (const m of git('show', `pre-phase1:${f}`).matchAll(KEY)) oldKeys.add(m[1]);
     }
     const nowText = jsFiles.map(read).join('\n');
-    for (const k of oldKeys) if (!nowText.includes(k)) fail(`storage key ${k} from pre-phase1 is missing from src/`);
+    // 'ft-dismiss' was a DOM event name inside inlineConfirm (deleted by A12b), never a storage key.
+    const NOT_STORAGE = new Set(['ft-dismiss']);
+    for (const k of oldKeys) if (!NOT_STORAGE.has(k) && !nowText.includes(k)) fail(`storage key ${k} from pre-phase1 is missing from src/`);
 } catch (err) {
     fail(`could not read storage keys at pre-phase1: ${err.message.split('\n')[0]}`);
 }

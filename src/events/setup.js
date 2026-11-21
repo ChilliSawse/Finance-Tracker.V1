@@ -1,10 +1,6 @@
 // Top-level event wiring (from events.js setupEventListeners).
 
-import { store } from '../state/store.js';
-import { getElement } from '../utils.js';
 import { showTab } from '../ui/tabs.js';
-import { updateDataAndUI } from '../ui/render.js';
-import { handleSettingsClickEvents, handleSettingsChangeEvents } from './settings-events.js';
 import { openQuickAdd } from '../ui/quick-add.js';
 import { openSettings } from '../ui/settings-screen.js';
 
@@ -50,23 +46,4 @@ export function setupEventListeners() {
         if (event.target.closest('[data-quick-add]')) { event.preventDefault(); openQuickAdd(); return; }
         if (event.target.closest('[data-open-settings]')) openSettings();
     });
-
-    // Dashboard view period change
-    const dashboardViewPeriodSelect = getElement('dashboard-view-period');
-    if (dashboardViewPeriodSelect) {
-        dashboardViewPeriodSelect.addEventListener('change', (event) => {
-            store.financeData.dashboardViewPeriod = event.target.value;
-            updateDataAndUI();
-        });
-    }
-
-    // Settings dynamic lists (Income, Tax Brackets, Assets, Liabilities, Allocation, Expenses).
-    // Phase D — delegated at the document level because these sections live in per-page
-    // settings modals (body-level). Both handlers are fully guarded — they only act on
-    // elements carrying the settings add-button ids, a `.delete-btn` with a settings
-    // `data-type`, or a `data-field` + whitelisted `data-collection` — so What If / GUI
-    // inputs are never matched.
-    document.addEventListener('click', handleSettingsClickEvents);
-    document.addEventListener('change', handleSettingsChangeEvents);
-
 }

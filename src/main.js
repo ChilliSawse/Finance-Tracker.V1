@@ -23,13 +23,10 @@ import './ui/settings.css'; // D2 — Settings screen
 import { setupEventListeners } from './events/setup.js';
 import { updateAllUI } from './ui/render.js';
 import {
-    restoreActiveTab, renderScopeLine, setupTabKeyboardNav, setupCardLinks,
-    setupDashboardEmptyActions, setupExpenseSearch,
+    restoreActiveTab, renderScopeLine, setupTabKeyboardNav,
 } from './ui/tabs.js';
-import { setupPageSettingsModals } from './ui/modals.js';
 import { setupImport } from './import/import-ui.js';
 import { setupPdfImport } from './import/pdf-ui.js';
-import { setupIncomeStatement } from './ui/income-statement.js';
 import { rollForwardBills, generateBillDueEvents } from './state/bills.js';
 import { refreshSpendCache } from './state/spend-cache.js';
 import { setupOnboarding } from './ui/onboarding.js';
@@ -43,6 +40,8 @@ import './ui/help.css'; // A11 — the "?" button and help sheet
 import './ui/scenario/scenario.css'; // F7 — What If shell
 import './ui/scenario/results.css'; // F8b — What If results, Compare, Make this real
 import './ui/scenario/results.js'; // F8b — registers the Answer bottom, Compare and Make this real views
+import './ui/scenario/answer-top.css'; // F8a — What If Answer, top half
+import './ui/scenario/answer-top.js'; // F8a — registers the Answer view
 import { mountHelpButtons } from './ui/help.js';
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
@@ -69,13 +68,8 @@ function boot() {
 
     setupPwaInstallListeners();
     setupTabKeyboardNav();
-    setupPageSettingsModals(); // Phase D — per-page settings modals
     setupImport(); // Ledger — bank CSV import (Tools)
     setupPdfImport(); // Variable income — bank PDF import + payslip autofill (Tools)
-    setupIncomeStatement(); // Variable income — printable statement (income modal)
-    setupDashboardEmptyActions(); // F.1 — welcome empty-state action cards
-    setupCardLinks(); // F.2 — dashboard cards link to their tab
-    setupExpenseSearch(); // H.2 — expense name filter
     mountHelpButtons(); // A11 — one "?" per screen
 
     updateAllUI();

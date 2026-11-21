@@ -19,6 +19,7 @@ import { calculateTotals } from '../calc/calculations.js';
 import { getCycle, addDays, addMonthsClamped, toIso, parseIso } from '../calc/pay-cycle.js';
 import { taxTablesStatus, taxYearKeyForDate } from '../calc/tax-tables/index.js';
 import { acceptPayslipJob } from '../state/income-migration.js';
+import { deleteIncomeSourceFlow } from './income-other.js';
 
 /** Legal minimum super shown when nothing is stored yet (a rate, not a payslip figure). */
 export const DEFAULT_SUPER_PCT = 12;
@@ -356,6 +357,8 @@ export function openIncomeSheet(index, opts = {}) {
             await persist();
             if (typeof opts.onSaved === 'function') opts.onSaved(source);
         },
+        // A12b: delete with Undo; the last source is refused (the old guard, now a toast).
+        onDelete: () => { deleteIncomeSourceFlow(index); },
     });
     decorate(handle, { index, layout, source, data, initial, today });
     return true;

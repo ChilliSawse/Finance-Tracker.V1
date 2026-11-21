@@ -102,6 +102,7 @@ export function buildSettings(ctx = {}) {
         g('tax', [
             { id: 'currency', kind: 'currency', label: t('d.settings.currency'), hint: t('d.settings.currency.hint'), search: 'money aud dollars region' },
             { id: 'taxtables', kind: 'info', label: tax.title, hint: tax.detail, value: tax.statusLabel, status: tax.status, search: 'tax year ato rates withholding medicare help' },
+            { id: 'taxdetails', kind: 'action', label: t('a12b.tax.title'), hint: t('a12b.tax.helpHint'), search: 'medicare levy help balance hecs estimate' },
         ]),
         g('setup', [
             { id: 'setup', kind: 'action', label: t('d.settings.setup'), hint: t('d.settings.setup.hint'), search: 'wizard start again onboarding quiz' },

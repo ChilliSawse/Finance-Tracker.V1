@@ -63,7 +63,7 @@ export function debtStepValues(spec, row) {
 async function rerender() {
     const m = await import('./index.js');
     const { renderMakeRealButton } = await import('./make-real.js');
-    m.registerScenarioView('make-real', renderMakeRealButton, { order: 200 }); // already registered: only repaints
+    m.registerScenarioView('make-real', renderMakeRealButton); // already registered: replaced, so it only repaints
 }
 
 async function afterChange() {

@@ -34,6 +34,7 @@ import { FI_TEST_CASES } from './calc/fi.test-cases.js';
 import { GOAL_PLANNER_TEST_CASES } from './calc/goal-planner.test-cases.js';
 import { SCENARIO_UI_TEST_CASES } from './ui/scenario-ui.test-cases.js';
 import { SCENARIO_RESULTS_TEST_CASES } from './ui/scenario-results.test-cases.js';
+import { SCENARIO_ANSWER_TOP_TEST_CASES } from './ui/scenario/answer-top.test-cases.js';
 import { SANITIZE_TEST_CASES } from './state/sanitize.test-cases.js';
 import { HTML_TEST_CASES } from './ui/html.test-cases.js';
 import { ACTIVITY_TEST_CASES } from './ui/activity.test-cases.js';
@@ -50,6 +51,7 @@ import { REVIEW_TEST_CASES } from './ui/review.test-cases.js';
 import { PWA_TEST_CASES } from './pwa.test-cases.js';
 import { ACCEPT_TEST_CASES, ACCEPT_XLSX_TEST_CASES } from './import/accept.test-cases.js';
 import { BUCKET_METHOD_TEST_CASES } from './ui/bucket-method.test-cases.js';
+import { INCOME_OTHER_TEST_CASES } from './ui/income-other.test-cases.js';
 
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
@@ -85,6 +87,7 @@ export const TEST_GROUPS = [
     { name: 'goal-planner', env: 'pure', cases: GOAL_PLANNER_TEST_CASES },
     { name: 'scenario-ui', env: 'pure', cases: SCENARIO_UI_TEST_CASES },
     { name: 'scenario-results', env: 'pure', cases: SCENARIO_RESULTS_TEST_CASES },
+    { name: 'scenario-answer-top', env: 'pure', cases: SCENARIO_ANSWER_TOP_TEST_CASES }, // F8a
     { name: 'sanitize', env: 'pure', cases: SANITIZE_TEST_CASES },
     { name: 'html', env: 'pure', cases: HTML_TEST_CASES },
     { name: 'activity', env: 'pure', cases: ACTIVITY_TEST_CASES },
@@ -101,4 +104,5 @@ export const TEST_GROUPS = [
     { name: 'accept', env: 'pure', cases: ACCEPT_TEST_CASES },
     { name: 'accept-xlsx', env: 'browser', cases: ACCEPT_XLSX_TEST_CASES },
     { name: 'bucket-method', env: 'pure', cases: BUCKET_METHOD_TEST_CASES },
+    { name: 'income-other', env: 'pure', cases: INCOME_OTHER_TEST_CASES },
 ];

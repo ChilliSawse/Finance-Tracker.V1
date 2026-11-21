@@ -11,6 +11,7 @@ import { netPerPayCents } from '../../calc/plan.js';
 import { nextPayDates, parseIso } from '../../calc/pay-cycle.js';
 import { getPayCyclesPerYear } from '../../utils.js';
 import { layoutFor, openIncomeSheet } from '../income-layout.js';
+import { openOtherIncomeSheet } from '../income-other.js';
 import { needsLaterLayout } from './quiz.js';
 import { shortDate } from '../plan-lists.js';
 import { registerSetupStep, STEP_ORDER } from './registry.js';
@@ -50,15 +51,14 @@ export function payReadout(data, today) {
 
 function afterClose(ctx, kind) {
     if (typeof MutationObserver === 'undefined') return;
-    const modal = document.getElementById('income-settings-modal');
-    const gone = () => (kind === 'modal' ? !modal || modal.hidden : !document.querySelector('.sheet-layer'));
-    const target = kind === 'modal' && modal ? modal : document.body;
+    const gone = () => !document.querySelector('.sheet-layer');
+    const target = document.body;
     const obs = new MutationObserver(() => {
         if (!gone()) return;
         obs.disconnect();
         ctx.refresh();
     });
-    obs.observe(target, kind === 'modal' ? { attributes: true, attributeFilter: ['hidden'] } : { childList: true, subtree: true });
+    obs.observe(target, { childList: true, subtree: true });
 }
 
 function openPay(ctx, i) {
@@ -70,8 +70,7 @@ function openPay(ctx, i) {
         try { opened = openIncomeSheet(i, { layout }) !== false; } catch (err) { console.error('income sheet failed', err); }
         if (opened) { afterClose(ctx, 'sheet'); return; }
     }
-    const legacy = document.getElementById('open-income-settings');
-    if (legacy) { legacy.click(); afterClose(ctx, 'modal'); }
+    if (openOtherIncomeSheet(i)) afterClose(ctx, 'sheet');
 }
 
 // ---------- layout step ----------

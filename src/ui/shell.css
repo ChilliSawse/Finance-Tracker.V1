@@ -5,10 +5,9 @@
 /* keep the app above the decorative background-effect canvas (z-index 0) */
 .app { position: relative; z-index: 1; }
 
-/* screens: only the active one shows; legacy panels inside a screen always show */
+/* screens: only the active one shows */
 .screen { display: none; }
 .screen.active { display: block; }
-.legacy-panel { display: block; }
 .title-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* sidebar nav (buttons, not links) */
