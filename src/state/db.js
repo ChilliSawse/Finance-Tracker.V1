@@ -9,7 +9,8 @@
 // financeData keeps its existing plain-dollar convention. Don't mix them up.
 
 const DEFAULT_DB_NAME = 'ledger-db';
-const DB_VERSION = 1;
+// Version 2 (F1): adds the scenarios store. Each store is guarded by objectStoreNames.contains, so an upgrade only adds what is missing.
+const DB_VERSION = 2;
 
 let dbName = DEFAULT_DB_NAME;
 let dbPromise = null;
@@ -43,6 +44,11 @@ export function openDb() {
                 // seq (not ts): ISO timestamps collide within a millisecond, which made
                 // ordering nondeterministic when one action logs several events.
                 s.createIndex('seq', 'seq');
+            }
+            if (!db.objectStoreNames.contains('scenarios')) {
+                const s = db.createObjectStore('scenarios', { keyPath: 'id' });
+                s.createIndex('pinned', 'pinned');
+                s.createIndex('updatedAt', 'updatedAt');
             }
         };
         req.onsuccess = () => {

@@ -534,6 +534,7 @@ export async function eraseAllData() {
         title: t('d.erase.title'), body: t('d.erase.body'), confirmLabel: t('d.erase.confirm'), danger: true,
     });
     if (!yes) return false;
+    await import('../state/scenarios.js'); // F1: registers the scenarios part, so erase-all clears it
     const { commitErase, RETIRED_KEYS } = await import('../state/backup.js');
     const result = await commitErase(store, {
         financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings(),

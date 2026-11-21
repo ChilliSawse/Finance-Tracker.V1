@@ -28,7 +28,7 @@ const MAX_DEPTH = 8;
 
 // Deep clean of one value from a file: prototype keys stripped, numbers finite and bounded,
 // strings capped, functions and symbols dropped. Strings are not escaped (render time does that).
-function cleanValue(v, depth) {
+export function cleanValue(v, depth) {
     if (v === null) return null;
     switch (typeof v) {
         case 'string': return v.length > MAX_STRING_LENGTH ? v.slice(0, MAX_STRING_LENGTH) : v;

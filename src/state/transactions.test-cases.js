@@ -140,7 +140,8 @@ export const TRANSACTIONS_TEST_CASES = [
         async fn(assert) {
             await fresh();
             const db = await openDb();
-            assert('db version stays 1', db.version, 1);
+            // B2 added no store (it stayed at 1); F1 then added the scenarios store, so the version is now 2 and no more than that.
+            assert('db version is 2 (F1 added scenarios, nothing else)', db.version, 2);
             await deleteDb();
         },
     },

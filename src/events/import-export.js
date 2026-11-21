@@ -12,6 +12,7 @@ import {
 import { updateDataAndUI } from '../ui/render.js';
 import { initializeSettingsUI } from '../ui/settings-forms.js';
 import { collectParts, buildBackupBundle, prepareBackup, commitBackup, carriesParts } from '../state/backup.js';
+import '../state/scenarios.js'; // F1: registers the scenarios part of the backup bundle
 import { showTab } from '../ui/tabs.js';
 import { updateFinanceDataFromFISettingsInputs } from './settings-events.js';
 
