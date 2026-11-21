@@ -44,6 +44,7 @@ import { PLAN_LISTS_TEST_CASES } from './ui/plan-lists.test-cases.js';
 import { BUCKET_SHEETS_TEST_CASES } from './ui/bucket-sheets.test-cases.js';
 import { PLAN_BUCKETS_TEST_CASES } from './ui/plan-buckets.test-cases.js';
 import { REVIEW_TEST_CASES } from './ui/review.test-cases.js';
+import { BUCKET_METHOD_TEST_CASES } from './ui/bucket-method.test-cases.js';
 
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
@@ -88,4 +89,5 @@ export const TEST_GROUPS = [
     { name: 'plan-lists', env: 'pure', cases: PLAN_LISTS_TEST_CASES },
     { name: 'plan-buckets', env: 'pure', cases: PLAN_BUCKETS_TEST_CASES },
     { name: 'review', env: 'pure', cases: REVIEW_TEST_CASES },
+    { name: 'bucket-method', env: 'pure', cases: BUCKET_METHOD_TEST_CASES },
 ];

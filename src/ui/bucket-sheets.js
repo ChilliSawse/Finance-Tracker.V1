@@ -8,7 +8,7 @@ import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
 import {
     getBuckets, setSplit, renameBucket, addBucket, deleteBucketWithMove, addGoal, updateGoal, removeGoal,
-    forkOwnTemplate, switchBackToBase, setMojo, addMojoStep, addTarget,
+    forkOwnTemplate, switchBackToBase, setMojo, addMojoStep, addTarget, updateTarget, removeTarget,
 } from '../state/saving-model.js';
 import { BUCKET_METHOD, suggestSplit, buildTree, bucketBalanceCents, canReturnToBase } from '../calc/saving-model.js';
 import { smilePlan } from '../calc/smile.js';
@@ -449,6 +449,33 @@ function openMojo(d) {
     return true;
 }
 
+/** The Add-a-target form, pre-filled from a saver target; null for a target that is gone or fixed (Mojo, Home, Super, debts). */
+export function targetSheetSpec(data, id) {
+    const ts = (data && data.savingModel && data.savingModel.fire && data.savingModel.fire.targets) || [];
+    const tg = ts.find((x) => x && x.id === id);
+    if (!tg || tg.type !== 'saver') return null;
+    return {
+        fields: [{ key: 'label', label: t('e.plan.addTargetLabel'), type: 'text', required: true }, { key: 'goalCents', label: t('e.plan.addTargetGoal'), type: 'money', unit: 'cents' }],
+        values: { label: tg.label || '', goalCents: num(tg.goalCents) > 0 ? tg.goalCents : null },
+    };
+}
+
+/** Save the edit sheet: the same two fields as the add sheet, through the state API (undo comes back with it). */
+export function applyTargetEdit(data, id, v) {
+    return updateTarget(data, id, { label: v.label, goalCents: v.goalCents || 0 });
+}
+
+function openTargetEdit(d, id) {
+    const spec = targetSheetSpec(d, id);
+    if (!spec) return false;
+    openSheet({
+        title: t('e.sheet.targetEditTitle'), fields: spec.fields, values: spec.values,
+        onSave: (v) => finish(applyTargetEdit(d, id, v), t('e.sheet.failed')),
+        onDelete: () => { finish(removeTarget(d, id)); },
+    });
+    return true;
+}
+
 function openTarget(d, kind) {
     if (kind === 'target-debt') {
         const used = new Set(((d.savingModel && d.savingModel.fire && d.savingModel.fire.targets) || []).filter((x) => x && x.type === 'debt').map((x) => String(x.liabilityId)));
@@ -472,7 +499,7 @@ function openTarget(d, kind) {
 
 /**
  * Open a bucket sheet. kind: split | template | bucket (id) | bucket-new | bucket-delete (id) | goal (id)
- * | goal-new (id = the parent bucket or goal, Smile when null) | mojo | target-pot | target-debt.
+ * | goal-new (id = the parent bucket or goal, Smile when null) | mojo | target-pot | target-debt | target-edit (id = the target).
  * @returns {boolean} true once a sheet (or its confirm) is on its way; false when the kind or id is not known.
  */
 export function openBucketSheet(kind, id) {
@@ -491,6 +518,7 @@ export function openBucketSheet(kind, id) {
         }
         case 'mojo': return openMojo(d);
         case 'target-pot': case 'target-debt': return openTarget(d, kind);
+        case 'target-edit': return id ? openTargetEdit(d, id) : false;
         default: return false;
     }
 }

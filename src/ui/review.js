@@ -5,7 +5,7 @@
 //
 // Shape: reviewModel / reviewHtml are pure (no DOM); openReview, mountReview and mountReviewCard wire them to the page.
 // Two state paths differ from the E3 file (see docs/phase1-changelog/E9.md): the real home of the "last opened" marker
-// and of bankSetTo is data.savingModel.review and data.savingModel.transfers.bankSetTo, so this file reads those.
+// and of bankSetTo is data.savingModel.review and data.savingModel.transfers.bankSetTo; calc/review.js reads those paths.
 
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
@@ -13,8 +13,6 @@ import { getSpendCache } from '../state/spend-cache.js';
 import { monthlySpendByCategory } from '../state/transactions.js';
 import { getBuckets } from '../state/saving-model.js';
 import { buildMonthlyReview, reviewDue, previousMonth, inMonth } from '../calc/review.js';
-import { transfersToUpdate } from '../calc/smile.js';
-import { netPerPayCents } from '../calc/plan.js';
 import { formatCurrency } from '../utils.js';
 import { esc, escNum } from './html.js';
 
@@ -57,11 +55,9 @@ export function monthOptions(today, count = 12) {
 
 // ---------- state ----------
 
-/** The marker lives at savingModel.review; E3's reviewDue reads data.review, so hand it that view. */
+/** The marker lives at savingModel.review; calc/review.js reads that path itself. */
 export function reviewDueFor(data, today, opts) {
-    const sm = (data && data.savingModel) || {};
-    const view = { savingModel: sm, review: isObj(sm.review) ? sm.review : (data && data.review) || null };
-    return reviewDue(view, today, opts);
+    return reviewDue(data, today, opts);
 }
 
 /** Opening a month sets savingModel.review.lastOpenedMonth. It only moves forward. Returns true when it changed. */
@@ -83,14 +79,10 @@ export function markReviewOpened(data, month) {
  */
 export function reviewModel(data, month, spend, today) {
     const d = data || {};
-    const sm = d.savingModel || {};
     const base = buildMonthlyReview({ data: d, month, spendByCategory: spend, today });
     const buckets = getBuckets(d, today);
     const slotOfId = new Map(buckets.map((b) => [String(b.id), b]));
-    let net = 0;
-    try { net = Math.max(0, netPerPayCents(d)); } catch (e) { net = 0; }
-    const transfers = transfersToUpdate({ allocation: d.allocation, netCents: net,
-        bankSetTo: (isObj(sm.transfers) && sm.transfers.bankSetTo) || sm.bankSetTo }).map((r) => {
+    const transfers = base.transfers.map((r) => {
         const b = slotOfId.get(String(r.bucketId));
         return { ...r, slot: b ? b.slot : 1, shade: b ? b.shade : 0 };
     });

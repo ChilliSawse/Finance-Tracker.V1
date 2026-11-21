@@ -516,6 +516,26 @@ export function addTarget(data, fields = {}) {
     return done(data, before, t('e.fire.added', { name: target.label }), { item: target, index: at });
 }
 
+/**
+ * Edit a target you added, in place (its position and skip flag stay). Only a saver pot (the ones the Remove link is on) takes {label, goalCents}; the other targets are fixed. One undo puts the list back.
+ */
+export function updateTarget(data, id, fields = {}) {
+    const ts = fireTargets(data);
+    const i = ts ? ts.findIndex((x) => x && x.id === id) : -1;
+    if (i < 0) return failed('missing');
+    const tg = ts[i];
+    if (tg.type === 'saver') {
+        const label = typeof fields.label === 'string' ? fields.label.trim() : tg.label;
+        if (!label) return failed('name');
+        const before = snapshot(data, ['savingModel']);
+        tg.label = label;
+        if (fields.goalCents !== undefined) tg.goalCents = Math.max(0, Math.round(num(fields.goalCents)));
+        refreshStates(data);
+        return done(data, before, t('e.fire.updated', { name: label }), { item: tg, index: i });
+    }
+    return failed('fixed');
+}
+
 /** Remove a target you added (a saver pot or a debt). Saved money goes back into the Fire bucket. */
 export function removeTarget(data, id) {
     const ts = fireTargets(data);
