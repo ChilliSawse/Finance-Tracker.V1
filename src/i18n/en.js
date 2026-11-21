@@ -95,6 +95,7 @@ export const en = {
     'import.commit': 'Import {count} {txnWord}',
     'import.commit.empty': 'Import',
     'import.emptyFile': 'That file looks empty — is it the right CSV export?',
+    'import.xlsxFailed': "Could not read this workbook. Export it as CSV from your bank or Excel and import that instead.",
     'import.readFailed': "Couldn't read that file. Try exporting it from your bank again.",
     'import.saveFailed': 'Saving failed: {message}. Nothing was imported.',
     'import.success.title': 'Done — {count} {txnWord} imported.{dupNote}',

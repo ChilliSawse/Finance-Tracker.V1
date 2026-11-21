@@ -205,35 +205,52 @@ function renderPreview() {
 }
 
 // ---- file intake ----
+function showImportError(key) {
+    setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${escapeHtml(t(key))}</p></div>`);
+}
+
+function startDraft(rows, errors, file) {
+    if (!rows.length) { showImportError('import.emptyFile'); return; }
+    draft = { rows, parseErrors: errors, fileName: file.name, normalised: [] };
+    setHTML('import-result', '');
+    getElement('import-drop').hidden = true;
+    getElement('import-config').hidden = false;
+
+    const detected = detectColumns(rows);
+    const signature = mappingSignature(rows, detected.headerRow);
+    draft.signature = signature;
+    const saved = signature ? readSavedMappings()[signature] : null;
+    populateConfigForm(detected, saved);
+
+    const nameInput = getElement('import-source-name');
+    if (nameInput && !nameInput.value) {
+        nameInput.value = (saved && saved.sourceName) || file.name.replace(/\.(csv|xlsx)$/i, '').slice(0, 40);
+    }
+    renderPreview();
+}
+
+const isXlsx = (file) => /\.xlsx$/i.test(file.name || '') || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+async function handleXlsx(file) {
+    try {
+        const { readXlsx } = await import('./xlsx.js');
+        const { rows } = await readXlsx(await file.arrayBuffer());
+        startDraft(rows, [], file);
+    } catch (_err) {
+        // Every failure (corrupt, password-protected, too big, unsafe) gets the same clear message.
+        showImportError('import.xlsxFailed');
+    }
+}
+
 function handleFile(file) {
     if (!file) return;
+    if (isXlsx(file)) { handleXlsx(file); return; }
     const reader = new FileReader();
     reader.onload = (e) => {
         const { rows, errors } = parseCsv(String(e.target.result || ''));
-        if (!rows.length) {
-            setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.emptyFile')}</p></div>`);
-            return;
-        }
-        draft = { rows, parseErrors: errors, fileName: file.name, normalised: [] };
-        setHTML('import-result', '');
-        getElement('import-drop').hidden = true;
-        getElement('import-config').hidden = false;
-
-        const detected = detectColumns(rows);
-        const signature = mappingSignature(rows, detected.headerRow);
-        draft.signature = signature;
-        const saved = signature ? readSavedMappings()[signature] : null;
-        populateConfigForm(detected, saved);
-
-        const nameInput = getElement('import-source-name');
-        if (nameInput && !nameInput.value) {
-            nameInput.value = (saved && saved.sourceName) || file.name.replace(/\.csv$/i, '').slice(0, 40);
-        }
-        renderPreview();
+        startDraft(rows, errors, file);
     };
-    reader.onerror = () => {
-        setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.readFailed')}</p></div>`);
-    };
+    reader.onerror = () => showImportError('import.readFailed');
     reader.readAsText(file);
 }
 
