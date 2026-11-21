@@ -25,6 +25,8 @@ const FIELD_LABELS = {
     net: [/take[- ]home pay/i, /net pay(ment)?s?\b/i, /net income/i, /net earnings/i, /amount paid to bank/i, /\bnet\b(?!.*ytd)/i],
     tax: [/payg\s*(w\/?h|withholding|tax)?/i, /tax withheld/i, /income tax/i, /less tax/i, /taxation/i, /\btax\b/i],
     gross: [/total gross/i, /gross (pay|earnings|income|salary)/i, /\bgross\b/i],
+    // HELP / study-loan repayment printed on its own row (C5, X-13).
+    help: [/\bhelp\b(?!\s*desk)/i, /study (and training support )?loan/i, /\bstsl\b|\bhecs\b|student loan/i],
     super: [/super(annuation)? guarantee/i, /employer super(annuation)? contribution/i, /\bsgc\b/i, /super(annuation)?\b/i],
 };
 
@@ -50,7 +52,7 @@ function amountsOnLine(text) {
 /**
  * Extract pay figures from payslip text lines.
  * @param {string[]} lines - one string per visual line (top to bottom).
- * @returns {{net: ?number, tax: ?number, gross: ?number, super: ?number,
+ * @returns {{net: ?number, tax: ?number, gross: ?number, super: ?number, help: ?number, grossDerived: boolean,
  *            schedule: ?string, provider: ?string}}
  */
 export function parsePayslipLines(lines) {
@@ -62,7 +64,7 @@ export function parsePayslipLines(lines) {
         if (hint.re.test(joined)) { schedule = hint.schedule; break; }
     }
 
-    const result = { net: null, tax: null, gross: null, super: null, schedule, provider: provider ? provider.name : null };
+    const result = { net: null, tax: null, gross: null, super: null, help: null, grossDerived: false, schedule, provider: provider ? provider.name : null };
 
     // Pass per field: first label-regex (most specific) that lands on a line
     // with an amount wins; within the line, the first amount is "this pay".
@@ -91,6 +93,8 @@ export function parsePayslipLines(lines) {
     // Derive what's missing when two of the trio are present.
     if (result.gross == null && result.net != null && result.tax != null) {
         result.gross = result.net + result.tax;
+        // Estimated, not read from the slip: callers must show it before it replaces a stored gross.
+        result.grossDerived = true;
     } else if (result.tax == null && result.net != null && result.gross != null) {
         result.tax = Math.max(0, result.gross - result.net);
     }
