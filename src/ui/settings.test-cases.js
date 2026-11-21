@@ -4,6 +4,7 @@
 import {
     buildBackupBundle, collectParts, prepareBackup, commitBackup, commitErase, registerBackupPart,
     sanitizeTransactionRows, sanitizeEventRows, BACKUP_PARTS, BACKUP_VERSION, carriesParts,
+    PRE_RESTORE_PARTS_KEY, undoLastRestore,
 } from '../state/backup.js';
 import { PRE_RESTORE_KEY } from '../state/sanitize.js';
 import { cloneDefaultFinanceData, cloneDefaultGuiSettings } from '../state/defaults.js';
@@ -34,7 +35,11 @@ function fakeParts(initial = {}, { failReplaceOn } = {}) {
             data[key] = rows.map((r) => ({ ...r }));
         },
     });
-    return { data, parts: [mk('transactions', sanitizeTransactionRows), mk('events', sanitizeEventRows)] };
+    const parts = [mk('transactions', sanitizeTransactionRows), mk('events', sanitizeEventRows)];
+    if (initial.scenarios) { // S8: a third part, like F1's scenarios
+        parts.push(mk('scenarios', (rows) => ({ rows: Array.isArray(rows) ? rows : [], skipped: 0 })));
+    }
+    return { data, parts };
 }
 
 const TXNS = [
@@ -163,6 +168,80 @@ export const SETTINGS_TEST_CASES = [
             assert('ok', res.ok, true);
             assert('rows cleared, settings fresh', [dest.data.transactions, dest.data.events, store.financeData.marker], [[], [], undefined]);
             assert('settings copy kept first', st.map.get(PRE_RESTORE_KEY), '{"mine":1}');
+        },
+    },
+    {
+        name: 'S8.1 the safety copy is taken first and covers settings, transactions, events and scenarios',
+        async fn(assert) {
+            const SCEN = [{ id: 's1', name: 'Scenario' }];
+            const dest = fakeParts({ transactions: TXNS, events: EVENTS, scenarios: SCEN });
+            const seenAtFirstReplace = {};
+            const st = memStorage({ financeTrackerData_v2: JSON.stringify({ financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings() }) });
+            dest.parts.forEach((p) => {
+                const orig = p.replace;
+                p.replace = async (rows) => { seenAtFirstReplace[p.key] = st.map.has(PRE_RESTORE_PARTS_KEY) && st.map.has(PRE_RESTORE_KEY); return orig(rows); };
+            });
+            const text = JSON.stringify(buildBackupBundle({
+                financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings(), partRows: { transactions: [], events: [], scenarios: [] },
+            }));
+            const res = await commitBackup(fakeStore(), prepareBackup(text, dest.parts), { storage: st, render: () => {}, save: () => {}, parts: dest.parts });
+            assert('ok, rows replaced', [res.ok, dest.data.transactions, dest.data.scenarios], [true, [], []]);
+            assert('copy existed before each replace', seenAtFirstReplace, { transactions: true, events: true, scenarios: true });
+            const kept = JSON.parse(st.map.get(PRE_RESTORE_PARTS_KEY));
+            assert('copy holds every part', kept.parts, { transactions: TXNS, events: EVENTS, scenarios: SCEN });
+            // the undo path brings the rows back too
+            const undone = await undoLastRestore(fakeStore(), { storage: st, render: () => {}, save: () => {}, parts: dest.parts });
+            assert('undo ok, rows back', [undone.ok, dest.data.transactions, dest.data.events, dest.data.scenarios], [true, TXNS, EVENTS, SCEN]);
+            assert('no copy means no undo', (await undoLastRestore(fakeStore(), { storage: memStorage(), parts: dest.parts })).error, 'noCopy');
+        },
+    },
+    {
+        name: 'S8.2 a copy that cannot be stored (quota) aborts the restore with nothing changed',
+        async fn(assert) {
+            const SCEN = [{ id: 's1', name: 'Scenario' }];
+            const quota = (failKey) => {
+                const st = memStorage({ financeTrackerData_v2: '{"mine":1}' });
+                st.setItem = (k) => { if (k === failKey) throw new Error('QuotaExceededError'); };
+                return st;
+            };
+            const text = JSON.stringify(buildBackupBundle({
+                financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings(), partRows: { transactions: [], events: [], scenarios: [] },
+            }));
+            for (const failKey of [PRE_RESTORE_PARTS_KEY, PRE_RESTORE_KEY]) {
+                const dest = fakeParts({ transactions: TXNS, events: EVENTS, scenarios: SCEN });
+                const store = fakeStore();
+                const snap = JSON.stringify(store);
+                let rendered = 0;
+                const res = await commitBackup(store, prepareBackup(text, dest.parts), { storage: quota(failKey), render: () => { rendered++; }, save: () => {}, parts: dest.parts });
+                assert('refused (' + failKey + ')', [res.ok, res.error], [false, 'cantKeepCopy']);
+                assert('nothing changed (' + failKey + ')', [dest.data.transactions, dest.data.events, dest.data.scenarios, JSON.stringify(store), rendered], [TXNS, EVENTS, SCEN, snap, 0]);
+            }
+        },
+    },
+    {
+        name: 'S8.3 a failure part-way leaves the device as it was, and says so when it cannot put rows back',
+        async fn(assert) {
+            const SCEN = [{ id: 's1', name: 'Scenario' }];
+            const text = JSON.stringify(buildBackupBundle({
+                financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings(), partRows: { transactions: [], events: [], scenarios: [] },
+            }));
+            // third part fails to write: the first two are put back
+            const dest = fakeParts({ transactions: TXNS, events: EVENTS, scenarios: SCEN });
+            const base = dest.parts[0];
+            const bad = { key: 'scenarios', read: async () => SCEN.map((r) => ({ ...r })), sanitize: (r) => ({ rows: r, skipped: 0 }), replace: async () => { throw new Error('boom'); } };
+            const parts = [...dest.parts.slice(0, 2), bad];
+            const store = fakeStore();
+            const snap = JSON.stringify(store);
+            const res = await commitBackup(store, prepareBackup(text, parts), { storage: memStorage(), render: () => {}, save: () => {}, parts });
+            assert('failed, device unchanged', [res.ok, res.error, dest.data.transactions, dest.data.events, JSON.stringify(store)], [false, 'cantWrite', TXNS, EVENTS, snap]);
+            assert('the failing part was retried, not reported as stuck here', Array.isArray(res.notPutBack), true);
+            // render fails after the rows were swapped: rows and settings are back
+            const d2 = fakeParts({ transactions: TXNS, events: EVENTS });
+            const s2 = fakeStore();
+            const snap2 = JSON.stringify(s2);
+            const r2 = await commitBackup(s2, prepareBackup(text, d2.parts), { storage: memStorage(), render: () => { throw new Error('render boom'); }, save: () => {}, parts: d2.parts });
+            assert('render failure restores everything', [r2.ok, d2.data.transactions, d2.data.events, JSON.stringify(s2)], [false, TXNS, EVENTS, snap2]);
+            assert('base part unused', !!base, true);
         },
     },
     {
