@@ -6,6 +6,8 @@ import { store } from './store.js';
 import { cloneDefaultFinanceData, cloneDefaultGuiSettings } from './defaults.js';
 import { runMigrationChain } from './migration-chain.js';
 import { migrateGuiAppearance } from '../theme/theme.js';
+import { showToast } from '../ui/toast.js';
+import { t } from '../i18n/strings.js';
 import { SAVE_KEY, sanitizeFinanceData, sanitizeGuiSettings, quarantineCorruptSave } from './sanitize.js';
 
 export class FinanceAutoSave {
@@ -101,18 +103,16 @@ export class FinanceAutoSave {
             };
             localStorage.setItem('financeTrackerData_v2', JSON.stringify(combinedData));
             this.lastSaveHash = this.getDataHash(); // Update hash after successful save
+            this._quotaWarned = false; // saving works again, so a later full-storage failure may warn again
             setTimeout(() => this.updateSaveStatus('saved'), 500); // UI feedback
         } catch (error) {
             console.error('Auto-save to localStorage failed:', error);
             this.updateSaveStatus('error');
-            // Storage full: say what happened and what to do, once per session —
-            // not on every retried save.
+            // Storage full: a persistent notice (D2) that stays until dismissed, once until a save works again,
+            // not on every retried save. It says what to do first: back up.
             if (error && error.name === 'QuotaExceededError' && !this._quotaWarned) {
                 this._quotaWarned = true;
-                alert("[STORAGE FULL] Your latest changes couldn't be saved — this device's storage for Ledger is full.\n\n"
-                    + '1. Open Settings → Save, Reset & Backup → Export Backup (JSON) so nothing is lost.\n'
-                    + '2. Free space by clearing old imported statements.\n\n'
-                    + 'Saving will resume automatically once there is space.');
+                showToast(t('d.storage.full'), 'error', 0);
             }
         }
     }

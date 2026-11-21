@@ -8,21 +8,21 @@ import './styles/legacy-aliases.css';
 import './styles/fonts.css';
 import './styles/base.css';
 import '../style.css';
-import './theme/appearance.css'; // A4: stripped appearance modal
 import './ui/shell.css'; // A5 — sidebar, phone bottom bar, screens
 import './ui/today.css'; // A6 — Today screen
 import { store } from './state/store.js';
 import { FinanceAutoSave } from './state/autosave.js';
 import { loadTheme } from './theme/theme.js';
 import { initializeSettingsUI } from './ui/settings-forms.js';
-import { initializeGuiSettingsForm } from './theme/appearance-form.js';
+import { setupSettingsScreen } from './ui/settings-screen.js';
+import './ui/settings.css'; // D2 — Settings screen
 import { setupEventListeners } from './events/setup.js';
 import { updateAllUI } from './ui/render.js';
 import {
     restoreActiveTab, renderScopeLine, setupTabKeyboardNav, setupCardLinks,
     setupDashboardEmptyActions, setupExpenseSearch, setupInfoSections,
 } from './ui/tabs.js';
-import { setupGuiModal, setupPageSettingsModals } from './ui/modals.js';
+import { setupPageSettingsModals } from './ui/modals.js';
 import { setupImport } from './import/import-ui.js';
 import { setupPdfImport } from './import/pdf-ui.js';
 import { setupIncomeStatement } from './ui/income-statement.js';
@@ -53,12 +53,11 @@ function boot() {
     generateBillDueEvents(store.financeData);
 
     initializeSettingsUI();
-    initializeGuiSettingsForm();
+    setupSettingsScreen(); // D2 — Settings, About and the Install row
     setupEventListeners();
 
     setupPwaInstallListeners();
     setupTabKeyboardNav();
-    setupGuiModal();  // A.4 — appearance modal
     setupPageSettingsModals(); // Phase D — per-page settings modals
     setupImport(); // Ledger — bank CSV import (Tools)
     setupPdfImport(); // Variable income — bank PDF import + payslip autofill (Tools)

@@ -18,8 +18,7 @@ export const store = {
     financeData: cloneDefaultFinanceData(),
     guiSettingsData: cloneDefaultGuiSettings(),
 
-    // Session defaults — actionSetCurrentAsDefault re-points these so an
-    // in-session "Reset to My Defaults" matches what was just saved.
+    // Factory defaults (D2: "Save as My Defaults" is gone; Erase all data uses the clones in defaults.js).
     defaultFinanceData,
     defaultGuiSettings,
 

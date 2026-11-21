@@ -31,6 +31,9 @@
         <symbol id="i-future" viewBox="0 0 16 16"><path d="M2.5 12.5l3.5-4 3 2 4.5-6"/><path d="M10.5 4.5h3v3"/></symbol>
         <symbol id="i-gear" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2"/><path d="M8 1.8v1.6M8 12.6v1.6M1.8 8h1.6M12.6 8h1.6M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1"/></symbol>
         <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+        <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/></symbol>
+        <symbol id="i-chev" viewBox="0 0 16 16"><path d="M6 3.5L10.5 8 6 12.5"/></symbol>
+        <symbol id="i-check" viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></symbol>
     </svg>
     <div class="app" id="app-shell">
         <aside class="side" aria-label="Ledger">
@@ -49,9 +52,7 @@
                 <!-- The autosave indicator is appended into the first .header (autosave.js). -->
                 <div class="header side-status"></div>
                 <p class="privacy">Kept on this device. Nothing leaves it.</p>
-                <!-- Temporary Install link: moves to Settings, About in D2. -->
-                <button type="button" class="side-link" id="install-app-btn" style="display: none;">Install App</button>
-                <button type="button" class="side-link side-settings" id="open-gui-settings" aria-haspopup="dialog"><svg class="i" aria-hidden="true"><use href="#i-gear"/></svg>Settings</button>
+                <button type="button" class="side-link side-settings" id="open-gui-settings" data-open-settings><svg class="i" aria-hidden="true"><use href="#i-gear"/></svg>Settings</button>
             </div>
         </aside>
 
@@ -591,77 +592,12 @@
                 </div>
             </div>
             </div>
+            <!-- D2: the Settings screen renders here (src/ui/settings-screen.js). Shown by the gear; any tab hides it. -->
+            <section id="settings-root" class="screen" aria-labelledby="settings-title"></section>
         </main>
     </div>
     <div id="sheet-root"></div>
     <div id="setup-root"></div>
-    <div id="settings-root"></div>
-
-    <!-- A4: stripped appearance modal. Four palettes, Auto/Light/Dark and Text size, plus the non-appearance
-         controls (currency, backup, restore, reset) that D2 moves to Settings, then A12b deletes this modal.
-         The body keeps id="guiSettings" for the delegated click handler. -->
-    <div class="legacy modal-backdrop" id="gui-settings-modal" hidden>
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gui-settings-title">
-            <div class="modal-header">
-                <h2 id="gui-settings-title">Appearance &amp; data</h2>
-                <button class="modal-close" id="close-gui-settings" aria-label="Close appearance settings">
-                    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-                </button>
-            </div>
-            <div class="modal-body" id="guiSettings">
-                <p class="theme-section-title">Palette</p>
-                <div id="theme-switcher-container" class="theme-switcher" aria-label="Palette"></div>
-                <p class="theme-section-title">Light or dark</p>
-                <div id="mode-switcher" class="mode-switcher" role="radiogroup" aria-label="Light or dark">
-                    <button type="button" role="radio" data-mode="auto" aria-checked="false">Auto</button>
-                    <button type="button" role="radio" data-mode="light" aria-checked="false">Light</button>
-                    <button type="button" role="radio" data-mode="dark" aria-checked="false">Dark</button>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">Text size</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="gui-base-font-size">Base text size (px)</label>
-                            <input type="number" class="form-input" id="gui-base-font-size" min="10" max="24" step="1">
-                        </div>
-                    </div>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">General</div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="currency-select">Currency</label>
-                            <select class="form-select" id="currency-select">
-                                <option value="AUD">AUD - Australian Dollar</option>
-                                <option value="USD">USD - US Dollar</option>
-                                <option value="EUR">EUR - Euro</option>
-                                <option value="GBP">GBP - British Pound</option>
-                                <option value="CAD">CAD - Canadian Dollar</option>
-                                <option value="NZD">NZD - New Zealand Dollar</option>
-                                <option value="JPY">JPY - Japanese Yen</option>
-                                <option value="CHF">CHF - Swiss Franc</option>
-                                <option value="CNY">CNY - Chinese Yuan</option>
-                                <option value="INR">INR - Indian Rupee</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="settings-section">
-                    <div class="settings-title">Save, Reset &amp; Backup</div>
-                    <p class="settings-hint">Appearance changes save automatically. Defaults = your whole setup (data + appearance) used as a reset point. Backup = a JSON file of everything.</p>
-                    <div class="settings-actions" style="margin-top: 12px; padding-top: 0; border-top: none;">
-                        <button class="btn btn-secondary" id="reset-gui-settings">Reset Appearance</button>
-                        <button class="btn btn-secondary" id="set-current-default">Save as My Defaults</button>
-                        <button class="btn btn-secondary" id="reset-to-defaults">Reset to Factory Defaults</button>
-                        <button class="btn btn-secondary" id="export-json-gui">Export Backup (JSON)</button>
-                        <input type="file" id="json-import-gui" accept=".json" style="display: none;">
-                        <button class="btn btn-secondary" id="import-json-gui-btn">Import Backup (JSON)</button>
-                        <button class="btn btn-secondary" id="export-csv-transactions">Export Transactions (CSV)</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Phase D.1 — Income settings modal. Opened by the gear button on the Income tab.
          Holds the Income Sources + Tax Brackets data entry relocated from the Settings tab.

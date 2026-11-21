@@ -59,6 +59,7 @@ for (const f of jsFiles) {
 // 4. alert( and confirm( once D2 has landed.
 if (args.has('--after-d2')) {
     for (const f of jsFiles) {
+        if (f.endsWith('.test-cases.js')) continue; // test payloads such as alert(1) are data, not calls
         if (/(^|[^.\w])(alert|confirm)\(/m.test(read(f))) fail(`alert( or confirm( in ${f}`);
     }
 }

@@ -1,7 +1,7 @@
 // Alert / confirm surfaces (moved from events.js).
 // showCustomModal is now a thin wrapper over the toast; confirmDialog is the one
-// whole-data dialog (Restore, Erase all data). confirmAction and inlineConfirm
-// stay until their call sites convert (D2, A12b).
+// whole-data dialog (Restore, Erase all data). inlineConfirm stays
+// until its call sites convert (A12b). confirmAction is gone (D2).
 
 import { escapeHtml } from '../utils.js';
 import { t } from '../i18n/strings.js';
@@ -93,11 +93,6 @@ export function confirmDialog({ title, body = '', confirmLabel, danger = false }
         // For a destructive action, start on the safe button.
         (danger ? cancel : ok).focus();
     });
-}
-
-export function confirmAction(message) {
-    // Replace with a proper UI element for confirmation dialogs
-    return confirm(message);
 }
 
 // B.4 — Non-blocking inline confirmation popover, anchored to the trigger element.

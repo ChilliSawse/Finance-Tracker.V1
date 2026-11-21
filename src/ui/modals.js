@@ -2,7 +2,6 @@
 
 import { getElement } from '../utils.js';
 import { getFocusables, trapTab } from './focus.js';
-import { initializeGuiSettingsForm } from '../theme/appearance-form.js';
 import {
     renderIncomeSourcesSettings, renderTaxBracketsSettings, renderAssetsSettings,
     renderLiabilitiesSettings, renderAllocationSettings, renderExpensesSettingsLists,
@@ -45,11 +44,6 @@ export function setupModal(modalId, openBtnId, onOpen) {
     openBtn.addEventListener('click', open);
     if (closeBtn) closeBtn.addEventListener('click', close);
     modal.addEventListener('mousedown', (e) => { if (e.target === modal) close(); }); // backdrop click
-}
-
-// A.4 — appearance modal populates its colour pickers/typography from guiSettingsData on open.
-export function setupGuiModal() {
-    setupModal('gui-settings-modal', 'open-gui-settings', initializeGuiSettingsForm);
 }
 
 // Make a modal behave like a real window: drag it by its header, resize it from the

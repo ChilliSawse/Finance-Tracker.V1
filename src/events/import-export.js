@@ -6,12 +6,12 @@ import { store } from '../state/store.js';
 import { showCustomModal, confirmDialog } from '../ui/confirm.js';
 import { t } from '../i18n/strings.js';
 import {
-    SAVE_KEY, PRE_RESTORE_KEY, CORRUPT_PREFIX, MAX_IMPORT_BYTES, prepareImport, commitImport,
+    SAVE_KEY, PRE_RESTORE_KEY, CORRUPT_PREFIX, MAX_IMPORT_BYTES, prepareImport,
     validateBundleShape, buildTransactionsCsv, quarantineCorruptSave,
 } from '../state/sanitize.js';
 import { updateDataAndUI } from '../ui/render.js';
 import { initializeSettingsUI } from '../ui/settings-forms.js';
-import { initializeGuiSettingsForm } from '../theme/appearance-form.js';
+import { collectParts, buildBackupBundle, prepareBackup, commitBackup, carriesParts } from '../state/backup.js';
 import { showTab } from '../ui/tabs.js';
 import { updateFinanceDataFromFISettingsInputs } from './settings-events.js';
 
@@ -24,16 +24,13 @@ function downloadText(text, filename, type = 'application/json') {
     URL.revokeObjectURL(url);
 }
 
-export function actionExportDataJSON() {
+// D2: one backup holds the settings plus the transactions and events (bundle version 2, state/backup.js).
+export async function actionExportDataJSON() {
     updateFinanceDataFromFISettingsInputs(); // Ensure FI settings are captured
-    const exportBundle = {
-        financeData: store.financeData,
-        guiSettings: store.guiSettingsData, // Include GUI settings in the JSON export
-        timestamp: new Date().toISOString()
-    };
-    const dataStr = JSON.stringify(exportBundle, null, 2);
-    downloadText(dataStr, `finance-data-backup-${new Date().toISOString().slice(0, 10)}.json`);
-    showCustomModal("Data exported as JSON!");
+    const { rows, failed } = await collectParts();
+    const bundle = buildBackupBundle({ financeData: store.financeData, guiSettings: store.guiSettingsData, partRows: rows });
+    downloadText(JSON.stringify(bundle, null, 2), `finance-data-backup-${new Date().toISOString().slice(0, 10)}.json`);
+    showCustomModal(t(failed.length ? 'd.backup.doneNoRows' : 'd.backup.done'), failed.length ? 'error' : 'success');
 }
 
 // Ledger — export imported transactions as CSV (date, description, amount, category).
@@ -76,34 +73,47 @@ export function handleJSONImport(event) {
     reader.onerror = () => showCustomModal(t('d.import.failed'), 'error');
     reader.onload = async (e) => {
         // M3: validate, sanitize and migrate on a clone. The store is not touched until all of it works.
-        const prepared = prepareImport(e.target.result);
+        const prepared = prepareBackup(e.target.result);
         if (!prepared.ok) {
             if (prepared.detail) console.error('Import error:', prepared.detail);
             showCustomModal(prepared.detail ? prepared.error : t('d.import.invalid', { reason: prepared.error }), 'error');
             return;
         }
+        // The one whole-data dialog.
         const yes = await confirmDialog({
-            title: t('d.import.confirmTitle'), body: t('d.import.confirmBody'),
+            title: t('d.import.confirmTitle'),
+            body: t(carriesParts(prepared) ? 'd.backup.confirmBody' : 'd.backup.confirmBodyOld'),
             confirmLabel: t('d.import.confirmLabel'), danger: true,
         });
         if (!yes) return;
-        const result = commitImport(store, prepared, {
+        const result = await commitBackup(store, prepared, {
             storage: localStorage,
             render: () => {
                 initializeSettingsUI();
-                initializeGuiSettingsForm();
                 updateDataAndUI();
+                document.dispatchEvent(new CustomEvent('ledger:data-swapped'));
             },
             save: () => { if (store.autoSave) store.autoSave.forceSave(); },
         });
         if (!result.ok) {
             if (result.detail) console.error('Import error:', result.detail);
-            showCustomModal(result.error, 'error');
+            const known = ['cantReadCurrent', 'cantWrite'].includes(result.error);
+            showCustomModal(known ? t('d.backup.' + result.error) : result.error, 'error');
             return;
         }
-        showCustomModal(t('d.import.done'));
+        try {
+            const { refreshSpendCache } = await import('../state/spend-cache.js');
+            await refreshSpendCache();
+            updateDataAndUI();
+        } catch (err) { console.error('Spend cache refresh failed', err); }
+        const c = result.counts || {};
+        const done = carriesParts(prepared)
+            ? t('d.backup.restoredCounts', { transactions: c.transactions || 0, events: c.events || 0 })
+            : t('d.backup.restoredOld');
+        showCustomModal(prepared.skipped ? done + ' ' + t('d.backup.skipped', { count: prepared.skipped }) : done, 'success');
         showTab('today');
     };
+
     reader.readAsText(file);
 }
 

@@ -1,6 +1,6 @@
 // Live-data settings form renderers (moved from uiSettings.js).
 // The What If scenario renderers live in ui/whatif.js; the appearance form
-// (initializeGuiSettingsForm) lives in theme/appearance-form.js.
+// lives in ui/settings-screen.js.
 
 import { store } from '../state/store.js';
 import { getElement, setText, setValue, escapeHtml, formatCurrency } from '../utils.js';
@@ -9,12 +9,10 @@ import { calculateTotals } from '../calc/calculations.js';
 import { AU_TAX_YEARS } from '../calc/tax-au.js';
 import { sumEvents, fyRange, activeFyKey } from '../calc/income-events.js';
 import { t } from '../i18n/strings.js';
-import { updateDefaultsButtonLabels } from '../events/settings-events.js';
-import { initializeGuiSettingsForm } from '../theme/appearance-form.js';
+import { applyStoredAppearance } from '../theme/theme.js';
 import { initializeWhatIfTab } from './whatif.js';
 
 export function initializeSettingsUI() {
-    setValue('currency-select', store.financeData.currency);
     setValue('dashboard-view-period', store.financeData.dashboardViewPeriod || 'fortnightly');
 
     renderIncomeSourcesSettings();
@@ -27,8 +25,7 @@ export function initializeSettingsUI() {
     renderBillsSettings();
     renderCategoriesSettings();
     renderFISettings();
-    updateDefaultsButtonLabels(); // Reflect whether user defaults exist
-    initializeGuiSettingsForm(); // Appearance modal form
+    applyStoredAppearance(); // palette, mode and text size from the saved settings
     initializeWhatIfTab(); // What If? tab
 }
 
