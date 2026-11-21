@@ -10,8 +10,8 @@ import { t } from '../../i18n/strings.js';
 import { esc } from '../html.js';
 import { store } from '../../state/store.js';
 import { getSpendCache } from '../../state/spend-cache.js';
-import { sampleDataActive } from '../../state/sample-data.js';
-import { moneyRows, debtRows } from './steps-money.js';
+import { sampleDataActive } from '../../state/sample-flag.js';
+import { moneyRows, debtRows } from './rows.js';
 
 export const SETUP_STATE_KEY = 'ft-setup-state';
 

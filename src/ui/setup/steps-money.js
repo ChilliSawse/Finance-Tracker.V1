@@ -14,24 +14,13 @@ import { planItemSheetSpec, savePlanItem, nextDue, shortDate, FREQUENCIES } from
 import { openSheet } from '../sheet.js';
 import { showUndoToast } from '../toast.js';
 import { registerSetupStep, STEP_ORDER } from './registry.js';
+import { moneyRows, debtRows, PLACEHOLDER_DEBT_ID } from './rows.js';
+
+export { moneyRows, debtRows }; // the checklist imports them from rows.js; tests and Setup keep this path
 
 const money = (n) => formatCurrency(n);
-const PLACEHOLDER_DEBT_ID = 'l-new-liability';
 
 // ---------- pure ----------
-
-const catMap = (data) => new Map((data.categories || []).filter(Boolean).map((c) => [c.id, c]));
-
-/** Plan lines in the essential (kind 'essential') or non-essential (kind 'non') list, by the category flag. */
-export function moneyRows(data, kind) {
-    const cats = catMap(data);
-    const wantEssential = kind === 'essential';
-    return (data.plan || []).filter((p) => {
-        if (!p || p.inTotals === false) return false;
-        const c = cats.get(p.categoryId);
-        return !!(c ? c.essential : p.essential) === wantEssential;
-    });
-}
 
 /** The A9a sheet spec with the category choices cut to this list's side of the flag. */
 export function moneySheetSpec(data, kind, item = null, preset = null) {
@@ -60,10 +49,6 @@ export function moneyTotals(data, kind) {
 }
 
 /** Real debts (the untouched placeholder row is not one). */
-export function debtRows(data) {
-  return (data.liabilities || []).filter((l) => l && !(l.id === PLACEHOLDER_DEBT_ID && l.name === 'New Liability' && !Number(l.balance) && !Number(l.interestRate)));
-}
-
 /** Add a debt: id from E4's factory, balance (A$), rate (% a year), minRepayment (A$ a month). */
 export function makeDebt(data, fields = {}) {
     if (!Array.isArray(data.liabilities)) data.liabilities = [];
