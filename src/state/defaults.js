@@ -40,12 +40,13 @@ export const defaultFinanceData = {
     allocation: [
         { name: "New Allocation", percentage: 100, currentBalance: 0, savingsGoal: 0 },
     ],
-    essentialExpenses: [
-        { name: "New Expense", amount: 0, frequency: "weekly" },
-    ],
-    nonEssentialExpenses: [
-        { name: "New Expense", amount: 0, frequency: "monthly" },
-    ],
+    // Phase 1: new data starts on the plan model (dataVersion 2). The legacy lists stay as
+    // empty arrays (the JSON import validator and old backups expect them) and are ignored.
+    dataVersion: 2,
+    plan: [],
+    rules: [],
+    essentialExpenses: [],
+    nonEssentialExpenses: [],
     fiSettings: {
         multiple: 25,
         expectedReturn: 7 // Default expected return

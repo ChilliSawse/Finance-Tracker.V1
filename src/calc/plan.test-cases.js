@@ -8,6 +8,7 @@ import { perCycle, perMonth, planTotals, netPerPayCents } from './plan.js';
 // Mirrors the sample household (sample-data.js) without touching IndexedDB.
 function sampleLike() {
     const d = cloneDefaultFinanceData();
+    delete d.dataVersion; // B3: this fixture is the legacy shape (defaults are now dataVersion 2)
     d.primaryIncomeIndex = 0;
     d.incomeSources = [
         { name: 'A', incomeType: 'salaried', grossAnnual: 85000, paySchedule: 'fortnightly', hoursPerCycle: 76, taxRemoved: null, invoicedPayPostTax: null },
