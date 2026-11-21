@@ -358,16 +358,27 @@ function tileHtml(b, mb) {
           </div>`;
 }
 
+/**
+ * The bucket split bar. A 0% bucket has no slice; a slice under TINY_SLICE_PCT is too narrow for its
+ * label, so it shows no text (the bar's aria-label and each slice's title carry the figures).
+ */
+const TINY_SLICE_PCT = 6;
+export function splitSegmentsHtml(tops, total) {
+    return tops.filter((b) => Math.round((b.pct || 0) * 10) > 0).map((b) => {
+        const cls = ROLE_CLASS[b.role] || 'b-smile';
+        const pct = escNum(Math.round(b.pct));
+        const tiny = b.pct < TINY_SLICE_PCT;
+        const label = tiny ? '' : (b.pct >= 25 ? `${esc(b.name)} ${pct}%` : `${pct}%`);
+        return `<span class="${cls}${b.pct < 25 ? ' p10' : ''}${tiny ? ' tiny' : ''}" title="${esc(b.name)} ${pct}%" style="flex:${escNum(Math.round((b.pct / total) * 1000) / 10)}">${label}</span>`;
+    }).join('');
+}
+
 function bucketsHtml(model, ctx, buckets) {
     const tops = buckets.filter((b) => b.kind !== 'goal');
     if (!tops.length) return '';
     const total = tops.reduce((a, b) => a + (b.pct || 0), 0) || 1;
     const parts = tops.map((b) => `${b.name} ${Math.round(b.pct)}%`).join(', ');
-    const split = tops.map((b) => {
-        const cls = ROLE_CLASS[b.role] || 'b-smile';
-        const label = b.pct >= 25 ? `${esc(b.name)} ${escNum(Math.round(b.pct))}%` : `${escNum(Math.round(b.pct))}%`;
-        return `<span class="${cls}${b.pct < 25 ? ' p10' : ''}" style="flex:${escNum(Math.round((b.pct / total) * 1000) / 10)}">${label}</span>`;
-    }).join('');
+    const split = splitSegmentsHtml(tops, total);
     const { latest } = incomeThisCycle(ctx.cycleRows);
     const cap = latest
         ? t('a.today.payLanded', { amount: esc(money(latest.amountCents)), date: esc(dayLong(latest.date)) })

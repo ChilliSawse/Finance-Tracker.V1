@@ -12,7 +12,7 @@ import { toIso } from '../calc/pay-cycle.js';
 import { updateAllUI } from './render.js';
 import { initializeSettingsUI } from './settings-forms.js';
 import { loadSampleData } from '../state/sample-data.js';
-import { showToast } from './toast.js';
+import { showToast, dismissToastTagged } from './toast.js';
 import { mountHelpButton } from './help.js'; // A11
 import { getSetupSteps } from './setup/registry.js';
 import { registerQuizStep } from './setup/quiz.js';
@@ -206,6 +206,7 @@ export function openSetup({ welcome = false, stepId = null } = {}) {
     if (!welcome) startSetupState(storage());
     const app = document.querySelector('.app');
     if (app) app.setAttribute('inert', '');
+    dismissToastTagged('sample-welcome');
     document.body.classList.add('has-setup');
     render({ focus: true });
     return true;
@@ -255,7 +256,7 @@ async function exploreWithSample() {
     st.dismissed = true; // nobody needs a "finish setting up" list on a demo household
     writeSetupState(storage(), st);
     closeSetup();
-    showToast(count > 0 ? t('toast.sample.loaded', { count }) : t('toast.sample.loadedNoTxns'));
+    showToast(count > 0 ? t('toast.sample.loaded', { count }) : t('toast.sample.loadedNoTxns'), 'info', undefined, 'sample-welcome');
 }
 
 // ---------- events (delegated, wired once) ----------
