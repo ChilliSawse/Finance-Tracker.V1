@@ -360,3 +360,21 @@ body.locked { overflow: hidden; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
+
+/* Update banner (pwa.js, A10). Theme tokens only, so it follows palette and mode. */
+.update-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 99999; padding: 16px var(--pad, 16px);
+  background: var(--surface); color: var(--text); text-align: center;
+  border-bottom: 3px solid var(--accent); box-shadow: 0 4px 20px var(--scrim);
+  font-family: inherit; transition: transform 0.3s var(--ease);
+}
+.update-banner-inner { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.update-banner-title { font-size: var(--fs-section); font-weight: 700; }
+.update-banner-msg { color: var(--muted); font-size: var(--fs-body); }
+.update-banner-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.update-banner-btn {
+  min-height: 44px; padding: 0 20px; border-radius: var(--r-pill); font: inherit; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--control); background: var(--surface); color: var(--text);
+}
+.update-banner-btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.update-banner.is-leaving { transform: translateY(-100%); }
