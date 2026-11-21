@@ -11,7 +11,7 @@ import { getBuckets, addBucket, addTarget, updateTarget, removeTarget } from '..
 import { leftThisPay } from '../calc/pay-cycle.js';
 import { reviewDue, buildMonthlyReview, bankSetToOf } from '../calc/review.js';
 import { taxTablesStatus, hasPayslipJob } from '../calc/tax-tables/index.js';
-import { renderTaxProvisionCard } from './income-insights.js';
+import { taxProvisionModel } from './future/model.js';
 import { reviewModel, reviewDueFor, markReviewOpened } from './review.js';
 import { taxCardModel, dismissTaxCheck } from './tax-card.js';
 import { confirmTaxCheck } from './income-layout.js';
@@ -31,40 +31,27 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
 const addPot = (d, label = 'Holiday fund', goalCents = 50000) => addTarget(d, { type: 'saver', label, goalCents }).item.id;
 
 export const BUCKET_METHOD_TEST_CASES = [
-    { name: 'E10.1 the tax-pot comparison works on a bucket with the tax tag, and on one with no id or role', async fn(assert) {
-        if (!HAS_DOM) return;
-        const host = document.createElement('div');
-        host.innerHTML = '<div id="tax-provision-card" hidden><div id="tax-provision-body"></div></div>';
-        document.body.appendChild(host);
-        const saved = store.financeData;
-        try {
-            const day = new Date();
-            const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-            const base = () => ({
-                incomeSources: [{ incomeType: 'variable', incomeEvents: [{ date: iso, netAmount: 8000, taxWithheld: 0 }] }],
-                primaryIncomeIndex: 0,
-            });
-            const text = () => document.getElementById('tax-provision-body').textContent;
-            store.financeData = { ...base(), allocation: [{ id: 'b-tax', name: 'Tax pot', role: null, isTaxProvision: true, currentBalance: 1000000 }] };
-            renderTaxProvisionCard({});
-            assert('the card shows', document.getElementById('tax-provision-card').hidden, false);
-            assert('a full pot reads on track, by name', text().includes('Tax pot'), true);
-            store.financeData = { ...base(), allocation: [{ id: 'b-tax', name: 'Tax pot', role: null, isTaxProvision: true, currentBalance: 0 }] };
-            renderTaxProvisionCard({});
-            const behind = text();
-            store.financeData = { ...base(), allocation: [{ name: 'Loose pot', isTaxProvision: true, currentBalance: 0 }] };
-            let threw = false;
-            try { renderTaxProvisionCard({}); } catch (e) { threw = true; }
-            assert('a pot with no id and no role does not throw', threw, false);
-            assert('and says the same as one with them', text().replace('Loose pot', 'Tax pot'), behind);
-            store.financeData = { ...base(), allocation: [null, 'x', { name: 'No tag' }] };
-            threw = false;
-            try { renderTaxProvisionCard({}); } catch (e) { threw = true; }
-            assert('stray rows in the list do not throw', threw, false);
-        } finally {
-            store.financeData = saved;
-            host.remove();
-        }
+    { name: 'E10.1 the tax-pot comparison works on a bucket with the tax tag, and on one with no id or role (the Future model; A12a moved this from the deleted Savings card)', fn(assert) {
+        const day = new Date();
+        const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+        const base = () => ({
+            incomeSources: [{ incomeType: 'variable', incomeEvents: [{ date: iso, netAmount: 8000, taxWithheld: 0 }] }],
+            primaryIncomeIndex: 0,
+        });
+        const full = taxProvisionModel({ ...base(), allocation: [{ id: 'b-tax', name: 'Tax pot', role: null, isTaxProvision: true, currentBalance: 1000000 }] });
+        assert('the card shows', full !== null && full.kind, 'pot');
+        assert('a full pot is shown by name and covers the provision', full.pot.name === 'Tax pot' && full.pot.balance >= full.prov.provisionToDate, true);
+        const behind = taxProvisionModel({ ...base(), allocation: [{ id: 'b-tax', name: 'Tax pot', role: null, isTaxProvision: true, currentBalance: 0 }] });
+        let loose = null;
+        let threw = false;
+        try { loose = taxProvisionModel({ ...base(), allocation: [{ name: 'Loose pot', isTaxProvision: true, currentBalance: 0 }] }); } catch (e) { threw = true; }
+        assert('a pot with no id and no role does not throw', threw, false);
+        assert('and says the same as one with them', { ...loose, pot: { ...loose.pot, name: 'Tax pot' } }, behind);
+        threw = false;
+        let stray = null;
+        try { stray = taxProvisionModel({ ...base(), allocation: [null, 'x', { name: 'No tag' }] }); } catch (e) { threw = true; }
+        assert('stray rows in the list do not throw', threw, false);
+        assert('and read as no tax pot', stray.kind, 'noPot');
     } },
     { name: 'E10.2 a bucket with no id or role does not throw in getBuckets or leftThisPay', fn(assert) {
         const d = house();

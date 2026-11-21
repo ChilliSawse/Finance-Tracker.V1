@@ -1,8 +1,7 @@
 // Future screen (F6). The screen itself lives in src/ui/future/ (model.js, view.js, index.js, future.css);
 // this file keeps C8's "Income pattern" card (the variable-income volatility card, FT-R-73 C11 / M-7), shown
-// only while a Variable source exists, and hands the rest to mountFuture. The legacy Savings and Liabilities
-// panels are hidden by future.css (A12a deletes them); their Debts, HELP payoff and tax-provision cards now
-// render from future/view.js.
+// only while a Variable source exists, and hands the rest to mountFuture. The Debts, HELP payoff and
+// tax-provision cards of the deleted Savings and Liabilities panels render from future/view.js.
 
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';

@@ -1,7 +1,7 @@
 // Feed items — the event log ({type, data} facts) turned into copy through the i18n
 // catalogue (src/i18n/en.js). A6: the greeting, pulse tiles and "coming up" card are gone;
-// Today owns the screen and this file now supplies the Story rows (renderHomeFeed) and
-// the item renderer (renderFeedItems), which Activity can reuse.
+// Today owns the screen and this file supplies its Story rows (renderHomeFeed, storyRows).
+// A12a removed the unused item renderer (renderFeedItems).
 // All colours are theme tokens. Interpolated params are escaped here — t() does not escape.
 
 import { getElement, setHTML, escapeHtml, formatCurrency } from '../utils.js';
@@ -85,32 +85,6 @@ function composeEvent(event) {
         default:
             return null; // unknown/internal types stay out of the feed
     }
-}
-
-export function renderFeedItems(events) {
-    let html = '';
-    let currentCluster = null;
-    const todayLabel = t('feed.today');
-    const yesterdayLabel = t('feed.yesterday');
-    for (const event of events) {
-        const composed = composeEvent(event);
-        if (!composed) continue;
-        const cluster = clusterLabel(event.ts);
-        if (cluster !== currentCluster) {
-            currentCluster = cluster;
-            html += `<div class="feed-cluster-label">${cluster}</div>`;
-        }
-        const when = (cluster === todayLabel || cluster === yesterdayLabel) ? timeLabel(event.ts) : dateLabel(event.ts);
-        html += `
-            <div class="feed-item feed-kind-${composed.kind}">
-                <span class="feed-dot" aria-hidden="true"></span>
-                <div class="feed-body">
-                    <p class="feed-text">${composed.html}</p>
-                    <span class="feed-time">${when}</span>
-                </div>
-            </div>`;
-    }
-    return html;
 }
 
 /** Story rows for Today: up to `limit` event lines dated on or after `since` (epoch ms), newest first. */
