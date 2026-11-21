@@ -4,7 +4,7 @@
 
 import {
     layoutFor, sheetValuesFor, draftSource, applyIncomeValues, readoutFor, describeCheck,
-    patchForFix, payAnchorFromNext, grossAnnualFrom,
+    patchForFix, payAnchorFromNext, grossAnnualFrom, recordPayslipCheck,
 } from './income-layout.js';
 import { acceptPayslipJob } from '../state/income-migration.js';
 
@@ -100,6 +100,20 @@ export const INCOME_LAYOUT_TEST_CASES = [
             const noHelp = readoutFor(vals({ hasStudyDebt: 'unsure' }), 'salary', { taxBrackets: [] }, TODAY);
             assert('before HELP when unsure', [noHelp.parts, noHelp.helpUnsure], ['A$626 tax', true]);
             assert('super on gross', readoutFor(vals({ superPct: 10 }), 'salary', {}, TODAY).superAnnual, 7950);
+        },
+    },
+    {
+        name: 'K2.5 a payslip check is stored on the source as {date, matched}',
+        fn(assert) {
+            const s = emp();
+            assert('stored', recordPayslipCheck(s, true, '2026-03-06', TODAY), true);
+            assert('shape', s.taxCheck, { date: '2026-03-06', matched: true });
+            assert('same result stores nothing new', recordPayslipCheck(s, true, '2026-03-06', TODAY), false);
+            assert('a differing result replaces it', recordPayslipCheck(s, false, '2026-03-20', TODAY), true);
+            assert('replaced', s.taxCheck, { date: '2026-03-20', matched: false });
+            assert('bad date falls back to today', recordPayslipCheck(s, true, 'x', TODAY) && s.taxCheck.date, TODAY);
+            assert('non-boolean ignored', recordPayslipCheck(s, 'yes', '2026-03-06', TODAY), false);
+            assert('no source', recordPayslipCheck(null, true, '2026-03-06', TODAY), false);
         },
     },
     {

@@ -51,6 +51,20 @@ export function confirmTaxCheck(data, slipDate, now = new Date()) {
     return true;
 }
 
+/**
+ * Stores the result of a payslip check on the source as `taxCheck = {date, matched}` (date = the payslip's date,
+ * YYYY-MM-DD). Returns true when the stored result changed. A malformed date falls back to `fallbackDate`.
+ */
+export function recordPayslipCheck(source, matched, slipDate, fallbackDate) {
+    if (!source || typeof matched !== 'boolean') return false;
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(slipDate || '') ? slipDate : (fallbackDate || null);
+    if (!iso) return false;
+    const cur = source.taxCheck;
+    if (cur && cur.date === iso && cur.matched === matched) return false;
+    source.taxCheck = { date: iso, matched };
+    return true;
+}
+
 /** The pay date before a "next pay day": same day of month where the month allows it. */
 export function payAnchorFromNext(nextIso, schedule) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(nextIso || '')) return null;
@@ -470,6 +484,9 @@ function decorate(handle, ctx) {
             return;
         }
         if (d.state === 'idle') { result.appendChild(node('p', 'ils-muted', d.message)); return; }
+        // A check that ran (matched or not) is remembered on the source for the Pay row. A payslip from before the tables
+        // we hold ('truth') is not a check of anything.
+        if (d.state !== 'truth' && recordPayslipCheck(source, d.state === 'match', slip.date, today) && !draft && store.autoSave) store.autoSave.onDataChange();
         for (const l of d.lines.slice(0, 2)) result.appendChild(node('p', 'ils-line', l));
         if (d.state === 'match') {
             result.appendChild(node('p', 'ils-ok', t('c.income.check.matches')));

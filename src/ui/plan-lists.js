@@ -102,6 +102,10 @@ function sourceRows(data) {
             primary: index === primary,
             often: s.paySchedule === 'yearly' ? t('a.plan.freq.yearly') : freqLabel(s.paySchedule) || '',
             perPay: variable ? null : net / cycles,
+            // The last payslip check (C6) and the "switch to Salary?" flag (C4), for the status on the row.
+            check: s.taxCheck && typeof s.taxCheck.matched === 'boolean' && ISO.test(String(s.taxCheck.date || ''))
+                ? { matched: s.taxCheck.matched, date: s.taxCheck.date } : null,
+            offer: s.migrationPrompt === 'payslip-job',
         };
     });
 }
@@ -172,12 +176,24 @@ export function listBodyHtml(kind, list, query) {
         + `<button type="button" class="btn ghost p-add" data-plan-add="${esc(kind)}">${esc(t(add))}</button>`;
 }
 
+/** The payslip-check line under a Pay row: matched or differs with the payslip's date, and "Check this" on a flagged source. */
+function payStatusHtml(r) {
+    let html = '';
+    if (r.check) {
+        const status = t(r.check.matched ? 'c.income.row.matches' : 'c.income.row.differs');
+        const text = t('c.income.row.checkedOn', { status, date: shortDate(r.check.date) });
+        html += `<span class="d p-check ${r.check.matched ? 'is-ok' : 'is-warn'}">${r.check.matched ? '\u2713 ' : ''}${esc(text)}</span>`;
+    }
+    if (r.offer) html += `<span class="d p-check is-warn">${esc(t('c.income.row.checkThis'))}</span>`;
+    return html;
+}
+
 export function payBodyHtml(pay) {
     const rows = pay.rows.map((r) => {
         const fig = r.perPay == null ? `<span class="money">${esc(t('a.plan.varies'))}</span>` : moneyHtml(r.perPay);
         const primary = r.primary ? ` <span class="pill ok">${esc(t('a.plan.primary'))}</span>` : '';
         return `<li><button type="button" class="p-row" data-income-open="${escNum(r.index)}">`
-            + `<span class="p-main"><span class="n">${esc(r.name)}${primary}</span><span class="d">${esc(r.type)}</span></span>`
+            + `<span class="p-main"><span class="n">${esc(r.name)}${primary}</span><span class="d">${esc(r.type)}</span>${payStatusHtml(r)}</span>`
             + `<span class="often">${esc(r.often)}</span>${fig}<span class="chev" aria-hidden="true"></span></button></li>`;
     }).join('');
     return (rows ? `<ul class="p-list">${rows}</ul>` : `<p class="muted p-empty">${esc(t('a.plan.emptyPay'))}</p>`)
