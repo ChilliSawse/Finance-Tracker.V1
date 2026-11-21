@@ -92,6 +92,12 @@ export const SAVING_MODEL_TEST_CASES = [
         assert('emergency is mojo', detectRole('Emergency fund'), 'mojo');
         assert('grow', detectRole('Investments'), 'grow');
         assert('living', detectRole('Living'), null);
+        assert('G1 important is daily', detectRole('Important'), 'daily');
+        assert('G1 everyday spending is daily', detectRole('Everyday spending'), 'daily');
+        assert('G1 every day / day to day / day-to-day', [detectRole('Every day'), detectRole('Day to day'), detectRole('Day-to-day')], ['daily', 'daily', 'daily']);
+        assert('G1 whole words only', [detectRole('Unimportant'), detectRole('Everydays')], [null, null]);
+        assert('G1 important does not take daily twice', detectRoles(['Daily', 'Important']), ['daily', null]);
+        assert('G1 important taken when daily is free', detectRoles(['Important', 'Daily']), ['daily', null]);
         assert('empty and junk', [detectRole(''), detectRole(null), detectRole(42)], [null, null, null]);
         assert('second smile null', detectRole('Smile', ['smile']), null);
         assert('first match per role', detectRoles(['Smile', 'Smile 2', 'Living', 'Fire']), ['smile', null, null, 'fire']);

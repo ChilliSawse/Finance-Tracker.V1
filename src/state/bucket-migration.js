@@ -227,7 +227,10 @@ export function migrateBucketModel(data, opts = {}) {
         goalsMoved.push(id);
     }
     if (fire && num(fire.savingsGoal) > 0) {
-        targets.unshift({
+        // FT-R-82: debts first, so the old goal goes right after the last debt (first when there are none).
+        let at = 0;
+        targets.forEach((t, i) => { if (t.type === 'debt') at = i + 1; });
+        targets.splice(at, 0, {
             id: 't-mig-fire', type: 'saver', label: 'Fire extinguisher goal', goalCents: toCents(fire.savingsGoal),
             savedCents: toCents(fire.currentBalance), skip: false, state: 'queued',
         });

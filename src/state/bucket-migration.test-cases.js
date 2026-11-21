@@ -61,10 +61,10 @@ export const BUCKET_MIGRATION_TEST_CASES = [
             assert('Mojo row is auto-created', [byRole(m, 'mojo').autoCreated, byRole(m, 'mojo').id], [true, 'mojo']);
             assert('Smile goal moved: cost 4,000 saved 1,200, bucket 0', [m.bucketGoals.map((g) => [g.name, g.cost, g.saved, g.share, g.parentId]), byRole(m, 'smile').currentBalance],
                 [[['holiday fund', 4000, 1200, 100, byRole(m, 'smile').id]], 0]);
-            const t0 = m.savingModel.fire.targets[0];
-            assert('Fire saver target first and active', [t0.type, t0.goalCents, t0.savedCents, t0.state], ['saver', 1000000, 800000, 'active']);
+            const t0 = m.savingModel.fire.targets[2];
+            assert('Fire saver target sits after the debts (FT-R-82); the first debt is active', [t0.type, t0.goalCents, t0.savedCents, t0.state, m.savingModel.fire.targets[0].state], ['saver', 1000000, 800000, 'queued', 'active']);
             assert('Fire list order after it', m.savingModel.fire.targets.map((t) => t.id),
-                ['t-mig-fire', 'debt:l-credit-card', 'debt:l-car-loan', 'mojo', 'home', 'super']);
+                ['debt:l-credit-card', 'debt:l-car-loan', 't-mig-fire', 'mojo', 'home', 'super']);
             assert('only the saver is active (home has no deposit goal yet)', m.savingModel.fire.targets.map((t) => t.state),
                 ['active', 'queued', 'queued', 'queued', 'skipped', 'queued']);
             assert('Fire bucket balance 0', byRole(m, 'fire').currentBalance, 0);
@@ -172,6 +172,15 @@ export const BUCKET_MIGRATION_TEST_CASES = [
             ];
             const r = runMigrationChain(d, { raw: JSON.stringify(d), storage: memStorage(), modules });
             assert('chain aborted, later step skipped, data identical', [r.aborted, calls, plain(d), d.savingModel], [true, [], plainBefore, undefined]);
+        },
+    },
+    {
+        name: 'G1 old Fire goal goes after the debts; with no debts it goes first (FT-R-82)',
+        fn(assert) {
+            const none = run(clone(legacySampleFinanceData().allocation), (x) => { x.liabilities = []; }).d;
+            assert('no debts: saver first, then Mojo, Home, Super', none.savingModel.fire.targets.map((t) => t.id), ['t-mig-fire', 'mojo', 'home', 'super']);
+            const one = run(clone(legacySampleFinanceData().allocation), (x) => { x.liabilities = x.liabilities.slice(0, 1); }).d;
+            assert('one debt: debt, then saver', one.savingModel.fire.targets.map((t) => t.type).slice(0, 2), ['debt', 'saver']);
         },
     },
     {
