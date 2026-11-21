@@ -278,6 +278,11 @@ function buildField(f, model, id) {
     return wrap;
 }
 
+/** A note's identity: its message and fix labels. setNote keeps the DOM node while this is unchanged (T3). */
+export function noteSig(message, fixes = []) {
+    return message ? JSON.stringify([message, (fixes || []).map((fx) => fx.label)]) : '';
+}
+
 export function openSheet({ title, fields = [], values = {}, onSave, onDelete, validate, plausibility, saveLabel, content, readOnly = false } = {}) {
     if (active) active.close(); // one sheet at a time
     const restoreFocus = rememberFocus();
@@ -356,6 +361,10 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
     function setNote(key, message, fixes = []) {
         const box = layer.querySelector(`[data-note-for="${CSS.escape(key)}"]`);
         if (!box) return;
+        // Update in place: rebuilding the fix button on a blur-triggered change eats a real mouse click (T3).
+        const sig = noteSig(message, fixes);
+        if (box.dataset.noteSig === sig) return;
+        box.dataset.noteSig = sig;
         box.textContent = '';
         if (!message) { box.hidden = true; return; }
         box.appendChild(el('span', 'sheet-note-text', message));

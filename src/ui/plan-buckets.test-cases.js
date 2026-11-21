@@ -7,7 +7,7 @@
 import { legacySampleFinanceData } from '../state/sample-data.js';
 import { runMigrationChain } from '../state/migration-chain.js';
 import { getBuckets } from '../state/saving-model.js';
-import { buildBucketsModel, buildBucketsHtml, dispatchBucketAction, splitSheetSpec } from './plan-buckets.js';
+import { buildBucketsModel, buildBucketsHtml, dispatchBucketAction, splitSheetSpec, bucketSheetRoute } from './plan-buckets.js';
 
 const TODAY = '2026-11-21';
 const sample = () => {
@@ -164,5 +164,25 @@ export const PLAN_BUCKETS_TEST_CASES = [
         assert('one percent field per bucket that can hold a share', spec.fields.length, 4);
         assert('values total 100', spec.fields.reduce((s, f) => s + spec.values[f.key], 0), 100);
         assert('no saving model renders nothing', buildBucketsHtml(buildBucketsModel({ allocation: [] }, TODAY, {}), {}), '');
+    } },
+    { name: 'T3.1 every bucket tile opens the bucket edit sheet', fn(assert) {
+        const d = sample();
+        const m = buildBucketsModel(d, TODAY, {});
+        const out = buildBucketsHtml(m, {});
+        const ids = m.tiles.map((b) => b.id);
+        assert('a tile button per bucket carries its id', ids.every((id) => has(out, 'data-pb="bucket-open" data-id="' + id + '"')), true);
+        const r = dispatchBucketAction(d, 'bucket-open', { id: ids[0] }, { today: TODAY });
+        assert('the action asks for the bucket sheet', r.sheet, { kind: 'bucket', id: ids[0] });
+        assert('routed to openBucketSheet(bucket, id)', bucketSheetRoute(r.sheet), { kind: 'bucket', id: ids[0] });
+    } },
+    { name: 'T3.2 routing: Fire target and other E7 kinds reach openBucketSheet', fn(assert) {
+        assert('add a pot', bucketSheetRoute({ kind: 'target-pot' }), { kind: 'target-pot', id: null });
+        assert('add a debt', bucketSheetRoute({ kind: 'target-debt' }), { kind: 'target-debt', id: null });
+        assert('new bucket', bucketSheetRoute({ kind: 'bucket-new' }), { kind: 'bucket-new', id: null });
+        assert('new goal uses the parent as id', bucketSheetRoute({ kind: 'goal-new', parent: 'p1' }), { kind: 'goal-new', id: 'p1' });
+        assert('split and goal still route', [bucketSheetRoute({ kind: 'split' }).kind, bucketSheetRoute({ kind: 'goal', id: 'g' }).id], ['split', 'g']);
+        assert('unknown or empty gives null', [bucketSheetRoute({ kind: 'nope' }), bucketSheetRoute(null)], [null, null]);
+        const d = sample();
+        assert('add-pot and add-debt actions ask for those sheets', [dispatchBucketAction(d, 'fire-add-pot', {}, { today: TODAY }).sheet.kind, dispatchBucketAction(d, 'fire-add-debt', {}, { today: TODAY }).sheet.kind], ['target-pot', 'target-debt']);
     } },
 ];

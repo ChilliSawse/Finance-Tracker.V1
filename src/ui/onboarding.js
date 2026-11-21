@@ -13,6 +13,7 @@ import { updateAllUI } from './render.js';
 import { initializeSettingsUI } from './settings-forms.js';
 import { loadSampleData } from '../state/sample-data.js';
 import { showToast } from './toast.js';
+import { mountHelpButton } from './help.js'; // A11
 import { getSetupSteps } from './setup/registry.js';
 import { registerQuizStep } from './setup/quiz.js';
 import { registerPaySteps } from './setup/steps-pay.js';
@@ -116,6 +117,7 @@ function render({ focus = false } = {}) {
         live = t('c.setup.stepOf', { n, total: list.length, title: step.title });
     }
     el.innerHTML = html;
+    mountHelpButton('setup', el.querySelector('.su-top')); // A11: one "?" in the setup header (T3)
     const liveEl = el.querySelector('.su-live');
     if (liveEl && focus) liveEl.textContent = live;
     if (focus) {
