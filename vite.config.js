@@ -43,7 +43,9 @@ export default defineConfig({
                 main: resolve(__dirname, 'index.html'),
                 // The calculation test harness ships as a second page so the
                 // deployed build can be verified in place (dev: /tests.html).
-                tests: resolve(__dirname, 'tests.html'),
+                // FT_NO_TESTS=1 leaves it out: deploy.yml runs the gate on the full build,
+                // then rebuilds without it so the Pages artifact carries no test page.
+                ...(process.env.FT_NO_TESTS ? {} : { tests: resolve(__dirname, 'tests.html') }),
             },
         },
     },

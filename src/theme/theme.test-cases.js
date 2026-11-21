@@ -23,9 +23,12 @@ async function indexHtml() {
         if (typeof process !== 'undefined' && process.versions && process.versions.node) {
             const nodeFs = 'node:fs';
             const fs = await import(/* @vite-ignore */ nodeFs);
-            return fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+            // G6W15-8: a path, not a URL from the module URL: Vite would copy index.html into dist/assets.
+            const nodeUrl = 'node:url', nodePath = 'node:path';
+            const [{ fileURLToPath }, path] = await Promise.all([import(/* @vite-ignore */ nodeUrl), import(/* @vite-ignore */ nodePath)]);
+            return fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'index.html'), 'utf8');
         }
-        const r = await fetch(new URL('../../index.html', import.meta.url));
+        const r = await fetch(new URL('index.html', document.baseURI));
         return r.ok ? await r.text() : null;
     } catch (_) { return null; }
 }
