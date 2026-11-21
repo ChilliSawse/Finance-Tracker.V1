@@ -1,8 +1,5 @@
 /* Future screen (F6). Tokens only. Ported from mockup/round2/future.css; classes carry an fu- prefix. */
 
-/* the old Savings and Liabilities panels are replaced by this screen; A12a deletes their markup */
-#future > .legacy-panel { display: none; }
-
 .fu-root { min-width: 0; }
 .fu-root[data-error] { padding: 24px; color: var(--muted); }
 .fu { align-items: start; }

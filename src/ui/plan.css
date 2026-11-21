@@ -1,6 +1,4 @@
 /* Plan screen (A9a): collapsible sections, money lists, caps, review card, back to top. Tokens only. */
-/* the old Income and Expenses panels are replaced by the lists; A12a deletes their markup */
-#plan #income.legacy-panel, #plan #expenses.legacy-panel { display: none; }
 
 .p-tools { margin: 0 0 16px; max-width: 420px; }
 .p-tools .form-input { width: 100%; }
