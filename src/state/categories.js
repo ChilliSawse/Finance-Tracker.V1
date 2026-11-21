@@ -65,21 +65,87 @@ export function cloneDefaultCategories() {
     return JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
 }
 
+// Card-network and wallet prefixes stripped before a merchant key is built.
+const KEY_PREFIX = /^(?:(?:sq|sp|pp|paypal|tyro|zlr|zip|ls)\s*\*\s*|eftpos\s+|visa\s+purchase\s+|card\s+purchase\s+|purchase\s+)+/;
+
 /**
- * Auto-categorise a transaction description: first category (in array order)
- * with a keyword contained in the lowercased description wins; 'other' otherwise.
+ * Stable merchant key for a bank description (learned rules): lowercase, card prefixes removed,
+ * the first one or two alphabetic words kept, stopping at the first word with a digit (store
+ * numbers, and the suburb after them). 'WOOLWORTHS 1234 NEWTOWN' gives 'woolworths'.
  * @param {string} description
- * @param {Array} categories - financeData.categories (or the defaults).
- * @returns {string} category id.
+ * @returns {string} the key, '' when nothing usable is left.
  */
-export function categoriseDescription(description, categories) {
+export function merchantKey(description) {
+    const d = String(description || '').toLowerCase().replace(/\s+/g, ' ').trim().replace(KEY_PREFIX, '').replace(/\*/g, ' ');
+    const words = [];
+    for (const tok of d.split(/\s+/)) {
+        if (/\d/.test(tok)) break;
+        const w = tok.replace(/[^a-z]/g, '');
+        if (w.length < 2) continue;
+        words.push(w);
+        if (words.length === 2) break;
+    }
+    return words.join(' ');
+}
+
+// The learned rule that applies to a description: same key, or the description's key starts with
+// the rule's key plus a space. The longest key wins, then the later rule. A rule whose category
+// no longer exists is ignored.
+function ruleFor(description, categories, rules) {
+    if (!Array.isArray(rules) || !rules.length) return null;
+    const k = merchantKey(description);
+    if (!k) return null;
+    const ids = new Set((categories || []).map((c) => c.id));
+    let best = null;
+    for (const r of rules) {
+        if (!r || !r.key || !ids.has(r.categoryId)) continue;
+        if (k !== r.key && !k.startsWith(r.key + ' ')) continue;
+        if (!best || r.key.length >= best.key.length) best = r;
+    }
+    return best;
+}
+
+/**
+ * Categorise and say how: { categoryId, by: 'rule' | 'keyword' | 'none', rule? }.
+ * Order: learned rules, then category keywords, then 'other' (by 'none').
+ */
+export function categoriseDetailed(description, categories, rules = []) {
+    const rule = ruleFor(description, categories, rules);
+    if (rule) return { categoryId: rule.categoryId, by: 'rule', rule };
     const d = (description || '').toLowerCase();
     if (d) {
         for (const cat of categories) {
             for (const kw of (cat.keywords || [])) {
-                if (kw && d.includes(kw)) return cat.id;
+                if (kw && d.includes(kw)) return { categoryId: cat.id, by: 'keyword' };
             }
         }
     }
-    return 'other';
+    return { categoryId: 'other', by: 'none' };
+}
+
+/**
+ * Auto-categorise a transaction description: learned rules first (optional third argument),
+ * then the first category (in array order) with a keyword contained in the lowercased
+ * description; 'other' otherwise.
+ * @param {string} description
+ * @param {Array} categories - financeData.categories (or the defaults).
+ * @param {Array} [rules] - financeData.rules.
+ * @returns {string} category id.
+ */
+export function categoriseDescription(description, categories, rules = []) {
+    return categoriseDetailed(description, categories, rules).categoryId;
+}
+
+/**
+ * Category and review status for a row about to be stored (FT-R-55). `chosenId` is a category
+ * already picked (the import preview). status is 'review' only when the row is uncategorised,
+ * meaning it ends up in 'other' and no learned rule put it there. A rule or keyword hit is 'ok'
+ * even in a category like Health.
+ * @returns {{categoryId:string, status:'ok'|'review'}}
+ */
+export function resolveCategory(description, chosenId, categories, rules = []) {
+    const det = categoriseDetailed(description, categories, rules);
+    const categoryId = chosenId || det.categoryId;
+    const byRule = det.by === 'rule' && det.categoryId === categoryId;
+    return { categoryId, status: categoryId === 'other' && !byRule ? 'review' : 'ok' };
 }

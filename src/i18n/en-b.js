@@ -6,4 +6,5 @@ export const enB = {
     'b.plan.removed': 'Removed {name}',
     'b.plan.nowBill': '{name} is now a bill',
     'b.plan.itemFallback': 'item',
+    'b.merge.line': 'Merged with your entry: {desc}, {amount} on {date}',
 };
