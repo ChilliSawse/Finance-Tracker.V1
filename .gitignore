@@ -10,5 +10,6 @@ real-files/
 
 # G6W12-7: tool output and downloaded backups can hold personal data.
 sweep-shots/
+z1-firstuse-shots/
 finance-data-backup-*.json
 ledger-saved-data-*.json
