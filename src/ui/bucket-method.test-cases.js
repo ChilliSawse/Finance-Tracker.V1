@@ -230,10 +230,10 @@ export const BUCKET_METHOD_TEST_CASES = [
     } },
     { name: 'E10.10 the July card shows for a payslip-job source with no check yet (30 Jun, 1 Jul, after the check)', fn(assert) {
         const job = () => ({ incomeSources: [{ incomeType: 'salaried', grossAnnual: 85000, paySchedule: 'fortnightly' }] });
-        assert('30 June: nothing', taxCardModel('2026-06-30', job()), null);
+        assert('30 June: due too, for the year ending (U2: any month)', taxCardModel('2026-06-30', job()), { kind: 'july', fy: '2025-26', late: true });
         assert('1 July: the card', taxCardModel('2026-07-01', job()), { kind: 'july', fy: '2026-27' });
         assert('still there in September', taxCardModel('2026-09-30', job()), { kind: 'july', fy: '2026-27' });
-        assert('quiet again in October (nothing ever checked)', taxCardModel('2026-10-01', job()), null);
+        assert('still there in October, with the later heading (U2)', taxCardModel('2026-10-01', job()), { kind: 'july', fy: '2026-27', late: true });
         const d = job();
         assert('the status says check due', taxTablesStatus('2026-07-01', d), { activeFy: '2026-27', stale: false, checkDue: true });
         assert('a payslip check confirms it', confirmTaxCheck(d, '2026-07-10', '2026-07-12'), true);
