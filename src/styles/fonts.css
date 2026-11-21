@@ -5,6 +5,8 @@
     font-weight: 400 700;
     font-style: normal;
     font-display: swap;
+    /* Latin subset (tools/subset-font.py); anything outside falls back to system-ui. */
+    unicode-range: U+0020-007E, U+00A0-017F, U+2007-200A, U+202F, U+2010-2015, U+2018-201F, U+2022, U+2026, U+2030, U+2039-203A, U+20A0-20BF, U+2190-2193, U+2212, U+2248, U+2264-2265;
 }
 
 :root {
