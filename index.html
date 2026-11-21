@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <!-- script-src whitelists cdn.jsdelivr.net for ONE thing: the on-demand PDF.js
-         dynamic import (bank statement / payslip reading); worker-src blob: lets
-         PDF.js spin up its parsing worker (it wraps the CDN worker in a blob).
-         Everything else stays 'self'. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-ft-fouc-init' https://cdn.jsdelivr.net; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:;">
+    <!-- worker-src blob: kept for PDF.js (bundled, same-origin worker). Everything else stays 'self'. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-ft-fouc-init'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:;">
     <title>Ledger</title>
     <script nonce="ft-fouc-init">
     /* replays {p,m} from the last session before CSS loads; the old shape sets nothing */
@@ -1105,8 +1102,8 @@
     </div>
 
     <!-- Ledger — bank PDF import. Same sandboxed shape as the CSV flow: parse →
-         detect bank → preview → explicit commit (with undo). PDF.js loads from the
-         CDN on demand the first time this modal is used; the PDF itself never
+         detect bank → preview → explicit commit (with undo). PDF.js is bundled and loads on demand
+         the first time this modal is used; the PDF itself never
          leaves the device. -->
     <div class="legacy modal-backdrop" id="pdf-import-modal" hidden>
         <div class="modal modal--wide modal--resizable" role="dialog" aria-modal="true" aria-labelledby="pdf-import-title">
@@ -1122,7 +1119,7 @@
                     <p class="import-drop-sub">or</p>
                     <button type="button" class="btn btn-secondary" id="pdf-import-browse">Choose a file…</button>
                     <input type="file" id="pdf-import-file" accept=".pdf,application/pdf" hidden>
-                    <p class="settings-hint">Works with CommBank, NAB, Westpac, ANZ, ING, Up and Bendigo statements (plus a generic reader for other banks). Everything is read right here in your browser — the file never leaves this device. The PDF reader library loads from a CDN the first time, so that step needs internet.</p>
+                    <p class="settings-hint">Works with CommBank, NAB, Westpac, ANZ, ING, Up and Bendigo statements (plus a generic reader for other banks). Everything is read right here in your browser — the file never leaves this device. The PDF reader is built in, so it works offline.</p>
                 </div>
 
                 <div id="pdf-import-status" role="status" aria-live="polite"></div>
