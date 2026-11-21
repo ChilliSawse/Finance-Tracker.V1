@@ -4,7 +4,8 @@
 
 import { store } from '../state/store.js';
 import { getElement, setText, setValue, escapeHtml, formatCurrency } from '../utils.js';
-import { escNum } from './html.js';
+import { esc, escNum } from './html.js';
+import { layoutFor } from './income-layout.js';
 import { calculateTotals } from '../calc/calculations.js';
 import { AU_TAX_YEARS } from '../calc/tax-au.js';
 import { sumEvents, fyRange, activeFyKey } from '../calc/income-events.js';
@@ -59,23 +60,19 @@ export function renderIncomeSourcesSettings() {
         const netPlaceholder = isVariable ? eventsNote : (isSelfEmployed ? 'Net Pay/Cycle' : 'Net/Cycle (opt)');
         const taxPlaceholder = isVariable ? eventsNote : 'Tax/Cycle (opt)';
 
-        itemDiv.innerHTML = `
-            <span>
-                <label for="${baseId}-primary" class="visually-hidden">Set as Primary Income Source ${index + 1}</label>
-                <input type="radio" name="primary-income" ${isPrimary ? 'checked' : ''} data-index="${index}" id="${baseId}-primary" style="justify-self: center;">
-            </span>
-            <span>
-                <label for="${baseId}-type" class="visually-hidden">Income Type ${index + 1}</label>
-                <select data-collection="incomeSources" data-index="${index}" data-field="incomeType" id="${baseId}-type" name="${baseId}-type">
-                    <option value="salaried" ${!isSelfEmployed && !isVariable ? 'selected' : ''}>Salaried</option>
-                    <option value="selfEmployed" ${isSelfEmployed ? 'selected' : ''}>Self-employed</option>
-                    <option value="variable" ${isVariable ? 'selected' : ''}>Variable</option>
-                </select>
-            </span>
-            <span>
-                <label for="${baseId}-name" class="visually-hidden">Income Source Name ${index + 1}</label>
-                <input type="text" value="${escapeHtml(source.name || '')}" data-collection="incomeSources" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
-            </span>
+        // C6: an employee source shows a one-line summary and opens the Salary or Set-hours sheet.
+        // Variable and Self-employed rows keep the editors below.
+        const layout = layoutFor(source);
+        if (layout) itemDiv.style.gridTemplateColumns = '0.4fr 0.9fr 1.2fr 3.8fr 0.5fr';
+        const cycleLabel = t(`c.income.cycle.${source.paySchedule}`);
+        const summary = layout === 'hours'
+            ? t('c.income.row.summaryHours', { rate: escNum(source.hourlyRate), hours: escNum(source.hoursPerWeek), cycle: cycleLabel.toLowerCase() })
+            : t('c.income.row.summary', { gross: Number(source.grossAnnual || 0).toLocaleString('en-AU'), cycle: cycleLabel.toLowerCase() });
+        const payCells = layout ? `
+            <span class="income-row-summary">
+                <span class="income-row-summary-text">${esc(summary)}</span>
+                <button type="button" class="btn btn-secondary btn-small income-edit-pay" data-index="${index}">${t('c.income.row.edit')}</button>
+            </span>` : `
             <span>
                 <label for="${baseId}-gross" class="visually-hidden">Gross Annual Income ${index + 1}</label>
                 <input type="number" value="${escNum(source.grossAnnual || 0)}" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" name="${baseId}-gross" placeholder="${(isSelfEmployed || isVariable) ? autoNote : 'Gross Annual'}" step="0.01" ${grossDisabled}>
@@ -100,13 +97,43 @@ export function renderIncomeSourcesSettings() {
             <span>
                 <label for="${baseId}-taxremoved" class="visually-hidden">Tax Removed Per Cycle ${index + 1}</label>
                 <input type="number" value="${escNum(isVariable ? '' : taxRemovedValue)}" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="${taxPlaceholder}" step="0.01" ${cycleDisabled}>
+            </span>`;
+
+        itemDiv.innerHTML = `
+            <span>
+                <label for="${baseId}-primary" class="visually-hidden">Set as Primary Income Source ${index + 1}</label>
+                <input type="radio" name="primary-income" ${isPrimary ? 'checked' : ''} data-index="${index}" id="${baseId}-primary" style="justify-self: center;">
             </span>
+            <span>
+                <label for="${baseId}-type" class="visually-hidden">Income Type ${index + 1}</label>
+                <select data-collection="incomeSources" data-index="${index}" data-field="incomeType" id="${baseId}-type" name="${baseId}-type">
+                    <option value="salaried" ${!isSelfEmployed && !isVariable ? 'selected' : ''}>Salaried</option>
+                    <option value="selfEmployed" ${isSelfEmployed ? 'selected' : ''}>Self-employed</option>
+                    <option value="variable" ${isVariable ? 'selected' : ''}>Variable</option>
+                </select>
+            </span>
+            <span>
+                <label for="${baseId}-name" class="visually-hidden">Income Source Name ${index + 1}</label>
+                <input type="text" value="${escapeHtml(source.name || '')}" data-collection="incomeSources" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Name">
+            </span>
+            ${payCells}
             <button class="delete-btn" data-index="${index}" data-type="incomeSource" aria-label="Delete Income Source ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
 
         if (isVariable) {
             container.appendChild(buildIncomeEventsEditor(source, index));
         } else {
+            if (source.migrationPrompt === 'payslip-job') {
+                const offer = document.createElement('div');
+                offer.className = 'income-row-tools income-payslip-job-offer';
+                offer.setAttribute('role', 'note');
+                offer.innerHTML = `
+                    <strong>${t('c.income.offer.title')}</strong>
+                    <span class="settings-hint">${t('c.income.offer.body')}</span>
+                    <button type="button" class="btn btn-secondary btn-small income-payslip-job-accept" data-index="${index}">${t('c.income.offer.accept')}</button>
+                    <button type="button" class="btn btn-secondary btn-small income-payslip-job-dismiss" data-index="${index}">${t('c.income.offer.dismiss')}</button>`;
+                container.appendChild(offer);
+            }
             // Payslip PDF autofill — fills gross/net/tax per cycle from a real payslip.
             const tools = document.createElement('div');
             tools.className = 'income-row-tools';
