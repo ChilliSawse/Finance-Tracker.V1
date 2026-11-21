@@ -2,6 +2,12 @@
 // Order matters: load data → apply theme (before first render) → build the
 // settings forms → wire events → first full render → restore the active tab.
 
+// Style load order matters (A3): generated tokens, legacy aliases, fonts, base design system, then the shrinking legacy sheet.
+import './styles/tokens.generated.css';
+import './styles/legacy-aliases.css';
+import './styles/fonts.css';
+import './styles/base.css';
+import '../style.css';
 import { store } from './state/store.js';
 import { FinanceAutoSave } from './state/autosave.js';
 import { loadTheme, registerStoredCustomFonts, applyBackgroundEffect, applyBgEffectColor } from './theme/theme.js';
