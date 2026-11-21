@@ -6,6 +6,7 @@ import { store } from './store.js';
 import { cloneDefaultFinanceData, cloneDefaultGuiSettings } from './defaults.js';
 import { runMigrationChain } from './migration-chain.js';
 import { migrateGuiAppearance } from '../theme/theme.js';
+import { SAVE_KEY, sanitizeFinanceData, sanitizeGuiSettings, quarantineCorruptSave } from './sanitize.js';
 
 export class FinanceAutoSave {
     constructor() {
@@ -117,26 +118,43 @@ export class FinanceAutoSave {
     }
 
     loadData() {
-        try {
-            const savedDataString = localStorage.getItem('financeTrackerData_v2');
-            if (savedDataString) {
-                const loadedBundle = JSON.parse(savedDataString);
-                if (loadedBundle && loadedBundle.financeData && loadedBundle.guiSettings) {
-                    store.financeData = loadedBundle.financeData;
-                    store.guiSettingsData = loadedBundle.guiSettings;
+        // S1: what happened while loading, for a later UI step (main.js shows the notices once).
+        store.loadStatus = { corruptKey: null, migrationAborted: false, migrationErrors: [], failed: false };
+        let raw = null;
+        try { raw = localStorage.getItem(SAVE_KEY); } catch (error) {
+            console.error('Could not read localStorage:', error);
+        }
+        if (raw) {
+            try {
+                const loadedBundle = JSON.parse(raw);
+                if (loadedBundle && loadedBundle.financeData && loadedBundle.guiSettings
+                    && typeof loadedBundle.financeData === 'object' && typeof loadedBundle.guiSettings === 'object') {
+                    // S1: prototype keys, non-finite numbers and a hostile currency never reach the store.
+                    const financeData = sanitizeFinanceData(loadedBundle.financeData);
+                    const guiSettings = sanitizeGuiSettings(loadedBundle.guiSettings);
                     // A4: old theme names, colour fields and the retired mode land on a palette and a colour mode.
-                    migrateGuiAppearance(store.guiSettingsData);
+                    migrateGuiAppearance(guiSettings);
+                    store.financeData = financeData;
+                    store.guiSettingsData = guiSettings;
                     // The four legacy migrations, then the Phase 1 steps (backup, one forceSave).
-                    runMigrationChain(store.financeData, {
-                        raw: savedDataString, source: 'load', forceSave: () => this.forceSave(),
+                    const result = runMigrationChain(store.financeData, {
+                        raw, source: 'load', forceSave: () => this.forceSave(),
                     });
+                    if (result && result.aborted) {
+                        // L5: carry on with the committed state; the flag lets the UI tell the user.
+                        store.loadStatus.migrationAborted = true;
+                        store.loadStatus.migrationErrors = result.errors || [];
+                    }
                     this.lastSaveHash = this.getDataHash();
                     this.updateSaveStatus('saved');
                     return true;
                 }
+                // Parsed but not a bundle: keep a copy, same as unparseable.
+                this._setAsideCorruptSave(raw);
+            } catch (error) {
+                console.error('Failed to load data from localStorage (v2):', error);
+                this._setAsideCorruptSave(raw);
             }
-        } catch (error) {
-            console.error('Failed to load data from localStorage (v2):', error);
         }
         // Fallback to default if load fails or no data
         store.financeData = cloneDefaultFinanceData();
@@ -144,6 +162,15 @@ export class FinanceAutoSave {
         this.lastSaveHash = this.getDataHash();
         this.updateSaveStatus('saved'); // Consider it 'saved' as it's default
         return false;
+    }
+
+    // M4: copy the raw string aside (once) before anything can overwrite it.
+    _setAsideCorruptSave(raw) {
+        store.loadStatus.failed = true;
+        try {
+            const { key } = quarantineCorruptSave(raw, localStorage);
+            store.loadStatus.corruptKey = key;
+        } catch (e) { /* storage unavailable */ }
     }
 
     onDataChange() {

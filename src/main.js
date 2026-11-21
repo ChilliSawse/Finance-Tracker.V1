@@ -32,9 +32,10 @@ import { setupMilestoneToasts } from './ui/toast.js';
 import './ui/sheet.css'; // D1 — sheet, undo toast and dialog styles
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
+import { showLoadNotices, showRecoveryPanel } from './events/import-export.js';
 import { runPayRollIfDue } from './state/saving-model.js'; // E5 — pay-day credit
 
-document.addEventListener('DOMContentLoaded', () => {
+function boot() {
     setupPwaUpdateListeners();
     store.autoSave = new FinanceAutoSave();
     const hadSavedData = store.autoSave.loadData();
@@ -89,4 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelAnimationFrame(fitRaf);
         fitRaf = requestAnimationFrame(() => fitAllAmounts());
     });
+
+    showLoadNotices(); // S1: once-only notices (unreadable save set aside, upgrade aborted)
+}
+
+// S1/M3: if startup throws because of the saved data, show a recovery panel instead of a dead page.
+document.addEventListener('DOMContentLoaded', () => {
+    try { boot(); } catch (err) { showRecoveryPanel(err); }
 });
