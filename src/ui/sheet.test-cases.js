@@ -8,6 +8,7 @@ import {
     createSheetModel, coerceFieldValue, noteSig, removeAt, deleteWithUndo,
 } from './sheet.js';
 import { createToastQueue } from './toast.js';
+import { openSheet } from './sheet.js';
 import { toastKindForModal, showCustomModal, confirmDialog } from './confirm.js';
 
 const HAS_DOM = typeof document !== 'undefined';
@@ -259,4 +260,41 @@ export const SHEET_TEST_CASES = [
         assert('a new fix label changes it', noteSig('Adds to 98%', [{ label: 'Other' }]) === noteSig('Adds to 98%', [fix]), false);
         assert('no message is the empty signature', [noteSig('', [fix]), noteSig(null)], ['', '']);
     } },
+    {
+        name: 'P2.1 an open sheet is never covered by a toast (390 and 1440)',
+        async fn(assert) {
+            if (!HAS_DOM) return;
+            // Real layout: the repo CSS inside an iframe of the given width holding a copy of the open sheet and the toast.
+            const [sheetCss, baseCss] = [(await import('./sheet.css?raw')).default, (await import('../../style.css?raw')).default];
+            const fields = [
+                { key: 'name', label: 'Name', type: 'text', hint: 'A short name for this debt.' },
+                { key: 'bal', label: 'Balance', type: 'money', hint: 'What you owe today.' },
+                { key: 'rate', label: 'Rate', type: 'number', hint: 'Yearly interest.' },
+            ];
+            const s = openSheet({ title: 'Add debt', fields, values: {}, onSave() {} });
+            const sheetHtml = s.layer.outerHTML;
+            s.close();
+            const cases = [[390, 780], [1440, 900], [800, 900]];
+            for (const [w, h] of cases) {
+                const fr = document.createElement('iframe');
+                fr.style.cssText = `position:fixed;left:-9999px;top:0;border:0;width:${w}px;height:${h}px`;
+                fr.srcdoc = `<!doctype html><html><head><style>${baseCss}</style><style>${sheetCss}</style></head><body class="has-sheet">${sheetHtml}<div id="ledger-toast" role="status" aria-live="polite" class="is-info has-controls is-visible"><span class="toast-msg">Added Family car.</span><button type="button" class="toast-action">Undo</button></div></body></html>`;
+                document.body.appendChild(fr);
+                await new Promise((r) => { fr.onload = r; });
+                await new Promise((r) => setTimeout(r, 400)); // the toast fades in
+                const d = fr.contentDocument;
+                const rect = (sel) => d.querySelector(sel).getBoundingClientRect();
+                const hit = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+                const toast = rect('#ledger-toast');
+                assert(`${w}: toast is shown`, toast.width > 0 && toast.height > 0, true);
+                assert(`${w}: toast inside the viewport`, toast.left >= 0 && toast.right <= w && toast.top >= 0 && toast.bottom <= h, true);
+                assert(`${w}: toast clear of the sheet body`, hit(toast, rect('.sheet-body')), false);
+                assert(`${w}: toast clear of the footer`, hit(toast, rect('.sheet-foot')), false);
+                assert(`${w}: toast clear of the sheet header`, hit(toast, rect('.sheet-head')), false);
+                assert(`${w}: the Undo button is on screen`, rect('.toast-action').bottom <= h && rect('.toast-action').top >= 0, true);
+                assert(`${w}: toast keeps role and live region`, [d.querySelector('#ledger-toast').getAttribute('role'), d.querySelector('#ledger-toast').getAttribute('aria-live')], ['status', 'polite']);
+                fr.remove();
+            }
+        },
+    },
 ];

@@ -6,7 +6,6 @@ import { showTab } from '../ui/tabs.js';
 import { updateDataAndUI } from '../ui/render.js';
 import { handleSettingsClickEvents, handleSettingsChangeEvents } from './settings-events.js';
 import { openQuickAdd } from '../ui/quick-add.js';
-import { handleWhatIfClickEvents, handleWhatIfChangeEvents } from '../ui/whatif.js';
 import { openSettings } from '../ui/settings-screen.js';
 
 export function setupEventListeners() {
@@ -70,10 +69,4 @@ export function setupEventListeners() {
     document.addEventListener('click', handleSettingsClickEvents);
     document.addEventListener('change', handleSettingsChangeEvents);
 
-    // What If Tab Events
-    const whatIfContent = getElement('whatIf');
-    if (whatIfContent) {
-        whatIfContent.addEventListener('click', handleWhatIfClickEvents);
-        whatIfContent.addEventListener('change', handleWhatIfChangeEvents);
-    }
 }
