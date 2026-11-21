@@ -182,7 +182,7 @@ export const en = {
 
     // PDF import
     'pdf.loading': 'Loading PDF reader…',
-    'pdf.loadFailed': "Couldn't load the PDF reader — check your internet connection and try again.",
+    'pdf.loadFailed': "Could not read that PDF. If it's a scanned image, export a CSV from your bank instead.",
     'pdf.parsingPage': 'Parsing page {page} of {total}…',
     'pdf.password': 'This PDF is password-protected — remove the password (print to PDF works) and try again.',
     'pdf.corrupt': "That file doesn't look like a readable PDF — try exporting it from your bank again.",
