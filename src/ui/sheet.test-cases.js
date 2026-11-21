@@ -5,7 +5,7 @@
 
 import {
     weeklyAmountRule, hoursRule, bucketTotalRule, runPlausibility,
-    createSheetModel, coerceFieldValue, removeAt, deleteWithUndo,
+    createSheetModel, coerceFieldValue, noteSig, removeAt, deleteWithUndo,
 } from './sheet.js';
 import { createToastQueue } from './toast.js';
 import { toastKindForModal, showCustomModal, confirmDialog } from './confirm.js';
@@ -252,4 +252,11 @@ export const SHEET_TEST_CASES = [
             assert('Escape resolves false', await p3, false);
         },
     },
+    { name: 'T3.1 a note keeps its node while its message and fixes are unchanged', fn(assert) {
+        const fix = { label: 'Put the difference into Smile' };
+        assert('same message and fix, same signature', noteSig('Adds to 98%', [fix]), noteSig('Adds to 98%', [{ label: 'Put the difference into Smile' }]));
+        assert('a new message changes it', noteSig('Adds to 99%', [fix]) === noteSig('Adds to 98%', [fix]), false);
+        assert('a new fix label changes it', noteSig('Adds to 98%', [{ label: 'Other' }]) === noteSig('Adds to 98%', [fix]), false);
+        assert('no message is the empty signature', [noteSig('', [fix]), noteSig(null)], ['', '']);
+    } },
 ];

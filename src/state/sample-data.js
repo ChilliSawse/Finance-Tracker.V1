@@ -1,6 +1,6 @@
 // Sample household (B5): Alex and Sam, a fictional Australian demo so someone can explore Ledger
-// before committing their own numbers. Loaded from onboarding; cleared by "Reset to Factory
-// Defaults" (which also deletes the sample transaction batch).
+// before committing their own numbers. Loaded from onboarding; cleared by Settings, Your data, "Erase all data"
+// (which also deletes the sample transaction batch).
 // Every figure comes from the app's own engine (FT-R-48, FT-R-87): pay from calculateTotals, the
 // split from applySuggestedSplit, bills matched by matchBills. Dates are relative to today.
 
@@ -298,7 +298,7 @@ export async function loadSampleData() {
         const res = await addTransactions(txns);
         added = res.added;
         await logEvent('import', { batchId: SAMPLE_BATCH_ID, count: added, sourceName: 'the sample bank history' });
-        await logEvent('note', { text: "You're exploring Ledger with sample data — everything here is made up. When you're ready, use Reset to Factory Defaults in Settings and add your own numbers." });
+        await logEvent('note', { text: "You're exploring Ledger with sample data — everything here is made up. When you're ready, use Settings, Your data, Erase all data, and add your own numbers." });
     } catch (_) {
         // No IndexedDB: the config-side sample still works; the feed just stays quieter.
     }

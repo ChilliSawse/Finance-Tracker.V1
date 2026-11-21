@@ -251,7 +251,7 @@ function tilesHtml(m, ui) {
             ? T('e.plan.leftThisPay', { amount: money(b.leftCents) })
             : T('e.plan.balance', { amount: money(b.balanceCents) });
         return `<li class="pb-tile ${toneClass(b.slot, 0)}" data-bucket="${esc(b.id)}">
-            <span class="pb-nm">${esc(b.name)}</span><span class="pb-pc num">${esc(pctText(b.pct))}</span>
+            <button type="button" class="pb-nm pb-linkbtn" data-pb="bucket-open" data-id="${esc(b.id)}" aria-label="${A('e.plan.bucketOpenAria', { name: b.name })}">${esc(b.name)}</button><span class="pb-pc num">${esc(pctText(b.pct))}</span>
             <span class="pb-pp money">${T('e.plan.perPay', { amount: money(b.perPayCents) })}</span>
             <span class="pb-bal">${balLine}</span>${chipsHtml(b, m, ui)}</li>`;
     }).join('')}</ul>`;
@@ -504,6 +504,7 @@ export function dispatchBucketAction(data, action, a = {}, ctx = {}) {
         case 'fire-add-pot': return { sheet: { kind: 'target-pot' } };
         case 'fire-add-debt': return { sheet: { kind: 'target-debt' } };
         case 'mojo-change': return { sheet: { kind: 'mojo' } };
+        case 'bucket-open': return { sheet: { kind: 'bucket', id: a.id } };
         case 'goal-open': return { sheet: { kind: 'goal', id: a.id } };
         case 'goal-add': return { sheet: { kind: 'goal-new', parent: a.parent } };
         case 'hint-apply': {
@@ -656,9 +657,20 @@ function openTargetSheet(root, kind) {
     });
 }
 
+const E7_KINDS = ['split', 'template', 'goal', 'goal-new', 'mojo', 'bucket-new', 'target-pot', 'target-debt'];
+
+/** Which E7 sheet an action opens: { kind, id } for openBucketSheet, or null (T3; pure so it can be tested). */
+export function bucketSheetRoute(sheet) {
+    if (!sheet || !sheet.kind) return null;
+    if (sheet.kind === 'bucket') return { kind: 'bucket', id: sheet.id || null };
+    return E7_KINDS.includes(sheet.kind) ? { kind: sheet.kind, id: sheet.id || sheet.parent || null } : null;
+}
+
 function openFor(root, sheet) {
     const kind = sheet.kind;
-    const e7 = ['split', 'template', 'goal', 'mojo'].includes(kind) ? openBucketSheet(kind, sheet.id || null) : false;
+    const route = bucketSheetRoute(sheet);
+    if (kind === 'bucket') { if (route) openBucketSheet(route.kind, route.id); return; }
+    const e7 = route ? openBucketSheet(route.kind, route.id) : false;
     if (e7) return;
     if (kind === 'split') openSplitSheet(root);
     else if (kind === 'template') openTemplateSheet(root);

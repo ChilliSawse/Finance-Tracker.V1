@@ -50,6 +50,7 @@ export const enE = {
     'e.plan.cats': 'Categories in {bucket}',
     'e.plan.catsNone': 'No categories yet',
     'e.plan.catMove': 'Move {name} to...',
+    'e.plan.bucketOpenAria': 'Edit {name}',
     'e.plan.catMoveTo': 'Move {name} to',
     'e.plan.catFollow': 'Follow the Essential tick',
     'e.plan.catCancel': 'Cancel',
