@@ -235,8 +235,10 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
             const radio = el('input', { type: 'radio', name: 'qa-bucket', value: b.id, 'data-qa': 'bucket' });
             radio.checked = r.bucketId === b.id;
             const left = figures.get(b.id) || 0;
+            // a saving bucket has no "left this pay": show what is saved in it, or nothing when it is empty
+            const figText = b.kind === 'spend' ? t('a.quickAdd.left', { amount: money(left) }) : (left > 0 ? t('a.quickAdd.inBucket', { amount: money(left) }) : '');
             const label = el('label', { class: 'bk' }, radio, el('span', { class: 'bn', text: b.name }),
-                el('span', { class: 'bv money', text: t('a.quickAdd.left', { amount: money(left) }) }),
+                el('span', { class: 'bv money', text: figText }),
                 (category() && b.id === r.usualId) ? el('span', { class: 'bw', text: t('a.quickAdd.bucketFrom', { category: category().name }) }) : null);
             tint(label, b);
             bkGrid.appendChild(label);

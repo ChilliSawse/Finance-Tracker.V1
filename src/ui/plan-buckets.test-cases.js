@@ -111,6 +111,16 @@ export const PLAN_BUCKETS_TEST_CASES = [
         d2.allocation.find((r) => r.role === 'mojo').currentBalance = 2500;
         assert('no note at or over the starter', buildBucketsModel(d2, TODAY, {}).fire.note, null);
     } },
+    { name: 'P1.1 a new bucket with no bankSetTo entry reads New, not A$0.00', fn(assert) {
+        const d = sample();
+        dispatchBucketAction(d, 'use-suggested');
+        const row = { id: 'b-new-p1', name: 'Holiday pot', role: null, kind: 'save', percentage: 0, currentBalance: 0, bankLabel: '' };
+        d.allocation.push(row);
+        const xf = buildBucketsModel(d, TODAY, {}).transfers.find((r) => r.bucketId === 'b-new-p1');
+        assert('listed with no old amount', xf && xf.wasCents, null);
+        const h = html(d);
+        assert('the amount cell says New and the detail says set this up', [has(h, '<span class="money">New</span>'), has(h, 'Set this up in your bank')], [true, true]);
+    } },
     { name: 'E6.8 transfers card', fn(assert) {
         const d = sample();
         assert('seeded to today: card hidden', buildBucketsModel(d, TODAY, {}).transfers.length, 0);

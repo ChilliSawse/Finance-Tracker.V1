@@ -61,6 +61,7 @@ export class FinanceAutoSave {
             unsaved: 'Unsaved changes'
         };
         this.statusIndicator.textContent = statusText[status] || 'All changes saved';
+        this.statusIndicator.title = this.statusIndicator.textContent; // sighted hint when only the dot shows on narrow phones
     }
 
     getDataHash() {

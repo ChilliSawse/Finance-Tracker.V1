@@ -195,7 +195,7 @@ export const TODAY_TEST_CASES = [
             assert('line starts at the pool less day one', s.actual[0], s.pool - s.spent[0]);
             assert('projection end = left - pace x days after today', s.endValue, model.leftCents - s.pace * (model.cycle.daysLeft - 1));
             assert('accessible name', html.includes('aria-labelledby="h-trend t-desc"'), true);
-            assert('data table', html.includes('<table class="today-sr">'), true);
+            assert('data table', html.includes('<div class="today-sr"><table class="today-sr-table">'), true);
             assert('table has a row per day', (html.match(/<th scope="row">/g) || []).length, 14);
         },
     },

@@ -26,5 +26,3 @@
 .income-row-summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .income-payslip-job-offer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-/* sheet.css sets display on .sheet-note, which beats the hidden attribute; keep empty notes hidden. */
-.sheet-note[hidden], .sheet-error[hidden] { display: none; }

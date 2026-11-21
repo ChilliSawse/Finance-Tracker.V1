@@ -322,7 +322,7 @@ function transfersHtml(m) {
         const detail = r.informational ? t('e.plan.xferStays') : (r.bankLabel || t('e.plan.xferNew'));
         const was = !r.informational && r.wasCents !== null && r.wasCents !== r.nowCents ? `<span class="was">${esc(money(r.wasCents))}</span>` : '';
         return `<li><label><input class="pb-tickbox" type="checkbox" data-pb="tick" data-id="${esc(r.bucketId)}"${r.informational ? ' checked disabled' : ''} aria-label="${A('e.plan.xferTick', { name: r.name })}">
-            <span><span class="n">${esc(r.name)}</span><span class="d">${esc(detail)}</span></span><span class="money">${was}${esc(money(r.nowCents))}</span></label></li>`;
+            <span><span class="n">${esc(r.name)}</span><span class="d">${esc(detail)}</span></span><span class="money">${was}${esc(r.wasCents === null && !r.nowCents ? t('e.plan.xferNewTag') : money(r.nowCents))}</span></label></li>`;
     }).join('');
     return `<section class="card pb-card pb-xfer pb-s4" aria-labelledby="pb-h-xfer">
         <div class="pb-head"><h3 id="pb-h-xfer">${esc(t('e.plan.xferTitle'))}</h3>${todo ? `<span class="pill due">${T('e.plan.xferTodo', { n: todo })}</span>` : ''}</div>
