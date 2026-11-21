@@ -65,7 +65,7 @@ if (args.has('--after-d2')) {
 
 // 5. Hex colours outside the generated token file.
 if (args.has('--hex')) {
-    const generated = new Set(['src/theme/tokens.generated.css'].map((p) => path.normalize(p)));
+    const generated = new Set(['src/styles/tokens.generated.css'].map((p) => path.normalize(p)));
     for (const f of [...srcFiles, 'style.css']) {
         if (generated.has(path.normalize(f))) continue;
         if (/#[0-9a-fA-F]{3,8}\b/.test(read(f).replace(/&#\d+;/g, ''))) fail(`hex colour in ${f}`);
