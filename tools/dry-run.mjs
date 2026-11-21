@@ -45,6 +45,10 @@ const cents = (d) => Math.round(num(d) * 100);
 const money = (c) => `${c < 0 ? '-' : ''}${(Math.abs(c) / 100).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const checks = [];
 const check = (label, ok, detail = '') => checks.push({ label, ok: !!ok, detail });
+// G6W12-3: failure details and chain error messages can carry amounts (the totals check prints weekly
+// dollars). With --no-amounts every one of them is replaced by this fixed text.
+const HIDDEN = '(detail hidden by --no-amounts)';
+const safeText = (t) => (noAmounts ? HIDDEN : t);
 
 function table(title, headers, rows) {
     console.log(`\n${title}`);
@@ -117,7 +121,7 @@ console.log(`File: ${file}`);
 console.log(`Input: dataVersion ${before.dataVersion == null ? 'none' : before.dataVersion}, savingModel ${before.savingModel ? 'present' : 'none'}`);
 
 console.log('\n(a) STRUCTURE (no amounts)');
-console.log(`\nChain result: aborted=${result.aborted} changed=${result.changed} backedUp=${result.backedUp} errors=[${result.errors.join(', ')}] forceSave calls=${saves}`);
+console.log(`\nChain result: aborted=${result.aborted} changed=${result.changed} backedUp=${result.backedUp} errors=[${noAmounts ? (result.errors.length ? HIDDEN + " x" + result.errors.length : "") : result.errors.join(", ")}] forceSave calls=${saves}`);
 console.log(`Steps run: ${steps.join(' > ')}`);
 
 if (sm) {
@@ -216,7 +220,7 @@ if (!noAmounts) {
 // ---------- verdict ----------
 
 console.log('\nChecks');
-checks.forEach((c) => console.log(`  ${c.ok ? 'PASS' : 'FAIL'}  ${c.label}${!c.ok && c.detail ? ` (${c.detail})` : ''}`));
+checks.forEach((c) => console.log(`  ${c.ok ? 'PASS' : 'FAIL'}  ${c.label}${!c.ok && c.detail ? ` (${safeText(c.detail)})` : ''}`));
 const failed = checks.filter((c) => !c.ok);
 console.log(failed.length ? `\nRESULT: ${failed.length} check(s) FAILED` : '\nRESULT: all checks passed');
 process.exit(failed.length ? 1 : 0);

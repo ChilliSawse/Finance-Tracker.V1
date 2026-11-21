@@ -12,7 +12,9 @@ const TYPES = {
 /** @param {string} root absolute directory @returns {Promise<{port:number, close:()=>void}>} */
 export async function serveDir(root) {
     const server = http.createServer(async (req, res) => {
-        const rel = normalize(decodeURIComponent(req.url.split('?')[0])).replace(/^[/\\]+/, '');
+        // G6W12-8: a malformed escape such as '%' answers 400 instead of crashing the server.
+        let rel;
+        try { rel = normalize(decodeURIComponent(req.url.split('?')[0])).replace(/^[/\\]+/, ''); } catch (_) { res.writeHead(400); res.end(); return; }
         const file = join(root, rel || 'index.html');
         if (file !== root && !file.startsWith(root + sep)) { res.writeHead(403); res.end(); return; }
         try {

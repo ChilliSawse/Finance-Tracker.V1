@@ -10,7 +10,7 @@ import {
 } from '../../tools/accept-fixtures.mjs';
 
 const SECRETS = [
-    'WOOLWORTHS', 'THORNBURY', 'EMPLOYER', 'NETFLIX', 'ROSSI', 'ACME', 'Jane', 'Citizen', FAKE_NAME,
+    'WOOLWORTHS', 'EXAMPLEVILLE', 'EMPLOYER', 'NETFLIX', 'ROSSI', 'ACME', 'Jane', 'Citizen', FAKE_NAME,
     '062000', '12345678', FAKE_ACCOUNT, '45.50', '1850', '1,200.00', '3,200', '2,560', '640.00', 'Westpac Banking',
 ];
 const leaks = (text) => SECRETS.filter((s) => text.toLowerCase().includes(s.toLowerCase()));
