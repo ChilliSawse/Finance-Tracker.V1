@@ -18,7 +18,10 @@ import {
 } from './settings-model.js';
 import { readAppearance, applyAppearance, applyTextSize, applyStoredAppearance, renderPaletteSwatches } from '../theme/theme.js';
 import { MODES } from '../theme/palettes.js';
-import { actionExportDataJSON, actionExportTransactionsCSV, handleJSONImport } from '../events/import-export.js';
+import { actionExportDataJSON, actionExportTransactionsCSV, handleJSONImport, undoRestoreNow } from '../events/import-export.js';
+import { confirmDialog } from './confirm.js';
+import { restoreCopyInfo } from '../state/backup.js';
+import { addUndoRestoreRow } from './restore-copy-row.js';
 import { eraseAllData } from '../events/settings-events.js';
 import { openTaxDetailsSheet } from './income-other.js';
 import { canInstall, promptInstall } from '../pwa.js';
@@ -29,6 +32,7 @@ const VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
 
 let root = null;
 let query = '';
+let restoreCopy = null; // U3: {id, timestamp} while a pre-restore copy exists, else null
 
 function save() { if (store.autoSave) store.autoSave.onDataChange(); }
 
@@ -102,7 +106,25 @@ function chooseCurrency(code) {
     showToast(t('d.settings.currency.changed', { code }), 'success');
 }
 
+// U3: look for the pre-restore copy; the row shows only while one exists.
+async function refreshRestoreCopy() {
+    const info = await restoreCopyInfo({ storage: localStorage });
+    const changed = (info && info.id) !== (restoreCopy && restoreCopy.id);
+    restoreCopy = info;
+    if (changed) renderList();
+}
+
+async function undoRestoreFromRow() {
+    const yes = await confirmDialog({
+        title: t('d.undo.confirmTitle'), body: t('d.undo.confirmBody'), confirmLabel: t('d.undo.confirmLabel'), danger: true,
+    });
+    if (!yes) return;
+    await undoRestoreNow();
+    await refreshRestoreCopy();
+}
+
 const ACTIONS = {
+    undorestore: undoRestoreFromRow,
     backup: () => actionExportDataJSON(),
     restore: () => { const f = root && root.querySelector('#json-import-gui'); if (f) f.click(); },
     export: () => actionExportTransactionsCSV(),
@@ -236,9 +258,9 @@ function buildAppearanceRows(grp) {
 function renderList() {
     const host = root && root.querySelector('#settings-list');
     if (!host) return;
-    const all = buildSettings({
+    const all = addUndoRestoreRow(buildSettings({
         financeData: store.financeData, now: new Date(), installAvailable: canInstall(), version: VERSION,
-    });
+    }), restoreCopy);
     const groups = filterSettings(all, query);
     // Keep focus on the same control across a re-render.
     const active = document.activeElement;
@@ -316,6 +338,7 @@ export function isSettingsOpen() { return !!root && root.classList.contains('act
 export function openSettings() {
     if (!root) return;
     query = '';
+    refreshRestoreCopy();
     const input = root.querySelector('#settings-search');
     if (input) input.value = '';
     renderList();
@@ -378,4 +401,6 @@ export function setupSettingsScreen() {
     // Re-render when the data changed under us (restore, erase) or the install prompt arrived.
     document.addEventListener('ledger:data-swapped', () => { applyStoredAppearance(); renderList(); });
     document.addEventListener('ledger:install-availability', () => renderList());
+    document.addEventListener('ledger:restore-copy-changed', () => { refreshRestoreCopy(); });
+    refreshRestoreCopy();
 }
