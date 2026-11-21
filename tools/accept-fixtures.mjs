@@ -7,7 +7,7 @@ export const FAKE_ACCOUNT = '062000 12345678';
 
 export const CSV_FIXTURE = [
     'Date,Description,Amount,Balance',
-    '02/03/2026,WOOLWORTHS 1234 THORNBURY,-45.50,1204.50',
+    '02/03/2026,WOOLWORTHS 1234 EXAMPLEVILLE,-45.50,1204.50',
     '03/03/2026,EMPLOYER PTY LTD PAY,1850.00,3054.50',
     '05/03/2026,NETFLIX.COM,-16.99,3037.51',
     '05/04/2026,TRANSFER TO ' + FAKE_NAME + ' ACC ' + FAKE_ACCOUNT + ',-300.00,2737.51',
@@ -17,7 +17,7 @@ export const CSV_FIXTURE = [
 
 export const XLSX_ROWS = [
     ['Date', 'Description', 'Debit', 'Credit', 'Balance'],
-    [{ serial: 46083 }, 'WOOLWORTHS 1234 THORNBURY', '45.50', null, '1204.50'],
+    [{ serial: 46083 }, 'WOOLWORTHS 1234 EXAMPLEVILLE', '45.50', null, '1204.50'],
     [{ serial: 46084 }, 'EMPLOYER PTY LTD PAY', null, '1850.00', '3054.50'],
     [{ serial: 46086 }, 'TRANSFER TO ' + FAKE_NAME, '300.00', null, '2754.50'],
 ];

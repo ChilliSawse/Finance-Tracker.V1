@@ -20,7 +20,7 @@ async function code(promise) {
 
 const SIMPLE = [
     ['Date', 'Description', 'Debit', 'Credit', 'Balance'],
-    [DATE(45658), 'WOOLWORTHS 1234 THORNBURY', '45.50', null, '1204.50'],
+    [DATE(45658), 'WOOLWORTHS 1234 EXAMPLEVILLE', '45.50', null, '1204.50'],
     [DATE(45659, 2), 'EMPLOYER PTY LTD PAY', null, '1850.00', '3054.50'],
 ];
 
@@ -32,7 +32,7 @@ export const XLSX_TEST_CASES = [
             const b = await readXlsx(await buildXlsx({ rows: SIMPLE, inline: true }));
             assert('shared == inline', a.rows, b.rows);
             assert('header', a.rows[0], ['Date', 'Description', 'Debit', 'Credit', 'Balance']);
-            assert('data row', a.rows[1], ['2025-01-01', 'WOOLWORTHS 1234 THORNBURY', '45.50', '', '1204.50']);
+            assert('data row', a.rows[1], ['2025-01-01', 'WOOLWORTHS 1234 EXAMPLEVILLE', '45.50', '', '1204.50']);
             assert('sheet name', a.sheetName, 'Statement');
             assert('stored entries work too', (await readXlsx(await buildXlsx({ rows: SIMPLE, method: 0 }))).rows, a.rows);
             assert('line numbers', a.rows.map((r) => r.line), [1, 2, 3]);

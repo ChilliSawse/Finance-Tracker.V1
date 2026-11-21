@@ -47,6 +47,10 @@ export default defineConfig({
             },
         },
     },
+    // G6W12-6: the dev server must never serve real bank files or downloaded backups (they sit inside the Vite root).
+    server: {
+        fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/real-files/**', '**/finance-data-backup-*.json', '**/ledger-saved-data-*.json', '**/sweep-shots/**'] },
+    },
     plugins: [
         ftCspHash(),
         VitePWA({
