@@ -54,44 +54,12 @@ export const defaultFinanceData = {
     dashboardViewPeriod: "fortnightly" // Default view period
 };
 
-// J1 — defaults mirror the DEFAULT_THEME (midnight) so a fresh load's
-// customisable overlay matches its derived base (no split look on first paint).
-// J2 step 2 — colours split into two kinds:
-//   BASE (always set): feed deriveTokens — bg / text / surface / border / accent /
-//     positive / negative / neutral. Everything else is *derived* from these.
-//   OVERRIDE (empty unless the user pins one): heading / muted / topbar text /
-//     essential / warning — overlaid on top of the derived set only when non-empty.
-// primaryBgEnd / cardBgEnd are retained for back-compat but no longer drive anything.
+// Appearance (A4): `theme` is a palette id (sunrise|bucket|eucalypt|harbour; src/theme/palettes.js) and
+// `colorMode` is auto|light|dark. Old saves keep their colour, font and effect fields, but nothing reads them.
 export const defaultGuiSettings = {
     theme: 'sunrise',
-    // base — Ledger's warm default (theme.js THEMES.sunrise)
-    primaryBgStart: "#f7f1e6",
-    cardBgStart: "#fffdf8",
-    textColor: "#453c33",
-    borderColor: "#e0d5c2",
-    accentColor: "#e8642c",
-    colorPositive: "#2e7d32",
-    colorNegative: "#c62828",
-    colorNeutral: "#0f766e",
-    // override (empty = derive)
-    headingColor: "",
-    mutedColor: "",
-    headerTextColor: "",
-    colorEssential: "",
-    colorWarning: "",
-    // derived 2nd stops, kept for back-compat (unused)
-    primaryBgEnd: "#f2e7d4",
-    cardBgEnd: "#fff8e5",
-    // typography
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    baseFontSize: "16",
-    // J4 — decorative background effect, gated at runtime behind
-    // prefers-reduced-motion + a mobile perf guard.
-    bgEffect: "none",
-    // J4 — optional custom tint for the effect (hex). Empty = follow the accent colour.
-    bgEffectColor: "",
-    mainHeading: "Ledger",
-    subHeading: "Your money, telling its story"
+    colorMode: 'auto',
+    baseFontSize: "16"
 };
 
 // structuredClone (not JSON round-trip) so taxBrackets' Infinity top band survives.

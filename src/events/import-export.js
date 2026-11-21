@@ -5,7 +5,8 @@ import { runMigrationChain } from '../state/migration-chain.js';
 import { showCustomModal, confirmAction } from '../ui/confirm.js';
 import { updateDataAndUI } from '../ui/render.js';
 import { initializeSettingsUI } from '../ui/settings-forms.js';
-import { initializeGuiSettingsForm } from '../theme/appearance.js';
+import { initializeGuiSettingsForm } from '../theme/appearance-form.js';
+import { migrateGuiAppearance } from '../theme/theme.js';
 import { showTab } from '../ui/tabs.js';
 import { updateFinanceDataFromFISettingsInputs } from './settings-events.js';
 

@@ -1355,3 +1355,13 @@ html[data-palette="harbour"][data-mode="dark"] {
 .p-bar.k9 i { background: currentColor; }
 .p-bar.k10 { background: var(--raised); color: var(--b10-chart); }
 .p-bar.k10 i { background: currentColor; }
+
+/* Palette swatches for the appearance screen: a chip shows one palette in one mode, whatever the page uses. */
+.pal-sw[data-sw="sunrise-light"] { --sw-ground: #f4f4f1; --sw-surface: #ffffff; --sw-accent: #0f766e; --sw-b1: #c56a3e; --sw-b2: #0593bf; --sw-b3: #a68003; }
+.pal-sw[data-sw="sunrise-dark"] { --sw-ground: #151311; --sw-surface: #1e1b18; --sw-accent: #4fc1b4; --sw-b1: #e28b63; --sw-b2: #3fb3df; --sw-b3: #c4a040; }
+.pal-sw[data-sw="bucket-light"] { --sw-ground: #f3f5f7; --sw-surface: #ffffff; --sw-accent: #1d5fd6; --sw-b1: #348dcf; --sw-b2: #c46183; --sw-b3: #b37903; }
+.pal-sw[data-sw="bucket-dark"] { --sw-ground: #111111; --sw-surface: #1a1a1a; --sw-accent: #5cc98d; --sw-b1: #58a5e4; --sw-b2: #da7d9b; --sw-b3: #ca933e; }
+.pal-sw[data-sw="eucalypt-light"] { --sw-ground: #eef2ee; --sw-surface: #ffffff; --sw-accent: #2e6b57; --sw-b1: #957f23; --sw-b2: #b96558; --sw-b3: #2d8ab8; }
+.pal-sw[data-sw="eucalypt-dark"] { --sw-ground: #111613; --sw-surface: #19201b; --sw-accent: #74c3a5; --sw-b1: #b49d46; --sw-b2: #da8375; --sw-b3: #50a9d9; }
+.pal-sw[data-sw="harbour-light"] { --sw-ground: #eef3f6; --sw-surface: #ffffff; --sw-accent: #0b4f7a; --sw-b1: #c66a28; --sw-b2: #069c82; --sw-b3: #9e8406; }
+.pal-sw[data-sw="harbour-dark"] { --sw-ground: #0e141a; --sw-surface: #151d25; --sw-accent: #6cb6e8; --sw-b1: #e48b53; --sw-b2: #21bfa0; --sw-b3: #bea333; }

@@ -133,6 +133,12 @@ export function buildCss(themes) {
         out.push(`.p-bar.k${n} { background: var(--raised); color: var(--b${n}-chart); }`);
         out.push(`.p-bar.k${n} i { background: currentColor; }`);
     }
+    out.push('');
+    out.push('/* Palette swatches for the appearance screen: a chip shows one palette in one mode, whatever the page uses. */');
+    for (const s of sets) {
+        const v = s.vars;
+        out.push(`.pal-sw[data-sw="${s.palette}-${s.mode}"] { --sw-ground: ${v['--ground']}; --sw-surface: ${v['--surface']}; --sw-accent: ${v['--accent']}; --sw-b1: ${v['--b1-chart']}; --sw-b2: ${v['--b2-chart']}; --sw-b3: ${v['--b3-chart']}; }`);
+    }
     return out.join('\n') + '\n';
 }
 

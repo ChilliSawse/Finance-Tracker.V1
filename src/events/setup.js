@@ -7,11 +7,7 @@ import { updateDataAndUI } from '../ui/render.js';
 import { handleSettingsClickEvents, handleSettingsChangeEvents } from './settings-events.js';
 import { openQuickAdd } from '../ui/quick-add.js';
 import { handleWhatIfClickEvents, handleWhatIfChangeEvents } from '../ui/whatif.js';
-import {
-    GUI_COLOR_FIELDS, handleGuiSettingsClickEvents, commitGuiColor, commitGuiText,
-    commitGuiEffect, commitGuiEffectColor, updateHarmonyPreview,
-    handleCustomFontUpload, handleThemeImport,
-} from '../theme/appearance.js';
+import { handleGuiSettingsClickEvents, commitTextSize } from '../theme/appearance-form.js';
 import { actionExportDataJSON, actionExportTransactionsCSV, handleJSONImport } from './import-export.js';
 
 export function setupEventListeners() {
@@ -102,50 +98,16 @@ export function setupEventListeners() {
             else if (event.target.id === 'export-csv-transactions') actionExportTransactionsCSV();
         });
     }
-    // J2 — appearance inputs. Each colour picker (GUI_COLOR_FIELDS) writes ONLY its own
-    // guiSettings field, so override colours stay un-pinned until actually edited.
-    // 'input' previews live while dragging/typing; 'change' persists.
-    GUI_COLOR_FIELDS.forEach(field => {
-        const el = getElement(field.id);
-        if (!el) return;
-        el.addEventListener('input',  () => commitGuiColor(field, false));
-        el.addEventListener('change', () => commitGuiColor(field, true));
-    });
-    ['gui-font-family', 'gui-base-font-size'].forEach(id => {
-        const el = getElement(id);
-        if (!el) return;
-        el.addEventListener('input',  () => commitGuiText(false));
-        el.addEventListener('change', () => commitGuiText(true));
-    });
-    // J4 — background effect selector (persists + applies immediately).
-    const bgEffectSel = getElement('gui-bg-effect');
-    if (bgEffectSel) bgEffectSel.addEventListener('change', () => commitGuiEffect(true));
-    // J4 — effect tint: the "Match accent" checkbox + the colour picker (live preview on input).
-    const bgEffectAccent = getElement('gui-bg-effect-accent');
-    if (bgEffectAccent) bgEffectAccent.addEventListener('change', () => commitGuiEffectColor(true));
-    const bgEffectColor = getElement('gui-bg-effect-color');
-    if (bgEffectColor) {
-        bgEffectColor.addEventListener('input',  () => commitGuiEffectColor(false));
-        bgEffectColor.addEventListener('change', () => commitGuiEffectColor(true));
+    // A4: Text size is the one typography control left. 'input' previews, 'change' persists.
+    const textSize = getElement('gui-base-font-size');
+    if (textSize) {
+        textSize.addEventListener('input',  () => commitTextSize(false));
+        textSize.addEventListener('change', () => commitTextSize(true));
     }
-    // J3 — Colour Harmony: changing any control re-renders the live preview (no apply
-    // until the button). Bound once here; idempotent because setupEventListeners runs once.
-    ['harmony-accent', 'harmony-type', 'harmony-mode'].forEach(id => {
-        const el = getElement(id);
-        if (!el) return;
-        el.addEventListener('input',  updateHarmonyPreview);
-        el.addEventListener('change', updateHarmonyPreview);
-    });
 
     // JSON backup import (appearance modal's #json-import-gui file input).
     const jsonImportGuiInput = getElement('json-import-gui');
     if (jsonImportGuiInput) {
         jsonImportGuiInput.addEventListener('change', handleJSONImport);
     }
-    // J3 — theme JSON import (separate from the full-data backup import above).
-    const themeImportInput = getElement('theme-import-file');
-    if (themeImportInput) themeImportInput.addEventListener('change', handleThemeImport);
-    // J3 — custom font upload (FontFace + localStorage).
-    const fontFileInput = getElement('gui-font-file');
-    if (fontFileInput) fontFileInput.addEventListener('change', handleCustomFontUpload);
 }

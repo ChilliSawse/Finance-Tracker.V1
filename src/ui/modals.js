@@ -2,7 +2,7 @@
 
 import { getElement } from '../utils.js';
 import { getFocusables, trapTab } from './focus.js';
-import { initializeGuiSettingsForm } from '../theme/appearance.js';
+import { initializeGuiSettingsForm } from '../theme/appearance-form.js';
 import {
     renderIncomeSourcesSettings, renderTaxBracketsSettings, renderAssetsSettings,
     renderLiabilitiesSettings, renderAllocationSettings, renderExpensesSettingsLists,

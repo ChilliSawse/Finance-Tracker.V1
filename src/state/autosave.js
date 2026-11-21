@@ -3,9 +3,9 @@
 // is unchanged (financeTrackerData_v2) — real saves in the wild depend on it.
 
 import { store } from './store.js';
-import { cloneDefaultFinanceData, cloneDefaultGuiSettings, defaultGuiSettings } from './defaults.js';
+import { cloneDefaultFinanceData, cloneDefaultGuiSettings } from './defaults.js';
 import { runMigrationChain } from './migration-chain.js';
-import { migrateGuiTheme, migrateGuiColorFields, pickFirstRunTheme, THEMES } from '../theme/theme.js';
+import { migrateGuiAppearance } from '../theme/theme.js';
 
 export class FinanceAutoSave {
     constructor() {
@@ -110,7 +110,7 @@ export class FinanceAutoSave {
                 this._quotaWarned = true;
                 alert("[STORAGE FULL] Your latest changes couldn't be saved — this device's storage for Ledger is full.\n\n"
                     + '1. Open Settings → Save, Reset & Backup → Export Backup (JSON) so nothing is lost.\n'
-                    + '2. Free space by removing a custom font or saved themes (they take the most room).\n\n'
+                    + '2. Free space by clearing old imported statements.\n\n'
                     + 'Saving will resume automatically once there is space.');
             }
         }
@@ -124,25 +124,12 @@ export class FinanceAutoSave {
                 if (loadedBundle && loadedBundle.financeData && loadedBundle.guiSettings) {
                     store.financeData = loadedBundle.financeData;
                     store.guiSettingsData = loadedBundle.guiSettings;
-                    // Migrate older saves that predate the theme system
-                    if (!store.guiSettingsData.theme) store.guiSettingsData.theme = 'midnight';
-                    if (!store.guiSettingsData.colorPositive) store.guiSettingsData.colorPositive = defaultGuiSettings.colorPositive;
-                    if (!store.guiSettingsData.colorNegative) store.guiSettingsData.colorNegative = defaultGuiSettings.colorNegative;
-                    if (!store.guiSettingsData.colorNeutral) store.guiSettingsData.colorNeutral = defaultGuiSettings.colorNeutral;
-                    // J1 — repoint saves on removed presets ('default'/'dark') to the closest
-                    // survivor and refresh the colour overlay so the old palette can't bleed through.
-                    migrateGuiTheme(store.guiSettingsData);
-                    migrateGuiColorFields(store.guiSettingsData);
+                    // A4: old theme names, colour fields and the retired mode land on a palette and a colour mode.
+                    migrateGuiAppearance(store.guiSettingsData);
                     // The four legacy migrations, then the Phase 1 steps (backup, one forceSave).
                     runMigrationChain(store.financeData, {
                         raw: savedDataString, source: 'load', forceSave: () => this.forceSave(),
                     });
-                    // Rebrand: the heading editor was removed pre-Ledger, so every save
-                    // carries the old default strings — safe to upgrade them in place.
-                    if (store.guiSettingsData.mainHeading === 'Personal Finance Dashboard') {
-                        store.guiSettingsData.mainHeading = defaultGuiSettings.mainHeading;
-                        store.guiSettingsData.subHeading = defaultGuiSettings.subHeading;
-                    }
                     this.lastSaveHash = this.getDataHash();
                     this.updateSaveStatus('saved');
                     return true;
@@ -154,19 +141,6 @@ export class FinanceAutoSave {
         // Fallback to default if load fails or no data
         store.financeData = cloneDefaultFinanceData();
         store.guiSettingsData = cloneDefaultGuiSettings();
-        // First run: respect the system colour scheme — dark systems open in
-        // midnight instead of the warm sunrise default. Mirrors a preset click
-        // (write the 8 base colours; overrides stay empty).
-        const firstTheme = pickFirstRunTheme();
-        if (firstTheme !== store.guiSettingsData.theme && THEMES[firstTheme]) {
-            const p = THEMES[firstTheme];
-            Object.assign(store.guiSettingsData, {
-                theme: firstTheme,
-                primaryBgStart: p.bg, cardBgStart: p.panel, textColor: p.fg,
-                borderColor: p.border, accentColor: p.accent,
-                colorPositive: p.positive, colorNegative: p.negative, colorNeutral: p.neutral,
-            });
-        }
         this.lastSaveHash = this.getDataHash();
         this.updateSaveStatus('saved'); // Consider it 'saved' as it's default
         return false;
