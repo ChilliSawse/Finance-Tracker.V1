@@ -22,6 +22,8 @@
 .p-sec[open] > summary .p-chev::before { transform: translate(-50%, -30%) rotate(-135deg); }
 
 .p-body, .p-slot, .p-review { max-width: 760px; }
+/* U1: from desktop width the Plan column grows with the window (about 72% of it, 1040 px at 1440) instead of sitting at 760; phone and tablet keep 760. */
+@media (min-width: 1024px) { .p-body, .p-slot, .p-review { max-width: clamp(760px, 72vw, 1040px); } }
 .p-body { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); padding: var(--card-pad); }
 .p-list { list-style: none; margin: 0; padding: 0; }
 .p-list li + li { border-top: 1px solid var(--rule); }
