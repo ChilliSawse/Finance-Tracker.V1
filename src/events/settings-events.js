@@ -3,6 +3,7 @@
 // edit (live data AND What If sandbox, via data-scope="whatif").
 
 import { store } from '../state/store.js';
+import { newLiabilityId } from '../state/bucket-migration.js';
 import {
     getElement, getValue, showFieldError, clearFieldError, validateFieldValue,
     formatCurrency,
@@ -430,7 +431,7 @@ export function removeAsset(index, scope) {
 export function addLiability(scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
     if (!fd) return;
-    fd.liabilities.push({ name: "New Liability", balance: 0, interestRate: 0 });
+    fd.liabilities.push({ id: newLiabilityId(fd.liabilities, "New Liability"), name: "New Liability", balance: 0, interestRate: 0 });
     if (scope === 'whatif') { renderWhatIfLiabilities(); } else { renderLiabilitiesSettings(); updateDataAndUI(); }
     revealNewRow(scope === 'whatif' ? 'whatif-liabilities-settings' : 'liabilities-settings');
 }

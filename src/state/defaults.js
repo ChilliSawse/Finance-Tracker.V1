@@ -3,6 +3,7 @@
 
 import { AU_TAX_YEARS, CURRENT_TAX_YEAR } from '../calc/tax-au.js';
 import { DEFAULT_CATEGORIES } from './categories.js';
+import { templateAllocation, freshSavingModel } from './bucket-migration.js';
 
 export const defaultFinanceData = {
     currency: "AUD",
@@ -35,11 +36,13 @@ export const defaultFinanceData = {
         { name: "New Asset", balance: 0 },
     ],
     liabilities: [
-        { name: "New Liability", balance: 0, interestRate: 0 }
+        { id: "l-new-liability", name: "New Liability", balance: 0, interestRate: 0 }
     ],
-    allocation: [
-        { name: "New Allocation", percentage: 100, currentBalance: 0, savingsGoal: 0 },
-    ],
+    // E4: a fresh allocation is the Bucket method template (60/10/10/20, Mojo at 0%) and new
+    // setups get auto-credit on (FT-R-80; migrated data keeps it off).
+    allocation: templateAllocation(),
+    savingModel: freshSavingModel(),
+    bucketGoals: [],
     // Phase 1: new data starts on the plan model (dataVersion 2). The legacy lists stay as
     // empty arrays (the JSON import validator and old backups expect them) and are ignored.
     dataVersion: 2,
