@@ -106,3 +106,22 @@ body.has-sheet { overflow: hidden; }
 .ledger-dialog h2 { margin: 0 0 8px; font-size: 1.15rem; }
 .ledger-dialog p { margin: 0 0 18px; line-height: 1.5; color: var(--sh-muted); }
 .ledger-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* Toast while a sheet is open: it must never cover the sheet's fields or its
+   Save/Cancel bar. Phone: the toast docks in a strip at the top and the sheet
+   is shortened to leave that strip clear. Panel (768px and up): the toast sits
+   in the dimmed area to the left of the 440px panel. */
+@media (max-width: 767px) {
+    body.has-sheet .sheet { max-height: calc(100vh - 84px); max-height: calc(100dvh - 84px); }
+    body.has-sheet #ledger-toast {
+        top: calc(10px + env(safe-area-inset-top, 0px)); bottom: auto;
+        transform: translate(-50%, -16px);
+    }
+    body.has-sheet #ledger-toast.is-visible { transform: translate(-50%, 0); }
+}
+@media (min-width: 768px) {
+    body.has-sheet #ledger-toast {
+        left: calc((100vw - 440px) / 2);
+        max-width: min(480px, calc(100vw - 440px - 32px));
+    }
+}
