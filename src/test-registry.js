@@ -1,4 +1,4 @@
-// The 30 registered test groups (Phase 1 plan section 12). Imported once by
+// The 31 registered test groups (Phase 1 plan section 12). Imported once by
 // tests.html and by tools/run-cases.mjs. env 'browser' groups need a DOM or
 // IndexedDB and are skipped by the Node runner.
 
@@ -33,6 +33,7 @@ import { ASSETS_DEBTS_TEST_CASES } from './state/assets-debts.test-cases.js';
 import { FI_TEST_CASES } from './calc/fi.test-cases.js';
 import { GOAL_PLANNER_TEST_CASES } from './calc/goal-planner.test-cases.js';
 import { SCENARIO_UI_TEST_CASES } from './ui/scenario-ui.test-cases.js';
+import { SANITIZE_TEST_CASES } from './state/sanitize.test-cases.js';
 
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
@@ -66,4 +67,5 @@ export const TEST_GROUPS = [
     { name: 'fi', env: 'pure', cases: FI_TEST_CASES },
     { name: 'goal-planner', env: 'pure', cases: GOAL_PLANNER_TEST_CASES },
     { name: 'scenario-ui', env: 'browser', cases: SCENARIO_UI_TEST_CASES },
+    { name: 'sanitize', env: 'pure', cases: SANITIZE_TEST_CASES },
 ];

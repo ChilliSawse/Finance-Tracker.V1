@@ -3,6 +3,7 @@
 // which isn't a leaf-utility concern.
 
 import { store } from './state/store.js';
+import { normaliseCurrency, safeNumber } from './state/sanitize.js';
 
 export function escapeHtml(str) {
     if (str == null) return '';
@@ -72,9 +73,9 @@ export function formatTimeToGoal(years) {
  * @returns {string} The formatted currency string.
  */
 export function formatCurrency(amount, currencyCode = store.financeData.currency, decimalPlaces = 2) {
-    if (typeof amount !== 'number' || isNaN(amount)) {
-        amount = 0;
-    }
+    // S1/H1: the result goes into innerHTML in many places, so it never carries unvalidated input.
+    amount = typeof amount === 'number' ? safeNumber(amount) : 0;
+    currencyCode = normaliseCurrency(currencyCode);
     try {
         return new Intl.NumberFormat(undefined, {
             style: 'currency',
@@ -84,7 +85,7 @@ export function formatCurrency(amount, currencyCode = store.financeData.currency
         }).format(amount);
     } catch (e) {
         const symbol = { USD: '$', EUR: '€', GBP: '£', AUD: 'A$', CAD: 'C$', NZD: 'NZ$', JPY: '¥', CHF: 'CHF', CNY: '¥', INR: '₹' }[currencyCode] || currencyCode + ' ';
-        return symbol + amount.toFixed(decimalPlaces);
+        return escapeHtml(symbol + amount.toFixed(decimalPlaces));
     }
 }
 
