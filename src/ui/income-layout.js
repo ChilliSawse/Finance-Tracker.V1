@@ -341,7 +341,8 @@ export function openIncomeSheet(index, opts = {}) {
     const today = todayIso();
     const initialVals = sheetValuesFor(source, layout, today);
     const initial = { grossAnnual: Number(source.grossAnnual) || 0, paySchedule: initialVals.paySchedule, nextPay: initialVals.nextPay };
-    const values = sheetValuesFor(source, layout, today, opts.carry);
+    // opts.prefill: sheet values to start from (Make this real opens the sheet with a scenario's figure); opts.onSaved(source) runs after a save.
+    const values = { ...sheetValuesFor(source, layout, today, opts.carry), ...(opts.prefill || {}) };
 
     const handle = openSheet({
         title: t(layout === 'hours' ? 'c.income.title.hours' : 'c.income.title.salary', { name: source.name || '' }),
@@ -353,6 +354,7 @@ export function openIncomeSheet(index, opts = {}) {
         onSave: async (v) => {
             applyIncomeValues(source, v, layout, initial);
             await persist();
+            if (typeof opts.onSaved === 'function') opts.onSaved(source);
         },
     });
     decorate(handle, { index, layout, source, data, initial, today });

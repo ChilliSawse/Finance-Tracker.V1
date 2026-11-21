@@ -41,6 +41,8 @@ import './ui/plan.css'; // A9a — Plan screen
 import './ui/setup/setup.css'; // C7 — full-screen setup
 import './ui/help.css'; // A11 — the "?" button and help sheet
 import './ui/scenario/scenario.css'; // F7 — What If shell
+import './ui/scenario/results.css'; // F8b — What If results, Compare, Make this real
+import './ui/scenario/results.js'; // F8b — registers the Answer bottom, Compare and Make this real views
 import { mountHelpButtons } from './ui/help.js';
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';

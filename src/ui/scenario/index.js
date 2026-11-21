@@ -26,11 +26,21 @@ const HOW_KEY = 'whatIfHowSeen';
 const ROOT_ID = 'scenario-root';
 
 let ui = null; // { root, scenario, saved, view, step }
-const renderers = {};
+const renderers = { answer: [], compare: [], 'make-real': [] };
 
-/** F8a and F8b fill the Answer and Compare regions through this. */
-export function registerScenarioView(name, fn) {
-    if (name === 'answer' || name === 'compare') renderers[name] = typeof fn === 'function' ? fn : null;
+/**
+ * F8a and F8b fill the Answer and Compare regions through this. A view can have several renderers (F8a's top of
+ * the answer, F8b's bottom); they run in `order` (default 100, ties in registration order), each in its own box.
+ * A fn already registered is not added twice; `fn` null clears the view. 'make-real' is the slot in the Compare step bar.
+ */
+export function registerScenarioView(name, fn, { order = 100 } = {}) {
+    if (Object.prototype.hasOwnProperty.call(renderers, name)) {
+        if (typeof fn !== 'function') renderers[name] = [];
+        else if (!renderers[name].some((r) => r.fn === fn)) {
+            renderers[name].push({ fn, order });
+            renderers[name].sort((a, b) => a.order - b.order);
+        }
+    }
     if (ui) render();
 }
 
@@ -278,14 +288,21 @@ function stepPanel() {
     return panel;
 }
 
+function fillHook(box, name) {
+    const list = renderers[name];
+    if (!list.length) { if (name !== 'make-real') box.appendChild(el('p', 'muted', t(`f.wi.hook.${name}`))); return box; }
+    for (const { fn } of list) {
+        const part = el('div', 'wi-hook-part');
+        try { fn(part, { scenario: ui.scenario, data: dataNow(), today: todayIso() }); } catch (err) { console.error(`scenario ${name} view failed`, err); part.textContent = t('f.wi.viewFailed'); }
+        box.appendChild(part);
+    }
+    return box;
+}
+
 function hookRegion(name) {
     const box = el('div', 'wi-hook');
     box.dataset.hook = name;
-    const fn = renderers[name];
-    if (fn) {
-        try { fn(box, { scenario: ui.scenario, data: dataNow(), today: todayIso() }); } catch (err) { console.error(`scenario ${name} view failed`, err); box.textContent = t('f.wi.viewFailed'); }
-    } else box.appendChild(el('p', 'muted', t(`f.wi.hook.${name}`)));
-    return box;
+    return fillHook(box, name);
 }
 
 function comparePanel() {
@@ -300,7 +317,8 @@ function comparePanel() {
     const acts = el('span', 'sn-acts');
     acts.appendChild(btn(t('f.wi.nav.change'), 'back-adjust'));
     const slot = el('span');
-    slot.dataset.hook = 'make-real'; // F8b adds Make this real here
+    slot.dataset.hook = 'make-real'; // F8b's Make this real button (registerScenarioView('make-real', fn))
+    fillHook(slot, 'make-real');
     acts.appendChild(slot);
     nav.appendChild(acts);
     card.appendChild(nav);
