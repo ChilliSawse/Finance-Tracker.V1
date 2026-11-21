@@ -62,7 +62,7 @@ export const TEST_GROUPS = [
     { name: 'shell', env: 'pure', cases: SHELL_TEST_CASES },
     { name: 'state-api', env: 'pure', cases: STATE_API_TEST_CASES },
     { name: 'setup', env: 'browser', cases: SETUP_TEST_CASES },
-    { name: 'quick-add', env: 'browser', cases: QUICK_ADD_TEST_CASES },
+    { name: 'quick-add', env: 'pure', cases: QUICK_ADD_TEST_CASES },
     { name: 'scenario', env: 'pure', cases: SCENARIO_TEST_CASES },
     { name: 'assets-debts', env: 'pure', cases: ASSETS_DEBTS_TEST_CASES },
     { name: 'fi', env: 'pure', cases: FI_TEST_CASES },
