@@ -92,7 +92,7 @@ export function handleJSONImport(event) {
                 updateDataAndUI();
                 document.dispatchEvent(new CustomEvent('ledger:data-swapped'));
             },
-            save: () => { if (store.autoSave) store.autoSave.forceSave(); },
+            save: () => (store.autoSave ? store.autoSave.forceSave() : true), // false = the main save failed (S9)
         });
         if (!result.ok) {
             if (result.detail) console.error('Import error:', result.detail);

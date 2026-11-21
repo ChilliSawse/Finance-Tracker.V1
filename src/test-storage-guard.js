@@ -9,6 +9,9 @@
 
 const REAL_DB = 'ledger-db';
 const SCRATCH_DB = 'ledger-test-scratch-db';
+// S9: the restore safety copy has its own small database; a test that uses its default name goes to a scratch name too.
+const REAL_SAFETY_DB = 'ledger-safety-db';
+const SCRATCH_SAFETY_DB = 'ledger-test-scratch-safety-db';
 
 function readStorage(store) {
     const out = {};
@@ -43,7 +46,7 @@ const realSession = window.sessionStorage;
 async function listDatabases() {
     if (!indexedDB.databases) return null;
     const dbs = await indexedDB.databases();
-    return dbs.map((d) => d.name).filter((n) => n !== SCRATCH_DB).sort();
+    return dbs.map((d) => d.name).filter((n) => n !== SCRATCH_DB && n !== SCRATCH_SAFETY_DB).sort();
 }
 
 // Row counts of the real database, only when it already exists (opening it would create it).
@@ -78,7 +81,7 @@ function swap(name, value) {
 swap('localStorage', makeMemoryStorage());
 swap('sessionStorage', makeMemoryStorage());
 
-const redirect = (name) => (name === REAL_DB ? SCRATCH_DB : name);
+const redirect = (name) => (name === REAL_DB ? SCRATCH_DB : name === REAL_SAFETY_DB ? SCRATCH_SAFETY_DB : name);
 IDBFactory.prototype.open = function (name, ...rest) { return realOpen.call(this, redirect(name), ...rest); };
 IDBFactory.prototype.deleteDatabase = function (name, ...rest) { return realDelete.call(this, redirect(name), ...rest); };
 
@@ -108,8 +111,10 @@ export async function verifyRealStoresUntouched() {
 
 // Remove the scratch database left by tests that used the app's default database name.
 export async function dropScratchDb() {
-    await new Promise((ok) => {
-        const r = realDelete.call(indexedDB, SCRATCH_DB);
-        r.onsuccess = r.onerror = r.onblocked = () => ok();
-    });
+    for (const name of [SCRATCH_DB, SCRATCH_SAFETY_DB]) {
+        await new Promise((ok) => {
+            const r = realDelete.call(indexedDB, name);
+            r.onsuccess = r.onerror = r.onblocked = () => ok();
+        });
+    }
 }

@@ -8,7 +8,7 @@ import { runMigrationChain } from './migration-chain.js';
 import { migrateGuiAppearance } from '../theme/theme.js';
 import { showToast } from '../ui/toast.js';
 import { t } from '../i18n/strings.js';
-import { SAVE_KEY, sanitizeFinanceData, sanitizeGuiSettings, quarantineCorruptSave } from './sanitize.js';
+import { SAVE_KEY, sanitizeFinanceData, sanitizeGuiSettings, quarantineCorruptSave, removeLegacyPartsCopy } from './sanitize.js';
 
 export class FinanceAutoSave {
     constructor() {
@@ -90,8 +90,9 @@ export class FinanceAutoSave {
         }
     }
 
+    /** Returns true when the data was written, false when the save failed (S9: a restore treats false as a failed restore). */
     forceSave() {
-        this.performSave();
+        return this.performSave();
     }
 
     performSave() {
@@ -106,6 +107,7 @@ export class FinanceAutoSave {
             this.lastSaveHash = this.getDataHash(); // Update hash after successful save
             this._quotaWarned = false; // saving works again, so a later full-storage failure may warn again
             setTimeout(() => this.updateSaveStatus('saved'), 500); // UI feedback
+            return true;
         } catch (error) {
             console.error('Auto-save to localStorage failed:', error);
             this.updateSaveStatus('error');
@@ -115,10 +117,13 @@ export class FinanceAutoSave {
                 this._quotaWarned = true;
                 showToast(t('d.storage.full'), 'error', 0);
             }
+            return false;
         }
     }
 
     loadData() {
+        // S9: the retired localStorage rows copy (every transaction in plain text) is removed.
+        try { removeLegacyPartsCopy(localStorage); } catch (error) { console.error('Could not remove the old safety copy:', error); }
         // S1: what happened while loading, for a later UI step (main.js shows the notices once).
         store.loadStatus = { corruptKey: null, migrationAborted: false, migrationErrors: [], failed: false };
         let raw = null;
