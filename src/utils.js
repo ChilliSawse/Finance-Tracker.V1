@@ -24,6 +24,7 @@ export function getPayCyclesPerYear(schedule) {
         case 'weekly': return 52;
         case 'fortnightly': return 26;
         case 'monthly': return 12;
+        case 'quarterly': return 4;
         case 'yearly': return 1;
         default: return 26; // Default to fortnightly
     }
@@ -41,6 +42,7 @@ export function getWeeklyAmount(amount, frequency) {
         case 'weekly': return amount;
         case 'fortnightly': return amount / 2;
         case 'monthly': return (amount * 12) / 52;
+        case 'quarterly': return (amount * 4) / 52;
         case 'yearly': return amount / 52;
         default: return amount;
     }
