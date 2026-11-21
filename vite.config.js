@@ -26,7 +26,7 @@ export default defineConfig({
             manifest: false,
             includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'manifest.json'],
             workbox: {
-                globPatterns: ['**/*.{js,css,html,png,json,woff2}'],
+                globPatterns: ['**/*.{js,mjs,css,html,png,json,woff2}'],
                 // App-shell fallback so deep links / offline navigations resolve.
                 navigateFallback: 'index.html',
                 cleanupOutdatedCaches: true,
