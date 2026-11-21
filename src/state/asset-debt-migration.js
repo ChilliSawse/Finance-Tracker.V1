@@ -44,7 +44,12 @@ export function needsAssetDebtMigration(data) {
 
 function netWorthOf(data) {
     // calculateTotals writes working fields onto the sources, so it runs on a throwaway copy.
-    return Math.round(calculateTotals(clone(data)).netWorth * 100);
+    // Rows that are not objects (null, a number, a string, an array) are left out of that copy only, the
+    // same way before and after, so they cannot make the maths throw; the real rows are never touched (G6W12-9).
+    const copy = clone(data);
+    if (Array.isArray(copy.assets)) copy.assets = copy.assets.filter(isObj);
+    if (Array.isArray(copy.liabilities)) copy.liabilities = copy.liabilities.filter(isObj);
+    return Math.round(calculateTotals(copy).netWorth * 100);
 }
 
 function uniqueId(prefix, name, fallback, used) {
