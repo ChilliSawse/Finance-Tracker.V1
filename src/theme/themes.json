@@ -1,0 +1,2426 @@
+{
+ "sunrise": {
+  "label": "Sunrise, grown up",
+  "dark_label": "Sunrise night",
+  "note": "Fix: Splurge moved from teal to a sea-glass blue so it no longer sits on the teal accent.",
+  "default": true,
+  "light": {
+   "base": {
+    "ground": "#f4f4f1",
+    "surface": "#ffffff",
+    "raised": "#efefeb",
+    "border": "#e4e3de",
+    "text": "#22201d",
+    "muted": "#5e5a54",
+    "accent": "#0f766e",
+    "accent-ink": "#ffffff",
+    "mark": "#e8642c",
+    "positive": "#2f7a45",
+    "negative": "#c41c29",
+    "warn-bg": "#fff4e0",
+    "warn-ink": "#8a3b00",
+    "ok-bg": "#e3f4e6",
+    "ok-ink": "#1f5a2b",
+    "neutral-bg": "#ecebe6",
+    "neutral-ink": "#3f3c37"
+   },
+   "buckets": [
+    {
+     "slot": 1,
+     "name": "Daily",
+     "hue": 45,
+     "bg": "#ffe0cf",
+     "ink": "#8a3412",
+     "chart": "#c56a3e",
+     "shades": [
+      {
+       "bg": "#f9d5c1",
+       "contrast": 5.93
+      },
+      {
+       "bg": "#f4c9b2",
+       "contrast": 5.36
+      },
+      {
+       "bg": "#eebea4",
+       "contrast": 4.86
+      }
+     ],
+     "ink_contrast": 6.52,
+     "chart_contrast": 3.81
+    },
+    {
+     "slot": 2,
+     "name": "Splurge",
+     "hue": 228,
+     "bg": "#d0effe",
+     "ink": "#004c65",
+     "chart": "#0593bf",
+     "shades": [
+      {
+       "bg": "#c1e6f8",
+       "contrast": 7.18
+      },
+      {
+       "bg": "#b1ddf2",
+       "contrast": 6.52
+      },
+      {
+       "bg": "#a2d5ed",
+       "contrast": 5.98
+      }
+     ],
+     "ink_contrast": 7.86,
+     "chart_contrast": 3.54
+    },
+    {
+     "slot": 3,
+     "name": "Smile",
+     "hue": 88,
+     "bg": "#fdeec0",
+     "ink": "#6b4a00",
+     "chart": "#a68003",
+     "shades": [
+      {
+       "bg": "#f5e4b0",
+       "contrast": 6.38
+      },
+      {
+       "bg": "#eddaa0",
+       "contrast": 5.81
+      },
+      {
+       "bg": "#e5d090",
+       "contrast": 5.28
+      }
+     ],
+     "ink_contrast": 6.97,
+     "chart_contrast": 3.68
+    },
+    {
+     "slot": 4,
+     "name": "Fire extinguisher",
+     "hue": 145,
+     "bg": "#dcefdc",
+     "ink": "#1f5a24",
+     "chart": "#4e9a52",
+     "shades": [
+      {
+       "bg": "#cfe7cf",
+       "contrast": 6.28
+      },
+      {
+       "bg": "#c2dec2",
+       "contrast": 5.7
+      },
+      {
+       "bg": "#b5d6b5",
+       "contrast": 5.2
+      }
+     ],
+     "ink_contrast": 6.84,
+     "chart_contrast": 3.46
+    },
+    {
+     "slot": 5,
+     "name": "Travel",
+     "hue": 315,
+     "bg": "#f5e1ff",
+     "ink": "#593269",
+     "chart": "#a36cbc",
+     "shades": [
+      {
+       "bg": "#edd6f9",
+       "contrast": 7.48
+      },
+      {
+       "bg": "#e5caf2",
+       "contrast": 6.74
+      },
+      {
+       "bg": "#ddbfec",
+       "contrast": 6.11
+      }
+     ],
+     "ink_contrast": 8.2,
+     "chart_contrast": 3.87
+    },
+    {
+     "slot": 6,
+     "name": "Grow",
+     "hue": 0,
+     "bg": "#ffe0e8",
+     "ink": "#6e2a43",
+     "chart": "#c46183",
+     "shades": [
+      {
+       "bg": "#fad4de",
+       "contrast": 7.49
+      },
+      {
+       "bg": "#f4c8d4",
+       "contrast": 6.77
+      },
+      {
+       "bg": "#eebcca",
+       "contrast": 6.11
+      }
+     ],
+     "ink_contrast": 8.23,
+     "chart_contrast": 3.9
+    },
+    {
+     "slot": 7,
+     "name": "Car",
+     "hue": 270,
+     "bg": "#e2e9fe",
+     "ink": "#31407a",
+     "chart": "#6880d4",
+     "shades": [
+      {
+       "bg": "#d6dff9",
+       "contrast": 7.36
+      },
+      {
+       "bg": "#cbd5f5",
+       "contrast": 6.7
+      },
+      {
+       "bg": "#bfcbf0",
+       "contrast": 6.07
+      }
+     ],
+     "ink_contrast": 8.07,
+     "chart_contrast": 3.73
+    },
+    {
+     "slot": 8,
+     "name": "Pets",
+     "hue": 117,
+     "bg": "#e7eecc",
+     "ink": "#424b00",
+     "chart": "#545f00",
+     "shades": [
+      {
+       "bg": "#dde5bd",
+       "contrast": 7.16
+      },
+      {
+       "bg": "#d3dcae",
+       "contrast": 6.53
+      },
+      {
+       "bg": "#c9d39f",
+       "contrast": 5.94
+      }
+     ],
+     "ink_contrast": 7.82,
+     "chart_contrast": 6.97
+    },
+    {
+     "slot": 9,
+     "name": "Gifts",
+     "hue": 249,
+     "bg": "#daecfe",
+     "ink": "#0b4778",
+     "chart": "#025a9a",
+     "shades": [
+      {
+       "bg": "#cce3f9",
+       "contrast": 7.28
+      },
+      {
+       "bg": "#bed9f4",
+       "contrast": 6.59
+      },
+      {
+       "bg": "#b1d0ef",
+       "contrast": 6.01
+      }
+     ],
+     "ink_contrast": 7.96,
+     "chart_contrast": 7.16
+    },
+    {
+     "slot": 10,
+     "name": "Health",
+     "hue": 66,
+     "bg": "#fee5cc",
+     "ink": "#633a01",
+     "chart": "#8d5403",
+     "shades": [
+      {
+       "bg": "#f8dabd",
+       "contrast": 7.38
+      },
+      {
+       "bg": "#f1cfad",
+       "contrast": 6.68
+      },
+      {
+       "bg": "#ebc59e",
+       "contrast": 6.09
+      }
+     ],
+     "ink_contrast": 8.1,
+     "chart_contrast": 6.17
+    }
+   ],
+   "checks": {
+    "pairs": 62,
+    "fails": [],
+    "min_adjacent_tile_dE": 3.3,
+    "min_adjacent_chart_dE": 10.1,
+    "closest_chart_pair": [
+     9.0,
+     2,
+     7
+    ],
+    "negative_vs_mark_dE": 14.5,
+    "negative_vs_nearest_chart": [
+     13.0,
+     1
+    ],
+    "accent_vs_nearest_chart": [
+     12.2,
+     8
+    ],
+    "lowest": [
+     [
+      "slot 1 ink on shade 3",
+      4.86,
+      4.5
+     ],
+     [
+      "mark on surface",
+      3.34,
+      3.0
+     ],
+     [
+      "slot 4 chart on surface",
+      3.46,
+      3.0
+     ]
+    ]
+   }
+  },
+  "dark": {
+   "base": {
+    "ground": "#151311",
+    "surface": "#1e1b18",
+    "raised": "#27231f",
+    "border": "#342f29",
+    "text": "#f5f1ec",
+    "muted": "#b6aea4",
+    "accent": "#4fc1b4",
+    "accent-ink": "#062925",
+    "mark": "#f08a55",
+    "positive": "#6fd08f",
+    "negative": "#ff6b72",
+    "warn-bg": "#2e2414",
+    "warn-ink": "#f5c26b",
+    "ok-bg": "#17291d",
+    "ok-ink": "#7fd69a",
+    "neutral-bg": "#28241f",
+    "neutral-ink": "#d6cfc6"
+   },
+   "buckets": [
+    {
+     "slot": 1,
+     "name": "Daily",
+     "hue": 45,
+     "bg": "#41261a",
+     "ink": "#fecab3",
+     "chart": "#e28b63",
+     "shades": [
+      {
+       "bg": "#4f2e20",
+       "contrast": 8.21
+      },
+      {
+       "bg": "#5e3726",
+       "contrast": 6.98
+      },
+      {
+       "bg": "#6d402c",
+       "contrast": 5.91
+      }
+     ],
+     "ink_contrast": 9.44,
+     "chart_contrast": 6.62
+    },
+    {
+     "slot": 2,
+     "name": "Splurge",
+     "hue": 228,
+     "bg": "#113240",
+     "ink": "#a3e2ff",
+     "chart": "#3fb3df",
+     "shades": [
+      {
+       "bg": "#143d4e",
+       "contrast": 8.23
+      },
+      {
+       "bg": "#17485c",
+       "contrast": 7.03
+      },
+      {
+       "bg": "#1a546b",
+       "contrast": 5.89
+      }
+     ],
+     "ink_contrast": 9.57,
+     "chart_contrast": 7.12
+    },
+    {
+     "slot": 3,
+     "name": "Smile",
+     "hue": 88,
+     "bg": "#372c11",
+     "ink": "#ecd59f",
+     "chart": "#c4a040",
+     "shades": [
+      {
+       "bg": "#433614",
+       "contrast": 8.21
+      },
+      {
+       "bg": "#504018",
+       "contrast": 6.99
+      },
+      {
+       "bg": "#5d4a1b",
+       "contrast": 5.93
+      }
+     ],
+     "ink_contrast": 9.53,
+     "chart_contrast": 6.9
+    },
+    {
+     "slot": 4,
+     "name": "Fire extinguisher",
+     "hue": 145,
+     "bg": "#1f3420",
+     "ink": "#b9e5b9",
+     "chart": "#72b875",
+     "shades": [
+      {
+       "bg": "#263f27",
+       "contrast": 8.21
+      },
+      {
+       "bg": "#2d4b2e",
+       "contrast": 6.94
+      },
+      {
+       "bg": "#345736",
+       "contrast": 5.84
+      }
+     ],
+     "ink_contrast": 9.53,
+     "chart_contrast": 7.21
+    },
+    {
+     "slot": 5,
+     "name": "Travel",
+     "hue": 315,
+     "bg": "#36273d",
+     "ink": "#ebc9fa",
+     "chart": "#c18dd8",
+     "shades": [
+      {
+       "bg": "#42304a",
+       "contrast": 8.14
+      },
+      {
+       "bg": "#4e3858",
+       "contrast": 7.03
+      },
+      {
+       "bg": "#5b4167",
+       "contrast": 5.95
+      }
+     ],
+     "ink_contrast": 9.42,
+     "chart_contrast": 6.59
+    },
+    {
+     "slot": 6,
+     "name": "Grow",
+     "hue": 0,
+     "bg": "#40242d",
+     "ink": "#fec6d6",
+     "chart": "#e183a1",
+     "shades": [
+      {
+       "bg": "#4e2c37",
+       "contrast": 8.2
+      },
+      {
+       "bg": "#5c3441",
+       "contrast": 7.05
+      },
+      {
+       "bg": "#6b3c4c",
+       "contrast": 6.0
+      }
+     ],
+     "ink_contrast": 9.46,
+     "chart_contrast": 6.5
+    },
+    {
+     "slot": 7,
+     "name": "Car",
+     "hue": 270,
+     "bg": "#252d45",
+     "ink": "#c9d6fe",
+     "chart": "#596fbb",
+     "shades": [
+      {
+       "bg": "#2d3754",
+       "contrast": 8.14
+      },
+      {
+       "bg": "#364164",
+       "contrast": 6.93
+      },
+      {
+       "bg": "#3e4b73",
+       "contrast": 5.91
+      }
+     ],
+     "ink_contrast": 9.44,
+     "chart_contrast": 3.6
+    },
+    {
+     "slot": 8,
+     "name": "Pets",
+     "hue": 117,
+     "bg": "#2c3115",
+     "ink": "#d3dfa6",
+     "chart": "#d2e284",
+     "shades": [
+      {
+       "bg": "#363c1a",
+       "contrast": 8.18
+      },
+      {
+       "bg": "#40471e",
+       "contrast": 6.96
+      },
+      {
+       "bg": "#4a5223",
+       "contrast": 5.9
+      }
+     ],
+     "ink_contrast": 9.55,
+     "chart_contrast": 12.2
+    },
+    {
+     "slot": 9,
+     "name": "Gifts",
+     "hue": 249,
+     "bg": "#1b3043",
+     "ink": "#b9dcff",
+     "chart": "#badcfe",
+     "shades": [
+      {
+       "bg": "#213b52",
+       "contrast": 8.14
+      },
+      {
+       "bg": "#274561",
+       "contrast": 6.99
+      },
+      {
+       "bg": "#2d5070",
+       "contrast": 5.91
+      }
+     ],
+     "ink_contrast": 9.51,
+     "chart_contrast": 12.04
+    },
+    {
+     "slot": 10,
+     "name": "Health",
+     "hue": 66,
+     "bg": "#3d2914",
+     "ink": "#facea3",
+     "chart": "#a3640f",
+     "shades": [
+      {
+       "bg": "#4a3218",
+       "contrast": 8.19
+      },
+      {
+       "bg": "#583b1c",
+       "contrast": 7.01
+      },
+      {
+       "bg": "#664521",
+       "contrast": 5.92
+      }
+     ],
+     "ink_contrast": 9.45,
+     "chart_contrast": 3.58
+    }
+   ],
+   "checks": {
+    "pairs": 62,
+    "fails": [],
+    "min_adjacent_tile_dE": 3.4,
+    "min_adjacent_chart_dE": 9.2,
+    "closest_chart_pair": [
+     8.8,
+     1,
+     3
+    ],
+    "negative_vs_mark_dE": 8.6,
+    "negative_vs_nearest_chart": [
+     8.0,
+     6
+    ],
+    "accent_vs_nearest_chart": [
+     8.1,
+     4
+    ],
+    "lowest": [
+     [
+      "slot 10 chart on surface",
+      3.58,
+      3.0
+     ],
+     [
+      "slot 7 chart on surface",
+      3.6,
+      3.0
+     ],
+     [
+      "slot 4 ink on shade 3",
+      5.84,
+      4.5
+     ]
+    ]
+   }
+  }
+ },
+ "bucket": {
+  "label": "Bucket tints",
+  "dark_label": "Forest night",
+  "note": "The bake-off palette. Dark partner is Forest night (true-neutral dark, green actions).",
+  "default": false,
+  "light": {
+   "base": {
+    "ground": "#f3f5f7",
+    "surface": "#ffffff",
+    "raised": "#f4f6f8",
+    "border": "#e6e6e6",
+    "text": "#1b1d1f",
+    "muted": "#5c6064",
+    "accent": "#1d5fd6",
+    "accent-ink": "#ffffff",
+    "mark": "#1d5fd6",
+    "positive": "#2f7a45",
+    "negative": "#c41c29",
+    "warn-bg": "#fffbeb",
+    "warn-ink": "#92400e",
+    "ok-bg": "#dcfae5",
+    "ok-ink": "#14532d",
+    "neutral-bg": "#eef0f2",
+    "neutral-ink": "#3d4145"
+   },
+   "buckets": [
+    {
+     "slot": 1,
+     "name": "Daily",
+     "hue": 245,
+     "bg": "#dcf1ff",
+     "ink": "#0a3a80",
+     "chart": "#348dcf",
+     "shades": [
+      {
+       "bg": "#cde8fa",
+       "contrast": 8.56
+      },
+      {
+       "bg": "#bfdff4",
+       "contrast": 7.81
+      },
+      {
+       "bg": "#b0d6ef",
+       "contrast": 7.1
+      }
+     ],
+     "ink_contrast": 9.36,
+     "chart_contrast": 3.59
+    },
+    {
+     "slot": 2,
+     "name": "Splurge",
+     "hue": 0,
+     "bg": "#ffe4ec",
+     "ink": "#7a1638",
+     "chart": "#c46183",
+     "shades": [
+      {
+       "bg": "#f9d8e2",
+       "contrast": 7.98
+      },
+      {
+       "bg": "#f4ccd8",
+       "contrast": 7.24
+      },
+      {
+       "bg": "#eec0cf",
+       "contrast": 6.54
+      }
+     ],
+     "ink_contrast": 8.78,
+     "chart_contrast": 3.9
+    },
+    {
+     "slot": 3,
+     "name": "Smile",
+     "hue": 75,
+     "bg": "#fff0d1",
+     "ink": "#6b3f00",
+     "chart": "#b37903",
+     "shades": [
+      {
+       "bg": "#f7e6c1",
+       "contrast": 7.3
+      },
+      {
+       "bg": "#f0dbb1",
+       "contrast": 6.62
+      },
+      {
+       "bg": "#e8d1a1",
+       "contrast": 6.02
+      }
+     ],
+     "ink_contrast": 7.98,
+     "chart_contrast": 3.71
+    },
+    {
+     "slot": 4,
+     "name": "Fire extinguisher",
+     "hue": 185,
+     "bg": "#d7f3ef",
+     "ink": "#0d4d45",
+     "chart": "#099b8f",
+     "shades": [
+      {
+       "bg": "#c7ebe6",
+       "contrast": 7.6
+      },
+      {
+       "bg": "#b7e3dd",
+       "contrast": 6.95
+      },
+      {
+       "bg": "#a7dbd4",
+       "contrast": 6.34
+      }
+     ],
+     "ink_contrast": 8.3,
+     "chart_contrast": 3.44
+    },
+    {
+     "slot": 5,
+     "name": "Travel",
+     "hue": 312,
+     "bg": "#f4e4fe",
+     "ink": "#562d6c",
+     "chart": "#a06dbe",
+     "shades": [
+      {
+       "bg": "#ecd9f8",
+       "contrast": 7.97
+      },
+      {
+       "bg": "#e4cdf2",
+       "contrast": 7.2
+      },
+      {
+       "bg": "#dcc2eb",
+       "contrast": 6.52
+      }
+     ],
+     "ink_contrast": 8.74,
+     "chart_contrast": 3.87
+    },
+    {
+     "slot": 6,
+     "name": "Grow",
+     "hue": 129,
+     "bg": "#e3f1d5",
+     "ink": "#314c01",
+     "chart": "#6d9538",
+     "shades": [
+      {
+       "bg": "#d8e8c7",
+       "contrast": 7.52
+      },
+      {
+       "bg": "#ccdfb9",
+       "contrast": 6.85
+      },
+      {
+       "bg": "#c1d7aa",
+       "contrast": 6.27
+      }
+     ],
+     "ink_contrast": 8.23,
+     "chart_contrast": 3.5
+    },
+    {
+     "slot": 7,
+     "name": "Car",
+     "hue": 216,
+     "bg": "#cef3fc",
+     "ink": "#044b59",
+     "chart": "#066374",
+     "shades": [
+      {
+       "bg": "#beeaf5",
+       "contrast": 7.55
+      },
+      {
+       "bg": "#aee2ee",
+       "contrast": 6.92
+      },
+      {
+       "bg": "#9dd9e8",
+       "contrast": 6.27
+      }
+     ],
+     "ink_contrast": 8.28,
+     "chart_contrast": 6.9
+    },
+    {
+     "slot": 8,
+     "name": "Pets",
+     "hue": 45,
+     "bg": "#ffe5da",
+     "ink": "#6f2a01",
+     "chart": "#903a03",
+     "shades": [
+      {
+       "bg": "#fadacc",
+       "contrast": 7.95
+      },
+      {
+       "bg": "#f4cebe",
+       "contrast": 7.18
+      },
+      {
+       "bg": "#efc3b0",
+       "contrast": 6.53
+      }
+     ],
+     "ink_contrast": 8.7,
+     "chart_contrast": 7.52
+    },
+    {
+     "slot": 9,
+     "name": "Gifts",
+     "hue": 288,
+     "bg": "#eae9ff",
+     "ink": "#413579",
+     "chart": "#56489b",
+     "shades": [
+      {
+       "bg": "#e0defa",
+       "contrast": 7.96
+      },
+      {
+       "bg": "#d6d4f5",
+       "contrast": 7.26
+      },
+      {
+       "bg": "#ccc9f0",
+       "contrast": 6.56
+      }
+     ],
+     "ink_contrast": 8.75,
+     "chart_contrast": 7.51
+    },
+    {
+     "slot": 10,
+     "name": "Health",
+     "hue": 102,
+     "bg": "#f0edce",
+     "ink": "#4b4303",
+     "chart": "#6f6502",
+     "shades": [
+      {
+       "bg": "#e7e3be",
+       "contrast": 7.67
+      },
+      {
+       "bg": "#dedaaf",
+       "contrast": 7.01
+      },
+      {
+       "bg": "#d5d09f",
+       "contrast": 6.35
+      }
+     ],
+     "ink_contrast": 8.42,
+     "chart_contrast": 5.94
+    }
+   ],
+   "checks": {
+    "pairs": 62,
+    "fails": [],
+    "min_adjacent_tile_dE": 5.3,
+    "min_adjacent_chart_dE": 16.0,
+    "closest_chart_pair": [
+     10.6,
+     2,
+     5
+    ],
+    "negative_vs_mark_dE": 34.7,
+    "negative_vs_nearest_chart": [
+     11.2,
+     8
+    ],
+    "accent_vs_nearest_chart": [
+     11.5,
+     9
+    ],
+    "lowest": [
+     [
+      "slot 4 chart on surface",
+      3.44,
+      3.0
+     ],
+     [
+      "slot 6 chart on surface",
+      3.5,
+      3.0
+     ],
+     [
+      "positive on surface",
+      5.26,
+      4.5
+     ]
+    ]
+   }
+  },
+  "dark": {
+   "base": {
+    "ground": "#111111",
+    "surface": "#1a1a1a",
+    "raised": "#222222",
+    "border": "#2e2e2e",
+    "text": "#ffffff",
+    "muted": "#b4b4b4",
+    "accent": "#5cc98d",
+    "accent-ink": "#0b1a11",
+    "mark": "#5cc98d",
+    "positive": "#5cc98d",
+    "negative": "#e5566f",
+    "warn-bg": "#2b2414",
+    "warn-ink": "#f2c46b",
+    "ok-bg": "#16281c",
+    "ok-ink": "#5cc98d",
+    "neutral-bg": "#262626",
+    "neutral-ink": "#d0d0d0"
+   },
+   "buckets": [
+    {
+     "slot": 1,
+     "name": "Daily",
+     "hue": 245,
+     "bg": "#13263b",
+     "ink": "#a9d3ff",
+     "chart": "#58a5e4",
+     "shades": [
+      {
+       "bg": "#19304a",
+       "contrast": 8.6
+      },
+      {
+       "bg": "#1f3a59",
+       "contrast": 7.44
+      },
+      {
+       "bg": "#254568",
+       "contrast": 6.31
+      }
+     ],
+     "ink_contrast": 9.83,
+     "chart_contrast": 6.56
+    },
+    {
+     "slot": 2,
+     "name": "Splurge",
+     "hue": 0,
+     "bg": "#361a25",
+     "ink": "#ffb8cc",
+     "chart": "#da7d9b",
+     "shades": [
+      {
+       "bg": "#44222f",
+       "contrast": 8.56
+      },
+      {
+       "bg": "#522939",
+       "contrast": 7.48
+      },
+      {
+       "bg": "#603244",
+       "contrast": 6.37
+      }
+     ],
+     "ink_contrast": 9.75,
+     "chart_contrast": 6.12
+    },
+    {
+     "slot": 3,
+     "name": "Smile",
+     "hue": 75,
+     "bg": "#33270f",
+     "ink": "#ffd68a",
+     "chart": "#ca933e",
+     "shades": [
+      {
+       "bg": "#3f3012",
+       "contrast": 9.28
+      },
+      {
+       "bg": "#4c3a16",
+       "contrast": 7.92
+      },
+      {
+       "bg": "#594419",
+       "contrast": 6.73
+      }
+     ],
+     "ink_contrast": 10.6,
+     "chart_contrast": 6.43
+    },
+    {
+     "slot": 4,
+     "name": "Fire extinguisher",
+     "hue": 185,
+     "bg": "#0f2e2a",
+     "ink": "#8fe0d2",
+     "chart": "#17b6a8",
+     "shades": [
+      {
+       "bg": "#113934",
+       "contrast": 8.3
+      },
+      {
+       "bg": "#13453f",
+       "contrast": 7.05
+      },
+      {
+       "bg": "#15514a",
+       "contrast": 5.96
+      }
+     ],
+     "ink_contrast": 9.53,
+     "chart_contrast": 6.87
+    },
+    {
+     "slot": 5,
+     "name": "Travel",
+     "hue": 312,
+     "bg": "#2d2135",
+     "ink": "#e9c9fe",
+     "chart": "#b788d4",
+     "shades": [
+      {
+       "bg": "#382942",
+       "contrast": 9.11
+      },
+      {
+       "bg": "#443250",
+       "contrast": 7.84
+      },
+      {
+       "bg": "#503b5e",
+       "contrast": 6.7
+      }
+     ],
+     "ink_contrast": 10.32,
+     "chart_contrast": 6.2
+    },
+    {
+     "slot": 6,
+     "name": "Grow",
+     "hue": 129,
+     "bg": "#202a15",
+     "ink": "#c7e2aa",
+     "chart": "#87ad59",
+     "shades": [
+      {
+       "bg": "#28351a",
+       "contrast": 9.22
+      },
+      {
+       "bg": "#314020",
+       "contrast": 7.9
+      },
+      {
+       "bg": "#3a4b26",
+       "contrast": 6.72
+      }
+     ],
+     "ink_contrast": 10.61,
+     "chart_contrast": 6.76
+    },
+    {
+     "slot": 7,
+     "name": "Car",
+     "hue": 216,
+     "bg": "#0a2b33",
+     "ink": "#99e5f9",
+     "chart": "#72e3ff",
+     "shades": [
+      {
+       "bg": "#0c3640",
+       "contrast": 9.23
+      },
+      {
+       "bg": "#0d414d",
+       "contrast": 7.94
+      },
+      {
+       "bg": "#0e4d5b",
+       "contrast": 6.69
+      }
+     ],
+     "ink_contrast": 10.62,
+     "chart_contrast": 11.72
+    },
+    {
+     "slot": 8,
+     "name": "Pets",
+     "hue": 45,
+     "bg": "#372016",
+     "ink": "#ffcab3",
+     "chart": "#a6552d",
+     "shades": [
+      {
+       "bg": "#45281c",
+       "contrast": 9.12
+      },
+      {
+       "bg": "#533122",
+       "contrast": 7.84
+      },
+      {
+       "bg": "#623928",
+       "contrast": 6.72
+      }
+     ],
+     "ink_contrast": 10.39,
+     "chart_contrast": 3.28
+    },
+    {
+     "slot": 9,
+     "name": "Gifts",
+     "hue": 288,
+     "bg": "#252339",
+     "ink": "#d5d2ff",
+     "chart": "#6c61b0",
+     "shades": [
+      {
+       "bg": "#2f2c47",
+       "contrast": 9.22
+      },
+      {
+       "bg": "#393556",
+       "contrast": 7.97
+      },
+      {
+       "bg": "#433f65",
+       "contrast": 6.78
+      }
+     ],
+     "ink_contrast": 10.52,
+     "chart_contrast": 3.29
+    },
+    {
+     "slot": 10,
+     "name": "Health",
+     "hue": 102,
+     "bg": "#2a270e",
+     "ink": "#e2da9c",
+     "chart": "#e1d473",
+     "shades": [
+      {
+       "bg": "#353112",
+       "contrast": 9.22
+      },
+      {
+       "bg": "#403b15",
+       "contrast": 7.95
+      },
+      {
+       "bg": "#4b4619",
+       "contrast": 6.73
+      }
+     ],
+     "ink_contrast": 10.57,
+     "chart_contrast": 11.49
+    }
+   ],
+   "checks": {
+    "pairs": 62,
+    "fails": [],
+    "min_adjacent_tile_dE": 5.5,
+    "min_adjacent_chart_dE": 14.6,
+    "closest_chart_pair": [
+     9.7,
+     2,
+     5
+    ],
+    "negative_vs_mark_dE": 31.5,
+    "negative_vs_nearest_chart": [
+     8.4,
+     2
+    ],
+    "accent_vs_nearest_chart": [
+     8.4,
+     6
+    ],
+    "lowest": [
+     [
+      "negative on surface",
+      4.88,
+      4.5
+     ],
+     [
+      "slot 8 chart on surface",
+      3.28,
+      3.0
+     ],
+     [
+      "slot 9 chart on surface",
+      3.29,
+      3.0
+     ]
+    ]
+   }
+  }
+ },
+ "eucalypt": {
+  "label": "Eucalypt & wattle",
+  "dark_label": "Bush night",
+  "note": "Fix: the \"spent\" mark moved from a second gold to burnt ochre, so wattle-gold Daily is the only gold.",
+  "default": false,
+  "light": {
+   "base": {
+    "ground": "#eef2ee",
+    "surface": "#ffffff",
+    "raised": "#e9eee9",
+    "border": "#dfe5df",
+    "text": "#1d2420",
+    "muted": "#56605a",
+    "accent": "#2e6b57",
+    "accent-ink": "#ffffff",
+    "mark": "#a8521f",
+    "positive": "#2f7a45",
+    "negative": "#c41c29",
+    "warn-bg": "#fff4e5",
+    "warn-ink": "#8a3b00",
+    "ok-bg": "#e1f1e4",
+    "ok-ink": "#1f4f30",
+    "neutral-bg": "#e6ebe6",
+    "neutral-ink": "#36403a"
+   },
+   "buckets": [
+    {
+     "slot": 1,
+     "name": "Daily",
+     "hue": 95,
+     "bg": "#f8e7a1",
+     "ink": "#5c4500",
+     "chart": "#957f23",
+     "shades": [
+      {
+       "bg": "#f0dd90",
+       "contrast": 6.7
+      },
+      {
+       "bg": "#e7d380",
+       "contrast": 6.08
+      },
+      {
+       "bg": "#dfc96e",
+       "contrast": 5.51
+      }
+     ],
+     "ink_contrast": 7.34,
+     "chart_contrast": 3.93
+    },
+    {
+     "slot": 2,
+     "name": "Splurge",
+     "hue": 30,
+     "bg": "#fcdcd6",
+     "ink": "#8a1f17",
+     "chart": "#b96558",
+     "shades": [
+      {
+       "bg": "#f7d0c9",
+       "contrast": 6.47
+      },
+      {
+       "bg": "#f1c5bc",
+       "contrast": 5.88
+      },
+      {
+       "bg": "#ecb9b0",
+       "contrast": 5.3
+      }
+     ],
+     "ink_contrast": 7.14,
+     "chart_contrast": 4.15
+    },
+    {
+     "slot": 3,
+     "name": "Smile",
+     "hue": 235,
+     "bg": "#d5eaf6",
+     "ink": "#0d4766",
+     "chart": "#2d8ab8",
+     "shades": [
+      {
+       "bg": "#c6e1f1",
+       "contrast": 7.32
+      },
+      {
+       "bg": "#b7d8eb",
+       "contrast": 6.65
+      },
+      {
+       "bg": "#a8d0e5",
+       "contrast": 6.07
+      }
+     ],
+     "ink_contrast": 8.02,
+     "chart_contrast": 3.86
+    },
+    {
+     "slot": 4,
+     "name": "Fire extinguisher",
+     "hue": 150,
+     "bg": "#dce9dd",
+     "ink": "#234a33",
+     "chart": "#4a925c",
+     "shades": [
+      {
+       "bg": "#cfe1d0",
+       "contrast": 7.31
+      },
+      {
+       "bg": "#c2d8c4",
+       "contrast": 6.63
+      },
+      {
+       "bg": "#b5d0b7",
+       "contrast": 6.04
+      }
+     ],
+     "ink_contrast": 7.98,
+     "chart_contrast": 3.78
+    },
+    {
+     "slot": 5,
+     "name": "Travel",
+     "hue": 312,
+     "bg": "#f1e1fc",
+     "ink": "#513463",
+     "chart": "#966cb0",
+     "shades": [
+      {
+       "bg": "#e9d6f6",
+       "contrast": 7.63
+      },
+      {
+       "bg": "#e1cbf0",
+       "contrast": 6.93
+      },
+      {
+       "bg": "#d9bfea",
+       "contrast": 6.23
+      }
+     ],
+     "ink_contrast": 8.37,
+     "chart_contrast": 4.14
+    },
+    {
+     "slot": 6,
+     "name": "Grow",
+     "hue": 201,
+     "bg": "#caf0f3",
+     "ink": "#044c50",
+     "chart": "#02787e",
+     "shades": [
+      {
+       "bg": "#bae8eb",
+       "contrast": 7.35
+      },
+      {
+       "bg": "#a9dfe4",
+       "contrast": 6.67
+      },
+      {
+       "bg": "#99d7dc",
+       "contrast": 6.08
+      }
+     ],
+     "ink_contrast": 8.01,
+     "chart_contrast": 5.26
+    },
+    {
+     "slot": 7,
+     "name": "Car",
+     "hue": 351,
+     "bg": "#fedeeb",
+     "ink": "#632d48",
+     "chart": "#7e355a",
+     "shades": [
+      {
+       "bg": "#f8d2e2",
+       "contrast": 7.66
+      },
+      {
+       "bg": "#f2c6d9",
+       "contrast": 6.93
+      },
+      {
+       "bg": "#ecbacf",
+       "contrast": 6.25
+      }
+     ],
+     "ink_contrast": 8.43,
+     "chart_contrast": 8.25
+    },
+    {
+     "slot": 8,
+     "name": "Pets",
+     "hue": 273,
+     "bg": "#e0e7fe",
+     "ink": "#343e6f",
+     "chart": "#3f4c8f",
+     "shades": [
+      {
+       "bg": "#d4ddf9",
+       "contrast": 7.51
+      },
+      {
+       "bg": "#c9d3f5",
+       "contrast": 6.84
+      },
+      {
+       "bg": "#bdc9f0",
+       "contrast": 6.19
+      }
+     ],
+     "ink_contrast": 8.25,
+     "chart_contrast": 7.95
+    },
+    {
+     "slot": 9,
+     "name": "Gifts",
+     "hue": 123,
+     "bg": "#e3edd0",
+     "ink": "#3a490c",
+     "chart": "#485b00",
+     "shades": [
+      {
+       "bg": "#d8e4c1",
+       "contrast": 7.38
+      },
+      {
+       "bg": "#cedbb3",
+       "contrast": 6.74
+      },
+      {
+       "bg": "#c3d2a4",
+       "contrast": 6.11
+      }
+     ],
+     "ink_contrast": 8.09,
+     "chart_contrast": 7.58
+    },
+    {
+     "slot": 10,
+     "name": "Health",
+     "hue": 255,
+     "bg": "#d9eaff",
+     "ink": "#20436e",
+     "chart": "#3a6aa7",
+     "shades": [
+      {
+       "bg": "#cce1fa",
+       "contrast": 7.52
+      },
+      {
+       "bg": "#bed7f5",
+       "contrast": 6.81
+      },
+      {
+       "bg": "#b1cef1",
+       "contrast": 6.21
+      }
+     ],
+     "ink_contrast": 8.21,
+     "chart_contrast": 5.53
+    }
+   ],
+   "checks": {
+    "pairs": 62,
+    "fails": [],
+    "min_adjacent_tile_dE": 3.4,
+    "min_adjacent_chart_dE": 11.9,
+    "closest_chart_pair": [
+     8.6,
+     8,
+     10
+    ],
+    "negative_vs_mark_dE": 9.5,
+    "negative_vs_nearest_chart": [
+     11.5,
+     2
+    ],
+    "accent_vs_nearest_chart": [
+     6.1,
+     6
+    ],
+    "lowest": [
+     [
+      "positive on surface",
+      5.26,
+      4.5
+     ],
+     [
+      "slot 2 ink on shade 3",
+      5.3,
+      4.5
+     ],
+     [
+      "slot 1 ink on shade 3",
+      5.51,
+      4.5
+     ]
+    ]
+   }
+  },
+  "dark": {
+   "base": {
+    "ground": "#111613",
+    "surface": "#19201b",
+    "raised": "#212a24",
+    "border": "#2c3830",
+    "text": "#eef3ef",
+    "muted": "#a9b5ad",
+    "accent": "#74c3a5",
+    "accent-ink": "#0b2219",
+    "mark": "#e0955a",
+    "positive": "#74c3a5",
+    "negative": "#ff6b6b",
+    "warn-bg": "#2c2414",
+    "warn-ink": "#f0c27a",
+    "ok-bg": "#16271d",
+    "ok-ink": "#86d0ac",
+    "neutral-bg": "#232b26",
+    "neutral-ink": "#cfd8d2"
+   },
+   "buckets": [
+    {
+     "slot": 1,
+     "name": "Daily",
+     "hue": 95,
+     "bg": "#322b13",
+     "ink": "#e6d8a3",
+     "chart": "#b49d46",
+     "shades": [
+      {
+       "bg": "#3e3517",
+       "contrast": 8.52
+      },
+      {
+       "bg": "#4a3f1a",
+       "contrast": 7.3
+      },
+      {
+       "bg": "#564a1e",
+       "contrast": 6.15
+      }
+     ],
+     "ink_contrast": 9.87,
+     "chart_contrast": 6.21
+    },
+    {
+     "slot": 2,
+     "name": "Splurge",
+     "hue": 30,
+     "bg": "#3d241f",
+     "ink": "#fec9c0",
+     "chart": "#da8375",
+     "shades": [
+      {
+       "bg": "#4b2c26",
+       "contrast": 8.49
+      },
+      {
+       "bg": "#5a352d",
+       "contrast": 7.23
+      },
+      {
+       "bg": "#693d35",
+       "contrast": 6.18
+      }
+     ],
+     "ink_contrast": 9.74,
+     "chart_contrast": 5.92
+    },
+    {
+     "slot": 3,
+     "name": "Smile",
+     "hue": 235,
+     "bg": "#162e3c",
+     "ink": "#ace0fe",
+     "chart": "#50a9d9",
+     "shades": [
+      {
+       "bg": "#1a394a",
+       "contrast": 8.59
+      },
+      {
+       "bg": "#1f4459",
+       "contrast": 7.32
+      },
+      {
+       "bg": "#234f68",
+       "contrast": 6.21
+      }
+     ],
+     "ink_contrast": 9.96,
+     "chart_contrast": 6.34
+    },
+    {
+     "slot": 4,
+     "name": "Fire extinguisher",
+     "hue": 150,
+     "bg": "#1c3121",
+     "ink": "#b7e5bf",
+     "chart": "#69b27a",
+     "shades": [
+      {
+       "bg": "#223c29",
+       "contrast": 8.57
+      },
+      {
+       "bg": "#284830",
+       "contrast": 7.27
+      },
+      {
+       "bg": "#2f5438",
+       "contrast": 6.12
+      }
+     ],
+     "ink_contrast": 9.91,
+     "chart_contrast": 6.53
+    },
+    {
+     "slot": 5,
+     "name": "Travel",
+     "hue": 312,
+     "bg": "#32253a",
+     "ink": "#e7cbfa",
+     "chart": "#b58ad0",
+     "shades": [
+      {
+       "bg": "#3e2e47",
+       "contrast": 8.49
+      },
+      {
+       "bg": "#4a3655",
+       "contrast": 7.34
+      },
+      {
+       "bg": "#563f64",
+       "contrast": 6.25
+      }
+     ],
+     "ink_contrast": 9.8,
+     "chart_contrast": 5.94
+    },
+    {
+     "slot": 6,
+     "name": "Grow",
+     "hue": 201,
+     "bg": "#0e3133",
+     "ink": "#a0e6ea",
+     "chart": "#0a7e84",
+     "shades": [
+      {
+       "bg": "#0f3c3f",
+       "contrast": 8.63
+      },
+      {
+       "bg": "#10484b",
+       "contrast": 7.32
+      },
+      {
+       "bg": "#115458",
+       "contrast": 6.17
+      }
+     ],
+     "ink_contrast": 9.96,
+     "chart_contrast": 3.43
+    },
+    {
+     "slot": 7,
+     "name": "Car",
+     "hue": 351,
+     "bg": "#3b232e",
+     "ink": "#fdc5dd",
+     "chart": "#ffbad8",
+     "shades": [
+      {
+       "bg": "#492b39",
+       "contrast": 8.42
+      },
+      {
+       "bg": "#573344",
+       "contrast": 7.24
+      },
+      {
+       "bg": "#653c4f",
+       "contrast": 6.14
+      }
+     ],
+     "ink_contrast": 9.69,
+     "chart_contrast": 10.5
+    },
+    {
+     "slot": 8,
+     "name": "Pets",
+     "hue": 273,
+     "bg": "#252a3f",
+     "ink": "#cad6ff",
+     "chart": "#6575bb",
+     "shades": [
+      {
+       "bg": "#2e344e",
+       "contrast": 8.49
+      },
+      {
+       "bg": "#363e5d",
+       "contrast": 7.27
+      },
+      {
+       "bg": "#3f486d",
+       "contrast": 6.18
+      }
+     ],
+     "ink_contrast": 9.84,
+     "chart_contrast": 3.81
+    },
+    {
+     "slot": 9,
+     "name": "Gifts",
+     "hue": 123,
+     "bg": "#272f18",
+     "ink": "#cee0ad",
+     "chart": "#c3dd8b",
+     "shades": [
+      {
+       "bg": "#303a1d",
+       "contrast": 8.52
+      },
+      {
+       "bg": "#394523",
+       "contrast": 7.27
+      },
+      {
+       "bg": "#435128",
+       "contrast": 6.09
+      }
+     ],
+     "ink_contrast": 9.89,
+     "chart_contrast": 11.11
+    },
+    {
+     "slot": 10,
+     "name": "Health",
+     "hue": 255,
+     "bg": "#1e2c3f",
+     "ink": "#bedafe",
+     "chart": "#9dc7fe",
+     "shades": [
+      {
+       "bg": "#25364e",
+       "contrast": 8.54
+      },
+      {
+       "bg": "#2c415d",
+       "contrast": 7.25
+      },
+      {
+       "bg": "#334b6d",
+       "contrast": 6.19
+      }
+     ],
+     "ink_contrast": 9.85,
+     "chart_contrast": 9.52
+    }
+   ],
+   "checks": {
+    "pairs": 62,
+    "fails": [],
+    "min_adjacent_tile_dE": 4.1,
+    "min_adjacent_chart_dE": 11.8,
+    "closest_chart_pair": [
+     10.3,
+     1,
+     4
+    ],
+    "negative_vs_mark_dE": 11.0,
+    "negative_vs_nearest_chart": [
+     7.4,
+     2
+    ],
+    "accent_vs_nearest_chart": [
+     6.7,
+     4
+    ],
+    "lowest": [
+     [
+      "slot 6 chart on surface",
+      3.43,
+      3.0
+     ],
+     [
+      "slot 8 chart on surface",
+      3.81,
+      3.0
+     ],
+     [
+      "negative on surface",
+      5.99,
+      4.5
+     ]
+    ]
+   }
+  }
+ },
+ "harbour": {
+  "label": "Harbour",
+  "dark_label": "Harbour night",
+  "note": "Fix: coral Daily and mark shifted to apricot; over-budget deepened to crimson (always with its icon and words).",
+  "default": false,
+  "light": {
+   "base": {
+    "ground": "#eef3f6",
+    "surface": "#ffffff",
+    "raised": "#e9eff3",
+    "border": "#dfe6eb",
+    "text": "#15212b",
+    "muted": "#53606b",
+    "accent": "#0b4f7a",
+    "accent-ink": "#ffffff",
+    "mark": "#d4701c",
+    "positive": "#2f7a45",
+    "negative": "#b3123f",
+    "warn-bg": "#fff6e0",
+    "warn-ink": "#7a4100",
+    "ok-bg": "#dff4ea",
+    "ok-ink": "#14532d",
+    "neutral-bg": "#e5ecf1",
+    "neutral-ink": "#33414c"
+   },
+   "buckets": [
+    {
+     "slot": 1,
+     "name": "Daily",
+     "hue": 52,
+     "bg": "#ffe3c8",
+     "ink": "#8a3d0a",
+     "chart": "#c66a28",
+     "shades": [
+      {
+       "bg": "#f9d8b9",
+       "contrast": 5.65
+      },
+      {
+       "bg": "#f2cda9",
+       "contrast": 5.12
+      },
+      {
+       "bg": "#ecc39a",
+       "contrast": 4.66
+      }
+     ],
+     "ink_contrast": 6.2,
+     "chart_contrast": 3.82
+    },
+    {
+     "slot": 2,
+     "name": "Splurge",
+     "hue": 175,
+     "bg": "#cdeee6",
+     "ink": "#0b5146",
+     "chart": "#069c82",
+     "shades": [
+      {
+       "bg": "#bde6dc",
+       "contrast": 6.81
+      },
+      {
+       "bg": "#aeded3",
+       "contrast": 6.22
+      },
+      {
+       "bg": "#9ed6c9",
+       "contrast": 5.67
+      }
+     ],
+     "ink_contrast": 7.44,
+     "chart_contrast": 3.45
+    },
+    {
+     "slot": 3,
+     "name": "Smile",
+     "hue": 95,
+     "bg": "#ffeab0",
+     "ink": "#6b4c00",
+     "chart": "#9e8406",
+     "shades": [
+      {
+       "bg": "#f7e0a0",
+       "contrast": 6.06
+      },
+      {
+       "bg": "#efd68f",
+       "contrast": 5.52
+      },
+      {
+       "bg": "#e7cc7e",
+       "contrast": 5.02
+      }
+     ],
+     "ink_contrast": 6.64,
+     "chart_contrast": 3.65
+    },
+    {
+     "slot": 4,
+     "name": "Fire extinguisher",
+     "hue": 300,
+     "bg": "#e6dcf5",
+     "ink": "#4a2c7a",
+     "chart": "#9470cd",
+     "shades": [
+      {
+       "bg": "#ddd1ef",
+       "contrast": 7.47
+      },
+      {
+       "bg": "#d5c6ea",
+       "contrast": 6.78
+      },
+      {
+       "bg": "#ccbbe4",
+       "contrast": 6.1
+      }
+     ],
+     "ink_contrast": 8.24,
+     "chart_contrast": 3.85
+    },
+    {
+     "slot": 5,
+     "name": "Travel",
+     "hue": 354,
+     "bg": "#fee0eb",
+     "ink": "#6c2446",
+     "chart": "#c55e8c",
+     "shades": [
+      {
+       "bg": "#f8d4e2",
+       "contrast": 7.84
+      },
+      {
+       "bg": "#f2c8d8",
+       "contrast": 7.09
+      },
+      {
+       "bg": "#edbccf",
+       "contrast": 6.42
+      }
+     ],
+     "ink_contrast": 8.63,
+     "chart_contrast": 3.92
+    },
+    {
+     "slot": 6,
+     "name": "Grow",
+     "hue": 135,
+     "bg": "#dcf2d0",
+     "ink": "#264e01",
+     "chart": "#5f983a",
+     "shades": [
+      {
+       "bg": "#d0e9c2",
+       "contrast": 7.42
+      },
+      {
+       "bg": "#c4e1b4",
+       "contrast": 6.8
+      },
+      {
+       "bg": "#b8d8a7",
+       "contrast": 6.18
+      }
+     ],
+     "ink_contrast": 8.13,
+     "chart_contrast": 3.48
+    },
+    {
+     "slot": 7,
+     "name": "Car",
+     "hue": 210,
+     "bg": "#c4f3fc",
+     "ink": "#044b55",
+     "chart": "#02707e",
+     "shades": [
+      {
+       "bg": "#b4eaf5",
+       "contrast": 7.48
+      },
+      {
+       "bg": "#a3e2ee",
+       "contrast": 6.85
+      },
+      {
+       "bg": "#92dae7",
+       "contrast": 6.26
+      }
+     ],
+     "ink_contrast": 8.2,
+     "chart_contrast": 5.8
+    },
+    {
+     "slot": 8,
+     "name": "Pets",
+     "hue": 327,
+     "bg": "#fcdefb",
+     "ink": "#602960",
+     "chart": "#7f3680",
+     "shades": [
+      {
+       "bg": "#f5d2f4",
+       "contrast": 7.77
+      },
+      {
+       "bg": "#eec7ed",
+       "contrast": 7.07
+      },
+      {
+       "bg": "#e6bbe5",
+       "contrast": 6.35
+      }
+     ],
+     "ink_contrast": 8.56,
+     "chart_contrast": 7.66
+    },
+    {
+     "slot": 9,
+     "name": "Gifts",
+     "hue": 75,
+     "bg": "#fee6c5",
+     "ink": "#5b3b00",
+     "chart": "#774f02",
+     "shades": [
+      {
+       "bg": "#f7dbb5",
+       "contrast": 7.61
+      },
+      {
+       "bg": "#f0d1a6",
+       "contrast": 6.94
+      },
+      {
+       "bg": "#e9c696",
+       "contrast": 6.27
+      }
+     ],
+     "ink_contrast": 8.37,
+     "chart_contrast": 7.23
+    },
+    {
+     "slot": 10,
+     "name": "Health",
+     "hue": 273,
+     "bg": "#e3e9fe",
+     "ink": "#303b7c",
+     "chart": "#4a5ab2",
+     "shades": [
+      {
+       "bg": "#d7dff9",
+       "contrast": 7.74
+      },
+      {
+       "bg": "#ccd5f5",
+       "contrast": 7.05
+      },
+      {
+       "bg": "#c1cbf0",
+       "contrast": 6.4
+      }
+     ],
+     "ink_contrast": 8.5,
+     "chart_contrast": 6.18
+    }
+   ],
+   "checks": {
+    "pairs": 62,
+    "fails": [],
+    "min_adjacent_tile_dE": 3.9,
+    "min_adjacent_chart_dE": 12.7,
+    "closest_chart_pair": [
+     9.1,
+     2,
+     6
+    ],
+    "negative_vs_mark_dE": 19.6,
+    "negative_vs_nearest_chart": [
+     14.3,
+     8
+    ],
+    "accent_vs_nearest_chart": [
+     10.3,
+     7
+    ],
+    "lowest": [
+     [
+      "slot 1 ink on shade 3",
+      4.66,
+      4.5
+     ],
+     [
+      "slot 3 ink on shade 3",
+      5.02,
+      4.5
+     ],
+     [
+      "slot 1 ink on shade 2",
+      5.12,
+      4.5
+     ]
+    ]
+   }
+  },
+  "dark": {
+   "base": {
+    "ground": "#0e141a",
+    "surface": "#151d25",
+    "raised": "#1d2730",
+    "border": "#29353f",
+    "text": "#eef4f8",
+    "muted": "#a6b4bf",
+    "accent": "#6cb6e8",
+    "accent-ink": "#06233a",
+    "mark": "#f2a65a",
+    "positive": "#6fd0a0",
+    "negative": "#ff6b8a",
+    "warn-bg": "#2c2414",
+    "warn-ink": "#f5c77a",
+    "ok-bg": "#13281f",
+    "ok-ink": "#7fd6aa",
+    "neutral-bg": "#1f2932",
+    "neutral-ink": "#ccd7df"
+   },
+   "buckets": [
+    {
+     "slot": 1,
+     "name": "Daily",
+     "hue": 52,
+     "bg": "#3d2515",
+     "ink": "#ffcbac",
+     "chart": "#e48b53",
+     "shades": [
+      {
+       "bg": "#4b2e1a",
+       "contrast": 8.44
+      },
+      {
+       "bg": "#59361f",
+       "contrast": 7.3
+      },
+      {
+       "bg": "#683f24",
+       "contrast": 6.19
+      }
+     ],
+     "ink_contrast": 9.76,
+     "chart_contrast": 6.58
+    },
+    {
+     "slot": 2,
+     "name": "Splurge",
+     "hue": 175,
+     "bg": "#0d332a",
+     "ink": "#9ee9d4",
+     "chart": "#21bfa0",
+     "shades": [
+      {
+       "bg": "#0f3f34",
+       "contrast": 8.46
+      },
+      {
+       "bg": "#124b3e",
+       "contrast": 7.17
+      },
+      {
+       "bg": "#145748",
+       "contrast": 6.06
+      }
+     ],
+     "ink_contrast": 9.88,
+     "chart_contrast": 7.31
+    },
+    {
+     "slot": 3,
+     "name": "Smile",
+     "hue": 95,
+     "bg": "#322b0f",
+     "ink": "#e8d89b",
+     "chart": "#bea333",
+     "shades": [
+      {
+       "bg": "#3e3512",
+       "contrast": 8.55
+      },
+      {
+       "bg": "#493f16",
+       "contrast": 7.34
+      },
+      {
+       "bg": "#564a19",
+       "contrast": 6.16
+      }
+     ],
+     "ink_contrast": 9.9,
+     "chart_contrast": 6.87
+    },
+    {
+     "slot": 4,
+     "name": "Fire extinguisher",
+     "hue": 300,
+     "bg": "#2f263e",
+     "ink": "#decefe",
+     "chart": "#b191ea",
+     "shades": [
+      {
+       "bg": "#3a2f4c",
+       "contrast": 8.5
+      },
+      {
+       "bg": "#45385b",
+       "contrast": 7.29
+      },
+      {
+       "bg": "#51416a",
+       "contrast": 6.21
+      }
+     ],
+     "ink_contrast": 9.79,
+     "chart_contrast": 6.57
+    },
+    {
+     "slot": 5,
+     "name": "Travel",
+     "hue": 354,
+     "bg": "#3d222d",
+     "ink": "#ffc4db",
+     "chart": "#e380aa",
+     "shades": [
+      {
+       "bg": "#4b2a37",
+       "contrast": 8.41
+      },
+      {
+       "bg": "#593242",
+       "contrast": 7.23
+      },
+      {
+       "bg": "#683a4d",
+       "contrast": 6.16
+      }
+     ],
+     "ink_contrast": 9.67,
+     "chart_contrast": 6.43
+    },
+    {
+     "slot": 6,
+     "name": "Grow",
+     "hue": 135,
+     "bg": "#213019",
+     "ink": "#c1e4af",
+     "chart": "#51852f",
+     "shades": [
+      {
+       "bg": "#293b1f",
+       "contrast": 8.61
+      },
+      {
+       "bg": "#314725",
+       "contrast": 7.28
+      },
+      {
+       "bg": "#39522b",
+       "contrast": 6.2
+      }
+     ],
+     "ink_contrast": 9.98,
+     "chart_contrast": 3.84
+    },
+    {
+     "slot": 7,
+     "name": "Car",
+     "hue": 210,
+     "bg": "#083138",
+     "ink": "#97e6f5",
+     "chart": "#78ebff",
+     "shades": [
+      {
+       "bg": "#083c45",
+       "contrast": 8.58
+      },
+      {
+       "bg": "#084852",
+       "contrast": 7.26
+      },
+      {
+       "bg": "#075460",
+       "contrast": 6.11
+      }
+     ],
+     "ink_contrast": 9.92,
+     "chart_contrast": 12.25
+    },
+    {
+     "slot": 8,
+     "name": "Pets",
+     "hue": 327,
+     "bg": "#372337",
+     "ink": "#f5c6f3",
+     "chart": "#ffbefe",
+     "shades": [
+      {
+       "bg": "#442b44",
+       "contrast": 8.51
+      },
+      {
+       "bg": "#513451",
+       "contrast": 7.27
+      },
+      {
+       "bg": "#5e3c5e",
+       "contrast": 6.24
+      }
+     ],
+     "ink_contrast": 9.78,
+     "chart_contrast": 11.38
+    },
+    {
+     "slot": 9,
+     "name": "Gifts",
+     "hue": 75,
+     "bg": "#382810",
+     "ink": "#f7d19c",
+     "chart": "#fece8c",
+     "shades": [
+      {
+       "bg": "#453114",
+       "contrast": 8.55
+      },
+      {
+       "bg": "#523b17",
+       "contrast": 7.29
+      },
+      {
+       "bg": "#60451b",
+       "contrast": 6.16
+      }
+     ],
+     "ink_contrast": 9.84,
+     "chart_contrast": 11.68
+    },
+    {
+     "slot": 10,
+     "name": "Health",
+     "hue": 273,
+     "bg": "#242a42",
+     "ink": "#cad6ff",
+     "chart": "#5c6dc0",
+     "shades": [
+      {
+       "bg": "#2c3451",
+       "contrast": 8.49
+      },
+      {
+       "bg": "#353e60",
+       "contrast": 7.25
+      },
+      {
+       "bg": "#3e4870",
+       "contrast": 6.16
+      }
+     ],
+     "ink_contrast": 9.81,
+     "chart_contrast": 3.57
+    }
+   ],
+   "checks": {
+    "pairs": 62,
+    "fails": [],
+    "min_adjacent_tile_dE": 4.0,
+    "min_adjacent_chart_dE": 11.9,
+    "closest_chart_pair": [
+     9.7,
+     1,
+     3
+    ],
+    "negative_vs_mark_dE": 16.2,
+    "negative_vs_nearest_chart": [
+     6.6,
+     5
+    ],
+    "accent_vs_nearest_chart": [
+     12.2,
+     4
+    ],
+    "lowest": [
+     [
+      "slot 10 chart on surface",
+      3.57,
+      3.0
+     ],
+     [
+      "slot 6 chart on surface",
+      3.84,
+      3.0
+     ],
+     [
+      "slot 2 ink on shade 3",
+      6.06,
+      4.5
+     ]
+    ]
+   }
+  }
+ }
+}
