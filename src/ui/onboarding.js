@@ -5,6 +5,7 @@
 // "explore with sample data" path. Settings > Run setup again fires `ledger:run-setup`.
 // `ft-onboarded` is still read, so nobody who finished or skipped the old onboarding sees setup again.
 
+import './setup/setup.css'; // C7 — full-screen setup
 import { store } from '../state/store.js';
 import { t } from '../i18n/strings.js';
 import { esc } from './html.js';
@@ -20,9 +21,8 @@ import { registerPaySteps } from './setup/steps-pay.js';
 import { registerMoneySteps } from './setup/steps-money.js';
 import { registerBasicSteps } from './setup/steps-basic.js';
 import { registerBucketSteps } from './setup/steps-buckets.js';
+import { markOnboarded, alreadyOnboarded } from './setup/onboarded.js';
 import { markStep, startSetupState, readSetupState, writeSetupState, renderSetupChecklist } from './setup/checklist.js';
-
-const ONBOARDED_KEY = 'ft-onboarded';
 
 let session = null;
 let wired = false;
@@ -30,13 +30,6 @@ let registered = false;
 
 function storage() {
     try { return window.localStorage; } catch (e) { return null; }
-}
-function markOnboarded() {
-    try { localStorage.setItem(ONBOARDED_KEY, '1'); } catch (e) { return false; }
-    return true;
-}
-function alreadyOnboarded() {
-    try { return localStorage.getItem(ONBOARDED_KEY) === '1'; } catch (e) { return false; }
 }
 
 /** C7's own steps plus E8's model, split and transfers. */

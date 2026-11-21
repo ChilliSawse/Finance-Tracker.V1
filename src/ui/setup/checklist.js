@@ -5,6 +5,7 @@
 // State: localStorage `ft-setup-state` = {completed: [stepId], skipped: [stepId], notNeeded: [stepId], dismissed: bool}.
 // Pure functions take the storage as a parameter so tests need no browser.
 
+import './checklist.css'; // C7 — Today's setup checklist (shared button and tag styles used by Setup too)
 import { t } from '../../i18n/strings.js';
 import { esc } from '../html.js';
 import { store } from '../../state/store.js';

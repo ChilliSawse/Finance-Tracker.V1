@@ -2,7 +2,7 @@
 
 import { showTab } from '../ui/tabs.js';
 import { openQuickAdd } from '../ui/quick-add.js';
-import { openSettings } from '../ui/settings-screen.js';
+import { openSettingsLazy } from '../lazy-setup.js'; // P3b: the Settings screen is built on first open
 
 export function setupEventListeners() {
     // Tab navigation. iOS Safari silently drops the synthetic `click` when a
@@ -44,6 +44,6 @@ export function setupEventListeners() {
     // the topbar carry no per-element listeners. Settings opens the Settings screen (D2).
     document.addEventListener('click', (event) => {
         if (event.target.closest('[data-quick-add]')) { event.preventDefault(); openQuickAdd(); return; }
-        if (event.target.closest('[data-open-settings]')) openSettings();
+        if (event.target.closest('[data-open-settings]')) openSettingsLazy();
     });
 }

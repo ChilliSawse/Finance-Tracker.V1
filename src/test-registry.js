@@ -52,6 +52,7 @@ import { BUCKET_SHEETS_TEST_CASES } from './ui/bucket-sheets.test-cases.js';
 import { PLAN_BUCKETS_TEST_CASES } from './ui/plan-buckets.test-cases.js';
 import { REVIEW_TEST_CASES } from './ui/review.test-cases.js';
 import { PWA_TEST_CASES } from './pwa.test-cases.js';
+import { LAZY_SETUP_TEST_CASES, LAZY_SETUP_BROWSER_TEST_CASES } from './lazy-setup.test-cases.js';
 import { IMPORT_ROUTE_TEST_CASES, IMPORT_ROUTE_BROWSER_TEST_CASES } from './import/route.test-cases.js';
 import { ACCEPT_TEST_CASES, ACCEPT_XLSX_TEST_CASES } from './import/accept.test-cases.js';
 import { BUCKET_METHOD_TEST_CASES } from './ui/bucket-method.test-cases.js';
@@ -114,4 +115,6 @@ export const TEST_GROUPS = [
     { name: 'accept-xlsx', env: 'browser', cases: ACCEPT_XLSX_TEST_CASES },
     { name: 'bucket-method', env: 'pure', cases: BUCKET_METHOD_TEST_CASES },
     { name: 'income-other', env: 'pure', cases: INCOME_OTHER_TEST_CASES },
+    { name: 'lazy-setup', env: 'pure', cases: LAZY_SETUP_TEST_CASES }, // P3b
+    { name: 'lazy-setup-browser', env: 'browser', cases: LAZY_SETUP_BROWSER_TEST_CASES }, // P3b
 ];

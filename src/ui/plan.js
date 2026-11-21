@@ -4,6 +4,7 @@
 // state survives re-renders; only the section bodies are redrawn. A9b fills the Debts,
 // Assets and Categories mounts (#plan-debts, #plan-assets, #plan-categories).
 
+import './plan.css'; // A9a — Plan screen
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
 import { getSpendCache } from '../state/spend-cache.js';

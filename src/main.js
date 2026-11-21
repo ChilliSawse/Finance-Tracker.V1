@@ -10,39 +10,23 @@ import './styles/base.css';
 import '../style.css';
 import './ui/shell.css'; // A5 — sidebar, phone bottom bar, screens
 import './ui/today.css'; // A6 — Today screen
-import './ui/future/future.css'; // F6 — Future screen
-import './ui/income-layout.css'; // C6 — Salary and Set-hours sheets
-import './ui/plan-buckets.css'; // E6 — Plan buckets section
-import './ui/review.css'; // E9 — monthly review
 import { store } from './state/store.js';
 import { FinanceAutoSave } from './state/autosave.js';
 import { loadTheme } from './theme/theme.js';
 import { initializeSettingsUI } from './ui/settings-forms.js';
-import { setupSettingsScreen } from './ui/settings-screen.js';
-import './ui/settings.css'; // D2 — Settings screen
+import './ui/settings.css'; // D2 — Settings screen styles (the screen's code loads on first open)
 import { setupEventListeners } from './events/setup.js';
 import { updateAllUI } from './ui/render.js';
 import {
     restoreActiveTab, renderScopeLine, setupTabKeyboardNav,
 } from './ui/tabs.js';
-import { setupImport } from './import/import-ui.js';
-import { setupPdfImport } from './import/pdf-ui.js';
 import { setupImportEntry } from './import/import-entry.js';
+import { bindSetupEntryPoints, startFirstRunSetup, needsFirstRunSetup } from './lazy-setup.js';
 import { rollForwardBills, generateBillDueEvents } from './state/bills.js';
 import { refreshSpendCache } from './state/spend-cache.js';
-import { setupOnboarding } from './ui/onboarding.js';
 import { setupMilestoneToasts } from './ui/toast.js';
 import './ui/sheet.css'; // D1 — sheet, undo toast and dialog styles
-import './ui/quick-add.css'; // A8 — Quick-add panel
-import './ui/activity.css'; // A7 — Activity screen styles
-import './ui/plan.css'; // A9a — Plan screen
-import './ui/setup/setup.css'; // C7 — full-screen setup
 import './ui/help.css'; // A11 — the "?" button and help sheet
-import './ui/scenario/scenario.css'; // F7 — What If shell
-import './ui/scenario/results.css'; // F8b — What If results, Compare, Make this real
-import './ui/scenario/results.js'; // F8b — registers the Answer bottom, Compare and Make this real views
-import './ui/scenario/answer-top.css'; // F8a — What If Answer, top half
-import './ui/scenario/answer-top.js'; // F8a — registers the Answer view
 import { mountHelpButtons } from './ui/help.js';
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
@@ -64,14 +48,12 @@ function boot() {
     generateBillDueEvents(store.financeData);
 
     initializeSettingsUI();
-    setupSettingsScreen(); // D2 — Settings, About and the Install row
-    setupEventListeners();
+    setupEventListeners(); // opens Settings through lazy-setup.js: the screen is built on first open (P3b)
 
     setupPwaInstallListeners();
     setupTabKeyboardNav();
-    setupImport(); // Ledger — bank CSV import (Tools)
-    setupPdfImport(); // Variable income — bank PDF import + payslip autofill (Tools)
-    setupImportEntry(); // one Import statement button routes CSV, XLSX and PDF
+    setupImportEntry(); // one Import statement button; the CSV, XLSX and PDF flows load and wire on first use (P3b)
+    bindSetupEntryPoints(); // Setup checklist buttons and Settings > Run setup again load Setup on first use (P3b)
     mountHelpButtons(); // A11 — one "?" per screen
 
     updateAllUI();
@@ -79,7 +61,7 @@ function boot() {
     restoreActiveTab(); // A.3 — restore last-viewed section (legacy names mapped; defaults to Today)
 
     setupMilestoneToasts(); // Ledger — celebration toasts
-    setupOnboarding(hadSavedData); // Ledger — first-run guided setup / sample data
+    if (needsFirstRunSetup(hadSavedData)) startFirstRunSetup(); // Ledger — first-run guided setup / sample data (loaded only when needed, P3b)
 
     // Spending aggregates load async from IndexedDB; refresh the visible tab
     // once they're in so transaction-fed cards appear without a manual switch.

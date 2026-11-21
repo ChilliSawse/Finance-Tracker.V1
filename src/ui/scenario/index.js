@@ -7,6 +7,7 @@
 // with fn(container, {scenario, data, today}); until then those regions show a short placeholder.
 // Everything user-visible is set as text; scenario names, notes and target names are never markup.
 
+import './scenario.css'; // F7 — What If shell
 import { t, plural } from '../../i18n/strings.js';
 import { store } from '../../state/store.js';
 import {
