@@ -436,9 +436,12 @@
             const t1 = makeTransaction({ date: '2026-07-01', description: 'WOOLWORTHS 1234', amountCents: -8532, categoryId: 'groceries', source: 'csv', importBatchId: batchId });
             const t2 = makeTransaction({ date: '2026-07-02', description: 'NETFLIX.COM', amountCents: -1899, categoryId: 'entertainment', source: 'csv', importBatchId: batchId });
             const t1dup = makeTransaction({ date: '2026-07-01', description: '  woolworths   1234 ', amountCents: -8532, categoryId: 'groceries', source: 'csv', importBatchId: batchId });
-            const res1 = await addTransactions([t1, t2, t1dup]);
+            const res1 = await addTransactions([t1, t2]);
             assertEqual('Batch insert adds unique rows', res1.added, 2);
-            assertEqual('Normalised duplicate is skipped', res1.duplicates, 1);
+            // S3 (L8): identical rows inside one file are genuine and both import; a later
+            // re-export of an existing row (here with different spacing and case) is the duplicate.
+            const res1b = await addTransactions([t1dup]);
+            assertEqual('Normalised duplicate is skipped', res1b.duplicates, 1);
             const res2 = await addTransactions([
                 makeTransaction({ date: '2026-07-01', description: 'WOOLWORTHS 1234', amountCents: -8532, source: 'csv' }),
             ]);

@@ -8,7 +8,7 @@
 
 import { store } from '../state/store.js';
 import { getElement, getValue, setHTML, escapeHtml, formatCurrency } from '../utils.js';
-import { parseCsv, detectColumns, normaliseRows } from './csv.js';
+import { parseCsv, detectColumns, normaliseRows, CSV_LIMITS, CsvLimitError } from './csv.js';
 import { categoriseDescription } from '../state/categories.js';
 import { makeTransaction, addTransactions, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
@@ -79,7 +79,8 @@ function currentConfig() {
 }
 
 function columnOptions(rows, hasHeader, selectedIndex) {
-    const width = Math.max(...rows.slice(0, 5).map(r => r.length));
+    // Capped: one <option> per column, five selects, so a pathological first row must not explode the DOM.
+    const width = Math.min(CSV_LIMITS.maxCols, Math.max(...rows.slice(0, 5).map(r => r.length)));
     const sample = hasHeader && rows.length > 1 ? rows[1] : rows[0];
     let html = '<option value="">—</option>';
     for (let i = 0; i < width; i++) {
@@ -132,10 +133,10 @@ function buildNormalised() {
         date: cfg.date, description: cfg.description,
         amount: cfg.amount, debit: cfg.debit, credit: cfg.credit,
     };
-    const { transactions, errors } = normaliseRows(draft.rows, mapping, {
+    const { transactions, errors, outOfRange } = normaliseRows(draft.rows, mapping, {
         skipHeader: cfg.hasHeader, invert: cfg.invert,
     });
-    return { cfg, transactions, errors };
+    return { cfg, transactions, errors, outOfRange };
 }
 
 function categoryOptions(selectedId) {
@@ -146,7 +147,7 @@ function categoryOptions(selectedId) {
 
 function renderPreview() {
     if (!draft) return;
-    const { transactions, errors } = buildNormalised();
+    const { transactions, errors, outOfRange } = buildNormalised();
     draft.normalised = transactions;
 
     const previewEl = getElement('import-preview');
@@ -190,6 +191,7 @@ function renderPreview() {
                     rowWord: t(allErrors.length === 1 ? 'import.errors.rowOne' : 'import.errors.rowMany'),
                 })}</p>
                 <ul>${items}${more}</ul>
+                ${outOfRange ? `<p class="import-errors-title">${escapeHtml(t('d.import.outOfRange', { count: outOfRange }))}</p>` : ''}
             </div>`;
     } else {
         errorsEl.innerHTML = '';
@@ -242,13 +244,31 @@ async function handleXlsx(file) {
     }
 }
 
+function showLimitError(key, params) {
+    setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${escapeHtml(t(key, params))}</p></div>`);
+}
+
 function handleFile(file) {
     if (!file) return;
+    // Size check before any read, so a huge file never reaches memory.
+    if (file.size > CSV_LIMITS.maxFileBytes) {
+        showLimitError('d.import.fileTooLarge', { limit: Math.round(CSV_LIMITS.maxFileBytes / 1048576) + ' MB' });
+        return;
+    }
     if (isXlsx(file)) { handleXlsx(file); return; }
     const reader = new FileReader();
     reader.onload = (e) => {
-        const { rows, errors } = parseCsv(String(e.target.result || ''));
-        startDraft(rows, errors, file);
+        let parsed;
+        try {
+            parsed = parseCsv(String(e.target.result || ''));
+        } catch (err) {
+            if (!(err instanceof CsvLimitError)) throw err;
+            if (err.code === 'too-large') showLimitError('d.import.fileTooLarge', { limit: Math.round(CSV_LIMITS.maxFileBytes / 1048576) + ' MB' });
+            else if (err.code === 'too-many-rows') showLimitError('d.import.csvTooManyRows');
+            else showLimitError('d.import.csvTooWide');
+            return;
+        }
+        startDraft(parsed.rows, parsed.errors, file);
     };
     reader.onerror = () => showImportError('import.readFailed');
     reader.readAsText(file);

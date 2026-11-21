@@ -5,7 +5,7 @@
 import { configureDb, deleteDb, openDb } from './db.js';
 import {
     makeTransaction, addTransactions, listTransactions, updateTransaction, deleteImportBatch,
-    exportAllTransactions, importTransactions, transactionStatus, countTransactions,
+    exportAllTransactions, importTransactions, transactionStatus, countTransactions, isValidIsoDate,
 } from './transactions.js';
 import { DEFAULT_CATEGORIES, categoryIcon, withFallbackIcons } from './categories.js';
 
@@ -141,6 +141,59 @@ export const TRANSACTIONS_TEST_CASES = [
             await fresh();
             const db = await openDb();
             assert('db version stays 1', db.version, 1);
+            await deleteDb();
+        },
+    },
+    {
+        name: 'S3.L8 identical rows in one statement both import; re-import adds nothing; overlap adds only new rows',
+        async fn(assert) {
+            await fresh();
+            const row = (date, description, amountCents) => makeTransaction({ date, description, amountCents, source: 'csv', importBatchId: 'b' });
+            const stmt1 = () => [
+                row('2026-11-02', 'CAFE X', -450), row('2026-11-02', 'CAFE X', -450), row('2026-11-03', 'WOOLWORTHS', -2000),
+            ];
+            const r1 = await addTransactions(stmt1());
+            assert('two identical coffees plus one other import', [r1.added, r1.duplicates], [3, 0]);
+            assert('three rows stored', await countTransactions(), 3);
+            const r2 = await addTransactions(stmt1());
+            assert('re-import of the same statement adds nothing', [r2.added, r2.duplicates], [0, 3]);
+            assert('still three rows', await countTransactions(), 3);
+            // a later statement overlapping the first: same 2 coffees, a 3rd coffee, and a new row
+            const r3 = await addTransactions([
+                row('2026-11-02', 'CAFE X', -450), row('2026-11-02', 'CAFE X', -450), row('2026-11-02', 'cafe  x', -450),
+                row('2026-11-03', 'WOOLWORTHS', -2000), row('2026-11-04', 'NEW SHOP', -999),
+            ]);
+            assert('only the genuinely new rows are added', [r3.added, r3.duplicates], [2, 3]);
+            assert('five rows stored', await countTransactions(), 5);
+            await deleteDb();
+        },
+    },
+    {
+        name: 'S3.L8b manual rows still merge with imports within 3 days',
+        async fn(assert) {
+            await fresh();
+            const manual = makeTransaction({ date: '2026-11-01', description: 'Lunch', amountCents: -1500, source: 'manual' });
+            await addTransactions([manual]);
+            const res = await addTransactions([makeTransaction({ date: '2026-11-03', description: 'CAFE LUNCH', amountCents: -1500, source: 'csv', importBatchId: 'b' })]);
+            assert('merged into the manual row', [res.added, res.merged], [0, 1]);
+            assert('one row', await countTransactions(), 1);
+            await deleteDb();
+        },
+    },
+    {
+        name: 'S3.L3 impossible dates are skipped and counted, never stored or thrown',
+        async fn(assert) {
+            await fresh();
+            assert('valid', isValidIsoDate('2026-02-28'), true);
+            assert('31 Feb', isValidIsoDate('2026-02-31'), false);
+            assert('29 Feb non-leap', isValidIsoDate('2026-02-29'), false);
+            assert('29 Feb leap', isValidIsoDate('2028-02-29'), true);
+            assert('garbage', isValidIsoDate('2026-1-1'), false);
+            const res = await addTransactions([
+                makeTransaction({ date: '2026-02-31', description: 'BAD', amountCents: -100, source: 'pdf', importBatchId: 'b' }),
+                makeTransaction({ date: '2026-02-27', description: 'GOOD', amountCents: -100, source: 'pdf', importBatchId: 'b' }),
+            ]);
+            assert('one added, one invalid', [res.added, res.invalid], [1, 1]);
             await deleteDb();
         },
     },

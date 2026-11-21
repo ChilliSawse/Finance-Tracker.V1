@@ -8,6 +8,7 @@
 // All returned figures are PLAIN DOLLARS (income-source convention).
 
 import { parseAmountToCents } from './csv.js';
+import { checkPayslip } from '../calc/payslip-check.js';
 
 // Provider fingerprints — informational only (shown in the status line);
 // extraction is vocabulary-based and provider-agnostic.
@@ -36,6 +37,26 @@ const PERIOD_HINTS = [
     { re: /fortnight(ly)?/i, schedule: 'fortnightly' },
     { re: /month(ly)?\s*(pay|period|frequency)|paid monthly|frequency:?\s*monthly/i, schedule: 'monthly' },
 ];
+
+/**
+ * L7: may the payslip's gross go straight into the income source?
+ * Never when it is an estimate (net + tax), and never over a different stored
+ * gross: those need the user's OK (C5's grossProposal / needsConfirm rule).
+ * @param {{gross:?number, tax:?number, grossDerived:boolean}} parsed
+ * @param {{grossAnnual?:number}} source
+ * @param {string} schedule pay schedule the gross is annualised by
+ * @param {number} cycles pay cycles per year for that schedule
+ * @returns {{proposedAnnual:?number, stored:boolean, needsConfirm:boolean}}
+ */
+export function grossDecision(parsed, source, schedule, cycles) {
+    const g = parsed && parsed.gross;
+    if (!(Number.isFinite(g) && g > 0) || !(cycles > 0)) return { proposedAnnual: null, stored: false, needsConfirm: false };
+    const proposedAnnual = +(g * cycles).toFixed(2);
+    const stored = Number(source && source.grossAnnual) > 0;
+    const proposal = checkPayslip({ ...parsed, gross: g }, { ...source, paySchedule: schedule }).grossProposal;
+    const differs = stored && ((proposal && proposal.needsConfirm) || Math.abs(Number(source.grossAnnual) - proposedAnnual) > 1);
+    return { proposedAnnual, stored, needsConfirm: !!(parsed.grossDerived || differs) };
+}
 
 /** Every money amount on a line, in DOLLARS, left to right. */
 function amountsOnLine(text) {
@@ -78,7 +99,7 @@ export function parsePayslipLines(lines) {
                 const amounts = amountsOnLine(line);
                 if (!amounts.length) continue;
                 const value = Math.abs(amounts[0]);
-                if (value === 0) continue;
+                if (value === 0 || !Number.isFinite(value)) continue;
                 result[field] = value;
                 break outer;
             }

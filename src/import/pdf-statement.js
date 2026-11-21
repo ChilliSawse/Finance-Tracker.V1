@@ -12,7 +12,7 @@
 // row ("Debit"/"Withdrawals"/"Money out" …), which positioned extraction makes
 // reliable. Amounts land in integer CENTS via the shared parseAmountToCents.
 
-import { parseAmountToCents, parseDateToIso } from './csv.js';
+import { parseAmountToCents, parseDateToIso, toIsoIfValid } from './csv.js';
 
 // ---------- bank detection ----------
 
@@ -138,6 +138,7 @@ export function parseStatementPages(pages, options = {}) {
 
             // 1. Date — from the first one-to-three items on the line.
             const parsed = readLeadingDate(line, fallbackYear, years);
+            if (parsed && parsed.invalid) { skipped++; last = null; continue; } // not a real calendar date
             if (!parsed) {
                 // Continuation line: description text wrapped under its transaction.
                 if (last && line.items.length && !line.items.some(i => moneyCents(i.str) !== null)) {
@@ -206,8 +207,9 @@ function readLeadingDate(line, fallbackYear, years) {
         const dm = parseDayMonth(joined);
         if (dm) {
             const year = pickYear(dm, years, fallbackYear);
-            const iso = `${year}-${String(dm.month).padStart(2, '0')}-${String(dm.day).padStart(2, '0')}`;
-            return { date: iso, consumed: take };
+            const iso = year === null ? null : toIsoIfValid(year, dm.month, dm.day);
+            // "31 Feb" and the like: flag the line so the engine counts it as skipped.
+            return iso ? { date: iso, consumed: take } : { invalid: true, consumed: take };
         }
     }
     return null;
@@ -216,11 +218,15 @@ function readLeadingDate(line, fallbackYear, years) {
 // A year-less date belongs to whichever candidate year doesn't put it in the
 // future — statements are historical documents.
 function pickYear(dm, years, fallbackYear) {
+    // Only years where the day exists are candidates (29 Feb needs a leap year);
+    // compared as ISO strings so no engine date parsing is involved.
     const now = new Date();
-    const candidates = years.length ? [...years].reverse() : [fallbackYear];
+    const limit = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 1)).toISOString().slice(0, 10);
+    const candidates = (years.length ? [...years].reverse() : [fallbackYear])
+        .filter((y) => toIsoIfValid(y, dm.month, dm.day) !== null);
+    if (!candidates.length) return null;
     for (const y of candidates) {
-        const d = new Date(y, dm.month - 1, dm.day);
-        if (d.getTime() <= now.getTime() + 24 * 3600 * 1000) return y;
+        if (toIsoIfValid(y, dm.month, dm.day) <= limit) return y;
     }
     return candidates[candidates.length - 1];
 }
