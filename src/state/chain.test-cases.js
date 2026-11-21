@@ -14,6 +14,7 @@ const NEW_STEPS = ['migratePlanModel', 'migrateBucketModel', 'migrateIncomeField
 function settledData() {
     const data = {
         dataVersion: 2, // B3: the plan step has nothing to do on a settled save
+        savingModel: { version: 1 }, // E4: nor has the bucket step
         incomeSources: [{ name: 'Job', incomeType: 'salaried' }],
         allocation: [{ name: 'Daily', percentage: 100 }],
     };

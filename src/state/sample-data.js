@@ -28,6 +28,8 @@ export function legacySampleFinanceData() {
     const data = cloneDefaultFinanceData();
     delete data.dataVersion;
     delete data.plan;
+    delete data.savingModel; // E4: the bucket model is what the migration adds
+    delete data.bucketGoals;
     data.primaryIncomeIndex = 0;
     data.incomeSources = [
         { name: 'Alex — marketing coordinator', incomeType: 'salaried', grossAnnual: 85000, paySchedule: 'fortnightly', hoursPerCycle: 76, taxRemoved: null, invoicedPayPostTax: null },
