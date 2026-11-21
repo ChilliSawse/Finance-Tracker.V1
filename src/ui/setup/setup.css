@@ -116,3 +116,13 @@ body.has-setup { overflow: hidden; }
     .su-foot { padding-inline: max(16px, calc((100% - 640px) / 2)); }
 }
 @media (prefers-reduced-motion: reduce) { .su-btn, .su-chip { transition: none; } }
+
+/* E8: starting balances and the auto-credit toggle */
+.su-bals { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.su-bal { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.su-bal input {
+    width: 9em; min-height: 44px; box-sizing: border-box; padding: 0 12px; text-align: right; font: inherit; font-variant-numeric: tabular-nums;
+    color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-inner);
+}
+.su-auto { margin-top: 16px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-tile); }
+.su-auto .su-li-main { display: flex; flex-direction: column; gap: 2px; }

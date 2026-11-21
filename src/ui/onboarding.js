@@ -19,6 +19,7 @@ import { registerQuizStep } from './setup/quiz.js';
 import { registerPaySteps } from './setup/steps-pay.js';
 import { registerMoneySteps } from './setup/steps-money.js';
 import { registerBasicSteps } from './setup/steps-basic.js';
+import { registerBucketSteps } from './setup/steps-buckets.js';
 import { markStep, startSetupState, readSetupState, writeSetupState, renderSetupChecklist } from './setup/checklist.js';
 
 const ONBOARDED_KEY = 'ft-onboarded';
@@ -38,13 +39,14 @@ function alreadyOnboarded() {
     try { return localStorage.getItem(ONBOARDED_KEY) === '1'; } catch (e) { return false; }
 }
 
-/** C7's own steps plus the default model, split and transfers (E8 replaces those three). */
+/** C7's own steps plus E8's model, split and transfers. */
 export function registerCoreSteps() {
     if (registered) return;
     registered = true;
     registerQuizStep();
     registerPaySteps();
     registerMoneySteps();
+    registerBucketSteps();
     registerBasicSteps();
 }
 
