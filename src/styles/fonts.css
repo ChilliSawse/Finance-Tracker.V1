@@ -1,0 +1,12 @@
+/* Manrope (variable, OFL 1.1; licence in public/fonts/OFL.txt). Self-hosted, weights 400 to 700. */
+@font-face {
+    font-family: "Manrope";
+    src: url("/fonts/Manrope-Variable.woff2") format("woff2");
+    font-weight: 400 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --font: "Manrope", system-ui, sans-serif;
+}

@@ -1,0 +1,32 @@
+/* Old token names mapped onto the new tokens, so the legacy Income, Expenses, Savings,
+   Liabilities and What If panels follow the four palettes. Tokens only, no colours.
+   Not linked into the app by A1: A3 and A4 wire it in, after the generated tokens. */
+:root {
+    --primary-bg-color-start: var(--ground);
+    --primary-bg-color-end: var(--ground);
+    --header-text-color: var(--text);
+    --tab-bg-color: color-mix(in srgb, var(--text) 10%, transparent);
+    --tab-active-bg-color: color-mix(in srgb, var(--text) 20%, transparent);
+    --tab-text-color: color-mix(in srgb, var(--text) 70%, transparent);
+    --tab-active-text-color: var(--text);
+    --content-bg-color: var(--surface);
+    --card-bg-gradient-start: var(--surface);
+    --card-bg-gradient-end: var(--surface);
+    --border-color: var(--border);
+    --text-color-primary: var(--text);
+    --text-color-secondary: var(--muted);
+    --heading-color: var(--text);
+    --accent-color: var(--accent);
+    --color-positive: var(--positive);
+    --color-negative: var(--negative);
+    --color-neutral: var(--accent);
+    --color-essential: var(--accent);
+    --color-warning: var(--warn-ink);
+    --essential-tint: color-mix(in srgb, var(--accent) 8%, transparent);
+    --warning-tint: var(--warn-bg);
+    --info-bg: color-mix(in srgb, var(--accent) 8%, transparent);
+    --info-border: var(--accent);
+    --positive-tint: color-mix(in srgb, var(--positive) 10%, transparent);
+    --neutral-tint: color-mix(in srgb, var(--accent) 10%, transparent);
+    --negative-tint: color-mix(in srgb, var(--negative) 10%, transparent);
+}
