@@ -7,6 +7,7 @@ import { getSpendCache } from './spend-cache.js';
 import { store } from './store.js';
 import { leftThisPay, billOccurrences, billStatus, addDays } from '../calc/pay-cycle.js';
 import { upcomingBills, missedBills } from './bills.js';
+import { isBillItem } from '../calc/bill-match.js';
 
 const NOT_READY = Object.freeze({ ready: false });
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -36,6 +37,10 @@ export function buildTodayModel({ data, rows, today }) {
     for (const r of cycleRows) if (isOut(r)) byDay.set(r.date, (byDay.get(r.date) || 0) + -r.amountCents);
     const dueBeforePay = upcomingBills(d, Math.max(0, left.cycle.daysLeft), { today, txns: all })
         .filter((b) => b.dueDate < end);
+    const missed = missedBills(d, { today, txns: all });
+    // Sum of exactly the rows the Due-before-pay-day card lists (every dated bill, any bucket; Missed ones from this cycle).
+    const dueListCents = dueBeforePay.reduce((s, b) => s + cents(b.bill.amount), 0)
+        + missed.filter((m) => m.dueDate >= start).reduce((s, m) => s + cents(m.bill.amount), 0);
     return {
         ready: true,
         today,
@@ -55,7 +60,8 @@ export function buildTodayModel({ data, rows, today }) {
         byCategory: spendByCategory(cycleRows),
         spendByDay: [...byDay].map(([date, spentCents]) => ({ date, spentCents })).sort((a, b) => a.date.localeCompare(b.date)),
         dueBeforePay,
-        missed: missedBills(d, { today, txns: all }),
+        dueListCents,
+        missed,
     };
 }
 
@@ -88,8 +94,7 @@ export function buildActivityFeed({ data, rows, today, range }) {
     const comingUp = [];
     const plan = Array.isArray(d.plan) ? d.plan : [];
     for (const item of plan) {
-        const isBill = item && item.anchorDue && (item.inTotals === false || (item.legacy && item.legacy.list === 'bill'));
-        if (!isBill) continue;
+        if (!isBillItem(item)) continue;
         for (const dueDate of billOccurrences(item, from, to)) {
             const status = billStatus(item, dueDate, all, today);
             if (status === 'Paid') continue;

@@ -102,3 +102,58 @@ export const TODAY_MODEL_TEST_CASES = [
         },
     },
 ];
+
+// K1 (conformance 3.1): one "dated bill" test (any plan item with a due date) for Today, Activity and bills.
+const K1_DATA = (plan) => ({ ...DATA, plan });
+const K1_ITEM = (id, name, amount, due, extra = {}) => ({ id, categoryId: 'subscriptions', name, amount, frequency: 'monthly', anchorDue: due, inTotals: true, ...extra });
+
+TODAY_MODEL_TEST_CASES.push(
+    {
+        name: 'K1.1 a dated bill that counts in totals shows in Due before pay day and Coming up',
+        fn(assert) {
+            const d = K1_DATA([K1_ITEM('water', 'Water bill', 77, '2026-11-09')]);
+            const m = buildTodayModel({ data: d, rows: ROWS, today: TODAY });
+            assert('listed', m.dueBeforePay.map((b) => [b.bill.id, b.dueDate]), [['water', '2026-11-09']]);
+            const f = buildActivityFeed({ data: d, rows: ROWS, today: TODAY });
+            assert('coming up', f.comingUp.map((o) => [o.planId, o.dueDate]), [['water', '2026-11-09']]);
+        },
+    },
+    {
+        name: 'K1.2 held back equals the listed rows (due before pay day plus missed in the cycle)',
+        fn(assert) {
+            const d = K1_DATA([
+                K1_ITEM('water', 'Water bill', 77, '2026-11-09'),
+                K1_ITEM('nfx', 'Netflix', 18.99, '2026-11-04'),
+                K1_ITEM('rem', 'Reminder only', 30, '2026-11-12', { inTotals: false }),
+                K1_ITEM('old', 'Gone by', 10, '2026-11-02'),
+            ]);
+            const m = buildTodayModel({ data: { ...d, allocation: [] }, rows: ROWS, today: TODAY });
+            const listed = m.dueBeforePay.reduce((s, b) => s + Math.round(b.bill.amount * 100), 0)
+                + m.missed.filter((x) => x.dueDate >= m.cycle.start).reduce((s, x) => s + Math.round(x.bill.amount * 100), 0);
+            assert('held back equals list sum', m.billsDueCents, listed);
+            assert('dueListCents equals list sum', m.dueListCents, listed);
+            assert('amount', listed, 7700 + 1899 + 3000 + 1000);
+            assert('netflix due today listed', m.dueBeforePay.some((b) => b.bill.id === 'nfx' && b.status === 'Due'), true);
+        },
+    },
+    {
+        name: 'K1.3 a reminder-only bill (inTotals false) is still listed; a matched bill is not counted twice',
+        fn(assert) {
+            const d = K1_DATA([K1_ITEM('rem', 'Reminder only', 30, '2026-11-12', { inTotals: false }), K1_ITEM('nfx', 'Netflix', 18.99, '2026-11-04')]);
+            const paid = [...ROWS, row('2026-11-04', 'subscriptions', 18.99, { billMatch: { planId: 'nfx', dueDate: '2026-11-04' } })];
+            const m = buildTodayModel({ data: { ...d, allocation: [] }, rows: paid, today: TODAY });
+            assert('only the reminder is listed', m.dueBeforePay.map((b) => b.bill.id), ['rem']);
+            assert('held back counts it once', m.billsDueCents, 3000);
+        },
+    },
+);
+
+TODAY_MODEL_TEST_CASES.push({
+    name: 'K1.4 a bill from another bucket is listed and dueListCents counts it (billsDueCents stays the Left-this-pay bucket)',
+    fn(assert) {
+        const d = K1_DATA([K1_ITEM('nfx', 'Netflix', 18.99, '2026-11-04'), { ...K1_ITEM('ph', 'Phone', 65, '2026-11-08'), categoryId: 'phone' }]);
+        const m = buildTodayModel({ data: d, rows: ROWS, today: TODAY });
+        assert('both listed', m.dueBeforePay.map((b) => b.bill.id), ['nfx', 'ph']);
+        assert('list sum', m.dueListCents, 1899 + 6500);
+    },
+});

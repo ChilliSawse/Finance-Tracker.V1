@@ -77,3 +77,9 @@ button.pill.review { padding: 0 9px; background: var(--warn-bg); color: var(--wa
 #today-tax-slot button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .future-pattern { margin-bottom: var(--gap); }
 .future-pattern:empty { display: none; }
+
+/* K1 (3.15): on the phone the Due-before-pay-day amount sits flush right, not mid-row. */
+@container (max-width: 400px) {
+  .due-card .bill { grid-template-columns: minmax(0, 1fr) auto; }
+  .due-card .bill .money { justify-self: end; text-align: right; }
+}

@@ -9,6 +9,7 @@
 import { logEvent } from './eventlog.js';
 import { t } from '../i18n/strings.js';
 import { billOccurrences, billStatus } from '../calc/pay-cycle.js';
+import { isBillItem } from '../calc/bill-match.js';
 
 const NOTIFIED_KEY = 'ft-bill-notified'; // billId → the nextDue date already announced
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -18,7 +19,8 @@ export const BILL_FREQUENCIES = ['weekly', 'fortnightly', 'monthly', 'quarterly'
 // B6 — on migrated data (dataVersion >= 2) bills are plan items (inTotals:false) carrying
 // anchorDue; due dates are computed from the anchor (billOccurrences), never rolled.
 const isPlanData = (data) => !!data && data.dataVersion >= 2 && Array.isArray(data.plan);
-const isBillItem = (it) => !!it && !!it.anchorDue && (it.inTotals === false || (it.legacy && it.legacy.list === 'bill'));
+// A dated bill = any plan item with a valid due date (isBillItem from bill-match.js, the one test shared with
+// Today, Activity, matching and Plan). inTotals only says whether it counts in Planned; it never hides a bill.
 function planBills(data) { return isPlanData(data) ? data.plan.filter(isBillItem) : []; }
 // Legacy rows added after migration (not mirrored in the plan) keep the old nextDue behaviour.
 function strayLegacyBills(data) {
