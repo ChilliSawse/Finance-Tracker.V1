@@ -13,7 +13,8 @@ import { calculateTotals } from '../calc/calculations.js';
 
 const SAMPLE_DAY = '2026-11-21';
 const near = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
-const sample = () => buildSampleHousehold(SAMPLE_DAY).data;
+// The sample as it was before step 5b ran on it (the live sample has 5b applied; G6W12-2).
+const sample = () => buildSampleHousehold(SAMPLE_DAY, { beforeAssetDebt: true }).data;
 const memStorage = () => {
     const m = new Map();
     return { m, getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); } };
@@ -22,7 +23,7 @@ const netWorth = (d) => Math.round(calculateTotals(structuredClone(d)).netWorth 
 
 export const ASSETS_DEBTS_TEST_CASES = [
     { name: 'F2.1 migration on the sample', fn(assert) {
-        const d = sample();
+        const d = legacySampleFinanceData();
         const nwBefore = netWorth(d);
         assert('sample net worth is 106,650 before', nwBefore, 10665000);
         assert('needs the migration', needsAssetDebtMigration(d), true);
@@ -34,15 +35,40 @@ export const ASSETS_DEBTS_TEST_CASES = [
         assert('kinds are flagged as suggested', d.assets.every((a) => a.kindSuggested === true), true);
         assert('debt labels', d.liabilities.map((l) => l.label), ['bad', 'bad']);
         assert('labels are flagged as suggested', d.liabilities.every((l) => l.labelSuggested === true), true);
-        assert('liability ids from E4 are kept', d.liabilities.map((l) => l.id), ['l-car-loan', 'l-credit-card']);
+        assert('liability ids are added', d.liabilities.map((l) => l.id), ['l-car-loan', 'l-credit-card']);
         assert('income sources get ids', d.incomeSources.map((s) => s.id), ['inc-alex-marketing-coordinator', 'inc-sam-freelance-design']);
         assert('inflation backfilled to 2.5', d.fiSettings.inflation, 2.5);
         assert('version written', d.assetDebtVersion, 1);
-        assert('sample rate fields are kept', [d.assets[0].interestRate, d.assets[0].interestFrequency, d.assets[2].dividendYield, d.assets[2].dividendFrequency], [4.8, 'monthly', 3.5, 'quarterly']);
         const snap = JSON.stringify(d);
         assert('second run returns false', migrateAssetDebtDetail(d), false);
         assert('second run changes nothing', JSON.stringify(d), snap);
         assert('guard now says nothing pending', needsAssetDebtMigration(d), false);
+    } },
+    { name: 'F2.1a2 the live sample already has step 5b applied and never takes the backup slot (G6W12-2)', fn(assert) {
+        const d = sample();
+        assert('sample rate fields are kept by the migration', (() => { migrateAssetDebtDetail(d); return [d.assets[0].interestRate, d.assets[0].interestFrequency, d.assets[2].dividendYield, d.assets[2].dividendFrequency]; })(), [4.8, 'monthly', 3.5, 'quarterly']);
+        const live = buildSampleHousehold(SAMPLE_DAY).data;
+        assert('live sample: nothing pending, version 1, net worth 106,650', [needsAssetDebtMigration(live), live.assetDebtVersion, netWorth(live)], [false, 1, 10665000]);
+        assert('live sample has asset ids and the inflation default', [live.assets.map((a) => a.id), live.fiSettings.inflation], [['a-savings-account', 'a-superannuation', 'a-etf-portfolio'], 2.5]);
+        assert('live sample is the pre-5b sample after the migration (same data)', JSON.stringify(live.assets), JSON.stringify(d.assets));
+        const st = memStorage();
+        const res = runMigrationChain(live, { raw: JSON.stringify(live), source: 'load', storage: st });
+        assert('chain over the live sample writes no backup', [res.backedUp, st.m.has(BACKUP_KEY)], [false, false]);
+    } },
+    { name: 'F2.1g step 5b ignores rows that are not objects, the same before and after (G6W12-9)', fn(assert) {
+        for (const [label, odd] of [['null', null], ['a number', 3], ['a string', 'x'], ['an array', [1, 2]]]) {
+            const d = sample();
+            d.assets.splice(1, 0, odd);
+            d.liabilities.push(odd);
+            const nw = netWorth({ ...d, assets: d.assets.filter((r) => r && typeof r === 'object' && !Array.isArray(r)), liabilities: d.liabilities.filter((r) => r && typeof r === 'object' && !Array.isArray(r)) });
+            let result;
+            try { result = migrateAssetDebtDetail(d); } catch (err) { result = 'threw ' + err.message; }
+            assert(label + ': migration completes', result, true);
+            assert(label + ': version written', d.assetDebtVersion, 1);
+            assert(label + ': the odd rows are left exactly where they were', [d.assets[1], d.liabilities[d.liabilities.length - 1]], [odd, odd]);
+            assert(label + ': real rows migrated, names and balances kept', [d.assets.filter((r) => r && typeof r === 'object' && !Array.isArray(r)).map((a) => [a.name, a.balance, a.id !== undefined]), d.liabilities[0].balance], [[['Savings account', 16500, true], ['Superannuation', 78400, true], ['ETF portfolio', 24800, true]], 11200]);
+            assert(label + ': net worth unchanged', netWorth({ ...d, assets: d.assets.filter((r) => r && typeof r === 'object' && !Array.isArray(r)), liabilities: d.liabilities.filter((r) => r && typeof r === 'object' && !Array.isArray(r)) }), nw);
+        }
     } },
     { name: 'F2.1b migration never touches names, balances or rates, adds only absent fields', fn(assert) {
         const d = sample();

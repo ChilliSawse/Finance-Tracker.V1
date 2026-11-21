@@ -10,6 +10,7 @@ import { CURRENT_TAX_YEAR } from '../calc/tax-au.js';
 import { resolveCategory } from './categories.js';
 import { makeTransaction, addTransactions } from './transactions.js';
 import { logEvent } from './eventlog.js';
+import { migrateAssetDebtDetail } from './asset-debt-migration.js';
 import { calculateTotals } from '../calc/calculations.js';
 import { matchBills } from '../calc/bill-match.js';
 import { billOccurrences, addMonthsClamped, addDays, toIso, parseIso } from '../calc/pay-cycle.js';
@@ -141,8 +142,11 @@ function engineNetPerCycleCents(data, sourceIndex, today) {
  * The sample household, pure: {data, rows, today}. `rows` are bank-history rows
  * {id, date, description, amountCents, categoryId, status, source, bucketId?, note?, billMatch?}.
  * `today` is an ISO date or a Date (default now); every date is relative to it.
+ * The asset and debt detail (chain step 5b) is already applied, so loading the sample never makes the
+ * chain copy the sample into the one-time pre-migration backup slot (G6W12-2). `opts.beforeAssetDebt`
+ * (a test seam) leaves the pre-5b shape instead.
  */
-export function buildSampleHousehold(today) {
+export function buildSampleHousehold(today, opts = {}) {
     const t = todayIsoOf(today);
     const data = cloneDefaultFinanceData();
     data.primaryIncomeIndex = 0;
@@ -169,7 +173,6 @@ export function buildSampleHousehold(today) {
         { name: 'Superannuation', balance: 78400 },
         { name: 'ETF portfolio', balance: 24800, dividendYield: 3.5, dividendFrequency: 'quarterly' },
     ];
-    delete data.assetDebtVersion; // F2: the chain's step 5b adds the ids, suggested kinds and labels on first load
     data.liabilities = [
         { id: 'l-car-loan', name: 'Car loan', balance: 11200, interestRate: 7.9 },
         { id: 'l-credit-card', name: 'Credit card', balance: 1850, interestRate: 20.99 },
@@ -178,6 +181,10 @@ export function buildSampleHousehold(today) {
         if (cat.id === 'groceries') cat.monthlyBudget = 1300;
         if (cat.id === 'dining') cat.monthlyBudget = 550;
     }
+    // F2 step 5b: applied here, not on load (its totals check guards net worth, A$106,650).
+    delete data.assetDebtVersion;
+    delete data.fiSettings.inflation;
+    if (!opts.beforeAssetDebt) migrateAssetDebtDetail(data);
 
     // Buckets: the engine's expenses-first split (Daily about 60.3%), not the book's 60/10/10/20 (FT-R-87).
     applySuggestedSplit(data);
