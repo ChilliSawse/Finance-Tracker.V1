@@ -224,11 +224,11 @@ function chartHtml(model, ctx) {
           <div class="t-x" style="grid-template-columns:repeat(${escNum(n)},minmax(0,1fr))" aria-hidden="true">${axis}</div>
         </div>
         <p class="t-note">${note}</p>
-        <table class="today-sr">
+        <div class="today-sr"><table class="today-sr-table">
           <caption>${t('a.today.tableCaption')}</caption>
           <thead><tr><th scope="col">${t('a.today.colDate')}</th><th scope="col">${t('a.today.colSpent')}</th><th scope="col">${t('a.today.colLeft')}</th><th scope="col">${t('a.today.colBills')}</th><th scope="col">${t('a.today.colKind')}</th></tr></thead>
           <tbody>${rows}</tbody>
-        </table>
+        </table></div>
       </section>`;
 }
 

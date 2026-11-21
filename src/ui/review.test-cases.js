@@ -47,6 +47,12 @@ export const REVIEW_TEST_CASES = [
         data.savingModel.transfers.bankSetTo = null;
         assert('an unseeded card is empty and says so', [reviewModel(data, MONTH, new Map(), TODAY).transfers.length, has(reviewHtml(reviewModel(data, MONTH, new Map(), TODAY), {}), 'match your split')], [0, true]);
     } },
+    { name: 'P1.2 a bucket with no bankSetTo entry reads New in the review transfer rows', fn(assert) {
+        const { data, rows } = house();
+        data.allocation.push({ id: 'b-new-p1', name: 'Holiday pot', role: null, kind: 'save', percentage: 0, currentBalance: 0, bankLabel: '' });
+        const out = reviewHtml(reviewModel(data, MONTH, spendOf(rows, MONTH), TODAY), {});
+        assert('the new row shows New and set this up', [has(out, '<div class="v money">New</div>'), has(out, 'New. Set this up in your bank')], [true, true]);
+    } },
     { name: 'E9.4 opening sets review.lastOpenedMonth, only forward; the Today card follows reviewDue', fn(assert) {
         const { data } = house();
         const opts = { hasTransactions: ['2026-10'] };

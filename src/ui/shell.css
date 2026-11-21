@@ -40,6 +40,11 @@
 }
 .header.side-status #save-status-indicator.saved::before { background: var(--positive); }
 .header.side-status #save-status-indicator.error::before { background: var(--negative); }
+/* narrow phones: the dot alone shows; the text stays in the DOM (font-size 0) so screen readers still hear it */
+@media (max-width: 479px) {
+  .header.side-status #save-status-indicator { font-size: 0; padding: 0 6px; }
+  .header.side-status #save-status-indicator::before { width: 8px; height: 8px; margin-right: 0; }
+}
 
 /* phone and tablet: bottom bar below 1024 px (FT-R-63) */
 @media (max-width: 1023px) {

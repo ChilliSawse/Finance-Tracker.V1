@@ -49,6 +49,7 @@ export const enA = {
     'a.quickAdd.comesOutOfNeeded': 'Comes out of (needed to save)',
     'a.quickAdd.thisOneOnly': 'Changes this one purchase only.',
     'a.quickAdd.left': '{amount} left',
+    'a.quickAdd.inBucket': '{amount} saved',
     'a.quickAdd.poolNote': 'your spending money',
     'a.quickAdd.note': 'Note',
     'a.quickAdd.optional': '(optional)',

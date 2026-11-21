@@ -176,7 +176,7 @@ function targetsCard(tg) {
 
 function transfersCard(rows) {
     const body = rows.length
-        ? `<p class="rv-lead">${esc(t('e.review.transferLead'))}</p><ul class="rv-tiles">${rows.map((r) => `<li class="tile rv-tile ${toneClass(r.slot, r.shade)}"><div class="t"><span>${esc(r.name)}</span>${r.bankLabel ? `<span>${esc(r.bankLabel)}</span>` : ''}</div><div class="v money">${esc(money(r.nowCents))}</div><div class="s">${esc(r.wasCents === null ? t('e.review.transferNew') : t('e.review.transferWas', { was: money(r.wasCents) }))}${r.informational ? ` · ${esc(t('e.review.transferInfo'))}` : ''}</div></li>`).join('')}</ul>`
+        ? `<p class="rv-lead">${esc(t('e.review.transferLead'))}</p><ul class="rv-tiles">${rows.map((r) => `<li class="tile rv-tile ${toneClass(r.slot, r.shade)}"><div class="t"><span>${esc(r.name)}</span>${r.bankLabel ? `<span>${esc(r.bankLabel)}</span>` : ''}</div><div class="v money">${esc(r.wasCents === null && !r.nowCents ? t('e.review.transferNewTag') : money(r.nowCents))}</div><div class="s">${esc(r.wasCents === null ? t('e.review.transferNew') : t('e.review.transferWas', { was: money(r.wasCents) }))}${r.informational ? ` · ${esc(t('e.review.transferInfo'))}` : ''}</div></li>`).join('')}</ul>`
         : `<p class="muted rv-empty">${esc(t('e.review.transferEmpty'))}</p>`;
     return `<section class="card rv-card" aria-labelledby="rv-h-xfer"><div class="card-head"><h2 id="rv-h-xfer">${esc(t('e.review.transferTitle'))}</h2></div>${body}</section>`;
 }

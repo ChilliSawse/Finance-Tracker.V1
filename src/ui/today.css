@@ -9,8 +9,9 @@
 /* the old Dashboard panel is replaced by this screen; A13 deletes its markup */
 #dashboard.legacy-panel { display: none; }
 
-.today-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-table.today-sr { border-collapse: collapse; }
+.today-sr { position: absolute; left: 0; top: 0; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* the table sits inside the clipped wrapper: a bare absolutely placed table keeps its content width and widens the page */
+.today-sr-table { border-collapse: collapse; }
 
 button.link, button.pill { font: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 button.link { color: var(--accent); font-weight: 600; font-size: var(--fs-body); }
