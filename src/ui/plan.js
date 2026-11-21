@@ -13,6 +13,7 @@ import { openSheet } from './sheet.js';
 import { showUndoToast, showToast } from './toast.js';
 import { openIncomeSheet } from './income-layout.js';
 import { mountBuckets } from './plan-buckets.js';
+import { mountReview } from './review.js';
 import { updateDataAndUI } from './render.js';
 import { getBuckets } from '../state/saving-model.js';
 import { listTransactions, updateTransaction } from '../state/transactions.js';
@@ -289,4 +290,5 @@ export function renderPlan(totals) {
     fillLists();
     const mount = document.getElementById('plan-buckets');
     if (mount) mountBuckets(mount);
+    mountReview();
 }
