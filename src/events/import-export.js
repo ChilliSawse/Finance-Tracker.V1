@@ -4,14 +4,18 @@
 
 import { store } from '../state/store.js';
 import { showCustomModal, confirmDialog } from '../ui/confirm.js';
+import { showUndoToast } from '../ui/toast.js';
 import { t } from '../i18n/strings.js';
 import {
-    SAVE_KEY, PRE_RESTORE_KEY, CORRUPT_PREFIX, MAX_IMPORT_BYTES, prepareImport,
+    SAVE_KEY, PRE_RESTORE_KEY, CORRUPT_PREFIX, MAX_IMPORT_BYTES,
     validateBundleShape, buildTransactionsCsv, quarantineCorruptSave,
 } from '../state/sanitize.js';
 import { updateDataAndUI } from '../ui/render.js';
 import { initializeSettingsUI } from '../ui/settings-forms.js';
-import { collectParts, buildBackupBundle, prepareBackup, commitBackup, carriesParts } from '../state/backup.js';
+import {
+    collectParts, buildBackupBundle, prepareBackup, commitBackup, carriesParts, undoLastRestore,
+    collectRecoveryBundle, restoreFromRecovery, restoreUndoToast,
+} from '../state/backup.js';
 import '../state/scenarios.js'; // F1: registers the scenarios part of the backup bundle
 import { showTab } from '../ui/tabs.js';
 
@@ -58,6 +62,51 @@ export function validateImportBundle(bundle) {
     return validateBundleShape(bundle);
 }
 
+// The app's own render and save hooks for a restore or an undo.
+function appCommitOptions() {
+    return {
+        storage: localStorage,
+        render: () => {
+            initializeSettingsUI();
+            updateDataAndUI();
+            document.dispatchEvent(new CustomEvent('ledger:data-swapped'));
+        },
+        save: () => (store.autoSave ? store.autoSave.forceSave() : true), // false = the main save failed (S9)
+    };
+}
+
+/** Tells the Settings screen to look again for a restore copy (it shows its Undo row only while one exists). */
+function announceCopyChanged() {
+    document.dispatchEvent(new CustomEvent('ledger:restore-copy-changed'));
+}
+
+/**
+ * U3: put back what was here before the last restore (settings, transactions, events). Used by the Undo toast
+ * and the Settings row. A successful undo spends the copy. Shows its own result toast.
+ */
+export async function undoRestoreNow() {
+    const result = await undoLastRestore(store, appCommitOptions());
+    if (!result.ok) {
+        if (result.detail) console.error('Undo error:', result.detail);
+        const msg = (result.notPutBack && result.notPutBack.length) ? t('d.backup.cantPutBack')
+            : result.error === 'noCopy' ? t('d.undo.noCopy')
+            : result.error === 'copyMismatch' ? t('d.undo.mismatch')
+            : ['cantReadCurrent', 'cantWrite', 'cantKeepCopy'].includes(result.error) ? t('d.backup.' + result.error)
+            : t('d.undo.failed');
+        showCustomModal(msg, 'error');
+        announceCopyChanged();
+        return result;
+    }
+    try {
+        const { refreshSpendCache } = await import('../state/spend-cache.js');
+        await refreshSpendCache();
+        updateDataAndUI();
+    } catch (err) { console.error('Spend cache refresh failed', err); }
+    showCustomModal(t('d.undo.done'), 'success');
+    announceCopyChanged();
+    return result;
+}
+
 export function handleJSONImport(event) {
     const input = event.target;
     const file = input.files[0];
@@ -85,15 +134,7 @@ export function handleJSONImport(event) {
             confirmLabel: t('d.import.confirmLabel'), danger: true,
         });
         if (!yes) return;
-        const result = await commitBackup(store, prepared, {
-            storage: localStorage,
-            render: () => {
-                initializeSettingsUI();
-                updateDataAndUI();
-                document.dispatchEvent(new CustomEvent('ledger:data-swapped'));
-            },
-            save: () => (store.autoSave ? store.autoSave.forceSave() : true), // false = the main save failed (S9)
-        });
+        const result = await commitBackup(store, prepared, appCommitOptions());
         if (!result.ok) {
             if (result.detail) console.error('Import error:', result.detail);
             const known = ['cantReadCurrent', 'cantWrite', 'cantKeepCopy'].includes(result.error);
@@ -109,7 +150,12 @@ export function handleJSONImport(event) {
         const done = carriesParts(prepared)
             ? t('d.backup.restoredCounts', { transactions: c.transactions || 0, events: c.events || 0 })
             : t('d.backup.restoredOld');
-        showCustomModal(prepared.skipped ? done + ' ' + t('d.backup.skipped', { count: prepared.skipped }) : done, 'success');
+        // U3: straight after a restore, an Undo toast (the same copy is also offered in Settings, Backup).
+        showUndoToast(restoreUndoToast({
+            message: prepared.skipped ? done + ' ' + t('d.backup.skipped', { count: prepared.skipped }) : done,
+            undo: () => undoRestoreNow(),
+        }));
+        announceCopyChanged();
         showTab('today');
     };
 
@@ -143,9 +189,23 @@ export async function showLoadNotices() {
     }
 }
 
+/** "your settings, your transactions and your events" from a list of part keys. */
+function plainList(keys) {
+    const names = keys.map((k) => {
+        const key = 'd.recovery.part.' + k;
+        const label = t(key);
+        return label === key ? k : label;
+    });
+    return names.length < 2 ? names.join('') : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+}
+
 /**
  * Minimal recovery panel for when startup throws. Built from plain DOM so it works even if the
- * normal UI cannot: export the raw saved data, import a backup, or reset. No DevTools needed.
+ * normal UI cannot. U3: it covers the whole backup, not only the settings.
+ *  - Export writes a full backup bundle (settings, transactions, events, scenarios), read part by part. A part that
+ *    cannot be read is named and left out; the rest is still saved.
+ *  - Import restores a full bundle through the same safety copy and rollback as a normal restore.
+ *  - Reset clears the saved settings (a copy is kept first); transactions and events are not touched.
  */
 export function showRecoveryPanel(error) {
     console.error('Ledger boot failed:', error);
@@ -155,27 +215,37 @@ export function showRecoveryPanel(error) {
     dlg.className = 'ledger-dialog';
     const h = document.createElement('h2'); h.textContent = t('d.recovery.title');
     const p = document.createElement('p'); p.textContent = t('d.recovery.body');
-    const msg = document.createElement('p'); msg.setAttribute('role', 'status');
+    const msg = document.createElement('p'); msg.setAttribute('role', 'status'); msg.style.marginTop = '12px';
     const row = document.createElement('div'); row.className = 'ledger-dialog-actions';
+    const buttons = [];
     const btn = (label, cls, fn) => {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'sheet-btn ' + cls; b.textContent = label;
         b.addEventListener('click', fn);
+        buttons.push(b);
         return b;
     };
+    const busy = (on) => buttons.forEach((b) => { b.disabled = on; });
     const file = document.createElement('input');
     file.type = 'file'; file.accept = '.json,application/json'; file.hidden = true;
-    const rawNow = () => { try { return localStorage.getItem(SAVE_KEY) || newestCorruptRaw(); } catch (e) { return null; } };
     const keepCopy = () => {
         const raw = localStorage.getItem(SAVE_KEY);
         if (raw) { quarantineCorruptSave(raw, localStorage); localStorage.setItem(PRE_RESTORE_KEY, raw); }
     };
 
     row.append(
-        btn(t('d.recovery.export'), '', () => {
-            const raw = rawNow();
-            if (!raw) { msg.textContent = t('d.recovery.nothing'); return; }
-            downloadText(raw, `ledger-saved-data-${new Date().toISOString().slice(0, 10)}.json`);
+        btn(t('d.recovery.export'), '', async () => {
+            busy(true);
+            msg.textContent = t('d.recovery.exporting');
+            try {
+                const { bundle, unreadable, anything } = await collectRecoveryBundle({ storage: localStorage, fallbackRaw: newestCorruptRaw() });
+                if (!anything) { msg.textContent = t('d.recovery.nothing'); return; }
+                downloadText(JSON.stringify(bundle, null, 2), `ledger-saved-data-${new Date().toISOString().slice(0, 10)}.json`);
+                msg.textContent = unreadable.length ? t('d.recovery.exportPartial', { parts: plainList(unreadable) }) : t('d.recovery.exportDone');
+            } catch (err) {
+                console.error('Recovery export failed', err);
+                msg.textContent = t('d.recovery.nothing');
+            } finally { busy(false); }
         }),
         btn(t('d.recovery.import'), '', () => file.click()),
         btn(t('d.recovery.reset'), 'is-danger', async () => {
@@ -187,19 +257,29 @@ export function showRecoveryPanel(error) {
     );
     file.addEventListener('change', () => {
         const f = file.files[0];
+        file.value = '';
         if (!f) return;
         if (f.size > MAX_IMPORT_BYTES) { msg.textContent = t('d.import.tooBig'); return; }
         const reader = new FileReader();
-        reader.onload = (e) => {
-            const prepared = prepareImport(e.target.result);
-            if (!prepared.ok) { msg.textContent = t('d.recovery.importFailed', { reason: prepared.error }); return; }
+        reader.onerror = () => { msg.textContent = t('d.import.failed'); };
+        reader.onload = async (e) => {
+            busy(true);
             try {
-                keepCopy();
-                localStorage.setItem(SAVE_KEY, JSON.stringify({
-                    financeData: prepared.financeData, guiSettings: prepared.guiSettings, timestamp: new Date().toISOString(),
-                }));
-            } catch (err) { msg.textContent = t('d.recovery.importFailed', { reason: String(err && err.message || err) }); return; }
-            location.reload();
+                const result = await restoreFromRecovery(e.target.result, { store, storage: localStorage });
+                if (!result.ok) {
+                    if (result.detail) console.error('Recovery import error:', result.detail);
+                    const known = ['cantReadCurrent', 'cantWrite', 'cantKeepCopy'].includes(result.error);
+                    msg.textContent = (result.notPutBack && result.notPutBack.length) ? t('d.backup.cantPutBack')
+                        : known ? t('d.backup.' + result.error)
+                        : t('d.recovery.importFailed', { reason: result.error });
+                    return;
+                }
+                msg.textContent = t('d.recovery.importDone');
+                location.reload();
+            } catch (err) {
+                console.error('Recovery import failed', err);
+                msg.textContent = t('d.recovery.importFailed', { reason: String(err && err.message || err) });
+            } finally { busy(false); }
         };
         reader.readAsText(f);
     });

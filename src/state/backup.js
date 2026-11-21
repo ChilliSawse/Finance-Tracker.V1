@@ -13,7 +13,9 @@
 // validate, sanitize, migration chain on a clone) and commitImport (safety copy, swap, render, save).
 // Pure apart from the default parts, which use IndexedDB only when called.
 
-import { prepareImport, commitImport, snapshotBeforeRestore, PRE_RESTORE_KEY, LEGACY_PARTS_KEY, safeNumber, MAX_STRING_LENGTH } from './sanitize.js';
+import {
+    prepareImport, commitImport, snapshotBeforeRestore, quarantineCorruptSave, PRE_RESTORE_KEY, LEGACY_PARTS_KEY, SAVE_KEY, safeNumber, MAX_STRING_LENGTH,
+} from './sanitize.js';
 import { IDB_SAFETY } from './safety-db.js';
 import { exportAllTransactions, importTransactions, isValidIsoDate } from './transactions.js';
 import { withStore } from './db.js';
@@ -273,11 +275,11 @@ export async function commitBackup(store, prepared, { storage, render, save, par
 /**
  * Undo the last restore: bring back the settings (PRE_RESTORE_KEY) and every part's rows (the safety
  * database) through the same commit (so it keeps a copy of the state it replaces, which makes it a redo
- * too). The two copies must carry the same id; a mismatched pair is refused ('copyMismatch'). Without a
+ * too, until it is spent: after a successful undo both copies are removed, U3). The two copies must carry the same id; a mismatched pair is refused ('copyMismatch'). Without a
  * rows copy (an erase, or an older settings-only copy) only the settings come back.
  * @returns {Promise<{ok:boolean, error?:string, detail?:*, counts?:object}>}
  */
-export async function undoLastRestore(store, { storage, render, save, parts = BACKUP_PARTS, safety = IDB_SAFETY } = {}) {
+export async function undoLastRestore(store, { storage, render, save, parts = BACKUP_PARTS, safety = IDB_SAFETY, spend = true } = {}) {
     let settings, copy;
     try {
         const rawSettings = storage.getItem(PRE_RESTORE_KEY);
@@ -291,7 +293,10 @@ export async function undoLastRestore(store, { storage, render, save, parts = BA
     const text = JSON.stringify({ version: BACKUP_VERSION, app: 'ledger', financeData: settings.financeData, guiSettings: settings.guiSettings, ...rows });
     const prepared = prepareBackup(text, parts);
     if (!prepared.ok) return prepared;
-    return commitBackup(store, prepared, { storage, render, save, parts, safety });
+    const result = await commitBackup(store, prepared, { storage, render, save, parts, safety });
+    // U3: the copy is spent once it has been put back (the undo's own copy of what it replaced is dropped too).
+    if (result.ok && spend) await discardRestoreCopy({ storage, safety });
+    return result;
 }
 
 /** Erase-all: a fresh store and every registered part emptied, through the same commit (settings copy and rollback). No rows copy is kept (G6W15-1). */
@@ -299,4 +304,130 @@ export function commitErase(store, { financeData, guiSettings }, { storage, rend
     const empty = {};
     for (const p of parts) empty[p.key] = [];
     return commitBackup(store, { financeData, guiSettings, parts: empty, counts: {} }, { storage, render, save, parts, safety, keepRowsCopy: false });
+}
+
+// ---------- U3: the restore copy, undo toast, and the boot recovery bundle ----------
+
+/**
+ * Is there a restore copy to put back? Only a full pair counts: a settings copy that says it has rows AND a
+ * matching rows copy in the safety database (an erase keeps settings only, so it gives null). The copy stays
+ * until the next restore replaces it, an erase removes the rows copy, or an undo spends it. Never throws.
+ * @returns {Promise<{id:string, timestamp:string|null}|null>}
+ */
+export async function restoreCopyInfo({ storage, safety = IDB_SAFETY } = {}) {
+    try {
+        const raw = storage.getItem(PRE_RESTORE_KEY);
+        if (!raw) return null;
+        const settings = JSON.parse(raw);
+        if (!settings || !settings.copyId || !settings.hasRows) return null;
+        const copy = await safety.get();
+        if (!copy || copy.id !== settings.copyId) return null;
+        return { id: copy.id, timestamp: copy.timestamp || settings.copyTimestamp || null };
+    } catch (err) {
+        console.error('Backup: could not check for a restore copy', err);
+        return null;
+    }
+}
+
+/** Remove both halves of the restore copy (settings and rows). Returns true when both are gone. */
+export async function discardRestoreCopy({ storage, safety = IDB_SAFETY } = {}) {
+    let ok = true;
+    try { storage.removeItem(PRE_RESTORE_KEY); } catch (err) { console.error('Backup: could not remove the settings copy', err); ok = false; }
+    try { await safety.remove(); } catch (err) { console.error('Backup: could not remove the rows copy', err); ok = false; }
+    return ok;
+}
+
+/** The arguments for showUndoToast after a restore. `undo` runs when the person taps Undo; expiry leaves the restore alone. */
+export function restoreUndoToast({ message, undo, duration = 12000 }) {
+    return { message, duration, onUndo: () => { Promise.resolve().then(undo).catch((err) => console.error('Undo failed', err)); } };
+}
+
+function withTimeout(promise, ms) {
+    return new Promise((resolve, reject) => {
+        const id = setTimeout(() => reject(new Error('Reading took too long.')), ms);
+        promise.then((v) => { clearTimeout(id); resolve(v); }, (e) => { clearTimeout(id); reject(e); });
+    });
+}
+
+/**
+ * The boot recovery export: a full v2 bundle read as defensively as possible. Settings come from the raw
+ * saved text (or `fallbackRaw`, a save that was set aside); every part is read on its own with a time limit.
+ * Whatever cannot be read is named in `unreadable` ('settings' or a part key) and left out; the rest is
+ * still exported. Unreadable settings text is carried as `unreadableSettingsText` so nothing is lost.
+ * @returns {Promise<{bundle:object, unreadable:string[], anything:boolean}>}
+ */
+export async function collectRecoveryBundle({ storage, parts = BACKUP_PARTS, fallbackRaw = null, now = new Date(), timeoutMs = 10000 } = {}) {
+    const unreadable = [];
+    let raw = null;
+    try { raw = storage.getItem(SAVE_KEY); } catch (err) { console.error('Recovery: could not read the saved settings', err); unreadable.push('settings'); }
+    if (raw == null && !unreadable.length) raw = fallbackRaw;
+    let saved = null;
+    let settingsText = null;
+    if (typeof raw === 'string' && raw) {
+        try {
+            const parsed = JSON.parse(raw);
+            if (isPlainRow(parsed) && isPlainRow(parsed.financeData)) saved = parsed;
+        } catch (err) { console.error('Recovery: the saved settings are not readable', err); }
+        if (!saved) { unreadable.push('settings'); settingsText = raw; }
+    }
+    const partRows = {};
+    for (const p of parts) {
+        try {
+            const list = await withTimeout(Promise.resolve().then(() => p.read()), timeoutMs);
+            if (!Array.isArray(list)) throw new Error('Not a list of rows.');
+            partRows[p.key] = list;
+        } catch (err) {
+            console.error(`Recovery: could not read ${p.key}`, err);
+            unreadable.push(p.key);
+        }
+    }
+    const bundle = buildBackupBundle({
+        financeData: saved ? saved.financeData : undefined,
+        guiSettings: saved ? (isPlainRow(saved.guiSettings) ? saved.guiSettings : {}) : undefined,
+        partRows, now,
+    });
+    if (!saved) { delete bundle.financeData; delete bundle.guiSettings; }
+    if (settingsText !== null) bundle.unreadableSettingsText = settingsText;
+    if (unreadable.length) bundle.unreadable = unreadable;
+    const anything = !!saved || settingsText !== null || Object.values(partRows).some((r) => r.length > 0);
+    return { bundle, unreadable, anything };
+}
+
+/**
+ * The boot recovery import: the same safety copy and rollback as a normal restore (commitBackup), then the
+ * settings are written to the main save for the next start. If the saved text is not even JSON it is set aside
+ * (so it is not lost), removed for the duration (the copy step needs to read it), and put back if the restore fails.
+ * @returns {Promise<{ok:boolean, error?:string, detail?:*, counts?:object, notPutBack?:string[]}>}
+ */
+export async function restoreFromRecovery(text, { store, storage, parts = BACKUP_PARTS, safety = IDB_SAFETY } = {}) {
+    const prepared = prepareBackup(text, parts);
+    if (!prepared.ok) return prepared;
+    let raw = null;
+    try { raw = storage.getItem(SAVE_KEY); } catch (err) { return { ok: false, error: 'cantKeepCopy', detail: err }; }
+    let removedRaw = null;
+    if (raw) {
+        let readable = false;
+        try { readable = isPlainRow(JSON.parse(raw)); } catch (err) { console.error('Recovery: the saved settings are not readable', err); }
+        if (!readable) {
+            quarantineCorruptSave(raw, storage);
+            try { storage.removeItem(SAVE_KEY); removedRaw = raw; } catch (err) { return { ok: false, error: 'cantKeepCopy', detail: err }; }
+        }
+    }
+    const result = await commitBackup(store, prepared, {
+        storage, parts, safety,
+        render: null,
+        save: () => {
+            try {
+                storage.setItem(SAVE_KEY, JSON.stringify({ financeData: store.financeData, guiSettings: store.guiSettingsData, timestamp: new Date().toISOString() }));
+                return true;
+            } catch (err) {
+                console.error('Recovery: could not save the restored settings', err);
+                return false;
+            }
+        },
+    });
+    if (!result.ok && removedRaw !== null) {
+        try { storage.setItem(SAVE_KEY, removedRaw); } catch (err) { console.error('Recovery: could not put the unreadable save back (a copy was set aside)', err); }
+    }
+    return result;
 }
