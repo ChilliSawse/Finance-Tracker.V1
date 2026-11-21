@@ -8,6 +8,7 @@
 import { getPayCyclesPerYear } from '../utils.js';
 import { netPerPayCents, effectiveBucket, SPENDABLE_POOL } from './plan.js';
 import { allocateCents } from './saving-model.js';
+import { eventFigures } from './income-events.js';
 
 const DAY_MS = 86400000;
 const STEP_DAYS = { weekly: 7, fortnightly: 14 };
@@ -197,6 +198,35 @@ export function billStatus(item, dueDate, txns, today) {
 const cents = (dollars) => Math.round((Number(dollars) || 0) * 100);
 
 /**
+ * Income received so far this month (FT-R-58), in cents: variable-income events dated in the
+ * cycle up to today, plus Income-category credits. A receipt recorded both ways counts once:
+ * an event matches a credit when the credit's id equals the event's `txnId` (if the event has
+ * one), else when the amount equals the event's banked or net figure to the cent and the dates
+ * are within 3 days. Each credit matches at most one event.
+ */
+function monthIncomeCents(sources, cycleRows, cycle, todayIso) {
+    const credits = cycleRows.filter((r) => r.categoryId === 'income' && r.amountCents > 0 && r.date <= todayIso);
+    const used = new Set();
+    let total = 0;
+    for (const src of sources) {
+        if (!src || src.incomeType !== 'variable') continue;
+        for (const e of src.incomeEvents || []) {
+            if (!e || !validIso(e.date) || e.date < cycle.start || e.date >= cycle.end || e.date > todayIso) continue;
+            const f = eventFigures(e);
+            const net = cents(f.net);
+            const amounts = [net, cents(e.netAmount)];
+            const hit = credits.find((c, i) => !used.has(i) && (
+                (e.txnId && c.id === e.txnId) ||
+                (!e.txnId && amounts.includes(c.amountCents) && Math.abs(daysBetween(e.date, c.date)) <= 3)));
+            if (hit) used.add(credits.indexOf(hit));
+            total += net;
+        }
+    }
+    credits.forEach((c, i) => { if (!used.has(i)) total += c.amountCents; });
+    return total;
+}
+
+/**
  * "Left this pay" per bucket (B 2.5 and 9.2), all in integer cents.
  * Pool: planned net per pay (totals.netCents when given, else netPerPayCents(data)) split by
  * allocateCents over the allocation percentages; no Daily bucket: the unallocated remainder is
@@ -223,7 +253,7 @@ export function leftThisPay({ data, totals, txns, today } = {}) {
     const cycleRows = rows.filter((r) => r && inCycle(r.date));
 
     let netCents;
-    if (cycle.mode === 'month') netCents = cycleRows.filter((r) => r.categoryId === 'income' && r.amountCents > 0 && r.date <= todayIso).reduce((s, r) => s + r.amountCents, 0);
+    if (cycle.mode === 'month') netCents = monthIncomeCents(sources, cycleRows, cycle, todayIso);
     else if (totals && Number.isFinite(totals.netCents)) netCents = Math.round(totals.netCents);
     else netCents = netPerPayCents(d);
 

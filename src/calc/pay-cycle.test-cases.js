@@ -279,5 +279,22 @@ function bucketCases() {
                 assert('no daily: remainder pool', nod.poolCents, 206306);
             },
         },
+        {
+            name: 'B3b.8b month mode counts events and transactions once',
+            fn(assert) {
+                const ev = (id, date, netAmount, extra = {}) => ({ id, date, netAmount, ...extra });
+                const src = (events) => [{ incomeType: 'variable', paySchedule: 'fortnightly', payAnchor: null, incomeEvents: events }];
+                const credit = (id, date, dollars) => ({ id, date, categoryId: 'income', amountCents: Math.round(dollars * 100) });
+                const go = (events, rows) => leftThisPay({ data: mockData({ incomeSources: src(events) }), txns: rows, today: '2026-11-10' }).netCents;
+                const events = [ev('e1', '2026-11-02', 400), ev('e2', '2026-11-05', 250.5), ev('old', '2026-10-30', 999), ev('future', '2026-11-20', 100)];
+                assert('events only (this month, up to today)', go(events, []), 65050);
+                assert('transactions only', go([], [credit('t1', '2026-11-03', 300), credit('t2', '2026-11-06', 120.25)]), 42025);
+                // t1 is the same receipt as e1 (same amount, 1 day apart); t2 is separate.
+                assert('overlap counted once', go(events, [credit('t1', '2026-11-03', 400), credit('t2', '2026-11-06', 120.25)]), 65050 + 12025);
+                assert('same amount but over 3 days apart is two receipts', go(events, [credit('t1', '2026-11-08', 400)]), 65050 + 40000);
+                assert('explicit link wins', go([ev('e1', '2026-11-02', 400, { txnId: 't9' })], [credit('t9', '2026-11-09', 399)]), 40000);
+                assert('one credit matches one event only', go([ev('a', '2026-11-02', 100), ev('b', '2026-11-03', 100)], [credit('t1', '2026-11-03', 100)]), 20000);
+            },
+        },
     ];
 }
