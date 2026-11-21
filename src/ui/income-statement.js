@@ -148,11 +148,3 @@ export function openIncomeStatement(periodChoice = '6') {
 }
 
 /** Wire the button in the income settings modal. Called once at startup. */
-export function setupIncomeStatement() {
-    const btn = getElement('open-income-statement');
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-        const period = getElement('income-statement-period');
-        openIncomeStatement(period ? period.value : '6');
-    });
-}

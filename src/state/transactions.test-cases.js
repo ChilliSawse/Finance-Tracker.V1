@@ -7,6 +7,7 @@ import {
     makeTransaction, addTransactions, listTransactions, updateTransaction, deleteImportBatch,
     exportAllTransactions, importTransactions, transactionStatus, countTransactions, isValidIsoDate,
 } from './transactions.js';
+import { commitImportRows } from './rules.js';
 import { DEFAULT_CATEGORIES, categoryIcon, withFallbackIcons } from './categories.js';
 
 async function fresh() {
@@ -63,7 +64,7 @@ export const TRANSACTIONS_TEST_CASES = [
             const far = makeTransaction({ date: '2026-11-20', description: 'Far', amountCents: -1850, source: 'manual' });
             await addTransactions([manual, far]);
             const csv = makeTransaction({ date: '2026-11-13', description: 'CAFE 123 MELB', amountCents: -1850, source: 'csv', importBatchId: 'batch-x' });
-            const res = await addTransactions([csv]);
+            const res = (await commitImportRows([csv])).result;
             assert('merged, not added', [res.added, res.merged, res.duplicates], [0, 1, 0]);
             let rows = await listTransactions();
             assert('still two rows (far one untouched)', rows.length, 2);
@@ -71,7 +72,7 @@ export const TRANSACTIONS_TEST_CASES = [
             assert('manual row took the bank hash', m.hash, csv.hash);
             assert('manual row flagged reconciled', m.reconciled, true);
             assert('out-of-window manual row not merged', rows.find(r => r.id === far.id).reconciled, undefined);
-            const again = await addTransactions([csv]);
+            const again = (await commitImportRows([csv])).result;
             assert('re-import of the merged row is a duplicate', [again.added, again.merged, again.duplicates], [0, 0, 1]);
             const removed = await deleteImportBatch('batch-x');
             assert('undo removes nothing from the manual row', removed, 0);
@@ -83,7 +84,7 @@ export const TRANSACTIONS_TEST_CASES = [
             const c3 = makeTransaction({ date: '2026-12-02', description: 'A', amountCents: -500, source: 'csv', importBatchId: 'b2' });
             const c4 = makeTransaction({ date: '2026-12-03', description: 'B', amountCents: -500, source: 'csv', importBatchId: 'b2' });
             const c5 = makeTransaction({ date: '2026-12-05', description: 'C', amountCents: -500, source: 'csv', importBatchId: 'b2' });
-            const r2 = await addTransactions([c3, c4, c5]);
+            const r2 = (await commitImportRows([c3, c4, c5])).result;
             assert('one-to-one; 4 days does not merge', [r2.added, r2.merged], [2, 1]);
             await deleteDb();
         },
@@ -175,8 +176,27 @@ export const TRANSACTIONS_TEST_CASES = [
             await fresh();
             const manual = makeTransaction({ date: '2026-11-01', description: 'Lunch', amountCents: -1500, source: 'manual' });
             await addTransactions([manual]);
-            const res = await addTransactions([makeTransaction({ date: '2026-11-03', description: 'CAFE LUNCH', amountCents: -1500, source: 'csv', importBatchId: 'b' })]);
+            const res = (await commitImportRows([makeTransaction({ date: '2026-11-03', description: 'CAFE LUNCH', amountCents: -1500, source: 'csv', importBatchId: 'b' })])).result;
             assert('merged into the manual row', [res.added, res.merged], [0, 1]);
+            assert('one row', await countTransactions(), 1);
+            await deleteDb();
+        },
+    },
+    {
+        name: 'A12b.6 the manual/import merge runs once: addTransactions only adds, commitImportRows merges',
+        async fn(assert) {
+            await fresh();
+            const manual = makeTransaction({ date: '2026-11-01', description: 'Lunch', amountCents: -1500, source: 'manual' });
+            await addTransactions([manual]);
+            const csv = makeTransaction({ date: '2026-11-02', description: 'CAFE', amountCents: -1500, source: 'csv', importBatchId: 'b' });
+            const plain = await addTransactions([csv]);
+            assert('addTransactions alone does not merge', [plain.added, plain.merged], [1, 0]);
+            assert('two rows now', await countTransactions(), 2);
+            await deleteDb();
+            await fresh();
+            await addTransactions([manual]);
+            const both = await commitImportRows([csv]);
+            assert('the import path merges exactly once', [both.result.added, both.result.merged, both.merges.length], [0, 1, 1]);
             assert('one row', await countTransactions(), 1);
             await deleteDb();
         },

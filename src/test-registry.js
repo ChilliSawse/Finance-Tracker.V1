@@ -49,6 +49,7 @@ import { REVIEW_TEST_CASES } from './ui/review.test-cases.js';
 import { PWA_TEST_CASES } from './pwa.test-cases.js';
 import { ACCEPT_TEST_CASES, ACCEPT_XLSX_TEST_CASES } from './import/accept.test-cases.js';
 import { BUCKET_METHOD_TEST_CASES } from './ui/bucket-method.test-cases.js';
+import { INCOME_OTHER_TEST_CASES } from './ui/income-other.test-cases.js';
 
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
@@ -99,4 +100,5 @@ export const TEST_GROUPS = [
     { name: 'accept', env: 'pure', cases: ACCEPT_TEST_CASES },
     { name: 'accept-xlsx', env: 'browser', cases: ACCEPT_XLSX_TEST_CASES },
     { name: 'bucket-method', env: 'pure', cases: BUCKET_METHOD_TEST_CASES },
+    { name: 'income-other', env: 'pure', cases: INCOME_OTHER_TEST_CASES },
 ];

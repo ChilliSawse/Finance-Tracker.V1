@@ -157,13 +157,6 @@ export const en = {
     'vol.notEnoughHistory': "Not enough history yet — I'll let you know once you have a full year of income events.",
     'vol.monthAria': '{month}: {amount}',
 
-    // Coaster card (Dashboard)
-    'coast.months': 'You could coast for about {months} on what you’ve saved.',
-    'coast.detail': '{assets} in assets ÷ {spend}/month average spending (last 3 months of transactions).',
-    'coast.noExpenses': 'Add some expenses to see your coaster estimate — import a bank CSV/PDF so Ledger knows your average month.',
-    'coast.monthOne': 'month',
-    'coast.monthMany': 'months',
-
     // Tax provision card (Savings tab)
     'taxpot.checkboxTitle': 'Use this bucket as your tax provision pot',
     'taxpot.none': 'Tag an allocation bucket as your Tax pot (Edit assets, allocation & FI) to compare it against the estimated liability.',

@@ -20,6 +20,7 @@ import { readAppearance, applyAppearance, applyTextSize, applyStoredAppearance, 
 import { MODES } from '../theme/palettes.js';
 import { actionExportDataJSON, actionExportTransactionsCSV, handleJSONImport } from '../events/import-export.js';
 import { eraseAllData } from '../events/settings-events.js';
+import { openTaxDetailsSheet } from './income-other.js';
 import { canInstall, promptInstall } from '../pwa.js';
 import { mountHelpButton } from './help.js'; // A11
 
@@ -109,6 +110,7 @@ const ACTIONS = {
     erase: () => eraseAllData(),
     setup: runSetupAgain,
     model: () => showTab('plan'),
+    taxdetails: () => openTaxDetailsSheet(),
     install: () => promptInstall(),
 };
 

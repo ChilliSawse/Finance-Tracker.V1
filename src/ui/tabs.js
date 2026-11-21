@@ -5,7 +5,6 @@
 import { store } from '../state/store.js';
 import { getElement, fitAllAmounts } from '../utils.js';
 import { renderActiveTab, refreshTab } from './render.js';
-import { setExpenseSearchQuery } from './render-tabs.js';
 import { resolveTab, scopeLine, nextTabIndex, DEFAULT_TAB } from './nav-model.js';
 
 export { VALID_TABS, LEGACY_TAB_MAP, resolveTab } from './nav-model.js';
@@ -69,52 +68,5 @@ export function setupTabKeyboardNav() {
             tabs[next].focus();
             showTab(tabs[next].dataset.tabTarget);
         }
-    });
-}
-
-// F.2 — dashboard cards are links to their tab (whole card clickable + keyboard accessible).
-export function setupCardLinks() {
-    const dash = getElement('dashboard');
-    if (!dash) return;
-    const go = (card) => { const t = card.dataset.cardLink; if (t) showTab(t); };
-    dash.addEventListener('click', (e) => {
-        const card = e.target.closest('[data-card-link]');
-        if (card) go(card);
-    });
-    dash.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        const card = e.target.closest('[data-card-link]');
-        if (card && e.target === card) { e.preventDefault(); go(card); }
-    });
-}
-
-// F.1 — dashboard empty-state action cards: jump to the relevant tab and open its settings modal.
-export function setupDashboardEmptyActions() {
-    const empty = getElement('dashboard-empty-state');
-    if (!empty) return;
-    const map = {
-        income:   ['income',   'open-income-settings'],
-        expenses: ['expenses', 'open-expenses-settings'],
-        fi:       ['savings',  'open-savings-settings'],
-    };
-    empty.addEventListener('click', (e) => {
-        const card = e.target.closest('[data-empty-action]');
-        if (!card) return;
-        const entry = map[card.dataset.emptyAction];
-        if (!entry) return;
-        showTab(entry[0]);
-        const btn = getElement(entry[1]);
-        if (btn) btn.click();
-    });
-}
-
-// H.2 — expense name search: filter the Expenses lists live as you type.
-// Display-only, so it refreshes just the Expenses tab (not a data change).
-export function setupExpenseSearch() {
-    const input = getElement('expense-search');
-    if (!input) return;
-    input.addEventListener('input', () => {
-        setExpenseSearchQuery(input.value || '');
-        refreshTab('plan');
     });
 }

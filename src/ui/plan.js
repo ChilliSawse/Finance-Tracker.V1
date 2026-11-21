@@ -12,6 +12,7 @@ import { formatCurrency } from '../utils.js';
 import { openSheet } from './sheet.js';
 import { showUndoToast, showToast } from './toast.js';
 import { openIncomeSheet } from './income-layout.js';
+import { openOtherIncomeSheet } from './income-other.js';
 import { mountBuckets } from './plan-buckets.js';
 import { mountReview } from './review.js';
 import { updateDataAndUI } from './render.js';
@@ -228,8 +229,8 @@ async function moveAndDelete(id, moveTo, rows) {
 function openIncome(index) {
     let opened = false;
     try { opened = openIncomeSheet(index) !== false; } catch (err) { console.error('income sheet failed', err); }
-    // Until C6 lands the sheet, the old income editor still works.
-    if (!opened) { const legacy = document.getElementById('open-income-settings'); if (legacy) legacy.click(); }
+    // Self-employed and Variable sources use the plain sheet (A12b); the old modal editor is gone.
+    if (!opened) opened = openOtherIncomeSheet(index);
 }
 
 function addIncome() {

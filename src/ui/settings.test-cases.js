@@ -253,7 +253,7 @@ export const SETTINGS_TEST_CASES = [
             assert('five groups in order', groups.map((g) => g.id), ['data', 'look', 'tax', 'setup', 'about']);
             assert('your data rows', groups[0].rows.map((r) => r.id), ['backup', 'restore', 'export', 'rules', 'erase']);
             assert('appearance rows', groups[1].rows.map((r) => r.id), ['theme', 'mode', 'size']);
-            assert('region rows: currency and a read-only tax row, no tax year setting', groups[2].rows.map((r) => [r.id, r.kind]), [['currency', 'currency'], ['taxtables', 'info']]);
+            assert('region rows: currency and a read-only tax row, Tax details (A12b), no tax year setting', groups[2].rows.map((r) => [r.id, r.kind]), [['currency', 'currency'], ['taxtables', 'info'], ['taxdetails', 'action']]);
             assert('setup rows', groups[3].rows.map((r) => r.id), ['setup', 'model']);
             assert('about rows (no install when unavailable)', groups[4].rows.map((r) => r.id), ['privacy', 'licence', 'version', 'fairwork']);
             assert('install appears when available', buildSettings({ installAvailable: true })[4].rows[0].id, 'install');

@@ -71,13 +71,6 @@ export function isValidIsoDate(iso) {
     return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
 }
 
-// iso +- days as 'YYYY-MM-DD', or null for an invalid date. Built from Date.UTC
-// components, never from Date.parse, so Safari's stricter parsing cannot throw.
-function shiftDate(iso, days) {
-    if (!isValidIsoDate(iso)) return null;
-    const t = Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)) + days);
-    return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 10) : null;
-}
 
 /**
  * Bulk-insert with count-based dedupe (L8). Imported rows (csv/pdf) with the same
@@ -88,7 +81,8 @@ function shiftDate(iso, days) {
  * statement adds only the rows it has beyond what is stored.
  * Rows with an impossible date are skipped and counted in `invalid` (only present when > 0).
  * @param {Array} txns - transactions from makeTransaction().
- * Imported (csv/pdf) rows that match an unreconciled manual row are merged into it, not added.
+ * A12b: this does NOT merge imported rows into manual rows. That is `commitImportRows` in rules.js,
+ * the one merge pass; `merged` is always 0 here so callers can add the merge count to it.
  * @returns {Promise<{added:number, duplicates:number, merged:number, invalid?:number}>}
  */
 export async function addTransactions(input) {
@@ -109,10 +103,8 @@ export async function addTransactions(input) {
         const tx = db.transaction('transactions', 'readwrite');
         const store = tx.objectStore('transactions');
         const hashIndex = store.index('hash');
-        const dateIndex = store.index('date');
         const seen = new Set();
-        const claimed = new Set(); // manual row ids already merged in this batch
-        let added = 0, duplicates = 0, merged = 0;
+        let added = 0, duplicates = 0;
 
         // Per-row existence check via the hash index. O(n) requests, but they all
         // ride one transaction — fine for CSV-sized batches (hundreds–thousands)
@@ -123,24 +115,11 @@ export async function addTransactions(input) {
             const check = hashIndex.getKey(t.hash);
             check.onsuccess = () => {
                 if (check.result !== undefined) { duplicates++; return; }
-                if (t.source === 'manual' || t.source === 'sample') { store.add(t); added++; return; }
-                // Imported row: merge into a same-amount manual row within +-3 days (FT-R-56).
-                const from = shiftDate(t.date, -3), to = shiftDate(t.date, 3);
-                if (!from || !to) { store.add(t); added++; return; }
-                const near = dateIndex.getAll(IDBKeyRange.bound(from, to));
-                near.onsuccess = () => {
-                    const m = (near.result || []).find(r => r.source === 'manual' && !r.reconciled
-                        && r.amountCents === t.amountCents && !claimed.has(r.id));
-                    if (m) {
-                        claimed.add(m.id);
-                        store.put({ ...m, hash: t.hash, reconciled: true, updatedAt: new Date().toISOString() });
-                        merged++;
-                    } else { store.add(t); added++; }
-                };
+                store.add(t); added++;
             };
         });
 
-        tx.oncomplete = () => resolve({ added, duplicates, merged, ...(invalid ? { invalid } : {}) });
+        tx.oncomplete = () => resolve({ added, duplicates, merged: 0, ...(invalid ? { invalid } : {}) });
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error || new Error('addTransactions aborted'));
     });
