@@ -22,14 +22,6 @@ export const store = {
     defaultFinanceData,
     defaultGuiSettings,
 
-    // What If sandbox — a full clone of financeData. Editable What If sections
-    // write here (via data-scope="whatif" routing), never to live data.
-    whatIfFinanceData: null,
-    whatIfViewPeriod: 'fortnightly',
-    // Tracks whether the What If tab has been seeded from live data yet, so tab
-    // switches don't clobber in-progress edits. Reset by "Reset to current".
-    whatIfInitialized: false,
-
     // FinanceAutoSave instance (constructed in main.js after DOM ready).
     autoSave: null,
 

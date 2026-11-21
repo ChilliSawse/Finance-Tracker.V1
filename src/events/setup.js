@@ -4,7 +4,6 @@ import { store } from '../state/store.js';
 import { getElement } from '../utils.js';
 import { showTab } from '../ui/tabs.js';
 import { updateDataAndUI } from '../ui/render.js';
-import { handleSettingsClickEvents, handleSettingsChangeEvents } from './settings-events.js';
 import { openQuickAdd } from '../ui/quick-add.js';
 import { openSettings } from '../ui/settings-screen.js';
 
@@ -59,14 +58,5 @@ export function setupEventListeners() {
             updateDataAndUI();
         });
     }
-
-    // Settings dynamic lists (Income, Tax Brackets, Assets, Liabilities, Allocation, Expenses).
-    // Phase D — delegated at the document level because these sections live in per-page
-    // settings modals (body-level). Both handlers are fully guarded — they only act on
-    // elements carrying the settings add-button ids, a `.delete-btn` with a settings
-    // `data-type`, or a `data-field` + whitelisted `data-collection` — so What If / GUI
-    // inputs are never matched.
-    document.addEventListener('click', handleSettingsClickEvents);
-    document.addEventListener('change', handleSettingsChangeEvents);
 
 }

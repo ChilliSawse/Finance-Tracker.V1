@@ -26,7 +26,6 @@ import {
     restoreActiveTab, renderScopeLine, setupTabKeyboardNav, setupCardLinks,
     setupDashboardEmptyActions, setupExpenseSearch,
 } from './ui/tabs.js';
-import { setupPageSettingsModals } from './ui/modals.js';
 import { setupImport } from './import/import-ui.js';
 import { setupPdfImport } from './import/pdf-ui.js';
 import { setupIncomeStatement } from './ui/income-statement.js';
@@ -67,7 +66,6 @@ function boot() {
 
     setupPwaInstallListeners();
     setupTabKeyboardNav();
-    setupPageSettingsModals(); // Phase D — per-page settings modals
     setupImport(); // Ledger — bank CSV import (Tools)
     setupPdfImport(); // Variable income — bank PDF import + payslip autofill (Tools)
     setupIncomeStatement(); // Variable income — printable statement (income modal)

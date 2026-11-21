@@ -1,12 +1,7 @@
-// Reusable modal shell + per-page settings modals (from main.js).
+// Reusable modal shell (from main.js). A12b removed the per-page settings modals and the draggable-window helper.
 
 import { getElement } from '../utils.js';
 import { getFocusables, trapTab } from './focus.js';
-import {
-    renderIncomeSourcesSettings, renderTaxBracketsSettings, renderAssetsSettings,
-    renderLiabilitiesSettings, renderExpensesSettingsLists,
-    renderFISettings, renderTaxSettings, renderBillsSettings, renderCategoriesSettings,
-} from './settings-forms.js';
 
 // A.4 / Phase D — reusable modal shell: open/close, focus trap, focus restore.
 // `onOpen` runs each time the modal opens (e.g. to (re)populate it).
@@ -44,65 +39,4 @@ export function setupModal(modalId, openBtnId, onOpen) {
     openBtn.addEventListener('click', open);
     if (closeBtn) closeBtn.addEventListener('click', close);
     modal.addEventListener('mousedown', (e) => { if (e.target === modal) close(); }); // backdrop click
-}
-
-// Make a modal behave like a real window: drag it by its header, resize it from the
-// bottom-right corner. The dialog is position:fixed (see style.css), so we set explicit
-// top/left coords — centred each time it opens, then updated as the user drags.
-export function setupDraggableModal(backdropId) {
-    const backdrop = getElement(backdropId);
-    if (!backdrop) return;
-    const dialog = backdrop.querySelector('.modal');
-    const header = backdrop.querySelector('.modal-header');
-    if (!dialog || !header) return;
-
-    const clamp = (v, min, max) => Math.max(min, Math.min(v, max));
-    const center = () => {
-        const w = dialog.offsetWidth, h = dialog.offsetHeight;
-        dialog.style.left = clamp((window.innerWidth - w) / 2, 8, window.innerWidth - 80) + 'px';
-        dialog.style.top  = clamp((window.innerHeight - h) / 2, 8, window.innerHeight - 80) + 'px';
-    };
-    // Re-centre whenever it transitions from hidden → shown (microtask, so no paint flash).
-    new MutationObserver(() => { if (!backdrop.hidden) center(); })
-        .observe(backdrop, { attributes: true, attributeFilter: ['hidden'] });
-
-    let dragging = false, offX = 0, offY = 0;
-    header.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.modal-close')) return; // don't drag when grabbing the close button
-        const r = dialog.getBoundingClientRect();
-        dragging = true; offX = e.clientX - r.left; offY = e.clientY - r.top;
-        document.body.style.userSelect = 'none';
-        e.preventDefault();
-    });
-    document.addEventListener('mousemove', (e) => {
-        if (!dragging) return;
-        dialog.style.left = clamp(e.clientX - offX, 0, window.innerWidth - 60) + 'px';
-        dialog.style.top  = clamp(e.clientY - offY, 0, window.innerHeight - 40) + 'px';
-    });
-    document.addEventListener('mouseup', () => {
-        if (!dragging) return;
-        dragging = false; document.body.style.userSelect = '';
-    });
-}
-
-// Phase D — per-page settings modals. Their inner lists are kept fresh by the
-// renderers; re-rendering on open just guarantees current values.
-export function setupPageSettingsModals() {
-    setupModal('income-settings-modal', 'open-income-settings', () => {
-        renderIncomeSourcesSettings();
-        renderTaxBracketsSettings();
-        renderTaxSettings();
-    });
-    setupModal('expenses-settings-modal', 'open-expenses-settings', () => {
-        renderExpensesSettingsLists();
-        renderBillsSettings();
-        renderCategoriesSettings();
-    });
-    setupModal('savings-settings-modal', 'open-savings-settings', () => {
-        renderAssetsSettings();
-        renderFISettings();
-    });
-    setupModal('liabilities-settings-modal', 'open-liabilities-settings', () => {
-        renderLiabilitiesSettings();
-    });
 }
