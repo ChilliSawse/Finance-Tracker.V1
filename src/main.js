@@ -32,11 +32,14 @@ import { setupMilestoneToasts } from './ui/toast.js';
 import './ui/sheet.css'; // D1 — sheet, undo toast and dialog styles
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
+import { runPayRollIfDue } from './state/saving-model.js'; // E5 — pay-day credit
 
 document.addEventListener('DOMContentLoaded', () => {
     setupPwaUpdateListeners();
     store.autoSave = new FinanceAutoSave();
     const hadSavedData = store.autoSave.loadData();
+    // E5: pay-day credit (a no-op when auto-credit is off); saved with the next autosave.
+    if (runPayRollIfDue(store.financeData).changed) store.autoSave.onDataChange();
     loadTheme(); // A4: palette and mode attributes plus text size, before the UI renders
 
     // Ledger — un-migrated (legacy) bills roll to their next occurrence; plan-item bills (B6)
@@ -73,6 +76,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // B7: data is loaded by now, so the cache can resolve the pay cycle; Today and Activity selectors stay ready:false until then.
     refreshSpendCache({ data: store.financeData }).then(() => {
         updateAllUI();
+    });
+
+    // E5: coming back to the app rolls any pay day that has passed (off by default for migrated data).
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && runPayRollIfDue(store.financeData).changed) { store.autoSave.onDataChange(); updateAllUI(); }
     });
 
     // Re-fit currency figures when the viewport changes (rotate / resize).

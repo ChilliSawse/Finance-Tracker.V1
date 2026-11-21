@@ -4,6 +4,8 @@
 
 import { store } from '../state/store.js';
 import { newLiabilityId } from '../state/bucket-migration.js';
+import { addBucket, deleteBucketWithMove, newBucket } from '../state/saving-model.js';
+import { showToast, showUndoToast } from '../ui/toast.js';
 import {
     getElement, getValue, showFieldError, clearFieldError, validateFieldValue,
     formatCurrency,
@@ -443,20 +445,38 @@ export function removeLiability(index, scope) {
     if (scope === 'whatif') { renderWhatIfLiabilities(); } else { renderLiabilitiesSettings(); updateDataAndUI(); }
 }
 
+// E5: live edits go through the saving-model state API (ids, roles, bounds, undo); the What If
+// sandbox keeps a plain row from the same factory. Out-of-template adds fork quietly here; E6's
+// sheet shows the "Make this your own template?" offer first.
+function undoToast(res) {
+    if (res && res.ok) { showUndoToast({ message: res.message, onUndo: () => { res.onUndo(); renderAllocationSettings(); updateDataAndUI(); } }); return true; }
+    if (res && res.message) showToast(res.message);
+    return false;
+}
+
 export function addAllocationCategory(scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
     if (!fd) return;
-    fd.allocation.push({ name: "New Category", percentage: 0, currentBalance: 0, savingsGoal: 0 });
-    if (scope === 'whatif') { renderWhatIfAllocation(); }
-    else { renderAllocationSettings(); updateDataAndUI(); }
+    if (scope === 'whatif') {
+        if (!Array.isArray(fd.allocation)) fd.allocation = [];
+        fd.allocation.push(newBucket(fd.allocation, { name: 'New Category' }));
+        renderWhatIfAllocation();
+    } else {
+        undoToast(addBucket(fd, { name: 'New Category' }, { fork: true }));
+        renderAllocationSettings(); updateDataAndUI();
+    }
     revealNewRow(scope === 'whatif' ? 'whatif-allocation-settings' : 'allocation-settings');
 }
 export function removeAllocationCategory(index, scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
     if (!fd) return;
-    fd.allocation.splice(index, 1);
-    if (scope === 'whatif') { renderWhatIfAllocation(); }
-    else { renderAllocationSettings(); updateDataAndUI(); }
+    if (scope === 'whatif') { fd.allocation.splice(index, 1); renderWhatIfAllocation(); return; }
+    const row = fd.allocation[index];
+    if (!row) return;
+    // Money or a share moves to the first other bucket until E7's "Move A$x to..." sheet exists.
+    const dest = fd.allocation.find((r) => r !== row);
+    undoToast(deleteBucketWithMove(fd, row.id, dest ? dest.id : null, { fork: true }));
+    renderAllocationSettings(); updateDataAndUI();
 }
 
 export function addCategory() {
