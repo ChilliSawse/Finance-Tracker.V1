@@ -2,7 +2,8 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 
 import { getWeeklyAmount, getPayCyclesPerYear } from '../utils.js';
-import { getCycle, payDatesBetween, nextPayDates, inferPayAnchor, billOccurrences, billStatus } from './pay-cycle.js';
+import { getCycle, payDatesBetween, nextPayDates, inferPayAnchor, billOccurrences, billStatus, leftThisPay } from './pay-cycle.js';
+import { effectiveBucket, defaultBucketRole, SPENDABLE_POOL } from './plan.js';
 
 const fort = { incomeType: 'salaried', paySchedule: 'fortnightly', payAnchor: '2026-10-31' };
 
@@ -124,4 +125,176 @@ export const PAY_CYCLE_TEST_CASES = [
             assert('month mode empty', payDatesBetween({ paySchedule: 'fortnightly' }, '2026-10-01', '2026-12-01'), []);
         },
     },
+    ...bucketCases(),
 ];
+
+// ---- B3b: effectiveBucket and per-bucket leftThisPay (mock fixture; the pool is given as an input) ----
+
+const ALLOC = [
+    { id: 'daily', role: 'daily', percentage: 60 }, { id: 'splurge', role: 'splurge', percentage: 10 },
+    { id: 'smile', role: 'smile', percentage: 10 }, { id: 'fire', role: 'fire', percentage: 20 },
+];
+const CATS = [
+    { id: 'groceries', essential: true }, { id: 'rent', essential: true }, { id: 'transport', essential: true },
+    { id: 'health', essential: true }, { id: 'phone', essential: true }, { id: 'insurance', essential: true },
+    { id: 'dining', essential: false }, { id: 'entertainment', essential: false },
+    { id: 'subscriptions', essential: false }, { id: 'other', essential: false }, { id: 'income', essential: false },
+];
+const row = (date, categoryId, dollars, extra = {}) => ({ id: `${date}-${categoryId}-${dollars}`, date, categoryId, amountCents: Math.round(-dollars * 100), ...extra });
+const PLAN = [
+    { id: 'ph', categoryId: 'phone', name: 'Phone', amount: 65, frequency: 'monthly', anchorDue: '2026-10-10', inTotals: false },
+    { id: 'car', categoryId: 'insurance', name: 'Car insurance', amount: 128.4, frequency: 'monthly', anchorDue: '2026-10-12', inTotals: false },
+    { id: 'nfx', categoryId: 'subscriptions', name: 'Netflix', amount: 16.99, frequency: 'monthly', anchorDue: '2026-10-11', inTotals: false },
+];
+function mockData(over = {}) {
+    return {
+        incomeSources: [{ incomeType: 'salaried', paySchedule: 'fortnightly', payAnchor: '2026-10-31' }],
+        primaryIncomeIndex: 0, allocation: ALLOC, categories: CATS, plan: PLAN, ...over,
+    };
+}
+const MOCK_ROWS = [
+    row('2026-11-01', 'groceries', 142.3), row('2026-11-01', 'transport', 68.2), row('2026-11-02', 'rent', 1120),
+    row('2026-11-02', 'health', 20), row('2026-11-03', 'groceries', 23.95),
+    row('2026-11-02', 'entertainment', 24), row('2026-11-03', 'dining', 18.5), row('2026-11-03', 'dining', 5.5),
+    row('2026-11-04', 'other', 32, { status: 'review' }),
+    row('2026-10-30', 'groceries', 500), // previous cycle
+    { id: 'pay', date: '2026-10-31', categoryId: 'income', amountCents: 343843 },
+];
+const run = (rows = MOCK_ROWS, data = mockData(), today = '2026-11-04') =>
+    leftThisPay({ data, totals: { netCents: 343843 }, txns: rows, today });
+
+function bucketCases() {
+    return [
+        {
+            name: 'B3b.1 resolver',
+            fn(assert) {
+                const cat = (id) => CATS.find((c) => c.id === id);
+                assert('dining to splurge', effectiveBucket(row('2026-11-01', 'dining', 10), cat('dining'), null, ALLOC), 'splurge');
+                assert('groceries to daily', effectiveBucket(row('2026-11-01', 'groceries', 10), cat('groceries'), null, ALLOC), 'daily');
+                assert('income to none', effectiveBucket({ amountCents: 5000, categoryId: 'income' }, cat('income'), null, ALLOC), null);
+                assert('transfer to none', effectiveBucket(row('2026-11-01', 'transfer', 10), { id: 'transfer' }, null, ALLOC), null);
+                assert('relinked category follows bucketId', effectiveBucket(row('2026-11-01', 'insurance', 10), { ...cat('insurance'), bucketId: 'fire' }, null, ALLOC), 'fire');
+                assert('deleted bucket falls back to derived', effectiveBucket(row('2026-11-01', 'insurance', 10), { ...cat('insurance'), bucketId: 'gone' }, null, ALLOC), 'daily');
+                assert('default role', [defaultBucketRole({ essential: true }), defaultBucketRole({ essential: false }), defaultBucketRole(null)], ['daily', 'splurge', 'splurge']);
+            },
+        },
+        {
+            name: 'B3b.2 order',
+            fn(assert) {
+                const c = { ...CATS.find((x) => x.id === 'groceries'), bucketId: 'smile' };
+                const item = { bucketId: 'fire' };
+                assert('transaction wins', effectiveBucket({ amountCents: -1, bucketId: 'splurge' }, c, item, ALLOC), 'splurge');
+                assert('plan item next', effectiveBucket({ amountCents: -1 }, c, item, ALLOC), 'fire');
+                assert('category next', effectiveBucket({ amountCents: -1 }, c, {}, ALLOC), 'smile');
+                assert('derived last', effectiveBucket({ amountCents: -1 }, CATS[0], null, ALLOC), 'daily');
+                const noDaily = ALLOC.filter((a) => a.role !== 'daily');
+                assert('no daily: essential to pool', effectiveBucket({ amountCents: -1 }, CATS[0], null, noDaily), SPENDABLE_POOL);
+                assert('no splurge: falls to daily', effectiveBucket({ amountCents: -1 }, CATS.find((x) => x.id === 'dining'), null, ALLOC.filter((a) => a.role !== 'splurge')), 'daily');
+                assert('unconfigured: pool', effectiveBucket({ amountCents: -1 }, CATS[0], null, []), SPENDABLE_POOL);
+            },
+        },
+        {
+            name: 'B3b.3 Daily left (mock fixture)',
+            fn(assert) {
+                const r = run();
+                assert('pool', r.poolCents, 206306);
+                assert('spent', r.spentCents, 137445);
+                assert('bills', r.billsDueCents, 19340);
+                assert('left', r.leftCents, 49521);
+                assert('per day (10 days)', r.perDayCents, 4952);
+                assert('cycle', [r.cycle.start, r.cycle.end, r.cycle.daysLeft, r.mode], ['2026-10-31', '2026-11-14', 10, 'cycle']);
+                assert('essential and non-essential so far', [r.essentialSoFarCents, r.nonEssentialSoFarCents], [137445, 8000]);
+                assert('unsorted and review', [r.unsortedCents, r.toReview], [3200, 1]);
+            },
+        },
+        {
+            name: 'B3b.4 Splurge left (mock fixture)',
+            fn(assert) {
+                const s = run().buckets.find((b) => b.id === 'splurge');
+                assert('pool', s.poolCents, 34384);
+                assert('spent', s.spentCents, 8000);
+                assert('bills (Netflix)', s.billsDueCents, 1699);
+                assert('left', s.leftCents, 24685);
+                assert('pools sum to net', run().buckets.reduce((a, b) => a + b.poolCents, 0), 343843);
+            },
+        },
+        {
+            name: 'B3b.5 no double count, missed counts',
+            fn(assert) {
+                const paid = [...MOCK_ROWS, row('2026-11-03', 'phone', 65, { billMatch: { planId: 'ph', dueDate: '2026-11-10', by: 'user' } })];
+                const r = run(paid);
+                assert('spent once', r.spentCents, 137445 + 6500);
+                assert('bill gone', r.billsDueCents, 12840);
+                assert('left unchanged', r.leftCents, 49521);
+                // A past, unmatched occurrence inside the cycle (due 2026-11-02) still counts (FT-R-54).
+                const missed = mockData({ plan: [...PLAN, { id: 'gym', categoryId: 'health', name: 'Gym', amount: 10, frequency: 'monthly', anchorDue: '2026-10-02' }] });
+                assert('missed bill counted', run(MOCK_ROWS, missed).billsDueCents, 19340 + 1000);
+                assert('status is Missed', billStatus(missed.plan[3], '2026-11-02', MOCK_ROWS, '2026-11-04'), 'Missed');
+            },
+        },
+        {
+            name: 'B3b.6 override',
+            fn(assert) {
+                const r = run([...MOCK_ROWS, row('2026-11-04', 'entertainment', 24, { bucketId: 'splurge' }), row('2026-11-04', 'dining', 30, { bucketId: 'daily' })]);
+                assert('splurge-covered row not in Daily', r.spentCents, 137445 + 3000);
+                assert('is in Splurge', r.buckets.find((b) => b.id === 'splurge').spentCents, 8000 + 2400);
+            },
+        },
+        {
+            name: 'B3b.7 boundary',
+            fn(assert) {
+                const edge = row('2026-11-14', 'groceries', 50);
+                assert('on cycle.end not counted', run([...MOCK_ROWS, edge], mockData(), '2026-11-04').spentCents, 137445);
+                const next = run([...MOCK_ROWS, edge], mockData(), '2026-11-14');
+                assert('falls in next cycle', [next.cycle.start, next.spentCents], ['2026-11-14', 5000]);
+                assert('on cycle.start counted', run([row('2026-10-31', 'groceries', 5)], mockData(), '2026-11-04').spentCents, 500);
+            },
+        },
+        {
+            name: 'B3b.8 month mode',
+            fn(assert) {
+                const data = mockData({ incomeSources: [{ incomeType: 'variable', paySchedule: 'fortnightly', payAnchor: null }] });
+                const rows = [
+                    { id: 'a', date: '2026-11-02', categoryId: 'income', amountCents: 300000 },
+                    { id: 'b', date: '2026-11-03', categoryId: 'income', amountCents: 50000 },
+                    { id: 'c', date: '2026-10-30', categoryId: 'income', amountCents: 900000 },
+                    row('2026-11-03', 'groceries', 100),
+                ];
+                const r = leftThisPay({ data, totals: { netCents: 999999 }, txns: rows, today: '2026-11-04' });
+                assert('month mode', [r.mode, r.cycle.start, r.cycle.end], ['month', '2026-11-01', '2026-12-01']);
+                assert('net is received so far', r.netCents, 350000);
+                assert('daily pool', r.poolCents, 210000);
+                assert('left', r.leftCents, 210000 - 10000 - r.billsDueCents);
+                // No anchor on a salaried source: month mode unless a recent income row infers one.
+                const noAnchor = mockData({ incomeSources: [{ incomeType: 'salaried', paySchedule: 'fortnightly', payAnchor: null }] });
+                const none = leftThisPay({ data: noAnchor, totals: { netCents: 343843 }, txns: [], today: '2026-11-04' });
+                assert('no anchor, nothing to infer', [none.mode, none.netCents], ['month', 0]);
+                const inf = leftThisPay({ data: noAnchor, totals: { netCents: 343843 }, txns: [{ id: 'p', date: '2026-10-31', categoryId: 'income', amountCents: 343843 }], today: '2026-11-04' });
+                assert('inferred anchor gives a cycle', [inf.mode, inf.cycle.end], ['cycle', '2026-11-14']);
+                // Unconfigured allocation: the whole net is spendable.
+                const raw = leftThisPay({ data: mockData({ allocation: [{ id: 'a1', name: 'New Allocation', percentage: 100 }] }), totals: { netCents: 343843 }, txns: [], today: '2026-11-04' });
+                assert('unconfigured pool is whole net', raw.poolCents, 343843);
+                // No Daily role: the unallocated remainder is the spendable pool.
+                const nod = leftThisPay({ data: mockData({ allocation: ALLOC.filter((a) => a.role !== 'daily') }), totals: { netCents: 343843 }, txns: [], today: '2026-11-04' });
+                assert('no daily: remainder pool', nod.poolCents, 206306);
+            },
+        },
+        {
+            name: 'B3b.8b month mode counts events and transactions once',
+            fn(assert) {
+                const ev = (id, date, netAmount, extra = {}) => ({ id, date, netAmount, ...extra });
+                const src = (events) => [{ incomeType: 'variable', paySchedule: 'fortnightly', payAnchor: null, incomeEvents: events }];
+                const credit = (id, date, dollars) => ({ id, date, categoryId: 'income', amountCents: Math.round(dollars * 100) });
+                const go = (events, rows) => leftThisPay({ data: mockData({ incomeSources: src(events) }), txns: rows, today: '2026-11-10' }).netCents;
+                const events = [ev('e1', '2026-11-02', 400), ev('e2', '2026-11-05', 250.5), ev('old', '2026-10-30', 999), ev('future', '2026-11-20', 100)];
+                assert('events only (this month, up to today)', go(events, []), 65050);
+                assert('transactions only', go([], [credit('t1', '2026-11-03', 300), credit('t2', '2026-11-06', 120.25)]), 42025);
+                // t1 is the same receipt as e1 (same amount, 1 day apart); t2 is separate.
+                assert('overlap counted once', go(events, [credit('t1', '2026-11-03', 400), credit('t2', '2026-11-06', 120.25)]), 65050 + 12025);
+                assert('same amount but over 3 days apart is two receipts', go(events, [credit('t1', '2026-11-08', 400)]), 65050 + 40000);
+                assert('explicit link wins', go([ev('e1', '2026-11-02', 400, { txnId: 't9' })], [credit('t9', '2026-11-09', 399)]), 40000);
+                assert('one credit matches one event only', go([ev('a', '2026-11-02', 100), ev('b', '2026-11-03', 100)], [credit('t1', '2026-11-03', 100)]), 20000);
+            },
+        },
+    ];
+}
