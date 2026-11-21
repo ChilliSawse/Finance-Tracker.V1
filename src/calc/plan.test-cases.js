@@ -140,6 +140,8 @@ export const PLAN_TEST_CASES = [
             assert('new bill counts', bill.item.inTotals, true);
             assert('unique ids', addPlanItem(d, { name: 'Rego' }).item.id !== bill.item.id, true);
             assert('toast shape', typeof bill.message === 'string' && typeof bill.onUndo === 'function', true);
+            assert('message from catalogue', bill.message, 'Added Rego');
+            assert('convert message', convertToBill(d, 'b', { anchorDue: '2026-12-01' }).message, 'Dining is now a bill');
         },
     },
 ];

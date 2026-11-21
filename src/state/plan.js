@@ -8,6 +8,8 @@
 // FT-R-53: items created here count in totals (inTotals true), including new bills;
 // migrated bills stay reminders (inTotals false) until a person changes that.
 
+import { t } from '../i18n/strings.js';
+
 const FIELDS = ['categoryId', 'name', 'amount', 'frequency', 'anchorDue', 'matchRule', 'bucketId', 'inTotals'];
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -49,7 +51,7 @@ export function addPlanItem(data, fields = {}) {
     plan.push(item);
     const id = item.id;
     return {
-        ok: true, item, index: plan.length - 1, message: `Added ${item.name || 'item'}`, onExpire: undefined,
+        ok: true, item, index: plan.length - 1, message: t('b.plan.added', { name: item.name || t('b.plan.itemFallback') }), onExpire: undefined,
         onUndo() {
             const i = plan.findIndex((p) => p && p.id === id);
             if (i >= 0) plan.splice(i, 1);
@@ -65,7 +67,7 @@ export function updatePlanItem(data, id, changes = {}) {
     const before = clone(plan[index]);
     for (const k of FIELDS) if (Object.prototype.hasOwnProperty.call(changes, k)) plan[index][k] = changes[k];
     return {
-        ok: true, item: plan[index], index, message: `Changed ${plan[index].name || 'item'}`, onExpire: undefined,
+        ok: true, item: plan[index], index, message: t('b.plan.changed', { name: plan[index].name || t('b.plan.itemFallback') }), onExpire: undefined,
         onUndo() {
             const i = plan.findIndex((p) => p && p.id === id);
             if (i >= 0) plan[i] = clone(before);
@@ -81,7 +83,7 @@ export function removePlanItem(data, id) {
     const [item] = plan.splice(index, 1);
     let restored = false;
     return {
-        ok: true, item, index, message: `Removed ${item.name || 'item'}`, onExpire: undefined,
+        ok: true, item, index, message: t('b.plan.removed', { name: item.name || t('b.plan.itemFallback') }), onExpire: undefined,
         onUndo() {
             if (restored) return;
             restored = true;
@@ -100,6 +102,6 @@ export function convertToBill(data, id, { anchorDue, frequency } = {}) {
     const changes = { anchorDue };
     if (frequency) changes.frequency = frequency;
     const res = updatePlanItem(data, id, changes);
-    if (res.ok) res.message = `${res.item.name || 'Item'} is now a bill`;
+    if (res.ok) res.message = t('b.plan.nowBill', { name: res.item.name || t('b.plan.itemFallback') });
     return res;
 }
