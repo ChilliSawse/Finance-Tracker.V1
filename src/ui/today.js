@@ -41,7 +41,7 @@ function heroMoney(c) {
     return m ? `${esc(m[1])}<span class="cents">${esc(m[2])}</span>` : esc(s);
 }
 
-const ROLE_CLASS = { daily: 'b-daily', splurge: 'b-splurge', smile: 'b-smile', fire: 'b-fire' };
+const ROLE_CLASS = { daily: 'b-daily', splurge: 'b-splurge', smile: 'b-smile', fire: 'b-fire', mojo: 'b-mojo' };
 
 // ---------- the rows the screen reads besides the model ----------
 
@@ -54,7 +54,7 @@ function incomeThisCycle(cycleRows) {
     const rows = cycleRows.filter((r) => r.amountCents > 0 && r.categoryId === 'income');
     const total = rows.reduce((a, r) => a + r.amountCents, 0);
     const latest = rows.reduce((best, r) => (!best || r.date > best.date ? r : best), null);
-    return { total, latest };
+    return { total, latest, count: rows.length };
 }
 
 /**
@@ -313,7 +313,7 @@ function dueHtml(model) {
 }
 
 function tileHtml(b, mb) {
-    const role = b.role && ROLE_CLASS[b.role] ? b.role : (b.role === 'mojo' ? 'smile' : 'smile');
+    const role = b.role && ROLE_CLASS[b.role] ? b.role : 'smile';
     let value, sub, extra = '';
     const name = b.name || '';
     const barHtml = (p, label) => `<div class="bar" role="img" aria-label="${esc(t('a.today.barAria', { pct: escNum(Math.round(p)), name: label }))}"><i style="width:${escNum(pct(p))}%"></i></div>`;
@@ -379,9 +379,9 @@ function bucketsHtml(model, ctx, buckets) {
     const total = tops.reduce((a, b) => a + (b.pct || 0), 0) || 1;
     const parts = tops.map((b) => `${b.name} ${Math.round(b.pct)}%`).join(', ');
     const split = splitSegmentsHtml(tops, total);
-    const { latest } = incomeThisCycle(ctx.cycleRows);
+    const { total: payTotal, latest, count } = incomeThisCycle(ctx.cycleRows);
     const cap = latest
-        ? t('a.today.payLanded', { amount: esc(money(latest.amountCents)), date: esc(dayLong(latest.date)) })
+        ? t(count > 1 ? 'a.today.payLandedMany' : 'a.today.payLanded', { amount: esc(money(count > 1 ? payTotal : latest.amountCents)), date: esc(dayLong(latest.date)) })
         : t('a.today.payPlanned', { amount: esc(money(model.netCents)) });
     const tiles = tops.map((b) => tileHtml(b, model.buckets.find((x) => x.id === b.id))).join('');
     return `

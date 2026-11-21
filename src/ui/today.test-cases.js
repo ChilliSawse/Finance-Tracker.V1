@@ -229,4 +229,25 @@ export const TODAY_TEST_CASES = [
             showToast('', 'info', 1);
         },
     },
+    {
+        name: 'K3 3.6 the pay line totals every income credit this pay and names the last date',
+        fn(assert) {
+            const two = [...ROWS_A, { id: 'inv', date: '2026-11-03', categoryId: 'income', amountCents: 94000 }];
+            const { html } = run(mkData(), two);
+            assert('total of both credits', /Pay of A?\$4,378\.43 this pay, last in/.test(html), true);
+            assert('the last credit alone is not the pay', /Pay of A?\$940\.00/.test(html), false);
+            const one = run(mkData(), ROWS_A).html;
+            assert('one credit keeps the mock wording', /Pay of A?\$3,438\.43 landed/.test(one), true);
+        },
+    },
+    {
+        name: 'K3 3.11 the Mojo tile uses its own slot class, not Smile',
+        fn(assert) {
+            const mojoAlloc = [...ALLOC, { id: 'mojo', role: 'mojo', name: 'Mojo', percentage: 5 }];
+            const { html } = run(mkData({ allocation: mojoAlloc }), ROWS_A);
+            assert('mojo tile', html.includes('class="tile b-mojo"'), true);
+            assert('smile tile still smile', html.includes('class="tile b-smile"'), true);
+            assert('mojo no longer borrows smile', (html.match(/class="tile b-smile"/g) || []).length, 1);
+        },
+    },
 ];

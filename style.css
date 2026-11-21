@@ -1,12 +1,12 @@
 /* CSS Variables for GUI Customization */
 :root {
-    --font-body: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-body: var(--font, 'Manrope', system-ui, sans-serif);
     --font-mono: 'Fira Code', 'Consolas', monospace;
     --font-display: var(--font-body);
     /* Colour tokens (backgrounds, text, borders, accent, semantics) come from legacy-aliases.css, which maps them onto
        the generated palette tokens. They are not repeated here: a fallback in this block would override that map. */
     --card-opacity: 80%;
-    --font-family-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-family-main: var(--font, 'Manrope', system-ui, sans-serif);
     --base-font-size: 16px;
     --save-status-saving-bg: rgba(255, 193, 7, 0.9); /* Amber */
     --save-status-saved-bg: rgba(76, 175, 80, 0.9); /* Green */

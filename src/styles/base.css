@@ -157,6 +157,7 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 .b-splurge { background: var(--splurge-bg); color: var(--splurge-ink); }
 .b-smile { background: var(--smile-bg); color: var(--smile-ink); }
 .b-fire { background: var(--fire-bg); color: var(--fire-ink); }
+.b-mojo { background: var(--mojo-bg); color: var(--mojo-ink); }
 
 .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .tile { border-radius: var(--r-tile); padding: 16px; display: flex; flex-direction: column; gap: 2px; min-height: 124px; transition: transform 150ms var(--ease); }
