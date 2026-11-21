@@ -15,7 +15,8 @@ function settledData() {
     const data = {
         dataVersion: 2, // B3: the plan step has nothing to do on a settled save
         savingModel: { version: 1 }, // E4: nor has the bucket step
-        incomeSources: [{ name: 'Job', incomeType: 'salaried' }],
+        // C4: nor has the income step (the source already carries its declaration)
+        incomeSources: [{ name: 'Job', incomeType: 'salaried', withholding: { claimsTaxFree: true } }],
         allocation: [{ name: 'Daily', percentage: 100 }],
     };
     runMigrationChain(data, { storage: null, modules: [] });

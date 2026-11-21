@@ -10,8 +10,13 @@ import { getPayCyclesPerYear, getWeeklyAmount } from '../utils.js';
 import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment } from './tax-au.js';
 import { variableSourceAnnualFigures, activeFyKey } from './income-events.js';
 import { planTotals } from './plan.js';
+import { expectedPay } from './withholding.js';
+import { annualEstimateForSources } from './tax-owed.js';
 
-export function calculateTotals(currentData) {
+/** opts.today (ISO date or Date) only affects the new tax-owed outputs; it picks the tax tables. */
+export function calculateTotals(currentData, opts = {}) {
+    const estimateInputs = [];
+    const taxDate = opts.today || new Date();
     let totalGrossAnnualIncome = 0;
     let totalNetAnnualIncome = 0;
     let totalAnnualTaxFromSources = 0;
@@ -81,6 +86,33 @@ export function calculateTotals(currentData) {
             }
         }
 
+        // New outputs (C4), additive only. Per pay: the actual payslip tax when entered,
+        // else the withholding engine's figure for a source with a declaration. Variable: none.
+        let withheldPerCycle = null, netPerCycleWithheld = null;
+        if (type !== 'variable' && sourceGrossAnnual > 0 && payCycles > 0) {
+            const grossPerCycle = Math.round((sourceGrossAnnual / payCycles) * 100) / 100;
+            const decl = source.withholding || null;
+            if (hasTaxOverride) {
+                withheldPerCycle = Math.max(0, taxPerCycle);
+            } else if (decl) {
+                withheldPerCycle = expectedPay({
+                    paySchedule: source.paySchedule, grossAnnual: sourceGrossAnnual,
+                    claimsTaxFree: decl.claimsTaxFree !== false, hasStudyDebt: decl.hasStudyDebt === true,
+                    extraPerPay: decl.extraPerPay,
+                }, taxDate).total;
+            }
+            if (withheldPerCycle !== null) {
+                netPerCycleWithheld = hasNetOverride ? netPerCycle : Math.max(0, grossPerCycle - withheldPerCycle);
+                estimateInputs.push({
+                    paySchedule: source.paySchedule, grossAnnual: sourceGrossAnnual,
+                    hasStudyDebt: !!(decl && decl.hasStudyDebt === true), claimsTaxFree: !decl || decl.claimsTaxFree !== false,
+                    extraPerPay: decl ? decl.extraPerPay : 0, withheldPerPay: withheldPerCycle,
+                });
+            }
+        }
+        source._withheldPerCycle = withheldPerCycle;
+        source._netPerCycleWithheld = netPerCycleWithheld;
+
         totalGrossAnnualIncome += sourceGrossAnnual;
         totalNetAnnualIncome += sourceAnnualNet;
         totalAnnualTaxFromSources += sourceAnnualTax;
@@ -118,7 +150,14 @@ export function calculateTotals(currentData) {
 
     const savingsRate = weeklyNet > 0 ? (weeklySavings / weeklyNet) * 100 : 0;
 
+    let annualEstimate = null;
+    if (estimateInputs.length) {
+        annualEstimate = annualEstimateForSources(estimateInputs, taxDate);
+    }
+
     return {
+        _annualTaxOwed: annualEstimate ? annualEstimate.owed.total : null,
+        _refundOrBill: annualEstimate ? { kind: annualEstimate.kind, amount: annualEstimate.amount, label: annualEstimate.label, estimate: true } : null,
         totalGrossAnnualIncome,
         totalAnnualTax: totalAnnualTaxFromSources,
         totalNetAnnualIncome,
