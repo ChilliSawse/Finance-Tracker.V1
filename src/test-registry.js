@@ -38,6 +38,7 @@ import { HTML_TEST_CASES } from './ui/html.test-cases.js';
 import { ACTIVITY_TEST_CASES } from './ui/activity.test-cases.js';
 import { TODAY_TEST_CASES } from './ui/today.test-cases.js';
 import { INCOME_LAYOUT_TEST_CASES } from './ui/income-layout.test-cases.js';
+import { TAX_CARD_TEST_CASES } from './ui/tax-card.test-cases.js';
 import { SETTINGS_TEST_CASES } from './ui/settings.test-cases.js';
 import { PLAN_LISTS_TEST_CASES } from './ui/plan-lists.test-cases.js';
 import { BUCKET_SHEETS_TEST_CASES } from './ui/bucket-sheets.test-cases.js';
@@ -81,6 +82,7 @@ export const TEST_GROUPS = [
     { name: 'activity', env: 'pure', cases: ACTIVITY_TEST_CASES },
     { name: 'today', env: 'pure', cases: TODAY_TEST_CASES },
     { name: 'income-layout', env: 'pure', cases: INCOME_LAYOUT_TEST_CASES },
+    { name: 'tax-card', env: 'pure', cases: TAX_CARD_TEST_CASES },
     { name: 'settings', env: 'pure', cases: SETTINGS_TEST_CASES },
     { name: 'plan-lists', env: 'pure', cases: PLAN_LISTS_TEST_CASES },
     { name: 'plan-buckets', env: 'pure', cases: PLAN_BUCKETS_TEST_CASES },

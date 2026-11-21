@@ -17,7 +17,7 @@ import { withholdingForPay } from '../calc/withholding.js';
 import { checkPayslip } from '../calc/payslip-check.js';
 import { calculateTotals } from '../calc/calculations.js';
 import { getCycle, addDays, addMonthsClamped, toIso, parseIso } from '../calc/pay-cycle.js';
-import { taxTablesStatus } from '../calc/tax-tables/index.js';
+import { taxTablesStatus, taxYearKeyForDate } from '../calc/tax-tables/index.js';
 import { acceptPayslipJob } from '../state/income-migration.js';
 
 /** Legal minimum super shown when nothing is stored yet (a rate, not a payslip figure). */
@@ -34,6 +34,20 @@ const todayIso = () => toIso(new Date());
 export function layoutFor(source) {
     if (!source || source.incomeType === 'variable' || source.incomeType === 'selfEmployed') return null;
     return Number(source.hourlyRate) > 0 && Number(source.hoursPerWeek) > 0 ? 'hours' : 'salary';
+}
+
+/**
+ * C8: a payslip that matched confirms take-home for its income year. Writes `data.taxCheck = {fy, done:true}`
+ * only when the payslip's date falls in the year the tables for `now` cover. Returns true when it changed.
+ */
+export function confirmTaxCheck(data, slipDate, now = new Date()) {
+    if (!data) return false;
+    const fy = taxTablesStatus(now, data).activeFy;
+    if (taxYearKeyForDate(slipDate || now) !== fy) return false;
+    const tc = data.taxCheck;
+    if (tc && tc.fy === fy && tc.done === true) return false;
+    data.taxCheck = { fy, done: true };
+    return true;
 }
 
 /** The pay date before a "next pay day": same day of month where the month allows it. */
@@ -306,6 +320,13 @@ async function persist() {
     updateDataAndUI();
 }
 
+/** A matched payslip was just written to `taxCheck`: save, and refresh Today's tax slot. */
+async function recordTaxCheck() {
+    if (store.autoSave) store.autoSave.onDataChange();
+    const { renderTaxCard } = await import('./tax-card.js');
+    renderTaxCard();
+}
+
 /**
  * Opens the Salary or Set-hours sheet for income source `index`.
  * @returns {boolean} true once a sheet opened; false for a missing, Variable or Self-employed source
@@ -444,6 +465,7 @@ function decorate(handle, ctx) {
         for (const l of d.lines.slice(0, 2)) result.appendChild(node('p', 'ils-line', l));
         if (d.state === 'match') {
             result.appendChild(node('p', 'ils-ok', t('c.income.check.matches')));
+            if (confirmTaxCheck(store.financeData, slip.date)) recordTaxCheck();
         } else if (d.state === 'truth') {
             result.appendChild(node('p', 'ils-msg', d.message));
         } else {

@@ -278,4 +278,12 @@ export const enC = {
     'c.setup.list.skippedMark': 'Skipped',
     'c.setup.list.notNeeded': 'Not needed',
     'c.setup.list.hide': 'Hide this list',
+    // Tax slot on Today (C8)
+    'c.tax.july.title': 'New tax year: {fy}',
+    'c.tax.july.body': 'Check one payslip to confirm your take-home.',
+    'c.tax.july.check': 'Check a payslip',
+    'c.tax.july.dismiss': 'Dismiss',
+    'c.tax.stale': 'Tax rates are from {fy}. An app update brings the new ones.',
+    // Future: Income pattern (C8)
+    'c.pattern.title': 'Income pattern',
 };
