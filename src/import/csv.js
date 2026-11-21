@@ -8,12 +8,32 @@
 // on in the original text). JSON.stringify ignores it, so rows still compare
 // as plain arrays; normaliseRows falls back to index+1 when it's absent.
 
+// Hard limits so a hostile or accidental huge file cannot freeze the tab.
+export const CSV_LIMITS = Object.freeze({
+    maxFileBytes: 15 * 1024 * 1024,
+    maxLineChars: 20000, // one physical line (quoted fields that wrap count each line)
+    maxCols: 256,
+    maxRows: 100000,
+    maxCellChars: 64, // amount and date cells longer than this are never money or a date
+});
+
+export class CsvLimitError extends Error {
+    /** @param {'too-large'|'line-too-long'|'too-many-columns'|'too-many-rows'} code */
+    constructor(code, message) {
+        super(message || code);
+        this.name = 'CsvLimitError';
+        this.code = code;
+    }
+}
+
 /**
  * Tokenizes CSV text (RFC-4180-ish) into rows of string fields.
  * Handles quoted fields, escaped quotes (""), commas/newlines inside quotes,
  * CRLF and LF line endings, a trailing newline, and a leading UTF-8 BOM.
  * Fully-empty physical lines are skipped. Column counts are NOT validated
  * here — mapping/normalisation deal with ragged rows later.
+ * Throws CsvLimitError when the text passes CSV_LIMITS (size, line length,
+ * column count, row count) rather than building a huge array.
  * @param {string} text - Raw CSV file contents.
  * @returns {{rows: string[][], errors: {line: number, message: string}[]}}
  */
@@ -21,6 +41,7 @@ export function parseCsv(text) {
     const rows = [];
     const errors = [];
     if (typeof text !== 'string' || text === '') return { rows, errors };
+    if (text.length > CSV_LIMITS.maxFileBytes) throw new CsvLimitError('too-large');
     if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
 
     let field = '';
@@ -29,9 +50,11 @@ export function parseCsv(text) {
     let line = 1;    // current physical line while scanning
     let rowLine = 1; // line the in-progress row started on
 
+    let lineStart = 0; // index where the current physical line began
     const endField = () => {
         row.push(field);
         field = '';
+        if (row.length > CSV_LIMITS.maxCols) throw new CsvLimitError('too-many-columns');
     };
     const endRow = () => {
         endField();
@@ -40,12 +63,15 @@ export function parseCsv(text) {
         if (!(row.length === 1 && row[0].trim() === '')) {
             row.line = rowLine;
             rows.push(row);
+            if (rows.length > CSV_LIMITS.maxRows) throw new CsvLimitError('too-many-rows');
         }
         row = [];
     };
 
     for (let i = 0; i < text.length; i++) {
         const c = text[i];
+        if (i - lineStart > CSV_LIMITS.maxLineChars) throw new CsvLimitError('line-too-long');
+        if (c === '\n' || c === '\r') lineStart = i + 1;
         if (inQuotes) {
             if (c === '"') {
                 if (text[i + 1] === '"') {
@@ -205,16 +231,33 @@ export function detectColumns(rows) {
  * @returns {?number} Integer cents (negative = money out) or null.
  */
 export function parseAmountToCents(str) {
-    if (str == null) return null;
+    return parseAmountDetailed(str).cents;
+}
+
+/**
+ * Like parseAmountToCents, but says WHY a cell gave null: `overflow` is true
+ * when it is a well-formed amount too large to store exactly (not a safe
+ * integer in cents), so callers can count those rows apart from plain junk.
+ * @returns {{cents: ?number, overflow: boolean}}
+ */
+export function parseAmountDetailed(str) {
+    const none = { cents: null, overflow: false };
+    if (str == null) return none;
     let s = String(str).trim();
-    if (s === '') return null;
+    if (s === '') return none;
+    if (s.length > CSV_LIMITS.maxCellChars) {
+        // Too long to be money. A run of digits and money punctuation is a
+        // huge number (counted as out of range); anything else is just junk.
+        return { cents: null, overflow: /^[-+$()\s\d,.]+$/.test(s) && /\d/.test(s) };
+    }
 
     let sign = 1;
-    const crdr = s.match(/^(.*?)\s*(CR|DR)\.?$/i);
-    if (crdr) {
-        s = crdr[1].trim();
-        if (/^dr$/i.test(crdr[2])) sign = -1;
-        if (s === '') return null;
+    // CR/DR suffix: a linear tail check (no backtracking regex over the whole cell).
+    const tail = /(CR|DR)\.?$/i.exec(s);
+    if (tail) {
+        s = s.slice(0, tail.index).trimEnd();
+        if (/^dr$/i.test(tail[1])) sign = -1;
+        if (s === '') return none;
     }
     if (/^\(.*\)$/.test(s)) {
         sign = -1;
@@ -224,9 +267,9 @@ export function parseAmountToCents(str) {
     // Sign may sit before or after the currency symbol ("-$12" / "$-12"),
     // but not in both spots. Thousands separators must group in threes.
     const m = s.match(/^([-+]?)\s*\$?\s*([-+]?)\s*(\d{1,3}(?:,\d{3})+|\d+)?(?:\.(\d+))?$/);
-    if (!m) return null;
-    if (m[1] !== '' && m[2] !== '') return null;
-    if (m[3] === undefined && m[4] === undefined) return null;
+    if (!m) return none;
+    if (m[1] !== '' && m[2] !== '') return none;
+    if (m[3] === undefined && m[4] === undefined) return none;
     if (m[1] === '-' || m[2] === '-') sign = -1;
 
     const intDigits = (m[3] || '0').replace(/,/g, '');
@@ -238,7 +281,9 @@ export function parseAmountToCents(str) {
         cents = Number(frac.slice(0, 2)) + (Number(frac[2]) >= 5 ? 1 : 0);
     }
     const total = Number(intDigits) * 100 + cents;
-    return total === 0 ? 0 : sign * total; // normalise -0 to 0
+    // Finite and exactly representable, or it would poison totals and the dedupe hash.
+    if (!Number.isFinite(total) || !Number.isSafeInteger(total)) return { cents: null, overflow: true };
+    return { cents: total === 0 ? 0 : sign * total, overflow: false }; // normalise -0 to 0
 }
 
 const MONTH_NAMES = [
@@ -261,9 +306,19 @@ function daysInMonth(year, month) {
     return [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
 }
 
-function toIsoIfValid(year, month, day) {
+/**
+ * 'YYYY-MM-DD' for a real calendar date, else null. Pure arithmetic checked
+ * against a Date.UTC round trip, so it never relies on how an engine (Safari
+ * included) treats an out-of-range date such as 31 Feb.
+ */
+export function toIsoIfValid(year, month, day) {
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
     if (month < 1 || month > 12) return null;
     if (day < 1 || day > daysInMonth(year, month)) return null;
+    if (year >= 100) {
+        const d = new Date(Date.UTC(year, month - 1, day));
+        if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
+    }
     const mm = String(month).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
     return `${year}-${mm}-${dd}`;
@@ -289,7 +344,7 @@ function expandYear(str) {
 export function parseDateToIso(str) {
     if (str == null) return null;
     const s = String(str).trim();
-    if (s === '') return null;
+    if (s === '' || s.length > CSV_LIMITS.maxCellChars) return null;
 
     let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
     if (m) return toIsoIfValid(Number(m[1]), Number(m[2]), Number(m[3]));
@@ -324,12 +379,16 @@ export function parseDateToIso(str) {
  * @param {{date: ?number, description: ?number, amount: ?number, debit: ?number, credit: ?number}} mapping
  * @param {{skipHeader?: boolean, invert?: boolean}} [options] - invert flips
  *     all signs (for banks that export spends as positive).
- * @returns {{transactions: {date: string, description: string, amountCents: number}[], errors: {line: number, message: string, raw: string}[]}}
+ * Amounts that are well formed but too large to store exactly (beyond
+ * Number.MAX_SAFE_INTEGER cents) are skipped with their own error and counted
+ * in `outOfRange`.
+ * @returns {{transactions: {date: string, description: string, amountCents: number}[], errors: {line: number, message: string, raw: string}[], outOfRange: number}}
  */
 export function normaliseRows(rows, mapping, options = {}) {
     const { skipHeader = false, invert = false } = options;
     const transactions = [];
     const errors = [];
+    let outOfRange = 0;
 
     for (let i = skipHeader ? 1 : 0; i < rows.length; i++) {
         const row = rows[i];
@@ -344,26 +403,29 @@ export function normaliseRows(rows, mapping, options = {}) {
         let amountCents = null;
         let amountEmpty;
         let badAmountRaw = null; // non-empty cell that refused to parse
+        let overflow = false; // ...because the amount is too large to store exactly
         if (mapping.amount != null) {
             const amountRaw = cell(mapping.amount);
             amountEmpty = amountRaw === '';
             if (!amountEmpty) {
-                amountCents = parseAmountToCents(amountRaw);
-                if (amountCents === null) badAmountRaw = amountRaw;
+                const d = parseAmountDetailed(amountRaw);
+                amountCents = d.cents;
+                if (amountCents === null) { badAmountRaw = amountRaw; overflow = d.overflow; }
             }
         } else {
             const debitRaw = cell(mapping.debit);
             const creditRaw = cell(mapping.credit);
             amountEmpty = debitRaw === '' && creditRaw === '';
             if (!amountEmpty) {
-                const debit = debitRaw === '' ? 0 : parseAmountToCents(debitRaw);
-                const credit = creditRaw === '' ? 0 : parseAmountToCents(creditRaw);
-                if (debit === null) {
-                    badAmountRaw = debitRaw;
-                } else if (credit === null) {
-                    badAmountRaw = creditRaw;
+                const dd = debitRaw === '' ? { cents: 0, overflow: false } : parseAmountDetailed(debitRaw);
+                const cd = creditRaw === '' ? { cents: 0, overflow: false } : parseAmountDetailed(creditRaw);
+                if (dd.cents === null) {
+                    badAmountRaw = debitRaw; overflow = dd.overflow;
+                } else if (cd.cents === null) {
+                    badAmountRaw = creditRaw; overflow = cd.overflow;
                 } else {
-                    amountCents = Math.abs(credit) - Math.abs(debit);
+                    amountCents = Math.abs(cd.cents) - Math.abs(dd.cents);
+                    if (!Number.isSafeInteger(amountCents)) { amountCents = null; badAmountRaw = creditRaw || debitRaw; overflow = true; }
                 }
             }
         }
@@ -380,6 +442,11 @@ export function normaliseRows(rows, mapping, options = {}) {
             fail(`Couldn't read a date from "${dateRaw}"`);
             continue;
         }
+        if (overflow) {
+            outOfRange++;
+            fail(`Amount is too large to import: "${String(badAmountRaw).slice(0, 24)}"`);
+            continue;
+        }
         if (badAmountRaw !== null || amountEmpty) {
             fail(`Couldn't read an amount from "${badAmountRaw === null ? '' : badAmountRaw}"`);
             continue;
@@ -389,5 +456,5 @@ export function normaliseRows(rows, mapping, options = {}) {
         transactions.push({ date, description, amountCents });
     }
 
-    return { transactions, errors };
+    return { transactions, errors, outOfRange };
 }

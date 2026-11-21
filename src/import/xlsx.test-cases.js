@@ -3,7 +3,7 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 // Fixtures are synthetic and generated at test time by tools/make-xlsx.mjs.
 
-import { readXlsx, serialToIso, XlsxError, XLSX_LIMITS } from './xlsx.js';
+import { readXlsx, serialToIso, XlsxError, XLSX_LIMITS, inflateCapped } from './xlsx.js';
 import { detectColumns, normaliseRows } from './csv.js';
 import { buildXlsx, buildZip } from '../../tools/make-xlsx.mjs';
 
@@ -148,6 +148,51 @@ export const XLSX_TEST_CASES = [
                 p += 46 + nlen + ldv.getUint16(p + 30, true) + ldv.getUint16(p + 32, true);
             }
             assert('declared size is enforced', ['too-large', 'corrupt'].includes(await code(readXlsx(liar))), true);
+        },
+    },
+    {
+        name: 'S3.M2 inflate aborts at the cap and does not buffer the whole bomb',
+        async fn(assert) {
+            // 128 MB of zeros deflates to ~128 KB (ratio ~1000:1). Read with a 1 MB cap.
+            const big = new Uint8Array(128 * 1024 * 1024);
+            const cs = new CompressionStream('deflate-raw');
+            const w = cs.writable.getWriter();
+            w.write(big); w.close();
+            const parts = [];
+            const r = cs.readable.getReader();
+            for (;;) { const { done, value } = await r.read(); if (done) break; parts.push(value); }
+            const comp = new Uint8Array(parts.reduce((a, p) => a + p.length, 0));
+            let o = 0; for (const p of parts) { comp.set(p, o); o += p.length; }
+            const slices = Math.ceil(comp.length / (16 * 1024));
+            assert('fixture is a real bomb', comp.length < 512 * 1024 && slices >= 6, true);
+
+            const mem = () => (performance.memory ? performance.memory.usedJSHeapSize : 0);
+            const before = mem();
+            const stats = {};
+            let err = null;
+            try { await inflateCapped(comp, 1024 * 1024, { stats }); } catch (e) { err = e; }
+            assert('refused as too-large', err instanceof XlsxError && err.code, 'too-large');
+            assert('input was not fed to the end', stats.fed < comp.length, true);
+            assert('at most a few slices were fed', stats.fed <= 4 * 16 * 1024, true);
+            if (performance.memory) assert('heap growth stays small (< 96 MB)', mem() - before < 96 * 1024 * 1024, true);
+
+            let ratioErr = null;
+            try { await inflateCapped(comp, Infinity, { maxRatio: 100, minRatioBytes: 1024 * 1024 }); } catch (e) { ratioErr = e; }
+            assert('ratio guard trips while inflating', ratioErr instanceof XlsxError && ratioErr.code, 'too-large');
+
+            const small = await buildXlsx({ rows: SIMPLE });
+            assert('normal workbooks still read', (await readXlsx(small)).rows.length, 3);
+        },
+    },
+    {
+        name: 'S3.L4 repeated r="1" rows still hit the row cap',
+        async fn(assert) {
+            const row = '<row r="1"><c r="A1" t="inlineStr"><is><t>a</t></is></c><c r="B1" t="inlineStr"><is><t>b</t></is></c></row>';
+            const sheet = '<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>' + row.repeat(5) + '</sheetData></worksheet>';
+            const x = await buildXlsx({ rows: [['a', 'b']], files: { 'xl/worksheets/sheet1.xml': sheet } });
+            assert('5 rows with r=1 against maxRows 3', await code(readXlsx(x, { maxRows: 3 })), 'too-large');
+            const ok = await readXlsx(x, { maxRows: 10 });
+            assert('under the cap they read, with increasing line numbers', ok.rows.map((r) => r.line), [1, 2, 3, 4, 5]);
         },
     },
 ];

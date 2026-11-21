@@ -61,21 +61,49 @@ export function normaliseTransaction(row) {
     return { ...row, status: transactionStatus(row), note: row.note || '', updatedAt: row.updatedAt || row.createdAt };
 }
 
-const DAY_MS = 86400000;
+/** True for a real calendar date 'YYYY-MM-DD' (checked by a Date.UTC round trip, not by parsing). */
+export function isValidIsoDate(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof iso === 'string' ? iso : '');
+    if (!m) return false;
+    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+    if (y < 1000) return false;
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+}
+
+// iso +- days as 'YYYY-MM-DD', or null for an invalid date. Built from Date.UTC
+// components, never from Date.parse, so Safari's stricter parsing cannot throw.
 function shiftDate(iso, days) {
-    return new Date(Date.parse(iso + 'T00:00:00Z') + days * DAY_MS).toISOString().slice(0, 10);
+    if (!isValidIsoDate(iso)) return null;
+    const t = Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)) + days);
+    return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 10) : null;
 }
 
 /**
- * Bulk-insert with dedupe: rows whose hash already exists in the store (or is
- * repeated within the batch) are skipped, so re-importing an overlapping CSV
- * export is safe.
+ * Bulk-insert with count-based dedupe (L8). Imported rows (csv/pdf) with the same
+ * date, description and amount are numbered in file order: the 1st keeps the
+ * plain hash, the 2nd gets "#2", and so on. A row is skipped only when that
+ * numbered hash is already stored, so two genuine identical coffees in one
+ * statement both import, a re-import adds nothing, and an overlapping later
+ * statement adds only the rows it has beyond what is stored.
+ * Rows with an impossible date are skipped and counted in `invalid` (only present when > 0).
  * @param {Array} txns - transactions from makeTransaction().
  * Imported (csv/pdf) rows that match an unreconciled manual row are merged into it, not added.
- * @returns {Promise<{added:number, duplicates:number, merged:number}>}
+ * @returns {Promise<{added:number, duplicates:number, merged:number, invalid?:number}>}
  */
-export async function addTransactions(txns) {
-    if (!txns.length) return { added: 0, duplicates: 0, merged: 0 };
+export async function addTransactions(input) {
+    if (!input.length) return { added: 0, duplicates: 0, merged: 0 };
+    let invalid = 0;
+    const occurrence = new Map();
+    const txns = [];
+    for (const t of input) {
+        if (!isValidIsoDate(t.date)) { invalid++; continue; }
+        if (t.source === 'manual' || t.source === 'sample') { txns.push(t); continue; }
+        const n = (occurrence.get(t.hash) || 0) + 1;
+        occurrence.set(t.hash, n);
+        txns.push(n === 1 ? t : { ...t, hash: `${t.hash}#${n}` });
+    }
+    if (!txns.length) return { added: 0, duplicates: 0, merged: 0, ...(invalid ? { invalid } : {}) };
     const db = await openDb();
     return new Promise((resolve, reject) => {
         const tx = db.transaction('transactions', 'readwrite');
@@ -97,7 +125,9 @@ export async function addTransactions(txns) {
                 if (check.result !== undefined) { duplicates++; return; }
                 if (t.source === 'manual' || t.source === 'sample') { store.add(t); added++; return; }
                 // Imported row: merge into a same-amount manual row within +-3 days (FT-R-56).
-                const near = dateIndex.getAll(IDBKeyRange.bound(shiftDate(t.date, -3), shiftDate(t.date, 3)));
+                const from = shiftDate(t.date, -3), to = shiftDate(t.date, 3);
+                if (!from || !to) { store.add(t); added++; return; }
+                const near = dateIndex.getAll(IDBKeyRange.bound(from, to));
                 near.onsuccess = () => {
                     const m = (near.result || []).find(r => r.source === 'manual' && !r.reconciled
                         && r.amountCents === t.amountCents && !claimed.has(r.id));
@@ -110,7 +140,7 @@ export async function addTransactions(txns) {
             };
         });
 
-        tx.oncomplete = () => resolve({ added, duplicates, merged });
+        tx.oncomplete = () => resolve({ added, duplicates, merged, ...(invalid ? { invalid } : {}) });
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error || new Error('addTransactions aborted'));
     });

@@ -44,4 +44,17 @@ export const enD = {
     'd.recovery.nothing': 'There is no saved data to export.',
     'd.recovery.importFailed': 'That backup could not be used: {reason}',
     'd.migrate.aborted': 'Some of your data could not be upgraded to the latest version. Ledger is running on the earlier layout. Your data is safe: export a backup before making changes.',
+
+    // Import limits and checks (S3)
+    'd.import.fileTooLarge': 'That file is too big to import (the limit is {limit}). Export a shorter date range from your bank.',
+    'd.import.csvTooWide': 'That file has too many columns or very long lines, so it does not look like a bank export.',
+    'd.import.csvTooManyRows': 'That file has too many rows to import. Export a shorter date range from your bank.',
+    'd.import.pdfTooManyPages': 'That PDF has too many pages to read here. Export a shorter date range from your bank.',
+    'd.import.outOfRange': '{count} row(s) skipped because the amount was too large to store.',
+    'd.import.skippedLines': '{count} line(s) skipped because the date or amount could not be read.',
+    'd.import.gross.title': 'Replace your gross income?',
+    'd.import.gross.body': 'The payslip suggests {proposed} a year, but this income source has {current}.',
+    'd.import.gross.estimated': 'The payslip does not print gross pay, so this figure is estimated from net pay plus tax.',
+    'd.import.gross.replace': 'Replace gross',
+    'd.import.gross.kept': ' · gross left as it was',
 };

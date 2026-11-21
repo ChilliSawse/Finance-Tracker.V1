@@ -3,8 +3,8 @@
 // DecompressionStream('deflate-raw'); XML is read with DOMParser.
 //
 // Security (G6): hard limits on file size, entry count, per-entry and total
-// uncompressed size, a zip-bomb ratio guard, a streaming inflate that stops at
-// the cap (the zip header's declared size is never trusted), and any
+// uncompressed size, a zip-bomb ratio guard, a streaming inflate (small input slices, output
+// drained as it appears) that cancels at the cap (the zip header's declared size is never trusted), and any
 // DOCTYPE or ENTITY declaration is rejected before the XML is parsed, so
 // entities can never expand. Nothing is executed and nothing touches the DOM.
 //
@@ -110,12 +110,39 @@ function readCentralDirectory(u8, limits) {
     return entries;
 }
 
-async function inflateCapped(data, cap) {
+// Feed size per write. Deflate expands at most ~1032:1, so one slice can add at
+// most ~16 MB of buffered output before the reader sees it and can abort.
+const INFLATE_SLICE = 16 * 1024;
+
+/**
+ * Inflates one entry while counting the output. The input goes in small slices
+ * and the output is drained concurrently, so a bomb is cancelled as soon as it
+ * passes the cap (or the ratio guard) and never buffers more than about one
+ * slice's worth beyond it. (A single big write makes Chromium enqueue the whole
+ * output at once, whatever the backpressure.) `stats.fed` reports how many input
+ * bytes were written, for tests.
+ */
+export async function inflateCapped(data, cap, opts = {}) {
+    const { maxRatio = Infinity, minRatioBytes = 0, stats = null, slice = INFLATE_SLICE } = opts;
     const ds = new DecompressionStream('deflate-raw');
     const writer = ds.writable.getWriter();
-    writer.write(data).catch(() => {});
-    writer.close().catch(() => {});
     const reader = ds.readable.getReader();
+    let abort = null; // XlsxError once a limit trips
+    let fed = 0;
+    if (stats) stats.fed = 0;
+
+    const pump = (async () => {
+        try {
+            for (let o = 0; o < data.length && !abort; o += slice) {
+                const part = data.subarray(o, Math.min(o + slice, data.length));
+                fed += part.length;
+                if (stats) stats.fed = fed;
+                await writer.write(part);
+            }
+            if (!abort) await writer.close();
+        } catch (_) { /* the reader side reports the failure */ }
+    })();
+
     const chunks = [];
     let total = 0;
     try {
@@ -123,16 +150,21 @@ async function inflateCapped(data, cap) {
             const { done, value } = await reader.read();
             if (done) break;
             total += value.length;
-            if (total > cap) {
+            if (total > cap) abort = new XlsxError('too-large', 'entry inflates past its declared size');
+            else if (total > minRatioBytes && total > data.length * maxRatio) abort = new XlsxError('too-large', 'compression ratio too high');
+            if (abort) {
+                chunks.length = 0;
                 reader.cancel().catch(() => {});
-                throw new XlsxError('too-large', 'entry inflates past its declared size');
+                writer.abort().catch(() => {});
+                break;
             }
             chunks.push(value);
         }
-    } catch (err) {
-        if (err instanceof XlsxError) throw err;
-        throw new XlsxError('corrupt', 'bad deflate data');
+    } catch (_) {
+        if (!abort) abort = new XlsxError('corrupt', 'bad deflate data');
     }
+    await pump;
+    if (abort) throw abort;
     const out = new Uint8Array(total);
     let o = 0;
     for (const c of chunks) { out.set(c, o); o += c.length; }
@@ -150,7 +182,7 @@ async function extract(u8, entry, limits) {
     const raw = u8.subarray(start, start + entry.csize);
     const out = entry.method === 0
         ? raw
-        : await inflateCapped(raw, Math.min(entry.usize, limits.maxEntryBytes));
+        : await inflateCapped(raw, Math.min(entry.usize, limits.maxEntryBytes), { maxRatio: limits.maxRatio, minRatioBytes: limits.minRatioBytes });
     if (out.length !== entry.usize) throw new XlsxError('corrupt', 'size mismatch');
     if (crc32(out) !== entry.crc) throw new XlsxError('corrupt', 'checksum mismatch');
     return out;
@@ -282,8 +314,13 @@ export async function readXlsx(input, limitOverrides = {}) {
         const banner = [];
         let cellCount = 0;
         let seq = 0;
+        let seen = 0;
         for (const rowEl of all(sheet, 'row')) {
-            seq = Number(rowEl.getAttribute('r')) || seq + 1;
+            // L4: count the rows actually present (the r= attribute can repeat) and
+            // require r to move forward, so neither can dodge the row cap.
+            if (++seen > limits.maxRows) throw new XlsxError('too-large', 'too many rows');
+            const attr = Number(rowEl.getAttribute('r'));
+            seq = attr > seq ? attr : seq + 1;
             if (seq > limits.maxRows) throw new XlsxError('too-large', 'too many rows');
             const cells = [];
             let nonEmpty = 0;

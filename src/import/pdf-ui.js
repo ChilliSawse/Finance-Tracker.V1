@@ -15,9 +15,10 @@ import { renderHomeFeed } from '../ui/feed.js';
 import { renderIncomeSourcesSettings } from '../ui/settings-forms.js';
 import { refreshSpendCache } from '../state/spend-cache.js';
 import { updateAllUI, updateDataAndUI } from '../ui/render.js';
-import { loadPdfJs, openPdfDocument, extractPagesLines } from './pdfjs-loader.js';
+import { loadPdfJs, openPdfDocument, extractPagesLines, PDF_LIMITS, PdfLimitError } from './pdfjs-loader.js';
+import { confirmDialog } from '../ui/confirm.js';
 import { parseStatementPages } from './pdf-statement.js';
-import { parsePayslipLines } from './payslip.js';
+import { parsePayslipLines, grossDecision } from './payslip.js';
 import { t } from '../i18n/strings.js';
 
 const txnWord = (n) => t(n === 1 ? 'feed.import.txnOne' : 'feed.import.txnMany');
@@ -72,6 +73,13 @@ function renderPreview() {
     if (!draft) return;
     const txns = draft.transactions;
 
+    const skippedEl = getElement('pdf-import-errors');
+    if (skippedEl) {
+        skippedEl.innerHTML = draft.skipped
+            ? `<div class="import-errors-box"><p class="import-errors-title">${escapeHtml(t('d.import.skippedLines', { count: draft.skipped }))}</p></div>`
+            : '';
+    }
+
     const note = getElement('pdf-import-detect-note');
     if (note) {
         note.textContent = draft.bank
@@ -122,6 +130,10 @@ function renderPreview() {
 // demand, translates pdf.js's failure modes into friendly copy via onError,
 // returns positioned page lines or null.
 async function readPdfPages(file, onStatus, onError) {
+    if (file.size > PDF_LIMITS.maxFileBytes) {
+        onError(escapeHtml(t('d.import.fileTooLarge', { limit: Math.round(PDF_LIMITS.maxFileBytes / 1048576) + ' MB' })));
+        return null;
+    }
     onStatus(`<span class="spinner" aria-hidden="true"></span>${t('pdf.loading')}`);
     let pdfjs;
     try {
@@ -144,8 +156,8 @@ async function readPdfPages(file, onStatus, onError) {
         pages = await extractPagesLines(pdf, (page, total) => {
             onStatus(`<span class="spinner" aria-hidden="true"></span>${t('pdf.parsingPage', { page, total })}`);
         });
-    } catch (_) {
-        onError(t('pdf.corrupt'));
+    } catch (err) {
+        onError(err instanceof PdfLimitError ? escapeHtml(t('d.import.pdfTooManyPages')) : t('pdf.corrupt'));
         return null;
     } finally {
         pdf.destroy().catch(() => {});
@@ -286,6 +298,29 @@ async function handlePayslipFile(file) {
         return;
     }
 
+    // Gross is the one figure that is never written unseen (L7): an estimate
+    // (net + tax) always asks, and a gross that differs from the stored one asks
+    // via C5's grossProposal. Decide before anything is changed.
+    const schedule = parsed.schedule || source.paySchedule;
+    const cyclesForGross = getPayCyclesPerYear(schedule);
+    const slipGross = parsed.gross != null && Number.isFinite(parsed.gross) && parsed.gross > 0 && source.incomeType !== 'selfEmployed'
+        ? parsed.gross : null;
+    let writeGross = false;
+    let grossKept = false;
+    if (slipGross != null) {
+        const { proposedAnnual, stored, needsConfirm } = grossDecision(parsed, source, schedule, cyclesForGross);
+        if (!needsConfirm) {
+            writeGross = true;
+        } else {
+            const body = [
+                t('d.import.gross.body', { proposed: formatCurrency(proposedAnnual), current: stored ? formatCurrency(Number(source.grossAnnual)) : '$0' }),
+                parsed.grossDerived ? t('d.import.gross.estimated') : '',
+            ].filter(Boolean).join(' ');
+            writeGross = await confirmDialog({ title: t('d.import.gross.title'), body, confirmLabel: t('d.import.gross.replace') });
+            grossKept = !writeGross;
+        }
+    }
+
     // Apply: per-cycle figures land directly; gross annualises via the pay
     // schedule (payslip's own frequency wins when it names one).
     if (parsed.schedule) source.paySchedule = parsed.schedule;
@@ -293,9 +328,11 @@ async function handlePayslipFile(file) {
     if (parsed.net != null) source.invoicedPayPostTax = +parsed.net.toFixed(2);
     if (parsed.tax != null) source.taxRemoved = +parsed.tax.toFixed(2);
     let grossPart = '';
-    if (parsed.gross != null && source.incomeType !== 'selfEmployed') {
-        source.grossAnnual = +(parsed.gross * cycles).toFixed(2);
+    if (writeGross) {
+        source.grossAnnual = +(slipGross * cycles).toFixed(2);
         grossPart = t('payslip.grossPart', { gross: formatCurrency(source.grossAnnual) });
+    } else if (grossKept) {
+        grossPart = t('d.import.gross.kept');
     }
     const superPart = parsed.super != null
         ? t('payslip.superPart', { superAmt: formatCurrency(parsed.super) })
