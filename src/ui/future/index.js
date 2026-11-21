@@ -3,6 +3,9 @@
 // the saved scenarios (IndexedDB, async) without holding the first paint back. Data edits go through openSheet
 // with an Undo toast and `updateDataAndUI`.
 
+import './future.css'; // F6 — Future screen
+import '../scenario/results.js'; // F8b — registers the Answer bottom, Compare and Make this real views
+import '../scenario/answer-top.js'; // F8a — registers the Answer view
 import { t } from '../../i18n/strings.js';
 import { store } from '../../state/store.js';
 import { explainFi } from '../../calc/fi.js';

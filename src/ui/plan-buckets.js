@@ -8,6 +8,7 @@
 // dispatchBucketAction(data, action, args, ctx) is the pure part of every click; mountBuckets
 // wires them to the page. Sheets: E7's openBucketSheet(kind, id) first, else a small D1 sheet.
 
+import './plan-buckets.css'; // E6 — Plan buckets section
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
 import {

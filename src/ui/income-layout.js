@@ -8,6 +8,7 @@
 // field for it (X-9). Medicare exemption and salary sacrifice are asked and answered with
 // "not modelled yet" (FT-R-67).
 
+import './income-layout.css'; // C6 — Salary and Set-hours sheets
 import { t } from '../i18n/strings.js';
 import { openSheet, hoursRule } from './sheet.js';
 import { confirmDialog } from './confirm.js';

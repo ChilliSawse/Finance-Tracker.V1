@@ -9,6 +9,7 @@
 // Every text is set as text, never markup. The bottom half (F8b) registers its own region; it can read the chosen
 // option with `getAnswer(scenarioId)` or listen for the `ft:answer-change` event this view dispatches.
 
+import './answer-top.css'; // F8a — What If Answer, top half
 import { t } from '../../i18n/strings.js';
 import {
     planGoalsFromData, earningsThreeWays, tickSplurgeItems, BIG_CUT_SHARE,

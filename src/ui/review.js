@@ -7,6 +7,7 @@
 // Two state paths differ from the E3 file (see docs/phase1-changelog/E9.md): the real home of the "last opened" marker
 // and of bankSetTo is data.savingModel.review and data.savingModel.transfers.bankSetTo; calc/review.js reads those paths.
 
+import './review.css'; // E9 — monthly review
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
 import { getSpendCache } from '../state/spend-cache.js';

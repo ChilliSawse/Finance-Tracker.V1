@@ -14,7 +14,6 @@ import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
 import { renderHomeFeed } from '../ui/feed.js';
 import { refreshSpendCache } from '../state/spend-cache.js';
-import { openActivityToReview } from '../ui/activity.js';
 import { updateAllUI } from '../ui/render.js';
 import { loadPdfJs, openPdfDocument, extractPagesLines, PDF_LIMITS, PdfLimitError } from './pdfjs-loader.js';
 import { parseStatementPages } from './pdf-statement.js';
@@ -260,7 +259,7 @@ async function commitImport() {
 
     await refreshSpendCache();
     updateAllUI();
-    if (result.added > 0) openActivityToReview(); // A7: land on Activity with To review on
+    if (result.added > 0) (await import('../ui/activity.js')).openActivityToReview(); // P3b: Activity loads when needed; A7: land on Activity with To review on
     else if (store.activeTab === 'today') renderHomeFeed();
 }
 

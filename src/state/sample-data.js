@@ -17,7 +17,8 @@ import { billOccurrences, addMonthsClamped, addDays, toIso, parseIso } from '../
 import { getBuckets, applySuggestedSplit, addGoal, setGoalShares, addTarget, moveTarget, removeTarget } from './saving-model.js';
 
 export const SAMPLE_BATCH_ID = 'ledger-sample-data';
-export const SAMPLE_FLAG_KEY = 'ft-sample-data';
+export { SAMPLE_FLAG_KEY, sampleDataActive, clearSampleFlag } from './sample-flag.js'; // P3b: the flag lives in its own small module
+import { SAMPLE_FLAG_KEY } from './sample-flag.js';
 
 function isoDaysAgo(days) {
     const d = new Date();
@@ -320,10 +321,3 @@ export async function loadSampleData() {
     return added;
 }
 
-export function sampleDataActive() {
-    try { return localStorage.getItem(SAMPLE_FLAG_KEY) === '1'; } catch (_) { return false; }
-}
-
-export function clearSampleFlag() {
-    try { localStorage.removeItem(SAMPLE_FLAG_KEY); } catch (_) { /* storage full or blocked: skip, deliberate */ }
-}

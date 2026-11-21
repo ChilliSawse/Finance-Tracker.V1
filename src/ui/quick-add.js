@@ -6,6 +6,7 @@
 // Everything user-visible goes in through textContent or setAttribute, never innerHTML. The pure parts
 // (guess, chip order, wording, what a save builds) are in quick-add-model.js.
 
+import './quick-add.css'; // A8 — Quick-add panel
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
 import { formatCurrency } from '../utils.js';

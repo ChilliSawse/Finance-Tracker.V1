@@ -3,7 +3,11 @@
 // env 'browser' need a DOM or IndexedDB and are skipped here.
 //   node tools/run-cases.mjs [group ...]
 
-import { TEST_GROUPS } from '../src/test-registry.js';
+import { register } from 'node:module';
+
+// Lazy UI modules import their own .css (P3b); Node loads those as empty modules.
+register('./css-hook.mjs', import.meta.url);
+const { TEST_GROUPS } = await import('../src/test-registry.js');
 
 const only = new Set(process.argv.slice(2));
 let pass = 0;
