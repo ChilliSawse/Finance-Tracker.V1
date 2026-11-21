@@ -53,6 +53,7 @@
     import { parseStatementPages, detectBank } from './src/import/pdf-statement.js';
     import { parsePayslipLines } from './src/import/payslip.js';
     import { migrateIncomeSourceTypes, migrateVariableIncomeFields } from './src/state/migrations.js';
+    import { TEST_GROUPS } from './src/test-registry.js';
     (async function () {
         const results = [];
         let pass = 0, fail = 0;
@@ -331,6 +332,22 @@
                 });
             } catch (err) {
                 record(tc.name, false, 'no exception', String(err));
+            }
+        }
+
+        // --- Phase 1 registered groups (src/test-registry.js; one file per group) ---
+        for (const g of TEST_GROUPS) {
+            if (!g.cases.length) continue;
+            group('Phase 1: ' + g.name);
+            for (const tc of g.cases) {
+                try {
+                    await tc.fn((label, actual, expected) => {
+                        const a = JSON.stringify(actual), e = JSON.stringify(expected);
+                        record(`${tc.name} — ${label}`, a === e, e, a);
+                    });
+                } catch (err) {
+                    record(tc.name, false, 'no exception', String(err));
+                }
             }
         }
 

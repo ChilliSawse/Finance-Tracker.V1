@@ -10,7 +10,17 @@
 // and pre-Ledger alert strings remain inline — see NOTES.md for the migration
 // inventory.
 
+import { enA } from './en-a.js';
+import { enB } from './en-b.js';
+import { enC } from './en-c.js';
+import { enD } from './en-d.js';
+import { enE } from './en-e.js';
+import { enF } from './en-f.js';
+
 export const en = {
+    // Per-slice catalogues (Phase 1): each slice edits only its own file.
+    ...enA, ...enB, ...enC, ...enD, ...enE, ...enF,
+
     // Home greeting
     'greeting.lateNight': 'Up late?',
     'greeting.morning': 'Good morning',

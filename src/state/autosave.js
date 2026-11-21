@@ -4,7 +4,7 @@
 
 import { store } from './store.js';
 import { cloneDefaultFinanceData, cloneDefaultGuiSettings, defaultGuiSettings } from './defaults.js';
-import { migrateIncomeSourceTypes, migrateAllocationFields, migrateLedgerFields, migrateVariableIncomeFields } from './migrations.js';
+import { runMigrationChain } from './migration-chain.js';
 import { migrateGuiTheme, migrateGuiColorFields, pickFirstRunTheme, THEMES } from '../theme/theme.js';
 
 export class FinanceAutoSave {
@@ -133,10 +133,10 @@ export class FinanceAutoSave {
                     // survivor and refresh the colour overlay so the old palette can't bleed through.
                     migrateGuiTheme(store.guiSettingsData);
                     migrateGuiColorFields(store.guiSettingsData);
-                    migrateIncomeSourceTypes(store.financeData); // Backfill incomeType on legacy saves
-                    migrateAllocationFields(store.financeData); // Stage 0 — backfill allocation goal/funds
-                    migrateLedgerFields(store.financeData); // Ledger — tax settings, categories, bills
-                    migrateVariableIncomeFields(store.financeData); // Variable income — events/baseHourlyRate
+                    // The four legacy migrations, then the Phase 1 steps (backup, one forceSave).
+                    runMigrationChain(store.financeData, {
+                        raw: savedDataString, source: 'load', forceSave: () => this.forceSave(),
+                    });
                     // Rebrand: the heading editor was removed pre-Ledger, so every save
                     // carries the old default strings — safe to upgrade them in place.
                     if (store.guiSettingsData.mainHeading === 'Personal Finance Dashboard') {
