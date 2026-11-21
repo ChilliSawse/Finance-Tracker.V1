@@ -31,6 +31,7 @@ const KIND_LABEL = {
 
 const FIELD_FMT = { grossAnnual: fmtMoney, amount: fmtMoney, cost: fmtMoney, balance: fmtMoney, percentage: (n) => `${round2(n)}%` };
 const fmtValue = (field, v) => {
+    if (field === 'due' && typeof v === 'string') return fmtDate(v) || v;
     if (typeof v === 'number') return (FIELD_FMT[field] || String)(v);
     return v == null ? '' : String(v);
 };

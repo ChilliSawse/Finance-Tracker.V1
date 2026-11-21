@@ -187,6 +187,14 @@ function applyAnswer(set, answer) {
         put(row('smile'), plan.requiredPerPayCents);
         const take = row('takeHome');
         if (take && option.earnedCents > 0) take.scen = moneyVal(take.scen.v + option.earnedCents);
+        // Smile now gets what the goals need, so each goal that can be paid in time is on time, and nothing is short (Q1)
+        for (const r of set.rows) {
+            if (r.kind === 'goal' && r.scen.v != null && r.scen.v !== Infinity) r.scen = val(0, t('f.res.goal.onTime'));
+        }
+        const short = row('short');
+        if (short && short.scen.v != null) short.scen = moneyVal(0, 'f.res.none');
+        const earnGap = row('earnGap');
+        if (earnGap && earnGap.scen.v != null) earnGap.scen = moneyVal(option.earnedCents, 'f.res.none');
     }
 }
 
@@ -352,11 +360,17 @@ export function renderAnswerBottom(container, ctx) {
     sec.append(head, ul, tableEl(set));
     container.append(sec);
     renderMakeRealBar(container, ctx);
-    container.addEventListener('click', (e) => {
-        const b = e.target.closest('[data-res-act="explain"]');
-        if (!b || !container.contains(b)) return;
-        openExplain(set, b.dataset.row, data);
-    });
+    // one listener for the container's life: the bottom half is redrawn on every option change, and a listener added
+    // per draw would open one Explain sheet per earlier draw (Q1)
+    container._explain = { set, data };
+    if (!container._explainWired) {
+        container._explainWired = true;
+        container.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-res-act="explain"]');
+            if (!b || !container.contains(b)) return;
+            openExplain(container._explain.set, b.dataset.row, container._explain.data);
+        });
+    }
 }
 
 export { renderMakeRealButton };
