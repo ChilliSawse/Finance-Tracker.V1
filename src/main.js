@@ -22,6 +22,7 @@ import { rollForwardBills, generateBillDueEvents } from './state/bills.js';
 import { refreshSpendCache } from './state/spend-cache.js';
 import { setupOnboarding } from './ui/onboarding.js';
 import { setupMilestoneToasts } from './ui/toast.js';
+import './ui/sheet.css'; // D1 — sheet, undo toast and dialog styles
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
 
