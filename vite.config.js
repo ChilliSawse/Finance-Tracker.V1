@@ -2,6 +2,9 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+
+const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')).version;
 
 // S2: the inline FOUC script is allowed by hash, not by a public nonce. This plugin
 // hashes the script as it appears in the final HTML (dev and build; the browser
@@ -30,6 +33,8 @@ function ftCspHash() {
 export default defineConfig({
     // Relative base so the same dist/ works on GitHub Pages subpaths and any static host.
     base: './',
+    // D2: the Version row in Settings, About.
+    define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
     build: {
         rollupOptions: {
             input: {

@@ -7,7 +7,6 @@
 // waits (registerType 'prompt') until the user opts in.
 
 let deferredPrompt = null;
-let installButton = null;
 
 export function setupPwaUpdateListeners() {
     // 'virtual:pwa-register' only exists when Vite serves/builds the app. GitHub
@@ -83,32 +82,37 @@ function dismissUpdateNotification() {
 }
 
 // --- PWA Install Logic ---
-export function setupPwaInstallListeners() {
-    installButton = document.getElementById('install-app-btn');
+// The Install row lives in Settings, About (D2, FT-R-62). The browser's prompt is held here;
+// the screen asks canInstall() and listens for 'ledger:install-availability' to show the row.
+export function canInstall() { return deferredPrompt !== null; }
 
+function announceInstall() {
+    document.dispatchEvent(new CustomEvent('ledger:install-availability', { detail: { available: canInstall() } }));
+}
+
+export async function promptInstall() {
+    if (!deferredPrompt) return false;
+    const prompt = deferredPrompt;
+    deferredPrompt = null; // a prompt can be used once
+    announceInstall();
+    try {
+        prompt.prompt();
+        const choice = await prompt.userChoice;
+        return !!choice && choice.outcome === 'accepted';
+    } catch (error) {
+        console.error('Error handling install prompt:', error);
+        return false;
+    }
+}
+
+export function setupPwaInstallListeners() {
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        if (installButton) installButton.style.display = 'inline-block';
+        announceInstall();
     });
-
-    if (installButton) {
-        installButton.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            try {
-                await deferredPrompt.userChoice;
-            } catch (error) {
-                console.error('Error handling install prompt:', error);
-            } finally {
-                deferredPrompt = null;
-                installButton.style.display = 'none';
-            }
-        });
-    }
-
     window.addEventListener('appinstalled', () => {
-        if (installButton) installButton.style.display = 'none';
         deferredPrompt = null;
+        announceInstall();
     });
 }

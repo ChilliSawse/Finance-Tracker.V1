@@ -38,6 +38,7 @@ import { HTML_TEST_CASES } from './ui/html.test-cases.js';
 import { ACTIVITY_TEST_CASES } from './ui/activity.test-cases.js';
 import { TODAY_TEST_CASES } from './ui/today.test-cases.js';
 import { INCOME_LAYOUT_TEST_CASES } from './ui/income-layout.test-cases.js';
+import { SETTINGS_TEST_CASES } from './ui/settings.test-cases.js';
 
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
@@ -76,4 +77,5 @@ export const TEST_GROUPS = [
     { name: 'activity', env: 'pure', cases: ACTIVITY_TEST_CASES },
     { name: 'today', env: 'pure', cases: TODAY_TEST_CASES },
     { name: 'income-layout', env: 'pure', cases: INCOME_LAYOUT_TEST_CASES },
+    { name: 'settings', env: 'pure', cases: SETTINGS_TEST_CASES },
 ];

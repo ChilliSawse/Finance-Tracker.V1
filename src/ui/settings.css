@@ -1,0 +1,60 @@
+/* Settings screen (D2). Tokens only, no hex. Rows are tall enough to tap (44px minimum). */
+.s-wrap { display: flex; flex-direction: column; gap: 24px; max-width: 720px; }
+.s-find { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-pill); color: var(--muted); }
+.s-find:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.s-find svg.i { width: 16px; height: 16px; flex: none; }
+.s-find input { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; color: var(--text); font: inherit; outline: 0; }
+.s-status { margin: -12px 0 0; min-height: 0; color: var(--muted); font-size: var(--fs-small); }
+.s-status:empty { display: none; }
+.s-status.s-empty { color: var(--text); }
+#settings-list { display: flex; flex-direction: column; gap: 24px; }
+
+.s-group { display: grid; gap: 10px; }
+.s-label h2 { margin: 0; font-size: var(--fs-section); line-height: 22px; font-weight: 600; }
+.s-label p { margin: 2px 0 0; color: var(--muted); font-size: var(--fs-small); }
+.s-card { padding: 0 !important; overflow: hidden; }
+.s-list { list-style: none; margin: 0; padding: 0; }
+.s-list > li + li { border-top: 1px solid var(--border); }
+
+.s-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 16px; border: 0; background: transparent; color: var(--text); font: inherit; text-align: left; text-decoration: none; cursor: pointer; }
+a.s-row, button.s-row { transition: background 150ms; }
+a.s-row:hover, button.s-row:hover { background: var(--raised); }
+.s-row:focus-visible, .s-select:focus-visible, .seg button:focus-visible, .theme-swatch:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.s-static { cursor: default; }
+.s-row .n-wrap { flex: 1; min-width: 0; }
+.s-row .n, .s-set .n, .s-inline .n { font-weight: 600; }
+.s-row .d, .s-set .d, .s-inline .d { color: var(--muted); font-size: var(--fs-small); }
+.s-row .v { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: var(--fs-small); text-align: right; }
+.s-row .v.ok { color: var(--positive); }
+.s-row .v.warn { color: var(--warn, var(--text)); font-weight: 600; }
+.s-row .v svg.i { width: 14px; height: 14px; }
+.s-row.quiet .n { color: var(--negative); }
+.s-row svg.chev { width: 14px; height: 14px; flex: none; color: var(--muted); }
+.s-detail { margin: 0; padding: 0 16px 14px; color: var(--muted); font-size: var(--fs-small); line-height: 18px; }
+.s-select { max-width: 55%; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--r-inner); background: var(--surface); color: var(--text); font: inherit; }
+
+.s-set { padding: 14px 16px; display: grid; gap: 12px; }
+.s-set .hd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.s-inline { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.s-inline .seg button { min-width: 44px; min-height: 36px; }
+.s-size { font-size: var(--fs-body); }
+.s-size-standard { font-size: var(--fs-small); }
+.s-size-larger { font-size: var(--fs-fig); }
+
+/* Theme choices: one button per palette, each showing its light and dark partner (renderPaletteSwatches). */
+.theme-switcher { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.theme-swatch { display: flex; flex-direction: column; gap: 8px; padding: 10px; text-align: left; cursor: pointer; font: inherit; color: var(--text); background: var(--surface); border: 2px solid var(--border); border-radius: var(--r-tile); }
+.theme-swatch:hover { border-color: var(--accent); }
+.theme-swatch.active { border-color: var(--accent); }
+.theme-swatch-chips { display: flex; gap: 6px; }
+.pal-sw { flex: 1; height: 34px; border-radius: var(--r-inner); border: 1px solid var(--border); background: linear-gradient(90deg, var(--sw-b1) 0 20%, var(--sw-b2) 20% 40%, var(--sw-b3) 40% 60%, var(--sw-accent) 60% 80%, var(--sw-surface) 80% 100%) bottom / 100% 10px no-repeat, var(--sw-ground); }
+.swatch-label { font-size: var(--fs-small); font-weight: 600; }
+
+@media (max-width: 1023px) {
+  /* leave room for the fixed bottom bar */
+  #settings-root { padding-bottom: 96px; }
+}
+@media (max-width: 480px) {
+  .s-row .v { max-width: 45%; }
+  .s-select { max-width: 60%; }
+}

@@ -12,7 +12,8 @@ import {
 } from '../utils.js';
 import { makeIncomeEvent, sumEvents, fyRange, activeFyKey } from '../calc/income-events.js';
 import { t } from '../i18n/strings.js';
-import { showCustomModal, confirmAction, inlineConfirm } from '../ui/confirm.js';
+import { showCustomModal, confirmDialog, inlineConfirm } from '../ui/confirm.js';
+import { cloneDefaultFinanceData, cloneDefaultGuiSettings } from '../state/defaults.js';
 import { updateDataAndUI } from '../ui/render.js';
 import {
     initializeSettingsUI, renderIncomeSourcesSettings, renderTaxBracketsSettings,
@@ -84,17 +85,6 @@ export function handleSettingsClickEvents(event) {
         // What If scenario expenses tag data-type with the collection name (plural).
         else if (dataType === 'essentialExpenses') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('essentialExpenses', index, scope));
         else if (dataType === 'nonEssentialExpenses') inlineConfirm(target, 'Delete this expense?', () => removeExpenseFromList('nonEssentialExpenses', index, scope));
-    }
-
-    // Data action buttons (in the appearance/settings modal; D.6).
-    else if (target.id === 'set-current-default') actionSetCurrentAsDefault();
-    else if (target.id === 'reset-to-defaults') {
-        // H.5 — non-blocking inline confirm (reuse B.4) instead of window.confirm.
-        const ud = getUserDefaults();
-        const msg = ud
-            ? 'Reset all data to your saved defaults? Your current changes will be lost.'
-            : 'Reset all finance data to the factory defaults? All your current data will be lost.';
-        inlineConfirm(target, msg, actionResetToAppDefaults);
     }
 }
 
@@ -547,7 +537,7 @@ export function removeExpenseFromList(arrayName, index, scope) {
     else { renderExpensesSettingsLists(); updateDataAndUI(); }
 }
 
-// --- User defaults ("Save as My Defaults" / reset) ---
+
 
 export function updateFinanceDataFromFISettingsInputs() {
     // Only update from inputs if the financeData values are somehow invalid
@@ -562,77 +552,38 @@ export function updateFinanceDataFromFISettingsInputs() {
     }
 }
 
-const USER_DEFAULTS_KEY = 'ft-user-defaults';
-
-// Returns the saved user-defaults bundle, or null if none/invalid.
-export function getUserDefaults() {
-    try {
-        const raw = localStorage.getItem(USER_DEFAULTS_KEY);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw);
-        if (parsed && parsed.financeData) return parsed;
-    } catch (e) {
-        console.error('Failed to read user defaults:', e);
-    }
-    return null;
-}
-
-// Keeps the reset button label in sync with whether user defaults exist.
-export function updateDefaultsButtonLabels() {
-    const resetBtn = getElement('reset-to-defaults');
-    if (resetBtn) {
-        resetBtn.textContent = getUserDefaults()
-            ? 'Reset to My Defaults'
-            : 'Reset to Factory Defaults';
-    }
-}
-
-export function actionSetCurrentAsDefault() {
-    if (!confirmAction('Save your current finance and appearance settings as your defaults? Resetting will return to this state.')) return;
-    updateFinanceDataFromFISettingsInputs(); // Ensure FI settings are captured from inputs
-
-    const bundle = {
-        financeData: JSON.parse(JSON.stringify(store.financeData)),
-        guiSettings: JSON.parse(JSON.stringify(store.guiSettingsData)),
-        timestamp: new Date().toISOString()
-    };
-    try {
-        localStorage.setItem(USER_DEFAULTS_KEY, JSON.stringify(bundle));
-        // Keep the in-memory session default in sync too
-        store.defaultFinanceData = JSON.parse(JSON.stringify(store.financeData));
-        updateDefaultsButtonLabels();
-        showCustomModal('Saved as your defaults.', 'success');
-    } catch (e) {
-        console.error('Failed to save user defaults:', e);
-        showCustomModal('Could not save defaults (storage error).', 'error');
-    }
-}
-
-export function actionResetToAppDefaults() {
-    // Confirmation handled by the caller's inlineConfirm (H.5).
-    // If the sample household is loaded, clear its transaction batch too so a
-    // reset really is a clean slate. Fire-and-forget (IndexedDB).
-    import('../state/sample-data.js').then(async (sample) => {
-        if (sample.sampleDataActive()) {
-            const tx = await import('../state/transactions.js');
-            await tx.deleteImportBatch(sample.SAMPLE_BATCH_ID).catch(() => {});
-            sample.clearSampleFlag();
-            const { refreshSpendCache } = await import('../state/spend-cache.js');
-            await refreshSpendCache();
+// D2 (FT-R-64): "Save as My Defaults" and the user-defaults store are gone; Back up and Restore replace them.
+// Erase all data is the one whole-data reset: one dialog, then a fresh start (settings, plan, transactions, events).
+export async function eraseAllData() {
+    const yes = await confirmDialog({
+        title: t('d.erase.title'), body: t('d.erase.body'), confirmLabel: t('d.erase.confirm'), danger: true,
+    });
+    if (!yes) return false;
+    const { commitErase, RETIRED_KEYS } = await import('../state/backup.js');
+    const result = await commitErase(store, {
+        financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings(),
+    }, {
+        storage: localStorage,
+        render: () => {
+            initializeSettingsUI(); // re-renders the settings inputs and re-applies the appearance
             updateDataAndUI();
-        }
-    }).catch(() => {});
-    const userDefaults = getUserDefaults();
-    if (userDefaults) {
-        store.financeData = JSON.parse(JSON.stringify(userDefaults.financeData));
-        if (userDefaults.guiSettings) {
-            store.guiSettingsData = JSON.parse(JSON.stringify(userDefaults.guiSettings));
-        }
-    } else {
-        store.financeData = JSON.parse(JSON.stringify(store.defaultFinanceData));
+            document.dispatchEvent(new CustomEvent('ledger:data-swapped'));
+        },
+        save: () => { if (store.autoSave) store.autoSave.forceSave(); },
+    });
+    if (!result.ok) {
+        if (result.detail) console.error('Erase failed:', result.detail);
+        showCustomModal(t('d.erase.failed'), 'error');
+        return false;
     }
-
-    initializeSettingsUI(); // Re-render all settings inputs (also re-applies GUI settings form/styles)
-    updateDataAndUI();       // Update all displays and save
-    showCustomModal(userDefaults ? 'Reset to your defaults complete!' : 'Reset to factory defaults complete!', 'success');
+    try {
+        const sample = await import('../state/sample-data.js');
+        sample.clearSampleFlag();
+        for (const key of RETIRED_KEYS) localStorage.removeItem(key);
+        const { refreshSpendCache } = await import('../state/spend-cache.js');
+        await refreshSpendCache();
+        updateDataAndUI();
+    } catch (err) { console.error('Erase clean-up failed', err); }
+    showCustomModal(t('d.erase.done'), 'success');
+    return true;
 }
