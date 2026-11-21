@@ -125,4 +125,29 @@ export const CHAIN_TEST_CASES = [
             assert('4 on import, 0 on load', [hooks(imp), hooks(load)], [4, 0]);
         },
     },
+    {
+        name: 'M0.7 atomic step: a module that mutates then throws leaves data byte-identical',
+        fn(assert) {
+            const data = settledData();
+            const before = JSON.stringify(data);
+            const modules = fakeModules([]);
+            modules[0].migrate = (d) => { d.p = 1; d.allocation.push({ name: 'half' }); throw new Error('boom'); };
+            const res = runMigrationChain(data, { raw: '{}', storage: memStorage(), modules });
+            assert('untouched and aborted', [JSON.stringify(data) === before, res.aborted], [true, true]);
+        },
+    },
+    {
+        name: 'M0.8 stop on first failure: a failing step 2 means step 3 never runs and no forceSave',
+        fn(assert) {
+            const log = [];
+            const modules = fakeModules(log);
+            modules[1].migrate = () => { log.push('migrateBucketModel'); throw new Error('boom'); };
+            let saves = 0;
+            const res = runMigrationChain(settledData(), {
+                source: 'import', raw: '{}', storage: memStorage(), modules, forceSave: () => { saves++; },
+            });
+            assert('plan ran, bucket failed, rest and hooks skipped, no save',
+                [log, saves, res.aborted], [['migratePlanModel', 'migrateBucketModel'], 0, true]);
+        },
+    },
 ];

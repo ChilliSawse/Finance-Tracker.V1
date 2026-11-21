@@ -59,6 +59,11 @@ Order (plan section 9.3):
    not trigger it (unchanged behaviour).
 7. Import only: each module's `afterImport(data)`.
 
+Atomic and stop rule: each owner step runs on a clone of the data and is committed only
+if it returns without throwing; the first throw (in a step or its `needsX`) stops the chain
+with `{aborted: true}`: no later owner step, no `forceSave`, no `afterImport`, and the data
+holds exactly the steps committed before it.
+
 Call sites: `loadData` in `src/state/autosave.js` (raw = the saved string) and
 `handleJSONImport` in `src/events/import-export.js` (raw = the imported file text).
 

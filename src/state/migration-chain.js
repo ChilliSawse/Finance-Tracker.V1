@@ -11,6 +11,10 @@
 //   7. on import only, each module's afterImport(data).
 // Each owner module keeps its own version guard and totals check, so the chain
 // is idempotent. The legacy four never trigger the forced save (as today).
+// Owner steps are atomic: each runs on a clone and is committed into data only
+// if it returns without throwing. The first failure stops the chain: no later
+// owner step, no forceSave, no afterImport, and the result is {aborted: true}.
+// Steps committed before the failure are complete and consistent.
 
 import {
     migrateIncomeSourceTypes, migrateAllocationFields, migrateLedgerFields, migrateVariableIncomeFields,
@@ -36,6 +40,16 @@ export const DEFAULT_MODULES = [
     { name: 'migrateIncomeFields', needs: income.needsIncomeMigration, migrate: income.migrateIncomeFields, afterImport: income.afterImport, backupGate: false },
     { name: 'migrateAssetDebtDetail', needs: assetDebt.needsAssetDebtMigration, migrate: assetDebt.migrateAssetDebtDetail, afterImport: assetDebt.afterImport, backupGate: true },
 ];
+
+function cloneData(data) {
+    return typeof structuredClone === 'function' ? structuredClone(data) : JSON.parse(JSON.stringify(data));
+}
+
+/** Replace data's contents in place (callers hold it by reference). */
+function commitInto(data, clone) {
+    for (const k of Object.keys(data)) delete data[k];
+    Object.assign(data, clone);
+}
 
 function defaultStorage() {
     try {
@@ -75,10 +89,17 @@ export function runMigrationChain(data, opts = {}) {
     }
 
     // 2. Backup before the first new mutation.
-    const pending = modules.some((m) => {
-        if (!m.backupGate) return false;
-        try { return !!m.needs(data); } catch (err) { fail(m.name + '.needs', err); return false; }
-    });
+    let pending = false;
+    for (const m of modules) {
+        if (!m.backupGate) continue;
+        try {
+            if (m.needs(data)) pending = true;
+        } catch (err) {
+            fail(m.name + '.needs', err);
+            result.aborted = true;
+            return result;
+        }
+    }
     if (pending && raw != null) {
         try {
             if (!storage) throw new Error('no storage to write the backup to');
@@ -95,8 +116,14 @@ export function runMigrationChain(data, opts = {}) {
     for (const m of modules) {
         note(m.name);
         try {
-            if (m.migrate(data)) result.changed = true;
-        } catch (err) { fail(m.name, err); }
+            const work = cloneData(data);
+            const didChange = m.migrate(work);
+            if (didChange) { commitInto(data, work); result.changed = true; }
+        } catch (err) {
+            fail(m.name, err);
+            result.aborted = true;
+            return result;
+        }
     }
 
     // 6. One forced save, after the backup and after step 5b.
