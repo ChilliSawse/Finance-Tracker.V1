@@ -37,6 +37,7 @@ import { SANITIZE_TEST_CASES } from './state/sanitize.test-cases.js';
 import { HTML_TEST_CASES } from './ui/html.test-cases.js';
 import { ACTIVITY_TEST_CASES } from './ui/activity.test-cases.js';
 import { TODAY_TEST_CASES } from './ui/today.test-cases.js';
+import { PLAN_LISTS_TEST_CASES } from './ui/plan-lists.test-cases.js';
 
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
@@ -74,4 +75,5 @@ export const TEST_GROUPS = [
     { name: 'html', env: 'pure', cases: HTML_TEST_CASES },
     { name: 'activity', env: 'pure', cases: ACTIVITY_TEST_CASES },
     { name: 'today', env: 'pure', cases: TODAY_TEST_CASES },
+    { name: 'plan-lists', env: 'pure', cases: PLAN_LISTS_TEST_CASES },
 ];

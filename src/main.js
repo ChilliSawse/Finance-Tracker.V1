@@ -33,6 +33,7 @@ import { setupMilestoneToasts } from './ui/toast.js';
 import './ui/sheet.css'; // D1 — sheet, undo toast and dialog styles
 import './ui/quick-add.css'; // A8 — Quick-add panel
 import './ui/activity.css'; // A7 — Activity screen styles
+import './ui/plan.css'; // A9a — Plan screen
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
 import { showLoadNotices, showRecoveryPanel } from './events/import-export.js';
