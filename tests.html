@@ -440,7 +440,7 @@
             assertEqual('Batch insert adds unique rows', res1.added, 2);
             assertEqual('Normalised duplicate is skipped', res1.duplicates, 1);
             const res2 = await addTransactions([
-                makeTransaction({ date: '2026-07-01', description: 'WOOLWORTHS 1234', amountCents: -8532 }),
+                makeTransaction({ date: '2026-07-01', description: 'WOOLWORTHS 1234', amountCents: -8532, source: 'csv' }),
             ]);
             assertEqual('Re-import of an existing row is skipped', res2.duplicates, 1);
             const listed = await listTransactions();

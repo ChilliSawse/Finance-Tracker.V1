@@ -71,7 +71,7 @@ export const PLAN_MIGRATION_TEST_CASES = [
             assert('Health insurance (shared word)', categoryOf(d, 'Health insurance'), 'health');
             assert('Dining out & takeaway', categoryOf(d, 'Dining out & takeaway'), 'dining');
             assert('Streaming & subscriptions', categoryOf(d, 'Streaming & subscriptions'), 'subscriptions');
-            assert('Gym falls to other', categoryOf(d, 'Gym'), 'other');
+            assert('Gym falls to fitness (FT-R-60)', categoryOf(d, 'Gym'), 'fitness');
             assert('Hobbies & fun falls to other', categoryOf(d, 'Hobbies & fun'), 'other');
             assert('essential row matching only a non-essential category lands in other-essential',
                 categoryOf(d, 'Entertainment'), 'other-essential');
@@ -155,7 +155,7 @@ export const PLAN_MIGRATION_TEST_CASES = [
         fn(assert) {
             const bills = [
                 { id: 'b-rego', name: 'Car rego', amount: 214, frequency: 'quarterly', nextDue: '2026-12-01' },
-                { id: 'b-phone', name: 'Phone plan', amount: 65, frequency: 'monthly', nextDue: '2026-12-05' },
+                { id: 'b-phone', name: 'Widget plan', amount: 65, frequency: 'monthly', nextDue: '2026-12-05' },
                 { id: 'b-cat', name: 'Gym pass', amount: 30, frequency: 'monthly', nextDue: '2026-12-09', categoryId: 'health' },
             ];
             const d = legacy([['Rent', 560]], [['Dining out', 20]], bills);
@@ -172,7 +172,7 @@ export const PLAN_MIGRATION_TEST_CASES = [
             assert('bill with no categoryId gets a category', planBills.every((p) => typeof p.categoryId === 'string' && p.categoryId), true);
             assert('existing categoryId kept', planBills[2].categoryId, 'health');
             assert('fallback bill is listed for review', d.planMigration.reviewBills, ['b-phone']);
-            assert('fallback names include it', d.planMigration.fallbacks.includes('Phone plan'), true);
+            assert('fallback names include it', d.planMigration.fallbacks.includes('Widget plan'), true);
             assert('totals unchanged', sampleTotals(d), before);
             assert('legacy bills untouched', d.bills, billsBefore);
             assert('envelopes untouched, no plan item from them', d.categories.map((c) => c.monthlyBudget).every((m) => m === 0) && d.plan.length === 5, true);
