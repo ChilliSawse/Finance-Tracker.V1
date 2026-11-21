@@ -18,6 +18,7 @@ function settledData() {
         // C4: nor has the income step (the source already carries its declaration)
         incomeSources: [{ name: 'Job', incomeType: 'salaried', withholding: { claimsTaxFree: true } }],
         allocation: [{ name: 'Daily', percentage: 100 }],
+        assetDebtVersion: 1, // F2: nor has the asset and debt step
     };
     runMigrationChain(data, { storage: null, modules: [] });
     return data;

@@ -163,6 +163,32 @@ const roleCounts = {};
 alloc.forEach((r) => { if (r.role) roleCounts[r.role] = (roleCounts[r.role] || 0) + 1; });
 check('each role used at most once', Object.values(roleCounts).every((n) => n === 1));
 
+// Assets and debts (F2, FT-R-79): counts by kind and label, before and after. No amounts here.
+const countBy = (rows, key, fallback) => {
+    const out = {};
+    for (const r of arr(rows).filter((x) => x && typeof x === 'object')) {
+        const k = r[key] == null ? fallback : String(r[key]);
+        out[k] = (out[k] || 0) + 1;
+    }
+    return out;
+};
+const countTable = (title, kindLabel, beforeRows, afterRows, key, fallback) => {
+    const b = countBy(beforeRows, key, fallback);
+    const a = countBy(afterRows, key, fallback);
+    const names = [...new Set([...Object.keys(b), ...Object.keys(a)])].sort();
+    table(title, [kindLabel, 'before', 'after'], names.map((n) => [n, b[n] || 0, a[n] || 0]));
+};
+countTable('Assets by kind', 'kind', before.assets, work.assets, 'kind', '(none)');
+countTable('Debts by label', 'label', before.liabilities, work.liabilities, 'label', '(none)');
+const suggestedKinds = arr(work.assets).filter((x) => x && x.kindSuggested === true).length;
+const suggestedLabels = arr(work.liabilities).filter((x) => x && x.labelSuggested === true).length;
+console.log(`Suggested, to check on the "Check these" card: ${suggestedKinds} asset kind(s), ${suggestedLabels} debt label(s)`);
+console.log(`Assets without an id: ${arr(work.assets).filter((x) => x && typeof x === 'object' && !x.id).length}; income sources without an id: ${arr(work.incomeSources).filter((x) => x && typeof x === 'object' && !x.id).length}`);
+const sumDollars = (rows) => arr(rows).reduce((a, r) => a + cents(r && r.balance), 0);
+check('asset total unchanged by the migration', sumDollars(before.assets) === sumDollars(work.assets));
+check('debt total unchanged by the migration', sumDollars(before.liabilities) === sumDollars(work.liabilities));
+check('asset and debt detail written (assetDebtVersion 1)', work.assetDebtVersion >= 1);
+
 // ---------- section (b): amounts ----------
 
 if (!noAmounts) {
@@ -180,6 +206,10 @@ if (!noAmounts) {
     }
     try { console.log(`Net pay per cycle: ${money(netPerPayCents(work))}`); } catch (err) { console.log('Net pay per cycle: not available'); }
     console.log(`Liabilities total: ${money(arr(before.liabilities).reduce((a, l) => a + cents(l && l.balance), 0))} before, ${money(arr(work.liabilities).reduce((a, l) => a + cents(l && l.balance), 0))} after`);
+    const byKind = {};
+    for (const a of arr(work.assets).filter((x) => x && typeof x === 'object')) byKind[a.kind || '(none)'] = (byKind[a.kind || '(none)'] || 0) + cents(a.balance);
+    table('Assets by kind (A$)', ['kind', 'total'], Object.keys(byKind).sort().map((k) => [k, money(byKind[k])]));
+    console.log(`Assets total: ${money(sumDollars(before.assets))} before, ${money(sumDollars(work.assets))} after`);
     console.log(`Percentages total: ${Math.round(alloc.reduce((s, r) => s + num(r.percentage), 0) * 10) / 10}`);
 }
 

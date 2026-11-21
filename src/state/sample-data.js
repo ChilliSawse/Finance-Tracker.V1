@@ -34,6 +34,8 @@ export function legacySampleFinanceData() {
     delete data.plan;
     delete data.savingModel; // E4: the bucket model is what the migration adds
     delete data.bucketGoals;
+    delete data.assetDebtVersion; // F2: the asset and debt detail is what the migration adds
+    delete data.fiSettings.inflation;
     data.primaryIncomeIndex = 0;
     data.incomeSources = [
         { name: 'Alex — marketing coordinator', incomeType: 'salaried', grossAnnual: 85000, paySchedule: 'fortnightly', hoursPerCycle: 76, taxRemoved: null, invoicedPayPostTax: null },
@@ -163,10 +165,11 @@ export function buildSampleHousehold(today) {
     data.plan = samplePlan(t);
     data.rules = [];
     data.assets = [
-        { name: 'Savings account', balance: 16500 },
+        { name: 'Savings account', balance: 16500, interestRate: 4.8, interestFrequency: 'monthly' },
         { name: 'Superannuation', balance: 78400 },
-        { name: 'ETF portfolio', balance: 24800 },
+        { name: 'ETF portfolio', balance: 24800, dividendYield: 3.5, dividendFrequency: 'quarterly' },
     ];
+    delete data.assetDebtVersion; // F2: the chain's step 5b adds the ids, suggested kinds and labels on first load
     data.liabilities = [
         { id: 'l-car-loan', name: 'Car loan', balance: 11200, interestRate: 7.9 },
         { id: 'l-credit-card', name: 'Credit card', balance: 1850, interestRate: 20.99 },
