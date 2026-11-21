@@ -1,6 +1,6 @@
 // Live-data settings form renderers (moved from uiSettings.js).
 // The What If scenario renderers live in ui/whatif.js; the appearance form
-// (initializeGuiSettingsForm / applyGuiStylesToPage) lives in theme/appearance.js.
+// (initializeGuiSettingsForm) lives in theme/appearance-form.js.
 
 import { store } from '../state/store.js';
 import { getElement, setText, setValue, escapeHtml, formatCurrency } from '../utils.js';
@@ -9,7 +9,7 @@ import { AU_TAX_YEARS } from '../calc/tax-au.js';
 import { sumEvents, fyRange, activeFyKey } from '../calc/income-events.js';
 import { t } from '../i18n/strings.js';
 import { updateDefaultsButtonLabels } from '../events/settings-events.js';
-import { initializeGuiSettingsForm } from '../theme/appearance.js';
+import { initializeGuiSettingsForm } from '../theme/appearance-form.js';
 import { initializeWhatIfTab } from './whatif.js';
 
 export function initializeSettingsUI() {

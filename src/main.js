@@ -8,19 +8,20 @@ import './styles/legacy-aliases.css';
 import './styles/fonts.css';
 import './styles/base.css';
 import '../style.css';
+import './theme/appearance.css'; // A4: stripped appearance modal
 import './ui/shell.css'; // A5 — sidebar, phone bottom bar, screens
 import { store } from './state/store.js';
 import { FinanceAutoSave } from './state/autosave.js';
-import { loadTheme, registerStoredCustomFonts, applyBackgroundEffect, applyBgEffectColor } from './theme/theme.js';
+import { loadTheme } from './theme/theme.js';
 import { initializeSettingsUI } from './ui/settings-forms.js';
-import { initializeGuiSettingsForm } from './theme/appearance.js';
+import { initializeGuiSettingsForm } from './theme/appearance-form.js';
 import { setupEventListeners } from './events/setup.js';
 import { updateAllUI } from './ui/render.js';
 import {
     restoreActiveTab, renderScopeLine, setupTabKeyboardNav, setupCardLinks,
     setupDashboardEmptyActions, setupExpenseSearch, setupInfoSections,
 } from './ui/tabs.js';
-import { setupGuiModal, setupDraggableModal, setupPageSettingsModals } from './ui/modals.js';
+import { setupGuiModal, setupPageSettingsModals } from './ui/modals.js';
 import { setupImport } from './import/import-ui.js';
 import { setupPdfImport } from './import/pdf-ui.js';
 import { setupIncomeStatement } from './ui/income-statement.js';
@@ -36,10 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPwaUpdateListeners();
     store.autoSave = new FinanceAutoSave();
     const hadSavedData = store.autoSave.loadData();
-    loadTheme(); // apply full preset (tab colours, tints, etc.) before UI renders
-    registerStoredCustomFonts(); // J3 — re-register uploaded fonts
-    applyBgEffectColor(store.guiSettingsData.bgEffectColor); // J4 — restore effect tint (before the effect starts)
-    applyBackgroundEffect(store.guiSettingsData.bgEffect); // J4 — restore saved effect
+    loadTheme(); // A4: palette and mode attributes plus text size, before the UI renders
 
     // Ledger — advance past-due bills to their next occurrence and announce
     // anything due this week in the feed (once per bill+date).
@@ -53,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPwaInstallListeners();
     setupTabKeyboardNav();
     setupGuiModal();  // A.4 — appearance modal
-    setupDraggableModal('gui-settings-modal'); // draggable, corner-resizable appearance window
     setupPageSettingsModals(); // Phase D — per-page settings modals
     setupImport(); // Ledger — bank CSV import (Tools)
     setupPdfImport(); // Variable income — bank PDF import + payslip autofill (Tools)

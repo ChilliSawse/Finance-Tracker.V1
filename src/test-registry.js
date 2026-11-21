@@ -4,6 +4,7 @@
 
 import { CHAIN_TEST_CASES } from './state/chain.test-cases.js';
 import { PALETTES_TEST_CASES } from './theme/palettes.test-cases.js';
+import { THEME_TEST_CASES } from './theme/theme.test-cases.js';
 import { PLAN_TEST_CASES } from './calc/plan.test-cases.js';
 import { PAY_CYCLE_TEST_CASES } from './calc/pay-cycle.test-cases.js';
 import { PLAN_MIGRATION_TEST_CASES } from './state/plan-migration.test-cases.js';
@@ -36,6 +37,7 @@ import { SCENARIO_UI_TEST_CASES } from './ui/scenario-ui.test-cases.js';
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
     { name: 'palettes', env: 'pure', cases: PALETTES_TEST_CASES },
+    { name: 'theme', env: 'pure', cases: THEME_TEST_CASES },
     { name: 'plan', env: 'pure', cases: PLAN_TEST_CASES },
     { name: 'pay-cycle', env: 'pure', cases: PAY_CYCLE_TEST_CASES },
     { name: 'plan-migration', env: 'pure', cases: PLAN_MIGRATION_TEST_CASES },
