@@ -25,7 +25,7 @@
 
     <svg width="0" height="0" style="position:absolute" aria-hidden="true">
         <symbol id="mark" viewBox="0 0 24 24"><g transform="rotate(-90 12 12)" fill="none" stroke-width="5"><circle cx="12" cy="12" r="8.5" pathLength="100" style="stroke:var(--b1, var(--accent))" stroke-dasharray="57 43"/><circle cx="12" cy="12" r="8.5" pathLength="100" style="stroke:var(--b2, var(--accent))" stroke-dasharray="7 93" stroke-dashoffset="-60"/><circle cx="12" cy="12" r="8.5" pathLength="100" style="stroke:var(--b3, var(--accent))" stroke-dasharray="7 93" stroke-dashoffset="-70"/><circle cx="12" cy="12" r="8.5" pathLength="100" style="stroke:var(--b4, var(--accent))" stroke-dasharray="17 83" stroke-dashoffset="-80"/></g></symbol>
-        <symbol id="i-today" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></symbol>
+        <symbol id="i-today" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.6"/><path d="M8 1.6v1.8M8 12.6v1.8M1.6 8h1.8M12.6 8h1.8M3.5 3.5l1.3 1.3M11.2 11.2l1.3 1.3M3.5 12.5l1.3-1.3M11.2 4.8l1.3-1.3"/></symbol>
         <symbol id="i-activity" viewBox="0 0 16 16"><path d="M2.5 4h11M2.5 8h11M2.5 12h7"/></symbol>
         <symbol id="i-plan" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5V8l4 3.5"/></symbol>
         <symbol id="i-future" viewBox="0 0 16 16"><path d="M2.5 12.5l3.5-4 3 2 4.5-6"/><path d="M10.5 4.5h3v3"/></symbol>
@@ -67,18 +67,6 @@
                 <div id="today-tax-slot"></div>
                 <div id="today-review-slot"></div>
                 <div id="today-body"></div>
-            <div id="home" class="legacy legacy-panel">
-                <div class="home-greeting">
-                    <h2 id="home-greeting-title">Good morning</h2>
-                    <p id="home-greeting-sub">Here's what's happening with your money.</p>
-                </div>
-                <div class="pulse-row" id="home-pulse"></div>
-                <div id="home-upcoming"></div>
-                <!-- Variable income — volatility dashboard; renders only when a Variable source exists. -->
-                <div id="home-income-volatility"></div>
-                <div class="feed" id="home-feed" aria-live="polite"></div>
-            </div>
-
             <div id="dashboard" class="legacy legacy-panel">
                 <div id="dashboard-empty-state" class="dashboard-empty" hidden>
                     <h2>Welcome to your Finance Tracker</h2>
