@@ -17,49 +17,14 @@
 //     remain the source of truth; these components only improve the *estimate*
 //     path when net/tax are left blank.
 
-export const AU_TAX_YEARS = {
-    '2026-27': {
-        label: '2026–27',
-        brackets: [
-            { min: 0, max: 18200, rate: 0 },
-            { min: 18200, max: 45000, rate: 0.15 },
-            { min: 45000, max: 135000, rate: 0.30 },
-            { min: 135000, max: 190000, rate: 0.37 },
-            { min: 190000, max: Infinity, rate: 0.45 },
-        ],
-        medicare: { rate: 0.02, singleLowerThreshold: 28011, taperRate: 0.10 },
-        help: {
-            minThreshold: 69528,
-            bands: [
-                { min: 69528, max: 129717, rate: 0.15 },
-                { min: 129717, max: Infinity, rate: 0.17 },
-            ],
-            capRate: 0.10, // repayment never exceeds 10% of repayment income
-            indexationPercentDefault: 2.8, // 1 June 2026 rate; user-adjustable in projections
-        },
-    },
-    '2025-26': {
-        label: '2025–26',
-        brackets: [
-            { min: 0, max: 18200, rate: 0 },
-            { min: 18200, max: 45000, rate: 0.16 },
-            { min: 45000, max: 135000, rate: 0.30 },
-            { min: 135000, max: 190000, rate: 0.37 },
-            { min: 190000, max: Infinity, rate: 0.45 },
-        ],
-        medicare: { rate: 0.02, singleLowerThreshold: 28011, taperRate: 0.10 },
-        help: {
-            minThreshold: 67000,
-            bands: [
-                { min: 67000, max: 125000, rate: 0.15 },
-                { min: 125000, max: Infinity, rate: 0.17 },
-            ],
-            capRate: 0.10,
-            indexationPercentDefault: 2.8,
-        },
-    },
-};
+// One copy of the figures: rebuilt from the dated files in ./tax-tables/ (C1).
+// The tables also carry withholding scales, STSL, LITO, effective dates and sources.
+import { TAX_TABLES, resolveTablesForDate } from './tax-tables/index.js';
+export { taxYearKeyForDate, getTablesForDate, taxTablesStatus } from './tax-tables/index.js';
 
+export const AU_TAX_YEARS = TAX_TABLES;
+
+// Kept for back-compat (defaults, migrations); the live year is always picked by date.
 export const CURRENT_TAX_YEAR = '2026-27';
 
 // The pre-rebuild default brackets (stale pre-2024 rates, no 45% band). Kept so
@@ -71,8 +36,10 @@ export const LEGACY_DEFAULT_BRACKETS = [
     { min: 120000, max: Infinity, rate: 0.37 },
 ];
 
+// A known key returns that year. An unknown or absent key falls back by DATE (today's
+// table, or the latest shipped when today is past them), no longer to a fixed constant.
 export function getTaxYear(fy) {
-    return AU_TAX_YEARS[fy] || AU_TAX_YEARS[CURRENT_TAX_YEAR];
+    return AU_TAX_YEARS[fy] || resolveTablesForDate(new Date()).tables;
 }
 
 /**
