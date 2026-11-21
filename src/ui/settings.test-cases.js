@@ -2,11 +2,11 @@
 // IndexedDB parts are in-memory fakes. Shape: { name, fn(assert) }, assert(label, actual, expected).
 
 import {
-    buildBackupBundle, collectParts, prepareBackup, commitBackup, commitErase, registerBackupPart,
+    buildBackupBundle, collectParts, prepareBackup, commitBackup as commitBackupReal, commitErase as commitEraseReal, registerBackupPart,
     sanitizeTransactionRows, sanitizeEventRows, BACKUP_PARTS, BACKUP_VERSION, carriesParts,
-    PRE_RESTORE_PARTS_KEY, undoLastRestore,
+    PRE_RESTORE_PARTS_KEY, undoLastRestore as undoLastRestoreReal,
 } from '../state/backup.js';
-import { PRE_RESTORE_KEY } from '../state/sanitize.js';
+import { PRE_RESTORE_KEY, removeLegacyPartsCopy, commitImport } from '../state/sanitize.js';
 import { cloneDefaultFinanceData, cloneDefaultGuiSettings } from '../state/defaults.js';
 import {
     buildSettings, filterSettings, countRows, textSizeId, textSizePx, parseKeywords, keywordCount, taxTablesRow,
@@ -20,6 +20,21 @@ function memStorage(initial = {}) {
         setItem(k, v) { map.set(k, String(v)); },
     };
 }
+
+// S9: the rows copy lives in the safety database, here an in-memory stand-in (one record, like the real one).
+function memSafety({ failPut = false } = {}) {
+    const box = { rec: undefined, puts: 0 };
+    return {
+        box,
+        put: async (r) => { if (failPut) throw new Error('QuotaExceededError'); box.puts++; box.rec = JSON.parse(JSON.stringify(r)); },
+        get: async () => (box.rec === undefined ? undefined : JSON.parse(JSON.stringify(box.rec))),
+        remove: async () => { box.rec = undefined; },
+    };
+}
+// Every restore, erase and undo below gets its own safety stand-in unless a test passes one.
+const commitBackup = (store, prepared, o = {}) => commitBackupReal(store, prepared, { safety: memSafety(), ...o });
+const commitErase = (store, fresh, o = {}) => commitEraseReal(store, fresh, { safety: memSafety(), ...o });
+const undoLastRestore = (store, o = {}) => undoLastRestoreReal(store, { safety: memSafety(), ...o });
 
 const fakeStore = () => ({ financeData: cloneDefaultFinanceData(), guiSettingsData: cloneDefaultGuiSettings() });
 
@@ -167,7 +182,7 @@ export const SETTINGS_TEST_CASES = [
                 { storage: st, render: () => {}, save: () => {}, parts: dest.parts });
             assert('ok', res.ok, true);
             assert('rows cleared, settings fresh', [dest.data.transactions, dest.data.events, store.financeData.marker], [[], [], undefined]);
-            assert('settings copy kept first', st.map.get(PRE_RESTORE_KEY), '{"mine":1}');
+            assert('settings copy kept first', JSON.parse(st.map.get(PRE_RESTORE_KEY)).mine, 1);
         },
     },
     {
@@ -176,21 +191,24 @@ export const SETTINGS_TEST_CASES = [
             const SCEN = [{ id: 's1', name: 'Scenario' }];
             const dest = fakeParts({ transactions: TXNS, events: EVENTS, scenarios: SCEN });
             const seenAtFirstReplace = {};
+            const safety = memSafety();
             const st = memStorage({ financeTrackerData_v2: JSON.stringify({ financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings() }) });
             dest.parts.forEach((p) => {
                 const orig = p.replace;
-                p.replace = async (rows) => { seenAtFirstReplace[p.key] = st.map.has(PRE_RESTORE_PARTS_KEY) && st.map.has(PRE_RESTORE_KEY); return orig(rows); };
+                p.replace = async (rows) => { seenAtFirstReplace[p.key] = safety.box.rec !== undefined && st.map.has(PRE_RESTORE_KEY); return orig(rows); };
             });
             const text = JSON.stringify(buildBackupBundle({
                 financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings(), partRows: { transactions: [], events: [], scenarios: [] },
             }));
-            const res = await commitBackup(fakeStore(), prepareBackup(text, dest.parts), { storage: st, render: () => {}, save: () => {}, parts: dest.parts });
+            const res = await commitBackup(fakeStore(), prepareBackup(text, dest.parts), { storage: st, render: () => {}, save: () => {}, parts: dest.parts, safety });
             assert('ok, rows replaced', [res.ok, dest.data.transactions, dest.data.scenarios], [true, [], []]);
             assert('copy existed before each replace', seenAtFirstReplace, { transactions: true, events: true, scenarios: true });
-            const kept = JSON.parse(st.map.get(PRE_RESTORE_PARTS_KEY));
+            const kept = safety.box.rec;
+            assert('nothing in localStorage under the old key', st.map.has(PRE_RESTORE_PARTS_KEY), false);
+            assert('both copies carry the same id', JSON.parse(st.map.get(PRE_RESTORE_KEY)).copyId, kept.id);
             assert('copy holds every part', kept.parts, { transactions: TXNS, events: EVENTS, scenarios: SCEN });
             // the undo path brings the rows back too
-            const undone = await undoLastRestore(fakeStore(), { storage: st, render: () => {}, save: () => {}, parts: dest.parts });
+            const undone = await undoLastRestore(fakeStore(), { storage: st, render: () => {}, save: () => {}, parts: dest.parts, safety });
             assert('undo ok, rows back', [undone.ok, dest.data.transactions, dest.data.events, dest.data.scenarios], [true, TXNS, EVENTS, SCEN]);
             assert('no copy means no undo', (await undoLastRestore(fakeStore(), { storage: memStorage(), parts: dest.parts })).error, 'noCopy');
         },
@@ -207,12 +225,13 @@ export const SETTINGS_TEST_CASES = [
             const text = JSON.stringify(buildBackupBundle({
                 financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings(), partRows: { transactions: [], events: [], scenarios: [] },
             }));
-            for (const failKey of [PRE_RESTORE_PARTS_KEY, PRE_RESTORE_KEY]) {
+            const FAIL_ROWS = 'rows copy (safety database)';
+            for (const failKey of [FAIL_ROWS, PRE_RESTORE_KEY]) {
                 const dest = fakeParts({ transactions: TXNS, events: EVENTS, scenarios: SCEN });
                 const store = fakeStore();
                 const snap = JSON.stringify(store);
                 let rendered = 0;
-                const res = await commitBackup(store, prepareBackup(text, dest.parts), { storage: quota(failKey), render: () => { rendered++; }, save: () => {}, parts: dest.parts });
+                const res = await commitBackup(store, prepareBackup(text, dest.parts), { storage: quota(failKey), render: () => { rendered++; }, save: () => {}, parts: dest.parts, safety: memSafety({ failPut: failKey === FAIL_ROWS }) });
                 assert('refused (' + failKey + ')', [res.ok, res.error], [false, 'cantKeepCopy']);
                 assert('nothing changed (' + failKey + ')', [dest.data.transactions, dest.data.events, dest.data.scenarios, JSON.stringify(store), rendered], [TXNS, EVENTS, SCEN, snap, 0]);
             }
@@ -242,6 +261,103 @@ export const SETTINGS_TEST_CASES = [
             const r2 = await commitBackup(s2, prepareBackup(text, d2.parts), { storage: memStorage(), render: () => { throw new Error('render boom'); }, save: () => {}, parts: d2.parts });
             assert('render failure restores everything', [r2.ok, d2.data.transactions, d2.data.events, JSON.stringify(s2)], [false, TXNS, EVENTS, snap2]);
             assert('base part unused', !!base, true);
+        },
+    },
+    {
+        name: 'S9.1 Erase all keeps no rows copy: not in localStorage, not in the safety database, and an earlier copy is deleted (G6W15-1)',
+        async fn(assert) {
+            const dest = fakeParts({ transactions: TXNS, events: EVENTS });
+            const safety = memSafety();
+            const st = memStorage({ financeTrackerData_v2: '{"mine":1}', [PRE_RESTORE_PARTS_KEY]: '{"parts":{"transactions":[{"id":"old"}]}}' });
+            st.removeItem = (k) => { st.map.delete(k); };
+            // an earlier restore left a rows copy
+            safety.box.rec = { id: 'earlier', timestamp: '2026-11-01T00:00:00Z', parts: { transactions: TXNS } };
+            const res = await commitEraseReal(fakeStore(), { financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings() },
+                { storage: st, render: () => {}, save: () => {}, parts: dest.parts, safety });
+            assert('erase ok, rows gone', [res.ok, dest.data.transactions, dest.data.events], [true, [], []]);
+            assert('no rows copy in the safety database', [safety.box.rec, safety.box.puts], [undefined, 0]);
+            assert('no rows copy in localStorage', [...st.map.keys()].some((k) => k === PRE_RESTORE_PARTS_KEY || st.map.get(k).includes('Corner cafe')), false);
+            const kept = JSON.parse(st.map.get(PRE_RESTORE_KEY));
+            assert('the settings copy is kept and says it has no rows', [kept.mine, kept.hasRows], [1, false]);
+            // undo after an erase brings back settings only (nothing to put back for the rows)
+            const undone = await undoLastRestore(fakeStore(), { storage: st, render: () => {}, save: () => {}, parts: dest.parts });
+            assert('settings-only undo is not refused', undone.error === 'copyMismatch', false);
+        },
+    },
+    {
+        name: 'S9.2 a restore keeps the full copy, with the settings copy marked by the same id and moment; a mismatched pair is refused (G6W15-6)',
+        async fn(assert) {
+            const dest = fakeParts({ transactions: TXNS, events: EVENTS });
+            const safety = memSafety();
+            const st = memStorage({ financeTrackerData_v2: JSON.stringify({ financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings() }) });
+            const text = JSON.stringify(buildBackupBundle({ financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings(), partRows: { transactions: [], events: [] } }));
+            const undoArgs = (extra = {}) => ({ storage: st, render: () => {}, save: () => {}, parts: dest.parts, safety, ...extra });
+            const res = await commitBackupReal(fakeStore(), prepareBackup(text, dest.parts), undoArgs());
+            assert('restore ok', res.ok, true);
+            const settings = JSON.parse(st.map.get(PRE_RESTORE_KEY));
+            assert('same id, same moment', [settings.copyId === safety.box.rec.id, settings.copyTimestamp === safety.box.rec.timestamp, settings.hasRows], [true, true, true]);
+            assert('rows copy holds the rows', safety.box.rec.parts.transactions, TXNS);
+            // a recovery-panel style write replaces only the settings copy: no longer the same pair
+            st.map.set(PRE_RESTORE_KEY, JSON.stringify({ financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings() }));
+            const before = JSON.stringify(dest.data);
+            const refused = await undoLastRestoreReal(fakeStore(), undoArgs());
+            assert('no id on the settings copy: refused, nothing changed', [refused.ok, refused.error, JSON.stringify(dest.data)], [false, 'copyMismatch', before]);
+            st.map.set(PRE_RESTORE_KEY, JSON.stringify({ ...settings, copyId: 'another-moment' }));
+            const refused2 = await undoLastRestoreReal(fakeStore(), undoArgs());
+            assert('a different id: refused', [refused2.ok, refused2.error, JSON.stringify(dest.data)], [false, 'copyMismatch', before]);
+            // the rows copy missing while the settings copy says it has rows
+            st.map.set(PRE_RESTORE_KEY, JSON.stringify(settings));
+            safety.box.rec = undefined;
+            assert('rows copy gone: refused', (await undoLastRestoreReal(fakeStore(), undoArgs())).error, 'copyMismatch');
+            // the matching pair undoes
+            const dest2 = fakeParts({ transactions: TXNS, events: EVENTS });
+            const safety2 = memSafety();
+            const st2 = memStorage({ financeTrackerData_v2: JSON.stringify({ financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings() }) });
+            const args2 = { storage: st2, render: () => {}, save: () => {}, parts: dest2.parts, safety: safety2 };
+            await commitBackupReal(fakeStore(), prepareBackup(text, dest2.parts), args2);
+            const back = await undoLastRestoreReal(fakeStore(), args2);
+            assert('a matching pair undoes', [back.ok, dest2.data.transactions, dest2.data.events], [true, TXNS, EVENTS]);
+        },
+    },
+    {
+        name: 'S9.3 a main save that fails after a restore or an erase is a failed restore: everything is put back, with the existing message (G6W15-2)',
+        async fn(assert) {
+            const text = JSON.stringify(buildBackupBundle({
+                financeData: { ...cloneDefaultFinanceData(), marker: 'from-file' }, guiSettings: cloneDefaultGuiSettings(), partRows: { transactions: [], events: [] },
+            }));
+            for (const mode of ['restore', 'erase']) {
+                const dest = fakeParts({ transactions: TXNS, events: EVENTS });
+                const store = fakeStore();
+                store.financeData.marker = 'mine';
+                const snap = JSON.stringify(store);
+                let renders = 0;
+                const opts = { storage: memStorage(), render: () => { renders++; }, save: () => false, parts: dest.parts, safety: memSafety() };
+                const res = mode === 'restore'
+                    ? await commitBackupReal(store, prepareBackup(text, dest.parts), opts)
+                    : await commitEraseReal(store, { financeData: cloneDefaultFinanceData(), guiSettings: cloneDefaultGuiSettings() }, opts);
+                assert(mode + ': refused with the existing message', [res.ok, res.error], [false, 'The backup could not be shown. Nothing was changed.']);
+                assert(mode + ': rows and settings put back', [dest.data.transactions, dest.data.events, JSON.stringify(store)], [TXNS, EVENTS, snap]);
+                assert(mode + ': the old data was drawn again', renders, 2);
+            }
+            // a save that returns nothing (older callers) or true is still a success
+            const ok = fakeParts({ transactions: TXNS, events: EVENTS });
+            for (const save of [() => {}, () => true]) {
+                const r = await commitBackupReal(fakeStore(), prepareBackup(text, ok.parts), { storage: memStorage(), render: () => {}, save, parts: ok.parts, safety: memSafety() });
+                assert('a save that does not return false succeeds', r.ok, true);
+            }
+            // commitImport on its own: the same rule
+            const store = fakeStore();
+            const r = commitImport(store, prepareBackup(text, ok.parts), { storage: memStorage(), render: () => {}, save: () => false });
+            assert('commitImport refuses when save returns false', [r.ok, store.financeData.marker], [false, undefined]);
+        },
+    },
+    {
+        name: 'S9.4 the old localStorage rows copy is removed on load',
+        fn(assert) {
+            const st = memStorage({ [PRE_RESTORE_PARTS_KEY]: '{"parts":{}}', keep: 'x' });
+            st.removeItem = (k) => { st.map.delete(k); };
+            assert('removed once', [removeLegacyPartsCopy(st), st.map.has(PRE_RESTORE_PARTS_KEY), st.map.has('keep')], [true, false, true]);
+            assert('nothing to remove the second time', removeLegacyPartsCopy(st), false);
         },
     },
     {

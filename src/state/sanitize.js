@@ -13,6 +13,8 @@ import { migrateGuiAppearance } from '../theme/theme.js';
 
 export const SAVE_KEY = 'financeTrackerData_v2';
 export const PRE_RESTORE_KEY = 'ft-pre-restore-backup';
+// S9: the rows copy used to live here (S8). It moved to IndexedDB (safety-db.js); a leftover key is removed on load.
+export const LEGACY_PARTS_KEY = 'ft-pre-restore-parts';
 export const CORRUPT_PREFIX = 'ft-corrupt-save-';
 export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
 export const MAX_ABS_NUMBER = 1e12;
@@ -152,25 +154,44 @@ export function prepareImport(text) {
     }
 }
 
-/** Write the current data to PRE_RESTORE_KEY (one copy, overwritten). Returns true on success. */
-export function snapshotBeforeRestore(store, storage) {
+/**
+ * Write the current data to PRE_RESTORE_KEY (one copy, overwritten). Returns true on success.
+ * `meta` ({copyId, timestamp, hasRows}) is recorded in the copy so an undo can tell it belongs to the
+ * rows copy in the safety database (S9); a body that cannot carry it is written as it is.
+ */
+export function snapshotBeforeRestore(store, storage, meta = null) {
     try {
         const raw = storage.getItem(SAVE_KEY);
-        const body = raw != null ? raw : JSON.stringify({
+        let body = raw != null ? raw : JSON.stringify({
             financeData: store.financeData, guiSettings: store.guiSettingsData, timestamp: new Date().toISOString(),
         });
+        if (meta) {
+            const parsed = JSON.parse(body);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                body = JSON.stringify({ ...parsed, copyId: meta.copyId, copyTimestamp: meta.timestamp, hasRows: !!meta.hasRows });
+            }
+        }
         storage.setItem(PRE_RESTORE_KEY, body);
         return true;
     } catch (e) { return false; }
 }
 
+/** S9: remove the retired localStorage rows copy (it held every transaction in plain text). Returns true when one was there. */
+export function removeLegacyPartsCopy(storage) {
+    if (storage.getItem(LEGACY_PARTS_KEY) === null) return false;
+    storage.removeItem(LEGACY_PARTS_KEY);
+    return true;
+}
+
 /**
  * Replace the store with a prepared import. `render` runs against the new data; if it throws, the
- * old store objects are put back and nothing is saved. `save` runs only after render succeeded.
+ * old store objects are put back and nothing is saved. `save` runs only after render succeeded;
+ * if it returns false (the main save failed) the old store objects are put back too.
  * @returns {{ok:boolean, error?:string}}
  */
-export function commitImport(store, prepared, { storage, render, save }) {
-    if (!snapshotBeforeRestore(store, storage)) {
+export function commitImport(store, prepared, { storage, render, save, copyTaken = false }) {
+    // copyTaken: commitBackup already wrote the settings copy together with the rows copy (S9), so it is not rewritten here.
+    if (!copyTaken && !snapshotBeforeRestore(store, storage)) {
         return { ok: false, error: 'Could not keep a safety copy of your current data first (storage may be full). Nothing was changed. Export a backup, then try again.' };
     }
     const prevFinance = store.financeData;
@@ -179,7 +200,8 @@ export function commitImport(store, prepared, { storage, render, save }) {
     store.guiSettingsData = prepared.guiSettings;
     try {
         if (render) render();
-        if (save) save();
+        // S9 (G6W15-2): a save that reports failure (false) is a failed import, so the old data is put back.
+        if (save && save() === false) throw new Error('The save did not complete.');
     } catch (err) {
         store.financeData = prevFinance;
         store.guiSettingsData = prevGui;

@@ -144,7 +144,7 @@ export const enD = {
 
     // Erase all (D2)
     'd.erase.title': 'Erase all your data?',
-    'd.erase.body': 'This clears your settings, plan, transactions and events from this device and starts fresh. Make a backup first if you might want them back. A copy of your settings is kept on this device until the next restore or erase.',
+    'd.erase.body': 'This clears your settings, plan, transactions and events from this device and starts fresh. Make a backup first if you might want them back. A copy of your settings is kept on this device until the next restore or erase. Your transactions and events are not kept.',
     'd.erase.confirm': 'Erase everything',
     'd.erase.done': 'All data erased. Ledger is back to a fresh start.',
     'd.erase.failed': 'Could not erase your data. Nothing was changed.',
