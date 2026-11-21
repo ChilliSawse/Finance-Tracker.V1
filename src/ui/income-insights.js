@@ -154,8 +154,8 @@ export function buildTaxProvisionCardHtml() {
 
 // ---------- Home tab: income volatility section ----------
 
-export function renderIncomeVolatility(totals) {
-    const el = getElement('home-income-volatility');
+export function renderIncomeVolatility(totals, target, title) {
+    const el = target || getElement('home-income-volatility');
     if (!el) return;
     if (!hasVariableSources(store.financeData)) { el.innerHTML = ''; return; }
 
@@ -222,7 +222,7 @@ export function renderIncomeVolatility(totals) {
     el.innerHTML = `
         <div class="volatility-card">
             <div class="volatility-head">
-                <span class="volatility-title">${t('vol.title')}</span>
+                <span class="volatility-title">${title ? escapeHtml(title) : t('vol.title')}</span>
                 <span class="volatility-sub">${t('vol.subtitle')}</span>
             </div>
             <div class="vol-chart">
