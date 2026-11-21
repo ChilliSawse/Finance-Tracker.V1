@@ -32,24 +32,25 @@ const addPot = (d, label = 'Holiday fund', goalCents = 50000) => addTarget(d, { 
 
 export const BUCKET_METHOD_TEST_CASES = [
     { name: 'E10.1 the tax-pot comparison works on a bucket with the tax tag, and on one with no id or role (the Future model; A12a moved this from the deleted Savings card)', fn(assert) {
-        const day = new Date();
-        const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+        // One pinned clock for every call: the model reads `now` to the millisecond (fyElapsedFraction), so separate new Date() calls made the equality below flaky (K5).
+        const now = new Date(`${TODAY}T12:00:00`);
+        const iso = TODAY;
         const base = () => ({
             incomeSources: [{ incomeType: 'variable', incomeEvents: [{ date: iso, netAmount: 8000, taxWithheld: 0 }] }],
             primaryIncomeIndex: 0,
         });
-        const full = taxProvisionModel({ ...base(), allocation: [{ id: 'b-tax', name: 'Tax pot', role: null, isTaxProvision: true, currentBalance: 1000000 }] });
+        const full = taxProvisionModel({ ...base(), allocation: [{ id: 'b-tax', name: 'Tax pot', role: null, isTaxProvision: true, currentBalance: 1000000 }] }, now);
         assert('the card shows', full !== null && full.kind, 'pot');
         assert('a full pot is shown by name and covers the provision', full.pot.name === 'Tax pot' && full.pot.balance >= full.prov.provisionToDate, true);
-        const behind = taxProvisionModel({ ...base(), allocation: [{ id: 'b-tax', name: 'Tax pot', role: null, isTaxProvision: true, currentBalance: 0 }] });
+        const behind = taxProvisionModel({ ...base(), allocation: [{ id: 'b-tax', name: 'Tax pot', role: null, isTaxProvision: true, currentBalance: 0 }] }, now);
         let loose = null;
         let threw = false;
-        try { loose = taxProvisionModel({ ...base(), allocation: [{ name: 'Loose pot', isTaxProvision: true, currentBalance: 0 }] }); } catch (e) { threw = true; }
+        try { loose = taxProvisionModel({ ...base(), allocation: [{ name: 'Loose pot', isTaxProvision: true, currentBalance: 0 }] }, now); } catch (e) { threw = true; }
         assert('a pot with no id and no role does not throw', threw, false);
         assert('and says the same as one with them', { ...loose, pot: { ...loose.pot, name: 'Tax pot' } }, behind);
         threw = false;
         let stray = null;
-        try { stray = taxProvisionModel({ ...base(), allocation: [null, 'x', { name: 'No tag' }] }); } catch (e) { threw = true; }
+        try { stray = taxProvisionModel({ ...base(), allocation: [null, 'x', { name: 'No tag' }] }, now); } catch (e) { threw = true; }
         assert('stray rows in the list do not throw', threw, false);
         assert('and read as no tax pot', stray.kind, 'noPot');
     } },
