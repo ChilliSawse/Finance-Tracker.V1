@@ -38,6 +38,8 @@
     </table>
 
     <script type="module">
+    // S5: must stay the FIRST import. Swaps in memory stand-ins for the real stores before any app module loads.
+    import { verifyRealStoresUntouched, dropScratchDb } from './src/test-storage-guard.js';
     import {
         calculateTotals, calculateTaxFromBrackets, getTaxBracketBreakdown, calculateYearsToFI,
     } from './src/calc/calculations.js';
@@ -502,6 +504,12 @@
         group('S4 tripwire');
         record('No CSP violation and no alert/confirm/prompt during the run', trips.length === 0, '0 events', trips.length + (trips.length ? ': ' + trips.join(' ; ') : ' events'));
         trips.length = 0; // counted once, as the record above
+
+        // --- S5 tripwire: the app's real stores (same origin) must be exactly as they were at page load ---
+        await dropScratchDb();
+        const storeProblems = await verifyRealStoresUntouched();
+        group('S5 real-storage tripwire');
+        record('Real localStorage, sessionStorage and IndexedDB are untouched by the run', storeProblems.length === 0, 'no changes', storeProblems.length ? storeProblems.join(' ; ') : 'no changes');
 
         // --- Render (text only: names and values can hold fixture payloads, so never innerHTML) ---
         const tbody = document.getElementById('results');
