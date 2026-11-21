@@ -102,7 +102,7 @@ export function handleJSONImport(event) {
                 initializeGuiSettingsForm();
                 updateDataAndUI();
                 showCustomModal('Data imported successfully! Please review all tabs.');
-                showTab('dashboard');
+                showTab('today');
             }
         } catch (error) {
             showCustomModal('Failed to import backup file. It might be corrupted.', 'error');

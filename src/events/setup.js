@@ -5,6 +5,7 @@ import { getElement } from '../utils.js';
 import { showTab } from '../ui/tabs.js';
 import { updateDataAndUI } from '../ui/render.js';
 import { handleSettingsClickEvents, handleSettingsChangeEvents } from './settings-events.js';
+import { openQuickAdd } from '../ui/quick-add.js';
 import { handleWhatIfClickEvents, handleWhatIfChangeEvents } from '../ui/whatif.js';
 import {
     GUI_COLOR_FIELDS, handleGuiSettingsClickEvents, commitGuiColor, commitGuiText,
@@ -30,7 +31,7 @@ export function setupEventListeners() {
         });
         tabsContainer.addEventListener('pointerup', (e) => {
             if (e.pointerType === 'mouse') return;
-            const tab = e.target.closest('.tab');
+            const tab = e.target.closest('[role="tab"]');
             if (!tab || !tab.dataset.tabTarget) return;
             // Real taps barely move and don't linger; anything else is a
             // scroll/press — leave those to their native behaviour.
@@ -40,7 +41,7 @@ export function setupEventListeners() {
             showTab(tab.dataset.tabTarget);
         });
         tabsContainer.addEventListener('click', (event) => {
-            const tab = event.target.closest('.tab');
+            const tab = event.target.closest('[role="tab"]');
             if (tab) {
                 if (performance.now() - pointerTapAt < 400) return; // pointerup already handled this tap
                 const tabName = tab.dataset.tabTarget;
@@ -48,6 +49,13 @@ export function setupEventListeners() {
             }
         });
     }
+
+    // Quick add (sidebar Add, phone +) and the phone Settings gear: delegated, so the single nav and
+    // the topbar carry no per-element listeners. Settings reuses the one #open-gui-settings opener.
+    document.addEventListener('click', (event) => {
+        if (event.target.closest('[data-quick-add]')) { event.preventDefault(); openQuickAdd(); return; }
+        if (event.target.closest('[data-open-settings]')) { const b = getElement('open-gui-settings'); if (b) b.click(); }
+    });
 
     // Dashboard view period change
     const dashboardViewPeriodSelect = getElement('dashboard-view-period');

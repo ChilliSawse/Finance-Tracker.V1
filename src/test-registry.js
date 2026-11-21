@@ -55,7 +55,7 @@ export const TEST_GROUPS = [
     { name: 'fire', env: 'pure', cases: FIRE_TEST_CASES },
     { name: 'smile-review', env: 'pure', cases: SMILE_REVIEW_TEST_CASES },
     { name: 'bucket-migration', env: 'pure', cases: BUCKET_MIGRATION_TEST_CASES },
-    { name: 'shell', env: 'browser', cases: SHELL_TEST_CASES },
+    { name: 'shell', env: 'pure', cases: SHELL_TEST_CASES },
     { name: 'state-api', env: 'pure', cases: STATE_API_TEST_CASES },
     { name: 'setup', env: 'browser', cases: SETUP_TEST_CASES },
     { name: 'quick-add', env: 'browser', cases: QUICK_ADD_TEST_CASES },
