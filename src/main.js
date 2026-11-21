@@ -30,6 +30,7 @@ import { refreshSpendCache } from './state/spend-cache.js';
 import { setupOnboarding } from './ui/onboarding.js';
 import { setupMilestoneToasts } from './ui/toast.js';
 import './ui/sheet.css'; // D1 — sheet, undo toast and dialog styles
+import './ui/activity.css'; // A7 — Activity screen styles
 import { setupPwaUpdateListeners, setupPwaInstallListeners } from './pwa.js';
 import { fitAllAmounts } from './utils.js';
 import { showLoadNotices, showRecoveryPanel } from './events/import-export.js';

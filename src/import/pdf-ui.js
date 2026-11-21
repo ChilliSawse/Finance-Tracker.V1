@@ -14,6 +14,7 @@ import { setupModal } from '../ui/modals.js';
 import { renderHomeFeed } from '../ui/feed.js';
 import { renderIncomeSourcesSettings } from '../ui/settings-forms.js';
 import { refreshSpendCache } from '../state/spend-cache.js';
+import { openActivityToReview } from '../ui/activity.js';
 import { updateAllUI, updateDataAndUI } from '../ui/render.js';
 import { loadPdfJs, openPdfDocument, extractPagesLines, PDF_LIMITS, PdfLimitError } from './pdfjs-loader.js';
 import { confirmDialog } from '../ui/confirm.js';
@@ -247,7 +248,8 @@ async function commitImport() {
 
     await refreshSpendCache();
     updateAllUI();
-    if (store.activeTab === 'today') renderHomeFeed();
+    if (result.added > 0) openActivityToReview(); // A7: land on Activity with To review on
+    else if (store.activeTab === 'today') renderHomeFeed();
 }
 
 async function undoLastImport() {
