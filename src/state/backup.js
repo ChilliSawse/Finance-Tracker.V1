@@ -19,8 +19,9 @@ import { withStore } from './db.js';
 
 export const BACKUP_VERSION = 2;
 export const MAX_PART_ROWS = 500000;
-// Keys the retired "Save as My Defaults" used. Never read or written now; Erase all removes it.
-export const RETIRED_KEYS = ['ft-user-defaults'];
+// Keys the retired "Save as My Defaults" (ft-user-defaults) and the retired info-guide panels (ft-info-collapsed, A11) used.
+// Never read or written now; Erase all removes them. Names are never changed.
+export const RETIRED_KEYS = ['ft-user-defaults', 'ft-info-collapsed'];
 
 const BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const MAX_DEPTH = 8;

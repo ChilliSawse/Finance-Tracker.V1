@@ -1,7 +1,7 @@
 // The edit sheet: one declarative form that opens as a bottom sheet below
 // 768 px and a right-hand panel above. Replaces the grid editors and modals.
 //
-//   openSheet({title, fields, values, onSave, onDelete, validate, plausibility, saveLabel})
+//   openSheet({title, fields, values, onSave, onDelete, validate, plausibility, saveLabel, content, readOnly})
 //     -> { close(), setError(field, message), setNote(field, message, fixes), getValues(), el }
 //
 // fields:       [{key, label, type: text|money|number|select|date|percent|toggle, options, hint, required, unit}]
@@ -278,7 +278,7 @@ function buildField(f, model, id) {
     return wrap;
 }
 
-export function openSheet({ title, fields = [], values = {}, onSave, onDelete, validate, plausibility, saveLabel } = {}) {
+export function openSheet({ title, fields = [], values = {}, onSave, onDelete, validate, plausibility, saveLabel, content, readOnly = false } = {}) {
     if (active) active.close(); // one sheet at a time
     const restoreFocus = rememberFocus();
     const model = createSheetModel({ fields, values, validate, plausibility });
@@ -303,6 +303,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
 
     const form = el('form', 'sheet-body');
     form.noValidate = true;
+    if (Array.isArray(content)) for (const n of content) if (n) form.appendChild(n); // A11: read-only blocks (help text), built with textContent
     for (const f of fields) form.appendChild(buildField(f, model, id));
     const formError = el('div', 'sheet-error sheet-form-error');
     formError.setAttribute('role', 'alert');
@@ -318,7 +319,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
         foot.appendChild(delBtn);
     }
     const spacer = el('span', 'sheet-spacer');
-    const cancelBtn = el('button', 'sheet-btn', t('d.sheet.cancel'));
+    const cancelBtn = el('button', 'sheet-btn', readOnly ? t('d.sheet.close') : t('d.sheet.cancel'));
     cancelBtn.type = 'button';
     cancelBtn.dataset.sheetAction = 'close';
     const saveBtn = el('button', 'sheet-btn is-primary', saveLabel || t('d.sheet.save'));
@@ -326,7 +327,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
     saveBtn.dataset.sheetAction = 'save';
     saveBtn.setAttribute('form', `${id}-form`);
     form.id = `${id}-form`;
-    foot.append(spacer, cancelBtn, saveBtn);
+    if (readOnly) foot.append(spacer, cancelBtn); else foot.append(spacer, cancelBtn, saveBtn);
 
     sheet.append(head, form, foot);
     layer.append(backdrop, sheet);
