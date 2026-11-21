@@ -4,6 +4,7 @@
 
 import { store } from '../state/store.js';
 import { getElement, setText, setValue, escapeHtml, formatCurrency } from '../utils.js';
+import { escNum } from './html.js';
 import { calculateTotals } from '../calc/calculations.js';
 import { AU_TAX_YEARS } from '../calc/tax-au.js';
 import { sumEvents, fyRange, activeFyKey } from '../calc/income-events.js';
@@ -77,7 +78,7 @@ export function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-gross" class="visually-hidden">Gross Annual Income ${index + 1}</label>
-                <input type="number" value="${source.grossAnnual || 0}" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" name="${baseId}-gross" placeholder="${(isSelfEmployed || isVariable) ? autoNote : 'Gross Annual'}" step="0.01" ${grossDisabled}>
+                <input type="number" value="${escNum(source.grossAnnual || 0)}" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" name="${baseId}-gross" placeholder="${(isSelfEmployed || isVariable) ? autoNote : 'Gross Annual'}" step="0.01" ${grossDisabled}>
             </span>
             <span>
                 <label for="${baseId}-schedule" class="visually-hidden">Pay Schedule ${index + 1}</label>
@@ -90,15 +91,15 @@ export function renderIncomeSourcesSettings() {
             </span>
             <span>
                 <label for="${baseId}-netpay" class="visually-hidden">Net Pay Per Cycle ${index + 1}</label>
-                <input type="number" value="${isVariable ? '' : invoicedPayValue}" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" name="${baseId}-netpay" placeholder="${netPlaceholder}" step="0.01" ${cycleDisabled}>
+                <input type="number" value="${escNum(isVariable ? '' : invoicedPayValue)}" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" name="${baseId}-netpay" placeholder="${netPlaceholder}" step="0.01" ${cycleDisabled}>
             </span>
             <span>
                  <label for="${baseId}-hours" class="visually-hidden">Hours Per Cycle ${index + 1}</label>
-                 <input type="number" value="${isVariable ? '' : (source.hoursPerCycle || '')}" data-collection="incomeSources" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" name="${baseId}-hours" placeholder="${isVariable ? eventsNote : 'Hours'}" step="1" ${cycleDisabled}>
+                 <input type="number" value="${escNum(isVariable ? '' : (source.hoursPerCycle || ''))}" data-collection="incomeSources" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" name="${baseId}-hours" placeholder="${isVariable ? eventsNote : 'Hours'}" step="1" ${cycleDisabled}>
             </span>
             <span>
                 <label for="${baseId}-taxremoved" class="visually-hidden">Tax Removed Per Cycle ${index + 1}</label>
-                <input type="number" value="${isVariable ? '' : taxRemovedValue}" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="${taxPlaceholder}" step="0.01" ${cycleDisabled}>
+                <input type="number" value="${escNum(isVariable ? '' : taxRemovedValue)}" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" name="${baseId}-taxremoved" placeholder="${taxPlaceholder}" step="0.01" ${cycleDisabled}>
             </span>
             <button class="delete-btn" data-index="${index}" data-type="incomeSource" aria-label="Delete Income Source ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -153,19 +154,19 @@ function buildIncomeEventsEditor(source, sourceIndex) {
                 </span>
                 <span>
                     <label for="${baseId}-net" class="visually-hidden">Event ${i + 1} amount banked</label>
-                    <input type="number" value="${e.netAmount || 0}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="netAmount" id="${baseId}-net" placeholder="Banked $" step="0.01" min="0">
+                    <input type="number" value="${escNum(e.netAmount || 0)}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="netAmount" id="${baseId}-net" placeholder="Banked $" step="0.01" min="0">
                 </span>
                 <span>
                     <label for="${baseId}-tax" class="visually-hidden">Event ${i + 1} tax withheld</label>
-                    <input type="number" value="${optVal(e.taxWithheld)}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="taxWithheld" id="${baseId}-tax" placeholder="Tax $ (opt)" step="0.01" min="0">
+                    <input type="number" value="${escNum(optVal(e.taxWithheld))}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="taxWithheld" id="${baseId}-tax" placeholder="Tax $ (opt)" step="0.01" min="0">
                 </span>
                 <span>
                     <label for="${baseId}-hours" class="visually-hidden">Event ${i + 1} hours worked</label>
-                    <input type="number" value="${optVal(e.hours)}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="hours" id="${baseId}-hours" placeholder="Hrs (opt)" step="0.25" min="0">
+                    <input type="number" value="${escNum(optVal(e.hours))}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="hours" id="${baseId}-hours" placeholder="Hrs (opt)" step="0.25" min="0">
                 </span>
                 <span>
                     <label for="${baseId}-cash" class="visually-hidden">Event ${i + 1} cash received</label>
-                    <input type="number" value="${optVal(e.cashReceived)}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="cashReceived" id="${baseId}-cash" placeholder="Cash $ (opt)" step="0.01" min="0">
+                    <input type="number" value="${escNum(optVal(e.cashReceived))}" data-collection="incomeEvents" data-parent-index="${sourceIndex}" data-index="${i}" data-field="cashReceived" id="${baseId}-cash" placeholder="Cash $ (opt)" step="0.01" min="0">
                 </span>
                 <span class="income-event-check">
                     <label for="${baseId}-gst" title="${t('varInc.gstTitle')}">GST</label>
@@ -192,7 +193,7 @@ function buildIncomeEventsEditor(source, sourceIndex) {
         </div>
         <div class="income-events-meta">
             <label class="form-label" for="income-${sourceIndex}-baserate">${t('varInc.baseRate')}</label>
-            <input type="number" class="income-baserate-input" value="${source.baseHourlyRate == null ? '' : source.baseHourlyRate}"
+            <input type="number" class="income-baserate-input" value="${escNum(source.baseHourlyRate == null ? '' : source.baseHourlyRate)}"
                 data-collection="incomeSources" data-index="${sourceIndex}" data-field="baseHourlyRate"
                 id="income-${sourceIndex}-baserate" placeholder="$/hr" step="0.01" min="0">
             <span class="settings-hint">${t('varInc.baseRateHint')}</span>
@@ -223,15 +224,15 @@ export function renderTaxBracketsSettings() {
         itemDiv.innerHTML = `
             <span>
                 <label for="${baseId}-min" class="visually-hidden">Min Income Bracket ${index + 1}</label>
-                <input type="number" value="${bracket.min}" data-collection="taxBrackets" data-index="${index}" data-field="min" id="${baseId}-min" name="${baseId}-min" placeholder="Min income" step="0.01">
+                <input type="number" value="${escNum(bracket.min)}" data-collection="taxBrackets" data-index="${index}" data-field="min" id="${baseId}-min" name="${baseId}-min" placeholder="Min income" step="0.01">
             </span>
             <span>
                 <label for="${baseId}-max" class="visually-hidden">Max Income Bracket ${index + 1}</label>
-                <input type="number" value="${bracket.max === Infinity ? '' : bracket.max}" data-collection="taxBrackets" data-index="${index}" data-field="max" id="${baseId}-max" name="${baseId}-max" placeholder="Max (empty=infinity)" step="0.01">
+                <input type="number" value="${escNum(bracket.max === Infinity ? '' : bracket.max)}" data-collection="taxBrackets" data-index="${index}" data-field="max" id="${baseId}-max" name="${baseId}-max" placeholder="Max (empty=infinity)" step="0.01">
             </span>
             <span>
                 <label for="${baseId}-rate" class="visually-hidden">Tax Rate Bracket ${index + 1}</label>
-                <input type="number" value="${(bracket.rate * 100).toFixed(2)}" data-collection="taxBrackets" data-index="${index}" data-field="rate" id="${baseId}-rate" name="${baseId}-rate" placeholder="Rate %" step="0.01">
+                <input type="number" value="${escNum((bracket.rate * 100).toFixed(2))}" data-collection="taxBrackets" data-index="${index}" data-field="rate" id="${baseId}-rate" name="${baseId}-rate" placeholder="Rate %" step="0.01">
             </span>
             <button class="delete-btn" data-index="${index}" data-type="taxBracket" aria-label="Delete Tax Bracket ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -274,7 +275,7 @@ export function renderAssetsSettings() {
             </span>
             <span>
                 <label for="${baseId}-balance" class="visually-hidden">Asset Balance ${index + 1}</label>
-                <input type="number" value="${asset.balance}" data-collection="assets" data-index="${index}" data-field="balance" id="${baseId}-balance" name="${baseId}-balance" placeholder="Balance" step="0.01">
+                <input type="number" value="${escNum(asset.balance)}" data-collection="assets" data-index="${index}" data-field="balance" id="${baseId}-balance" name="${baseId}-balance" placeholder="Balance" step="0.01">
             </span>
             <button class="delete-btn" data-index="${index}" data-type="asset" aria-label="Delete Asset ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -297,11 +298,11 @@ export function renderLiabilitiesSettings() {
             </span>
             <span>
                 <label for="${baseId}-balance" class="visually-hidden">Liability Balance ${index + 1}</label>
-                <input type="number" value="${liability.balance}" data-collection="liabilities" data-index="${index}" data-field="balance" id="${baseId}-balance" name="${baseId}-balance" placeholder="Balance" step="0.01">
+                <input type="number" value="${escNum(liability.balance)}" data-collection="liabilities" data-index="${index}" data-field="balance" id="${baseId}-balance" name="${baseId}-balance" placeholder="Balance" step="0.01">
             </span>
             <span>
                 <label for="${baseId}-rate" class="visually-hidden">Liability Interest Rate ${index + 1}</label>
-                <input type="number" value="${liability.interestRate || 0}" data-collection="liabilities" data-index="${index}" data-field="interestRate" id="${baseId}-rate" name="${baseId}-rate" placeholder="Interest %" step="0.01">
+                <input type="number" value="${escNum(liability.interestRate || 0)}" data-collection="liabilities" data-index="${index}" data-field="interestRate" id="${baseId}-rate" name="${baseId}-rate" placeholder="Interest %" step="0.01">
             </span>
             <button class="delete-btn" data-index="${index}" data-type="liability" aria-label="Delete Liability ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -326,15 +327,15 @@ export function renderAllocationSettings() {
             </span>
             <span>
                 <label for="${baseId}-percentage" class="visually-hidden">Allocation Percentage ${index + 1}</label>
-                <input type="number" value="${alloc.percentage}" data-collection="allocation" data-index="${index}" data-field="percentage" id="${baseId}-percentage" name="${baseId}-percentage" placeholder="%" step="0.1" min="0">
+                <input type="number" value="${escNum(alloc.percentage)}" data-collection="allocation" data-index="${index}" data-field="percentage" id="${baseId}-percentage" name="${baseId}-percentage" placeholder="%" step="0.1" min="0">
             </span>
             <span>
                 <label for="${baseId}-current" class="visually-hidden">Current Funds ${index + 1}</label>
-                <input type="number" value="${alloc.currentBalance != null ? alloc.currentBalance : 0}" data-collection="allocation" data-index="${index}" data-field="currentBalance" id="${baseId}-current" name="${baseId}-current" placeholder="Funds $" step="0.01" min="0">
+                <input type="number" value="${escNum(alloc.currentBalance != null ? alloc.currentBalance : 0)}" data-collection="allocation" data-index="${index}" data-field="currentBalance" id="${baseId}-current" name="${baseId}-current" placeholder="Funds $" step="0.01" min="0">
             </span>
             <span>
                 <label for="${baseId}-goal" class="visually-hidden">Savings Goal ${index + 1}</label>
-                <input type="number" value="${alloc.savingsGoal != null ? alloc.savingsGoal : 0}" data-collection="allocation" data-index="${index}" data-field="savingsGoal" id="${baseId}-goal" name="${baseId}-goal" placeholder="Goal $ (opt)" step="0.01" min="0">
+                <input type="number" value="${escNum(alloc.savingsGoal != null ? alloc.savingsGoal : 0)}" data-collection="allocation" data-index="${index}" data-field="savingsGoal" id="${baseId}-goal" name="${baseId}-goal" placeholder="Goal $ (opt)" step="0.01" min="0">
             </span>
             <span style="justify-self: center;" title="${t('taxpot.checkboxTitle')}">
                 <label for="${baseId}-taxpot" class="visually-hidden">Use bucket ${index + 1} as the tax provision pot</label>
@@ -380,7 +381,7 @@ export function renderExpensesSettingsLists() {
                 </span>
                 <span>
                     <label for="${baseId}-amount" class="visually-hidden">${typeLabel} Expense Amount ${index + 1}</label>
-                    <input type="number" value="${expense.amount}" data-collection="${expensesArrayName}" data-index="${index}" data-field="amount" id="${baseId}-amount" name="${baseId}-amount" placeholder="Amount" step="0.01">
+                    <input type="number" value="${escNum(expense.amount)}" data-collection="${expensesArrayName}" data-index="${index}" data-field="amount" id="${baseId}-amount" name="${baseId}-amount" placeholder="Amount" step="0.01">
                 </span>
                 <span>
                     <label for="${baseId}-frequency" class="visually-hidden">${typeLabel} Expense Frequency ${index + 1}</label>
@@ -418,7 +419,7 @@ export function renderCategoriesSettings() {
             </span>
             <span>
                 <label for="${baseId}-budget" class="visually-hidden">Monthly Budget ${index + 1}</label>
-                <input type="number" value="${cat.monthlyBudget || ''}" data-collection="categories" data-index="${index}" data-field="monthlyBudget" id="${baseId}-budget" placeholder="No cap" step="1" min="0">
+                <input type="number" value="${escNum(cat.monthlyBudget || '')}" data-collection="categories" data-index="${index}" data-field="monthlyBudget" id="${baseId}-budget" placeholder="No cap" step="1" min="0">
             </span>
             <span style="justify-self: center;">
                 <label for="${baseId}-essential" class="visually-hidden">Essential ${index + 1}</label>
@@ -452,7 +453,7 @@ export function renderBillsSettings() {
             </span>
             <span>
                 <label for="${baseId}-amount" class="visually-hidden">Bill Amount ${index + 1}</label>
-                <input type="number" value="${bill.amount != null ? bill.amount : ''}" data-collection="bills" data-index="${index}" data-field="amount" id="${baseId}-amount" placeholder="Amount" step="0.01" min="0">
+                <input type="number" value="${escNum(bill.amount != null ? bill.amount : '')}" data-collection="bills" data-index="${index}" data-field="amount" id="${baseId}-amount" placeholder="Amount" step="0.01" min="0">
             </span>
             <span>
                 <label for="${baseId}-frequency" class="visually-hidden">Bill Frequency ${index + 1}</label>

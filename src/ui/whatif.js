@@ -8,6 +8,7 @@ import {
     getElement, setHTML, setValue, escapeHtml, formatCurrency,
     formatTimeToGoal, fitAllAmounts,
 } from '../utils.js';
+import { escNum } from './html.js';
 import { calculateTotals, calculateYearsToFI } from '../calc/calculations.js';
 import { updateAllocationTotalDisplay } from './settings-forms.js';
 
@@ -55,15 +56,15 @@ export function renderWhatIfAllocation() {
             </span>
             <span>
                 <label for="${baseId}-percentage" class="visually-hidden">Scenario Allocation Percentage ${index + 1}</label>
-                <input type="number" value="${alloc.percentage}" data-scope="whatif" data-collection="allocation" data-index="${index}" data-field="percentage" id="${baseId}-percentage" placeholder="%" step="0.1" min="0">
+                <input type="number" value="${escNum(alloc.percentage)}" data-scope="whatif" data-collection="allocation" data-index="${index}" data-field="percentage" id="${baseId}-percentage" placeholder="%" step="0.1" min="0">
             </span>
             <span>
                 <label for="${baseId}-current" class="visually-hidden">Scenario Current Funds ${index + 1}</label>
-                <input type="number" value="${alloc.currentBalance != null ? alloc.currentBalance : 0}" data-scope="whatif" data-collection="allocation" data-index="${index}" data-field="currentBalance" id="${baseId}-current" placeholder="Funds $" step="0.01" min="0">
+                <input type="number" value="${escNum(alloc.currentBalance != null ? alloc.currentBalance : 0)}" data-scope="whatif" data-collection="allocation" data-index="${index}" data-field="currentBalance" id="${baseId}-current" placeholder="Funds $" step="0.01" min="0">
             </span>
             <span>
                 <label for="${baseId}-goal" class="visually-hidden">Scenario Savings Goal ${index + 1}</label>
-                <input type="number" value="${alloc.savingsGoal != null ? alloc.savingsGoal : 0}" data-scope="whatif" data-collection="allocation" data-index="${index}" data-field="savingsGoal" id="${baseId}-goal" placeholder="Goal $ (opt)" step="0.01" min="0">
+                <input type="number" value="${escNum(alloc.savingsGoal != null ? alloc.savingsGoal : 0)}" data-scope="whatif" data-collection="allocation" data-index="${index}" data-field="savingsGoal" id="${baseId}-goal" placeholder="Goal $ (opt)" step="0.01" min="0">
             </span>
             <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="allocation" aria-label="Delete Scenario Allocation ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
@@ -104,7 +105,7 @@ export function renderWhatIfIncomeSources() {
             <span><label for="${baseId}-name" class="visually-hidden">Scenario Income Name ${index + 1}</label>
                 <input type="text" value="${escapeHtml(source.name || '')}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Name"></span>
             <span><label for="${baseId}-gross" class="visually-hidden">Scenario Gross ${index + 1}</label>
-                <input type="number" value="${source.grossAnnual || 0}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" placeholder="${(isSelfEmployed || isVariable) ? '— auto —' : 'Gross Annual'}" step="0.01" ${grossDisabled}></span>
+                <input type="number" value="${escNum(source.grossAnnual || 0)}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="grossAnnual" id="${baseId}-gross" placeholder="${(isSelfEmployed || isVariable) ? '— auto —' : 'Gross Annual'}" step="0.01" ${grossDisabled}></span>
             <span><label for="${baseId}-schedule" class="visually-hidden">Scenario Schedule ${index + 1}</label>
                 <select data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="paySchedule" id="${baseId}-schedule" ${cycleDisabled}>
                     <option value="weekly" ${source.paySchedule === 'weekly' ? 'selected' : ''}>Weekly</option>
@@ -113,11 +114,11 @@ export function renderWhatIfIncomeSources() {
                     <option value="yearly" ${source.paySchedule === 'yearly' ? 'selected' : ''}>Yearly</option>
                 </select></span>
             <span><label for="${baseId}-netpay" class="visually-hidden">Scenario Net Pay ${index + 1}</label>
-                <input type="number" value="${isVariable ? '' : invoicedPayValue}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" placeholder="${netPlaceholder}" step="0.01" ${cycleDisabled}></span>
+                <input type="number" value="${escNum(isVariable ? '' : invoicedPayValue)}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="invoicedPayPostTax" id="${baseId}-netpay" placeholder="${netPlaceholder}" step="0.01" ${cycleDisabled}></span>
             <span><label for="${baseId}-hours" class="visually-hidden">Scenario Hours ${index + 1}</label>
-                <input type="number" value="${isVariable ? '' : (source.hoursPerCycle || '')}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" placeholder="Hours" step="1" ${cycleDisabled}></span>
+                <input type="number" value="${escNum(isVariable ? '' : (source.hoursPerCycle || ''))}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="hoursPerCycle" id="${baseId}-hours" placeholder="Hours" step="1" ${cycleDisabled}></span>
             <span><label for="${baseId}-taxremoved" class="visually-hidden">Scenario Tax Removed ${index + 1}</label>
-                <input type="number" value="${isVariable ? '' : taxRemovedValue}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" placeholder="${isVariable ? '— from events —' : 'Tax/Cycle (opt)'}" step="0.01" ${cycleDisabled}></span>
+                <input type="number" value="${escNum(isVariable ? '' : taxRemovedValue)}" data-scope="whatif" data-collection="incomeSources" data-index="${index}" data-field="taxRemoved" id="${baseId}-taxremoved" placeholder="${isVariable ? '— from events —' : 'Tax/Cycle (opt)'}" step="0.01" ${cycleDisabled}></span>
             <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="incomeSource" aria-label="Delete Scenario Income Source ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
     });
@@ -137,7 +138,7 @@ export function renderWhatIfAssets() {
             <span><label for="${baseId}-name" class="visually-hidden">Scenario Asset Name ${index + 1}</label>
                 <input type="text" value="${escapeHtml(asset.name)}" data-scope="whatif" data-collection="assets" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Asset name"></span>
             <span><label for="${baseId}-balance" class="visually-hidden">Scenario Asset Balance ${index + 1}</label>
-                <input type="number" value="${asset.balance}" data-scope="whatif" data-collection="assets" data-index="${index}" data-field="balance" id="${baseId}-balance" placeholder="Balance" step="0.01"></span>
+                <input type="number" value="${escNum(asset.balance)}" data-scope="whatif" data-collection="assets" data-index="${index}" data-field="balance" id="${baseId}-balance" placeholder="Balance" step="0.01"></span>
             <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="asset" aria-label="Delete Scenario Asset ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
     });
@@ -157,9 +158,9 @@ export function renderWhatIfLiabilities() {
             <span><label for="${baseId}-name" class="visually-hidden">Scenario Liability Name ${index + 1}</label>
                 <input type="text" value="${escapeHtml(liability.name)}" data-scope="whatif" data-collection="liabilities" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Liability name"></span>
             <span><label for="${baseId}-balance" class="visually-hidden">Scenario Liability Balance ${index + 1}</label>
-                <input type="number" value="${liability.balance}" data-scope="whatif" data-collection="liabilities" data-index="${index}" data-field="balance" id="${baseId}-balance" placeholder="Balance" step="0.01"></span>
+                <input type="number" value="${escNum(liability.balance)}" data-scope="whatif" data-collection="liabilities" data-index="${index}" data-field="balance" id="${baseId}-balance" placeholder="Balance" step="0.01"></span>
             <span><label for="${baseId}-rate" class="visually-hidden">Scenario Interest Rate ${index + 1}</label>
-                <input type="number" value="${liability.interestRate || 0}" data-scope="whatif" data-collection="liabilities" data-index="${index}" data-field="interestRate" id="${baseId}-rate" placeholder="Interest %" step="0.01"></span>
+                <input type="number" value="${escNum(liability.interestRate || 0)}" data-scope="whatif" data-collection="liabilities" data-index="${index}" data-field="interestRate" id="${baseId}-rate" placeholder="Interest %" step="0.01"></span>
             <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="liability" aria-label="Delete Scenario Liability ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
     });
@@ -179,7 +180,7 @@ export function renderWhatIfExpensesList(collection, containerId) {
             <span><label for="${baseId}-name" class="visually-hidden">Scenario Expense Name ${index + 1}</label>
                 <input type="text" value="${escapeHtml(expense.name)}" data-scope="whatif" data-collection="${collection}" data-index="${index}" data-field="name" id="${baseId}-name" placeholder="Name"></span>
             <span><label for="${baseId}-amount" class="visually-hidden">Scenario Expense Amount ${index + 1}</label>
-                <input type="number" value="${expense.amount}" data-scope="whatif" data-collection="${collection}" data-index="${index}" data-field="amount" id="${baseId}-amount" placeholder="Amount" step="0.01"></span>
+                <input type="number" value="${escNum(expense.amount)}" data-scope="whatif" data-collection="${collection}" data-index="${index}" data-field="amount" id="${baseId}-amount" placeholder="Amount" step="0.01"></span>
             <span><label for="${baseId}-frequency" class="visually-hidden">Scenario Expense Frequency ${index + 1}</label>
                 <select data-scope="whatif" data-collection="${collection}" data-index="${index}" data-field="frequency" id="${baseId}-frequency">
                     <option value="weekly" ${expense.frequency === 'weekly' ? 'selected' : ''}>Weekly</option>
@@ -289,7 +290,7 @@ export function runWhatIfScenario() {
                 const pct = Math.min(100, Math.max(0, (current / goal) * 100));
                 goalLine = `<div class="savings-goal"><div class="savings-goal-bar"><div class="savings-goal-fill" style="width:${pct}%;"></div></div><div class="savings-goal-meta">${formatCurrency(current)} / ${formatCurrency(goal)} · ${t}</div></div>`;
             }
-            return `<div class="savings-item"><div class="savings-label">${escapeHtml(alloc.name)} (${alloc.percentage}%)</div><div class="savings-amount">${formatCurrency(annualContribution * incomeF)}/${periodLabel}</div>${goalLine}</div>`;
+            return `<div class="savings-item"><div class="savings-label">${escapeHtml(alloc.name)} (${escNum(alloc.percentage)}%)</div><div class="savings-amount">${formatCurrency(annualContribution * incomeF)}/${periodLabel}</div>${goalLine}</div>`;
         }).join('');
         const allocBlock = allocItems
             ? `<div class="card" style="margin-top: 16px;"><div class="card-title">Income Allocation Strategy</div><div class="card-subtitle">Per-${periodLabel} split of scenario net income, with goal progress</div><div class="savings-breakdown">${allocItems}</div></div>`
@@ -338,7 +339,7 @@ export function runWhatIfScenario() {
                 </div>
                 <div class="card">
                     <div class="card-title">Financial Independence</div>
-                    <div class="card-subtitle">${scenarioFinanceData.fiSettings.multiple}× expenses @ ${scenarioFinanceData.fiSettings.expectedReturn}%</div>
+                    <div class="card-subtitle">${escNum(scenarioFinanceData.fiSettings.multiple)}× expenses @ ${escNum(scenarioFinanceData.fiSettings.expectedReturn)}%</div>
                     <div class="amount">${fmtYears(scenarioYearsToFI)}</div>
                     <p class="wi-line">${fiDelta}</p>
                     <p class="wi-line">Target ${formatCurrency(scenarioFiTarget)}</p>

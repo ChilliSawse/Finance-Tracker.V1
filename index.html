@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <!-- worker-src blob: kept for PDF.js (bundled, same-origin worker). Everything else stays 'self'. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'nonce-ft-fouc-init'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:;">
+    <!-- CSP (meta, so frame-ancestors/report-uri cannot be set here). script-src carries NO nonce and NO unsafe-inline: the one inline script (FOUC, below) is allowed by its sha256, which the ftCspHash plugin in vite.config.js recomputes at build and dev time (a test checks the committed value). worker-src blob: is for PDF.js. object/base/form/frame are shut because the app uses none. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-xu7rRa7oIvF2GW4d/NTMa3gvArLbkc6c5dv9Z+PEc5w='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none';">
     <title>Ledger</title>
-    <script nonce="ft-fouc-init">
+    <script>
     /* replays {p,m} from the last session before CSS loads; the old shape sets nothing */
     (function(){try{var t=JSON.parse(localStorage.getItem('ft-theme-fouc')),h=document.documentElement;if(t.p)h.dataset.palette=t.p;if(t.m&&t.m!='auto')h.dataset.mode=t.m}catch(e){}})()
     </script>
