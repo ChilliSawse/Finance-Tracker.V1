@@ -1,7 +1,7 @@
 // The one mutable application-state container.
 //
 // Previously these were implicit globals spread across <script defer> files
-// (financeData, guiSettingsData, whatIfFinanceData, autoSave, …). They stay
+// (financeData, guiSettingsData, autoSave, …). They stay
 // deliberately simple — a plain object modules import and read/write — because
 // the codebase's editing model is "mutate in place, then tell the renderer"
 // (see ui/render.js for the scoped-render coordination that replaced the old

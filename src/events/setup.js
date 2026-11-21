@@ -1,9 +1,6 @@
 // Top-level event wiring (from events.js setupEventListeners).
 
-import { store } from '../state/store.js';
-import { getElement } from '../utils.js';
 import { showTab } from '../ui/tabs.js';
-import { updateDataAndUI } from '../ui/render.js';
 import { openQuickAdd } from '../ui/quick-add.js';
 import { openSettings } from '../ui/settings-screen.js';
 
@@ -49,14 +46,4 @@ export function setupEventListeners() {
         if (event.target.closest('[data-quick-add]')) { event.preventDefault(); openQuickAdd(); return; }
         if (event.target.closest('[data-open-settings]')) openSettings();
     });
-
-    // Dashboard view period change
-    const dashboardViewPeriodSelect = getElement('dashboard-view-period');
-    if (dashboardViewPeriodSelect) {
-        dashboardViewPeriodSelect.addEventListener('change', (event) => {
-            store.financeData.dashboardViewPeriod = event.target.value;
-            updateDataAndUI();
-        });
-    }
-
 }

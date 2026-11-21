@@ -4,7 +4,7 @@
 // Categorise order: learned rules, then category keywords, then 'other' (categories.js).
 
 import { merchantKey, categoriseDescription, categoriseDetailed, resolveCategory } from './categories.js';
-import { listTransactions, updateTransaction, isValidIsoDate } from './transactions.js';
+import { listTransactions, updateTransaction, isValidIsoDate, addTransactions } from './transactions.js';
 import { withStore } from './db.js';
 import { matchBills } from '../calc/bill-match.js';
 
@@ -144,6 +144,18 @@ export async function mergeManualRows(newRows) {
         merges: merges.map((m) => ({ manualId: m.manualId, date: m.manual.date, description: m.manual.description,
             bankDescription: m.bank.description, amountCents: m.bank.amountCents })),
     };
+}
+
+/**
+ * The one import-commit path (A12b: the merge used to run here AND inside addTransactions): merge
+ * matching manual rows (FT-R-56/57), then add the rest. `result.merged` counts the merges.
+ * @returns {Promise<{result:{added:number, duplicates:number, merged:number, invalid?:number}, merges:Array}>}
+ */
+export async function commitImportRows(newRows) {
+    const m = await mergeManualRows(newRows);
+    const result = await addTransactions(m.rows);
+    result.merged = (result.merged || 0) + m.merges.length;
+    return { result, merges: m.merges };
 }
 
 /**

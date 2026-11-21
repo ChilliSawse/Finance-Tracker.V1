@@ -1,6 +1,6 @@
 // Alert / confirm surfaces (moved from events.js).
 // showCustomModal is now a thin wrapper over the toast; confirmDialog is the one
-// whole-data dialog (Restore, Erase all data). inlineConfirm (A12b) and confirmAction (D2) are gone.
+// whole-data dialog (Restore, Erase all data). The inline popover and the native confirm are gone.
 
 import { t } from '../i18n/strings.js';
 import { showToast } from './toast.js';

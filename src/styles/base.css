@@ -6,11 +6,8 @@
    Chrome (day strip, gauge track, selected category chip) uses accent and neutral
    tokens, never a bucket slot, so a theme or a renamed bucket cannot recolour it (C5).
 
-   Coexistence with the legacy panels (FT-R-73 C3): the generic names this file defines
-   (.card .btn .icon-btn .add-btn .amount .topbar) are switched off for anything inside,
-   or carrying, .legacy, and the matching rules in style.css are scoped under
-   :where(.legacy), at zero extra specificity. The D1 sheet (.sheet-layer .sheet) is the only sheet:
-   A7 retired the duplicate base .sheet rules. Delete the :where(...) guards when A12 purges style.css. */
+   The D1 sheet (.sheet-layer .sheet) is the only sheet: A7 retired the duplicate base .sheet rules.
+   (A12b: the .legacy scope and its :where() guards are gone with the legacy panels and modals.) */
 
 :root {
   --fs-hero: 34px; --fs-title: 24px; --fs-fig: 20px; --fs-section: 16px; --fs-body: 14px; --fs-small: 13px;
@@ -52,14 +49,14 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; font-weight: 700; font-size: var(--fs-section); }
 .mark { width: 22px; height: 22px; flex: none; }
 .scope { padding: 2px 8px 0 40px; color: var(--muted); font-size: var(--fs-small); line-height: 16px; }
-.add-btn:where(:not(.legacy *, .legacy)) {
+.add-btn {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   height: 40px; margin: 20px 0 16px; border: 0; border-radius: var(--r-pill);
   background: var(--accent); color: var(--accent-ink); font-weight: 600;
   transition: transform 120ms var(--ease), filter 150ms;
 }
-.add-btn:where(:not(.legacy *, .legacy)):hover { filter: brightness(1.08); }
-.add-btn:where(:not(.legacy *, .legacy)):active { transform: scale(0.98); }
+.add-btn:hover { filter: brightness(1.08); }
+.add-btn:active { transform: scale(0.98); }
 .nav { display: flex; flex-direction: column; gap: 2px; }
 .nav a {
   display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px;
@@ -77,20 +74,20 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 .title-row p { margin: 4px 0 0; color: var(--muted); font-size: var(--fs-body); }
 
 .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gap); }
-.card:where(:not(.legacy *, .legacy)) { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); padding: var(--card-pad); min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-card); padding: var(--card-pad); min-width: 0; }
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .card-head h2 { margin: 0; font-size: var(--fs-section); line-height: 22px; font-weight: 600; }
 .card-head .aside { color: var(--muted); font-size: var(--fs-small); }
 .link { color: var(--accent); font-weight: 600; font-size: var(--fs-body); }
 .link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
-.btn:where(:not(.legacy *, .legacy)) {
+.btn {
   display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px;
   border-radius: var(--r-pill); border: 1px solid var(--control); background: var(--surface);
   font-weight: 600; transition: background 150ms, transform 120ms var(--ease);
 }
-.btn:where(:not(.legacy *, .legacy)):hover { background: var(--raised); }
-.btn:where(:not(.legacy *, .legacy)):active { transform: scale(0.98); }
+.btn:hover { background: var(--raised); }
+.btn:active { transform: scale(0.98); }
 
 .pill {
   display: inline-flex; align-items: center; height: 22px; padding: 0 9px; flex: none; white-space: nowrap;
@@ -233,15 +230,15 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 .scrim { display: none; position: fixed; inset: 0; background: var(--scrim); z-index: 20; }
 @keyframes slide-in { from { transform: translateX(24px); opacity: 0; } }
 @keyframes slide-up { from { transform: translateY(32px); opacity: 0; } }
-.icon-btn:where(:not(.legacy *, .legacy)) { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--raised); color: var(--text); transition: background 150ms; }
-.icon-btn:where(:not(.legacy *, .legacy)):hover { background: var(--active); }
+.icon-btn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--raised); color: var(--text); transition: background 150ms; }
+.icon-btn:hover { background: var(--active); }
 .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--r-pill); background: var(--raised); align-self: flex-start; }
 .seg button { height: 32px; padding: 0 16px; border: 0; border-radius: var(--r-pill); background: transparent; color: var(--muted); font-weight: 600; }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); outline: 1px solid var(--border); }
-.amount:where(:not(.legacy *, .legacy)) { border-radius: var(--r-tile); background: var(--raised); padding: 16px 18px; }
-.amount:where(:not(.legacy *, .legacy)) .field-label-sm { display: block; font-size: var(--fs-small); color: var(--muted); font-weight: 600; }
-.amount:where(:not(.legacy *, .legacy)) output { display: block; font-size: var(--fs-hero); line-height: 44px; font-weight: 700; letter-spacing: -0.02em; }
-.amount:where(:not(.legacy *, .legacy)) output .caret { display: inline-block; width: 2px; height: 30px; margin-left: 3px; vertical-align: -3px; background: var(--accent); animation: blink 1s steps(1) infinite; }
+.amount { border-radius: var(--r-tile); background: var(--raised); padding: 16px 18px; }
+.amount .field-label-sm { display: block; font-size: var(--fs-small); color: var(--muted); font-weight: 600; }
+.amount output { display: block; font-size: var(--fs-hero); line-height: 44px; font-weight: 700; letter-spacing: -0.02em; }
+.amount output .caret { display: inline-block; width: 2px; height: 30px; margin-left: 3px; vertical-align: -3px; background: var(--accent); animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 .effect { margin: 6px 0 0; font-size: var(--fs-small); color: var(--muted); }
 .effect b { color: var(--daily-ink); font-weight: 700; }
@@ -266,7 +263,7 @@ svg.i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
 body.locked { overflow: hidden; }
 
 /* ---------- card-width rules (fix: wrapping at ~1100-1300 px windows) ---------- */
-.card:where(:not(.legacy *, .legacy)) { container-type: inline-size; }
+.card { container-type: inline-size; }
 .tile .t span:last-child, .tile .s { overflow-wrap: anywhere; }
 @container (max-width: 640px) {
   .hero-top { grid-template-columns: minmax(0, 1fr); gap: 20px; }
@@ -282,7 +279,7 @@ body.locked { overflow: hidden; }
 }
 
 /* ---------- phone chrome (hidden on desktop) ---------- */
-.topbar:where(:not(.legacy *, .legacy)), .tabbar { display: none; }
+.topbar, .tabbar { display: none; }
 
 /* ---------- tablet ---------- */
 @media (max-width: 1280px) {
@@ -297,15 +294,15 @@ body.locked { overflow: hidden; }
   .app { display: block; }
   .side { display: none; }
   .canvas { padding: 0 var(--pad) 112px; }
-  .topbar:where(:not(.legacy *, .legacy)) {
+  .topbar {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     height: 56px; margin: 0 calc(-1 * var(--pad)); padding: 0 var(--pad);
     position: sticky; top: 0; z-index: 10; background: var(--ground);
   }
-  .topbar:where(:not(.legacy *, .legacy)) .brand { padding: 0; font-size: var(--fs-body); }
-  .topbar:where(:not(.legacy *, .legacy)) .icon-btn:where(:not(.legacy *, .legacy)) { width: 44px; height: 44px; background: transparent; }
+  .topbar .brand { padding: 0; font-size: var(--fs-body); }
+  .topbar .icon-btn { width: 44px; height: 44px; background: transparent; }
   .title-row { margin: 4px 0 16px; align-items: flex-start; }
-  .title-row .btn:where(:not(.legacy *, .legacy)) { height: 44px; }
+  .title-row .btn { height: 44px; }
 
   .hero-top { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .figs { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 16px; }
@@ -344,7 +341,7 @@ body.locked { overflow: hidden; }
 
   .scrim { display: block; z-index: 40; }
   .long { display: none; }
-  .amount:where(:not(.legacy *, .legacy)) { padding: 10px 14px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .amount { padding: 10px 14px; display: flex; flex-direction: column; align-items: center; text-align: center; }
   .cats { gap: 6px; }
   .cats .chip { padding: 0 12px; }
   .cat-note { margin-top: 6px; }

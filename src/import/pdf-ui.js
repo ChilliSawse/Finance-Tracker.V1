@@ -1,27 +1,24 @@
-// Bank PDF import flow + payslip autofill — a sibling of import-ui.js with the
+// Bank PDF import flow (+ the payslip reader) — a sibling of import-ui.js with the
 // same shape: module-local draft state, one exported setup function, nothing
 // written until the user explicitly commits. Reuses the CSV pipeline's pure
-// helpers and the exact same commit path (makeTransaction → addTransactions →
+// helpers and the exact same commit path (makeTransaction → commitImportRows →
 // logEvent → refreshSpendCache → updateAllUI), so PDF rows behave identically
 // to CSV rows everywhere downstream.
 
 import { store } from '../state/store.js';
-import { getElement, getValue, setHTML, escapeHtml, formatCurrency, getPayCyclesPerYear } from '../utils.js';
+import { getElement, getValue, setHTML, escapeHtml, formatCurrency } from '../utils.js';
 import { categoriseDescription } from '../state/categories.js';
-import { resolveCategory, mergeManualRows, rematchBills } from '../state/rules.js';
-import { makeTransaction, addTransactions, deleteImportBatch } from '../state/transactions.js';
+import { resolveCategory, commitImportRows, rematchBills } from '../state/rules.js';
+import { makeTransaction, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
 import { renderHomeFeed } from '../ui/feed.js';
-import { renderIncomeSourcesSettings } from '../ui/settings-forms.js';
 import { refreshSpendCache } from '../state/spend-cache.js';
 import { openActivityToReview } from '../ui/activity.js';
-import { updateAllUI, updateDataAndUI } from '../ui/render.js';
+import { updateAllUI } from '../ui/render.js';
 import { loadPdfJs, openPdfDocument, extractPagesLines, PDF_LIMITS, PdfLimitError } from './pdfjs-loader.js';
-import { confirmDialog } from '../ui/confirm.js';
 import { parseStatementPages } from './pdf-statement.js';
-import { parsePayslipLines, grossDecision } from './payslip.js';
-import { checkPayslip } from '../calc/payslip-check.js';
+import { parsePayslipLines } from './payslip.js';
 import { t } from '../i18n/strings.js';
 
 const txnWord = (n) => t(n === 1 ? 'feed.import.txnOne' : 'feed.import.txnMany');
@@ -224,10 +221,9 @@ async function commitImport() {
     commitBtn.disabled = true;
     let result, merges = [];
     try {
-        const m = await mergeManualRows(txns);
-        merges = m.merges;
-        result = await addTransactions(m.rows);
-        result.merged = (result.merged || 0) + merges.length;
+        const done = await commitImportRows(txns);
+        merges = done.merges;
+        result = done.result;
         await rematchBills(store.financeData);
     } catch (err) {
         setHTML('pdf-import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.saveFailed', { message: escapeHtml(String(err && err.message || err)) })}</p></div>`);
@@ -287,14 +283,7 @@ async function undoLastImport() {
     if (store.activeTab === 'today') renderHomeFeed();
 }
 
-// ---- payslip autofill (income settings modal) ----
-
-let payslipSourceIndex = null;
-
-function payslipStatus(index, html) {
-    const el = getElement(`payslip-status-${index}`);
-    if (el) el.innerHTML = html;
-}
+// ---- payslip reading (the income sheet's check panel uses it) ----
 
 /**
  * Reads a payslip PDF and returns the parsed figures (net, tax, gross, help ...), or null with the
@@ -310,78 +299,6 @@ export async function readPayslip(file, onStatus, onError) {
         return null;
     }
     return parsed;
-}
-
-async function handlePayslipFile(file) {
-    const index = payslipSourceIndex;
-    payslipSourceIndex = null;
-    if (!file || index == null) return;
-    const source = store.financeData.incomeSources[index];
-    if (!source) return;
-
-    const onStatus = (html) => payslipStatus(index, html);
-    const onError = (message) => payslipStatus(index, `<span style="color: var(--color-negative);">${message}</span>`);
-    onStatus(`<span class="spinner" aria-hidden="true"></span>${t('payslip.parsing')}`);
-    const parsed = await readPayslip(file, onStatus, onError);
-    if (!parsed) return;
-
-    // Gross is the one figure that is never written unseen (L7): an estimate
-    // (net + tax) always asks, and a gross that differs from the stored one asks
-    // via C5's grossProposal. Decide before anything is changed.
-    const schedule = parsed.schedule || source.paySchedule;
-    const cyclesForGross = getPayCyclesPerYear(schedule);
-    const slipGross = parsed.gross != null && Number.isFinite(parsed.gross) && parsed.gross > 0 && source.incomeType !== 'selfEmployed'
-        ? parsed.gross : null;
-    let writeGross = false;
-    let grossKept = false;
-    if (slipGross != null) {
-        const { proposedAnnual, stored, needsConfirm } = grossDecision(parsed, source, schedule, cyclesForGross);
-        if (!needsConfirm) {
-            writeGross = true;
-        } else {
-            const body = [
-                t('d.import.gross.body', { proposed: formatCurrency(proposedAnnual), current: stored ? formatCurrency(Number(source.grossAnnual)) : '$0' }),
-                parsed.grossDerived ? t('d.import.gross.estimated') : '',
-            ].filter(Boolean).join(' ');
-            writeGross = await confirmDialog({ title: t('d.import.gross.title'), body, confirmLabel: t('d.import.gross.replace') });
-            grossKept = !writeGross;
-        }
-    }
-
-    // Apply: per-cycle figures land directly; gross annualises via the pay
-    // schedule (payslip's own frequency wins when it names one).
-    if (parsed.schedule) source.paySchedule = parsed.schedule;
-    const cycles = getPayCyclesPerYear(source.paySchedule);
-    if (parsed.net != null) source.invoicedPayPostTax = +parsed.net.toFixed(2);
-    if (parsed.tax != null) source.taxRemoved = +parsed.tax.toFixed(2);
-    let grossPart = '';
-    if (writeGross) {
-        source.grossAnnual = +(slipGross * cycles).toFixed(2);
-        grossPart = t('payslip.grossPart', { gross: formatCurrency(source.grossAnnual) });
-    } else if (grossKept) {
-        grossPart = t('d.import.gross.kept');
-    }
-    const superPart = parsed.super != null
-        ? t('payslip.superPart', { superAmt: formatCurrency(parsed.super) })
-        : '';
-
-    // C6: line the payslip up against what Ledger expects, and say so in plain words.
-    let checkPart = '';
-    if (parsed.tax != null && source.withholding && source.incomeType === 'salaried') {
-        const chk = checkPayslip({ tax: parsed.tax, gross: slipGross }, source);
-        const msg = chk.matches ? t('c.income.check.matches') : chk.message;
-        if (msg) checkPart = ` <span>${escapeHtml(msg)}</span>`;
-    }
-
-    renderIncomeSourcesSettings();
-    updateDataAndUI();
-    // Re-render rebuilt the row tools — write the status after it.
-    payslipStatus(index, `<span style="color: var(--color-positive);">${t('payslip.applied', {
-        net: formatCurrency(parsed.net || 0),
-        tax: formatCurrency(parsed.tax || 0),
-        grossPart,
-        superPart,
-    })}</span>${checkPart}`);
 }
 
 // ---- wiring ----
@@ -429,18 +346,4 @@ export function setupPdfImport() {
         else if (e.target.id === 'pdf-import-another') resetDraft();
         else if (e.target.id === 'pdf-import-undo') undoLastImport();
     });
-
-    // Payslip autofill: the per-source buttons are re-rendered with the list,
-    // so delegate at the document level (same pattern as settings-events).
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('.payslip-upload-btn');
-        if (!btn) return;
-        payslipSourceIndex = parseInt(btn.dataset.parentIndex, 10);
-        const payslipInput = getElement('payslip-file');
-        if (payslipInput) { payslipInput.value = ''; payslipInput.click(); }
-    });
-    const payslipInput = getElement('payslip-file');
-    if (payslipInput) {
-        payslipInput.addEventListener('change', () => handlePayslipFile(payslipInput.files && payslipInput.files[0]));
-    }
 }

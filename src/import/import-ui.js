@@ -10,8 +10,8 @@ import { store } from '../state/store.js';
 import { getElement, getValue, setHTML, escapeHtml, formatCurrency } from '../utils.js';
 import { parseCsv, detectColumns, normaliseRows, CSV_LIMITS, CsvLimitError } from './csv.js';
 import { categoriseDescription } from '../state/categories.js';
-import { resolveCategory, mergeManualRows, rematchBills } from '../state/rules.js';
-import { makeTransaction, addTransactions, deleteImportBatch } from '../state/transactions.js';
+import { resolveCategory, commitImportRows, rematchBills } from '../state/rules.js';
+import { makeTransaction, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
 import { renderHomeFeed } from '../ui/feed.js';
@@ -305,10 +305,9 @@ async function commitImport() {
     commitBtn.disabled = true;
     let result, merges = [];
     try {
-        const m = await mergeManualRows(txns);
-        merges = m.merges;
-        result = await addTransactions(m.rows);
-        result.merged = (result.merged || 0) + merges.length;
+        const done = await commitImportRows(txns);
+        merges = done.merges;
+        result = done.result;
         await rematchBills(store.financeData);
     } catch (err) {
         setHTML('import-result', `<div class="import-errors-box"><p class="import-errors-title">${t('import.saveFailed', { message: escapeHtml(String(err && err.message || err)) })}</p></div>`);
