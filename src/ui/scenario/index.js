@@ -146,7 +146,19 @@ async function persist() {
 }
 
 function setChanges(next) {
-    ui.scenario = { ...ui.scenario, changes: next };
+    // A change that is edited is a new thing to apply: its made-real mark goes (G6W15-5).
+    const old = new Map(ui.scenario.changes.map((c) => [c.id, JSON.stringify(c)]));
+    const marks = {};
+    for (const c of next) if (ui.scenario.madeReal && ui.scenario.madeReal[c.id] && old.get(c.id) === JSON.stringify(c)) marks[c.id] = ui.scenario.madeReal[c.id];
+    ui.scenario = { ...ui.scenario, changes: next, madeReal: marks };
+}
+
+/** Make this real records (or clears) its marks on the open scenario and saves it. Returns the scenario now open, or null. */
+export async function updateOpenScenario(fn) {
+    if (!ui || !ui.scenario) return null;
+    ui.scenario = fn(ui.scenario);
+    await persist();
+    return ui ? ui.scenario : null;
 }
 
 // ---------- rendering ----------

@@ -35,6 +35,7 @@ import { GOAL_PLANNER_TEST_CASES } from './calc/goal-planner.test-cases.js';
 import { SCENARIO_UI_TEST_CASES } from './ui/scenario-ui.test-cases.js';
 import { SCENARIO_RESULTS_TEST_CASES } from './ui/scenario-results.test-cases.js';
 import { SCENARIO_ANSWER_TOP_TEST_CASES } from './ui/scenario/answer-top.test-cases.js';
+import { SCENARIO_MAKE_REAL_SAFETY_TEST_CASES } from './ui/scenario/make-real-safety.test-cases.js';
 import { SANITIZE_TEST_CASES } from './state/sanitize.test-cases.js';
 import { HTML_TEST_CASES } from './ui/html.test-cases.js';
 import { ACTIVITY_TEST_CASES } from './ui/activity.test-cases.js';
@@ -88,6 +89,7 @@ export const TEST_GROUPS = [
     { name: 'scenario-ui', env: 'pure', cases: SCENARIO_UI_TEST_CASES },
     { name: 'scenario-results', env: 'pure', cases: SCENARIO_RESULTS_TEST_CASES },
     { name: 'scenario-answer-top', env: 'pure', cases: SCENARIO_ANSWER_TOP_TEST_CASES }, // F8a
+    { name: 'scenario-make-real-safety', env: 'pure', cases: SCENARIO_MAKE_REAL_SAFETY_TEST_CASES }, // S10
     { name: 'sanitize', env: 'pure', cases: SANITIZE_TEST_CASES },
     { name: 'html', env: 'pure', cases: HTML_TEST_CASES },
     { name: 'activity', env: 'pure', cases: ACTIVITY_TEST_CASES },

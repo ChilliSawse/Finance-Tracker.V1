@@ -335,7 +335,9 @@ async function recordTaxCheck() {
  */
 export function openIncomeSheet(index, opts = {}) {
     const data = store.financeData;
-    const source = data && data.incomeSources && data.incomeSources[index];
+    // opts.draft: a new source held in memory (Make this real); it joins data.incomeSources only when the sheet is saved.
+    const draft = opts.draft || null;
+    const source = draft || (data && data.incomeSources && data.incomeSources[index]);
     const layout = opts.layout || layoutFor(source);
     if (!source || !layout || typeof document === 'undefined') return false;
 
@@ -354,13 +356,14 @@ export function openIncomeSheet(index, opts = {}) {
         plausibility: plausibilityFor(layout),
         onSave: async (v) => {
             applyIncomeValues(source, v, layout, initial);
+            if (draft && !data.incomeSources.includes(draft)) data.incomeSources.push(draft);
             await persist();
             if (typeof opts.onSaved === 'function') opts.onSaved(source);
         },
         // A12b: delete with Undo; the last source is refused (the old guard, now a toast).
-        onDelete: () => { deleteIncomeSourceFlow(index); },
+        onDelete: draft ? undefined : () => { deleteIncomeSourceFlow(index); },
     });
-    decorate(handle, { index, layout, source, data, initial, today });
+    decorate(handle, { index, layout, source, data, initial, today, draft, onSaved: opts.onSaved });
     return true;
 }
 
@@ -376,7 +379,7 @@ function decorate(handle, ctx) {
     sw.addEventListener('click', () => {
         const carry = handle.getValues();
         handle.close();
-        openIncomeSheet(ctx.index, { layout: layout === 'hours' ? 'salary' : 'hours', carry });
+        openIncomeSheet(ctx.index, { layout: layout === 'hours' ? 'salary' : 'hours', carry, draft: ctx.draft, onSaved: ctx.onSaved });
     });
     form.insertBefore(sw, form.firstChild);
 
