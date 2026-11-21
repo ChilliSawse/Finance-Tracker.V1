@@ -8,7 +8,7 @@
 
 import { store } from '../state/store.js';
 import { calculateTotals } from '../calc/calculations.js';
-import { setText, formatCurrency, fitAllAmounts } from '../utils.js';
+import { fitAllAmounts } from '../utils.js';
 import { renderToday } from './today.js';
 import { renderActivity } from './activity.js';
 import { renderPlan } from './plan.js';
@@ -40,8 +40,6 @@ export function updateAllUI() {
     recordDailySnapshot(totals);
     checkMilestones(totals);
     Object.keys(TAB_RENDERERS).forEach(tab => renderTab(tab, totals));
-    // The liabilities-modal total readout rides along with any full render.
-    setText('total-liabilities-settings', formatCurrency(totals.currentLiabilities));
     dirty.clear();
 }
 
@@ -67,8 +65,6 @@ export function renderActiveTab() {
     if (!dirty.has(tab)) return;
     const totals = calculateTotals(store.financeData);
     renderTab(tab, totals);
-    // Keep the liabilities-modal total fresh — it can be open while its list is edited.
-    setText('total-liabilities-settings', formatCurrency(totals.currentLiabilities));
 }
 
 // Display-only refresh of one tab (e.g. the expense search filter).

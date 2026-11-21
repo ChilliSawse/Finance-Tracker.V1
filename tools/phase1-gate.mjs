@@ -46,14 +46,20 @@ try {
     fail(`could not compare with tag pre-phase1: ${err.message.split('\n')[0]}`);
 }
 
-// 3. No new empty catch: the count per file may not rise above pre-phase1 (some already exist).
-const EMPTY_CATCH = /catchs*(([^)]*))?s*{s*}/g;
+// 3. No empty catch body anywhere in src/ (G4). A body with a statement or a comment is fine.
+// Regex literal on purpose: backslashes in strings get mangled in this repo's scripts. The self-test
+// proves the pattern still fires on the shapes it must catch and not on the ones it must allow.
+const EMPTY_CATCH = /catch\s*(\([^)]*\))?\s*\{\s*\}/g;
+{
+    const hits = (s) => (s.match(EMPTY_CATCH) || []).length;
+    const must = ['try { x(); } catch (e) {}', 'try { x(); } catch {}', 'try { x(); } catch (e) {\n  }', 'catch(err){ }'];
+    const mustNot = ['try { x(); } catch (e) { console.warn(e); }', 'try { x(); } catch { /* deliberate */ }'];
+    for (const t of must) if (hits(t) !== 1) fail(`gate self-test: empty-catch pattern missed: ${JSON.stringify(t)}`);
+    for (const t of mustNot) if (hits(t) !== 0) fail(`gate self-test: empty-catch pattern flagged a filled catch: ${JSON.stringify(t)}`);
+}
 for (const f of jsFiles) {
     const now = (read(f).match(EMPTY_CATCH) || []).length;
-    if (!now) continue;
-    let before = 0;
-    try { before = (git('show', `pre-phase1:${f.split(path.sep).join('/')}`).match(EMPTY_CATCH) || []).length; } catch { before = 0; }
-    if (now > before) fail(`new empty catch in ${f} (${before} at pre-phase1, ${now} now)`);
+    if (now) fail(`empty catch body in ${f} (${now})`);
 }
 
 // 4. alert( and confirm( once D2 has landed.

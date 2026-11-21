@@ -31,7 +31,7 @@ export function showTab(name) {
     renderActiveTab();
 
     // A.3 — remember the active section across reloads (key unchanged, values are the new names).
-    try { localStorage.setItem('ft-active-tab', tabName); } catch (_) {}
+    try { localStorage.setItem('ft-active-tab', tabName); } catch (_) { /* storage full or blocked: skip, deliberate */ }
 
     // Figures in a just-revealed screen couldn't be measured while hidden — fit now.
     fitAllAmounts();
@@ -44,7 +44,7 @@ export function restoreActiveTab() {
         tab = resolveTab(localStorage.getItem('ft-active-tab'));
         // The sidebar no longer collapses (FT-R-62); drop the dead preference.
         localStorage.removeItem('ft-sidebar-collapsed');
-    } catch (_) {}
+    } catch (_) { /* storage unavailable: start on the default tab */ }
     showTab(tab);
 }
 

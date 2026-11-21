@@ -34,7 +34,7 @@ export function recordDailySnapshot(totals) {
     if (last && last.date === date) snaps[snaps.length - 1] = entry;
     else snaps.push(entry);
     while (snaps.length > MAX_SNAPSHOTS) snaps.shift();
-    try { localStorage.setItem(SNAPSHOTS_KEY, JSON.stringify(snaps)); } catch (_) {}
+    try { localStorage.setItem(SNAPSHOTS_KEY, JSON.stringify(snaps)); } catch (_) { /* storage full or blocked: skip, deliberate */ }
 }
 
 /**

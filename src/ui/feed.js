@@ -106,7 +106,7 @@ export function storyRows(events, since, limit) {
  * and how many rows the To-review line already used.
  */
 export async function renderHomeFeed() {
-    const el = getElement('today-story-events');
+    const el = document.getElementById('today-story-events');
     if (!el) return;
     const m = todayModel();
     if (!m.ready) return;

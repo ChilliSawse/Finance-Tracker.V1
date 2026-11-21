@@ -236,7 +236,7 @@ async function commitImport() {
         try {
             const ev = await logEvent('import', { batchId, count: result.added, sourceName });
             eventId = ev.id;
-        } catch (_) {}
+        } catch (err) { console.warn('Ledger: import step failed', err); }
     }
     lastCommit = { batchId, eventId, added: result.added };
 
@@ -269,7 +269,7 @@ async function undoLastImport() {
     try {
         await deleteImportBatch(lastCommit.batchId);
         if (lastCommit.eventId) await deleteEvent(lastCommit.eventId);
-    } catch (_) {}
+    } catch (err) { console.warn('Ledger: import step failed', err); }
     setHTML('pdf-import-result', `
         <div class="import-success">
             <p class="import-success-title">${t('import.undo.done', { count: lastCommit.added })}</p>

@@ -58,7 +58,7 @@ function saveMapping(signature, config) {
     if (!signature) return;
     const all = readSavedMappings();
     all[signature] = config;
-    try { localStorage.setItem(MAPPINGS_KEY, JSON.stringify(all)); } catch (_) {}
+    try { localStorage.setItem(MAPPINGS_KEY, JSON.stringify(all)); } catch (_) { /* storage full or blocked: skip, deliberate */ }
 }
 
 // ---- UI state readers ----
@@ -322,7 +322,7 @@ async function commitImport() {
         try {
             const ev = await logEvent('import', { batchId, count: result.added, sourceName });
             eventId = ev.id;
-        } catch (_) {}
+        } catch (err) { console.warn('Ledger: import step failed', err); }
     }
     lastCommit = { batchId, eventId, added: result.added };
 
@@ -355,7 +355,7 @@ async function undoLastImport() {
     try {
         await deleteImportBatch(lastCommit.batchId);
         if (lastCommit.eventId) await deleteEvent(lastCommit.eventId);
-    } catch (_) {}
+    } catch (err) { console.warn('Ledger: import step failed', err); }
     setHTML('import-result', `
         <div class="import-success">
             <p class="import-success-title">${t('import.undo.done', { count: lastCommit.added })}</p>

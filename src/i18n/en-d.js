@@ -10,7 +10,6 @@ export const enD = {
     'd.sheet.required': 'Please fill this in.',
     'd.sheet.notNumber': 'Enter a number, like 25 or 25.50.',
     'd.sheet.saveFailed': 'Could not save. Nothing was changed.',
-    'd.sheet.fixCount': 'Please check {count} field(s) marked below.',
     // Plausibility notes (quiet, never block Save)
     'd.plaus.weekly': 'That is about {amount} a week. Is that right?',
     'd.plaus.hours': '{hours} hours a week is more than most people work. Is that right?',
@@ -19,7 +18,6 @@ export const enD = {
     // Toast
     'd.toast.undo': 'Undo',
     'd.toast.dismiss': 'Dismiss',
-    'd.toast.deleted': '{name} deleted',
     // Dialog
     'd.dialog.confirm': 'Confirm',
     'd.dialog.cancel': 'Cancel',
@@ -28,9 +26,7 @@ export const enD = {
     'd.import.invalid': 'Invalid backup file: {reason}',
     'd.import.failed': 'Could not import that backup. Nothing was changed.',
     'd.import.confirmTitle': 'Replace all your data?',
-    'd.import.confirmBody': 'Importing this file will replace ALL current data (financial and appearance). A safety copy of your current data is kept first.',
     'd.import.confirmLabel': 'Replace data',
-    'd.import.done': 'Data imported successfully! Please review all tabs.',
     'd.corrupt.title': 'Your saved data could not be read',
     'd.corrupt.body': 'Ledger started with fresh data. The unreadable copy was kept safely on this device. Export it so you can get help recovering it.',
     'd.corrupt.export': 'Export it',
@@ -52,11 +48,6 @@ export const enD = {
     'd.import.pdfTooManyPages': 'That PDF has too many pages to read here. Export a shorter date range from your bank.',
     'd.import.outOfRange': '{count} row(s) skipped because the amount was too large to store.',
     'd.import.skippedLines': '{count} line(s) skipped because the date or amount could not be read.',
-    'd.import.gross.title': 'Replace your gross income?',
-    'd.import.gross.body': 'The payslip suggests {proposed} a year, but this income source has {current}.',
-    'd.import.gross.estimated': 'The payslip does not print gross pay, so this figure is estimated from net pay plus tax.',
-    'd.import.gross.replace': 'Replace gross',
-    'd.import.gross.kept': ' · gross left as it was',
 
     // Settings screen (D2)
     'd.settings.title': 'Settings',
