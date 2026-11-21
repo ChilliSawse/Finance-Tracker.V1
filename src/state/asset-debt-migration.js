@@ -141,3 +141,10 @@ export function migrateAssetDebtDetail(data, hooks = {}) {
 export function afterImport(data) {
     return false;
 }
+
+// F5: ids for rows created after the migration ran (the version guard stops it filling them later).
+// One owner for the id shape: the same `a-<slug>` / `inc-<slug>` with `-2` on collision.
+/** A unique asset id for a new row. */
+export function newAssetId(assets, name) { return uniqueId('a', name, 'asset', idsInUse(assets)); }
+/** A unique income source id for a new row. */
+export function newIncomeSourceId(sources, name) { return uniqueId('inc', name, 'income', idsInUse(sources)); }

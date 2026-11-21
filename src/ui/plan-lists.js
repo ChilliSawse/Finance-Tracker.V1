@@ -15,9 +15,11 @@ import { billOccurrences } from '../calc/pay-cycle.js';
 import { addPlanItem, updatePlanItem, removePlanItem, convertToBill } from '../state/plan.js';
 import { weeklyAmountRule } from './sheet.js';
 import { categoryIcon } from '../state/categories.js';
-import { newLiabilityId } from '../state/bucket-migration.js';
 import { relinkCategory } from '../state/saving-model.js';
-import { assetSheetSpec, debtSheetSpec, newAsset, newDebt } from './plan-assets-debts.js';
+import {
+    assetSheetSpec, debtSheetSpec, newAsset, newDebt, newIncomeSourceRow as newIncomeRow, applyAssetValues, applyDebtValues,
+    assetChipsHtml, debtChipsHtml, ASSET_KINDS,
+} from './plan-assets-debts.js';
 import { categoryBucketField, bucketIdFromField } from './bucket-sheets.js';
 import { iconSvgHtml, CATEGORY_ICON_NAMES } from './icon-paths.js';
 
@@ -309,8 +311,8 @@ export function deletePlanItem(data, id) {
 }
 
 /** A source row for "Add income" in the legacy shape the engine reads. C6's sheet edits the rest. */
-export function newIncomeSource() {
-    return { name: 'New Income', incomeType: 'salaried', grossAnnual: 0, paySchedule: 'fortnightly', hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null, payAnchor: null };
+export function newIncomeSource(list = []) {
+    return newIncomeRow(list); // F5: the factory carries the id
 }
 
 /** Marks the migration review done for every listed bill (the card then hides). */
@@ -349,6 +351,7 @@ function listRows(data, kind) {
 export function debtAssetModel(data, kind) {
     const rows = listRows(data || {}, kind).map(({ r, index }) => ({
         index, id: r.id || '', name: r.name || '', balance: Number(r.balance) || 0, rate: kind === 'debt' ? Number(r.interestRate) || 0 : null,
+        chips: kind === 'debt' ? debtChipsHtml(r) : assetChipsHtml(r),
     }));
     return { kind, rows, count: rows.length, total: rows.reduce((s, r) => s + r.balance, 0) };
 }
@@ -358,7 +361,7 @@ export function debtAssetBodyHtml(model) {
     const rows = model.rows.map((r) => {
         const sub = k === 'debt' ? t('a.plan.debt.rate', { rate: String(r.rate) }) : t('a.plan.asset.sub');
         return `<li><button type="button" class="p-row" data-${k}-open="${escNum(r.index)}">`
-            + `<span class="p-main"><span class="n">${esc(r.name || t('a.plan.list.unnamed'))}</span><span class="d">${esc(sub)}</span></span>`
+            + `<span class="p-main"><span class="n">${esc(r.name || t('a.plan.list.unnamed'))}${r.chips || ''}</span><span class="d">${esc(sub)}</span></span>`
             + `<span class="often"></span>${moneyHtml(r.balance)}<span class="chev" aria-hidden="true"></span></button></li>`;
     }).join('');
     return (rows ? `<ul class="p-list">${rows}</ul>` : `<p class="muted p-empty">${esc(t(`a.plan.${k}.empty`))}</p>`)
@@ -371,24 +374,24 @@ export function debtAssetCount(kind, n) {
 }
 
 /**
- * The openSheet spec for a debt or an asset. F5 fills plan-assets-debts.js with the final fields; until then
- * (the stub has none) the three plain fields below carry the sheet, so the list works today.
+ * The openSheet spec for a debt or an asset (F5 fields from plan-assets-debts.js). `opts`: today (ISO, for the
+ * depreciation offer), kind (override) and carry (values entered so far) when the sheet reopens after a kind change.
+ * If a spec ever came back with no fields the three plain fields below would carry the sheet.
  */
-export function debtAssetSheetSpec(kind, row = null) {
-    const stub = kind === 'debt' ? debtSheetSpec(row) : assetSheetSpec(row);
-    const editing = !!row;
-    const fields = stub.fields && stub.fields.length ? stub.fields : [
+export function debtAssetSheetSpec(kind, row = null, opts = {}) {
+    const spec = kind === 'debt' ? debtSheetSpec(row, opts) : assetSheetSpec(row, opts);
+    const plain = !(spec.fields && spec.fields.length);
+    const fields = plain ? [
         { key: 'name', label: t('a.plan.list.name'), type: 'text', required: true },
         { key: 'balance', label: t(`a.plan.${kind}.balance`), type: 'money', required: true },
         ...(kind === 'debt' ? [{ key: 'interestRate', label: t('a.plan.debt.interest'), type: 'percent', hint: t('a.plan.debt.interestHint') }] : []),
-    ];
-    const blank = kind === 'debt' ? newDebt() : newAsset();
-    const base = editing ? row : { ...blank, name: '', balance: null };
-    const values = { ...(stub.values || {}), ...base };
-    const title = stub.title || (editing ? t('a.plan.list.edit', { name: row.name || t('a.plan.list.unnamed') }) : t(`a.plan.${kind}.addTitle`));
+    ] : spec.fields;
+    const title = spec.title || (row ? t('a.plan.list.edit', { name: row.name || t('a.plan.list.unnamed') }) : t(`a.plan.${kind}.addTitle`));
+    const values = plain ? { ...(spec.values || {}), ...(row || { name: '', balance: null }) } : spec.values;
     return {
-        title, fields, values,
+        title, fields, values, plausibility: spec.plausibility, reopenOn: spec.reopenOn || [],
         validate(v) {
+            if (!plain && spec.validate) return spec.validate(v);
             const errors = {};
             if (!String(v.name || '').trim()) errors.name = t('a.plan.err.name');
             if (v.balance == null || !(Number(v.balance) >= 0)) errors.balance = t('a.plan.err.amount');
@@ -407,18 +410,16 @@ export function saveDebtAsset(data, kind, index, values) {
     const name = String(values.name || '').trim();
     const balance = Number(values.balance) || 0;
     if (index == null) {
+        // F5: the factories give the new row its id and every detail field; the sheet values then go on top.
         const row = kind === 'debt'
-            ? { ...newDebt(), id: newLiabilityId(list, name), name, balance, interestRate: Number(values.interestRate) || 0 }
-            : { ...newAsset(), name, balance };
+            ? applyDebtValues(newDebt(list, { name, balance }), values)
+            : applyAssetValues(newAsset(list, { name, balance, ...(ASSET_KINDS.includes(values.kind) ? { kind: values.kind } : {}) }), values);
         list.push(row);
         return { ok: true, item: row, message: t('a.plan.list.added', { name }), onUndo() { restoreList(list, before); }, onExpire: undefined };
     }
     const row = list[index];
     if (!row) return failed('missing');
-    // Fields F5 adds travel through: every sheet value except an id writes back.
-    for (const k of Object.keys(values)) if (k !== 'id') row[k] = values[k];
-    row.name = name; row.balance = balance;
-    if (kind === 'debt') row.interestRate = Number(values.interestRate) || 0;
+    if (kind === 'debt') applyDebtValues(row, { ...values, name, balance }); else applyAssetValues(row, { ...values, name, balance });
     return { ok: true, item: row, message: t('a.plan.list.changed', { name }), onUndo() { restoreList(list, before); }, onExpire: undefined };
 }
 

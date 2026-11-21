@@ -214,7 +214,8 @@ export const PLAN_LISTS_TEST_CASES = [
             const dm = debtAssetModel(d, 'debt');
             assert('debt rows and total', [dm.count, dm.total], [2, 13050]);
             const spec = debtAssetSheetSpec('debt', d.liabilities[0]);
-            assert('stub falls back to plain fields', spec.fields.map((f) => f.key), ['name', 'balance', 'interestRate']);
+            // F5 filled the stub: the sheet now carries the debt detail fields (the plain three are still its first three).
+            assert('F5 fields lead with the plain three', spec.fields.map((f) => f.key).slice(0, 3), ['name', 'balance', 'interestRate']);
             assert('validate', Object.keys(debtAssetSheetSpec('asset').validate({ name: '', balance: null })).sort(), ['balance', 'name']);
             const before = JSON.stringify(d);
             const add = saveDebtAsset(d, 'debt', null, { name: 'Store card', balance: 300, interestRate: 18 });

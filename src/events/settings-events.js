@@ -3,7 +3,8 @@
 // edit (live data AND What If sandbox, via data-scope="whatif").
 
 import { store } from '../state/store.js';
-import { newLiabilityId } from '../state/bucket-migration.js';
+import { newAsset, newDebt } from '../ui/plan-assets-debts.js';
+import { newIncomeSourceId } from '../state/asset-debt-migration.js';
 import { newBucket } from '../state/saving-model.js';
 import {
     getElement, getValue, showFieldError, clearFieldError, validateFieldValue,
@@ -318,7 +319,7 @@ export function addIncomeSource(scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
     if (!fd) return;
     fd.incomeSources.push({
-        name: "New Income", incomeType: "salaried", grossAnnual: 0, paySchedule: "monthly", hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null,
+        id: newIncomeSourceId(fd.incomeSources, "New Income"), name: "New Income", incomeType: "salaried", grossAnnual: 0, paySchedule: "monthly", hoursPerCycle: null, taxRemoved: null, invoicedPayPostTax: null,
         hourlyRate: null, hoursPerWeek: null, superPct: null, basis: "salary", taxCheck: null,
         withholding: { claimsTaxFree: true, hasStudyDebt: null, medicareExemption: false, extraPerPay: 0 },
     });
@@ -412,7 +413,7 @@ export function removeTaxBracket(index) {
 export function addAsset(scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
     if (!fd) return;
-    fd.assets.push({ name: "New Asset", balance: 0 });
+    fd.assets.push(newAsset(fd.assets)); // F5: id and every detail field at creation
     if (scope === 'whatif') { renderWhatIfAssets(); } else { renderAssetsSettings(); updateDataAndUI(); }
     revealNewRow(scope === 'whatif' ? 'whatif-assets-settings' : 'assets-settings');
 }
@@ -426,7 +427,7 @@ export function removeAsset(index, scope) {
 export function addLiability(scope) {
     const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
     if (!fd) return;
-    fd.liabilities.push({ id: newLiabilityId(fd.liabilities, "New Liability"), name: "New Liability", balance: 0, interestRate: 0 });
+    fd.liabilities.push(newDebt(fd.liabilities));
     if (scope === 'whatif') { renderWhatIfLiabilities(); } else { renderLiabilitiesSettings(); updateDataAndUI(); }
     revealNewRow(scope === 'whatif' ? 'whatif-liabilities-settings' : 'liabilities-settings');
 }
