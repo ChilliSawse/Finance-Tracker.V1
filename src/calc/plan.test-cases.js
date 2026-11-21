@@ -145,3 +145,54 @@ export const PLAN_TEST_CASES = [
         },
     },
 ];
+
+// ---- B6: bills rewired to anchor dates (separate, clearly named cases) ----
+import { upcomingBills, missedBills, rollForwardBills } from '../state/bills.js';
+
+const b6Data = (extra = {}) => ({
+    dataVersion: 2,
+    bills: [{ id: 'bill-1', name: 'Rego', amount: 100, frequency: 'monthly', nextDue: '2026-01-31' }],
+    plan: [{ id: 'bill-1', categoryId: 'other', name: 'Rego', amount: 100, frequency: 'monthly', anchorDue: '2026-01-31', inTotals: false, legacy: { list: 'bill', index: 0 } }],
+    ...extra,
+});
+
+PLAN_TEST_CASES.push(
+    {
+        name: 'B6.1 bill plan items: 31 January monthly shows 28 February then 31 March',
+        fn(assert) {
+            const d = b6Data();
+            const feb = upcomingBills(d, 14, { today: '2026-02-20' });
+            assert('feb date', feb.map((u) => u.dueDate), ['2026-02-28']);
+            assert('feb keeps the old bill id', feb[0].bill.id, 'bill-1');
+            assert('feb days', feb[0].dueInDays, 8);
+            const mar = upcomingBills(d, 14, { today: '2026-03-20' });
+            assert('mar date', mar.map((u) => u.dueDate), ['2026-03-31']);
+        },
+    },
+    {
+        name: 'B6.1 a missed bill reads Missed and is not rolled',
+        fn(assert) {
+            const d = b6Data();
+            const before = JSON.stringify(d);
+            assert('roll is a no-op for plan items', rollForwardBills(d), false);
+            assert('data untouched', JSON.stringify(d), before);
+            const missed = missedBills(d, { today: '2026-03-05', lookbackDays: 20 });
+            assert('missed list', missed.map((m) => [m.bill.id, m.dueDate, m.status]), [['bill-1', '2026-02-28', 'Missed']]);
+            const paid = [{ billMatch: { planId: 'bill-1', dueDate: '2026-02-28' } }];
+            assert('paid is not missed', missedBills(d, { today: '2026-03-05', lookbackDays: 20, txns: paid }), []);
+            assert('paid not upcoming', upcomingBills(d, 14, { today: '2026-02-28', txns: paid }), []);
+            assert('due today status', upcomingBills(d, 14, { today: '2026-02-28' })[0].status, 'Due');
+        },
+    },
+    {
+        name: 'B6.1 legacy bills still roll forward as before',
+        fn(assert) {
+            const d = { bills: [{ id: 'x', name: 'Old', amount: 5, frequency: 'monthly', nextDue: '2000-01-15' }] };
+            assert('moved', rollForwardBills(d), true);
+            assert('now in the future', d.bills[0].nextDue >= '2026-01-01', true);
+            const soon = upcomingBills({ bills: [{ id: 'y', name: 'N', amount: 1, frequency: 'weekly', nextDue: '2026-05-03' }] }, 7, { today: '2026-05-01' });
+            assert('legacy upcoming', soon.map((u) => [u.bill.id, u.dueInDays]), [['y', 2]]);
+            assert('legacy missed empty', missedBills(d, { today: '2026-05-01' }), []);
+        },
+    },
+);

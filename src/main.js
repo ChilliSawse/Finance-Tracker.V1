@@ -39,7 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const hadSavedData = store.autoSave.loadData();
     loadTheme(); // A4: palette and mode attributes plus text size, before the UI renders
 
-    // Ledger — advance past-due bills to their next occurrence and announce
+    // Ledger — un-migrated (legacy) bills roll to their next occurrence; plan-item bills (B6)
+    // never roll: their dates come from anchorDue, so this is a no-op for them. Announce
     // anything due this week in the feed (once per bill+date).
     if (rollForwardBills(store.financeData) && store.autoSave) store.autoSave.onDataChange();
     generateBillDueEvents(store.financeData);
