@@ -11,6 +11,8 @@ import { registerBackupPart, cleanValue, MAX_PART_ROWS } from './backup.js';
 import { changeProblems, applyOp, isIsoDate } from '../calc/scenario.js';
 import { addPlanItem, updatePlanItem, removePlanItem } from './plan.js';
 import { setSplit, addGoal, updateGoal, removeGoal } from './saving-model.js';
+import { BILL_FREQUENCIES } from './bills.js';
+import { validateAssumptions } from '../ui/future/model.js';
 import { t, plural } from '../i18n/strings.js';
 
 export const MAX_SCENARIO_ROWS = 10000;   // on restore; saving by hand has no cap
@@ -40,8 +42,9 @@ export function sanitizeChange(raw) {
         until: raw.until == null ? null : raw.until,
         note: cut(raw.note, MAX_NOTE),
     };
-    // The cleaned value must still satisfy the rules (a value that vanished is not allowed).
-    return changeProblems(c).length ? null : c;
+    // The cleaned value must still satisfy the rules (a value that vanished is not allowed), and a field or a
+    // value the normal sheet would refuse is not kept (the same table Make this real uses).
+    return changeProblems(c).length || changeRealProblem(c, { onRestore: true }) ? null : c;
 }
 
 /** One scenario from untrusted JSON (a file or a save): {scenario, dropped} or null when it has no usable id. */
@@ -58,6 +61,12 @@ export function sanitizeScenario(raw, now = new Date()) {
         seen.add(c.id);
         changes.push(c);
     }
+    const madeReal = {};
+    if (isObj(raw.madeReal)) {
+        for (const k of Object.keys(raw.madeReal)) {
+            if (seen.has(k) && isStamp(raw.madeReal[k])) madeReal[k] = raw.madeReal[k];   // only ids of changes that are kept
+        }
+    }
     const scenario = {
         id: raw.id,
         name: cut(raw.name, MAX_NAME),
@@ -68,6 +77,7 @@ export function sanitizeScenario(raw, now = new Date()) {
         archived: raw.archived === true,
         changes,
         presetId: typeof raw.presetId === 'string' && raw.presetId.length <= 60 ? raw.presetId : null,
+        madeReal,
     };
     if (JSON.stringify(scenario).length > MAX_ROW_JSON) return null;
     return { scenario, dropped };
@@ -113,7 +123,7 @@ export function newScenario(fields = {}, now = new Date()) {
     const stamp = now.toISOString();
     return {
         id: newId('sc'), name: cut(fields.name, MAX_NAME), startedFrom: isIsoDate(fields.startedFrom) ? fields.startedFrom : null,
-        createdAt: stamp, updatedAt: stamp, pinned: false, archived: false, changes: [], presetId: fields.presetId || null,
+        createdAt: stamp, updatedAt: stamp, pinned: false, archived: false, changes: [], presetId: fields.presetId || null, madeReal: {},
     };
 }
 
@@ -150,6 +160,7 @@ export async function duplicateScenario(id, opts = {}) {
         createdAt: now.toISOString(), pinned: false, archived: false,
     };
     copy.changes = copy.changes.map((c) => ({ ...c, id: newId('ch') }));
+    copy.madeReal = {};   // a copy has not been made real
     return saveScenario(copy, { now });
 }
 
@@ -175,12 +186,124 @@ export const SCENARIOS_PART = {
 };
 registerBackupPart(SCENARIOS_PART);
 
+// ---------- Make this real: what a scenario may write into real data (G6W15-3) ----------
+//
+// ONE table: for each change kind, the fields a scenario may write and the check each value must pass. A field that
+// is not here is refused, and each value is checked the way the normal sheet for that field would (the Assumptions
+// bounds are the F6 sheet's own, via validateAssumptions; frequencies are the bills list). Used on restore
+// (sanitizeChange), before Apply (stepProblem) and when a change is applied (applyMakeReal). A check returns null
+// (fine) or a reason code: number, range, date, choice, text, other (the text for each is `f.res.mr.why.*`).
+
+const MAX_MONEY = 100000000;
+const isNumber = (v) => typeof v === 'number' && Number.isFinite(v);
+const between = (lo, hi) => (v) => (!isNumber(v) ? 'number' : v >= lo && v <= hi ? null : 'range');
+const rMoney = between(0, MAX_MONEY);
+const rPercent = between(0, 100);
+const rText = (v) => (typeof v === 'string' && v.trim().length > 0 && v.length <= MAX_NAME ? null : 'text');
+const rDate = (v) => (v === null || isIsoDate(v) ? null : 'date');
+const rBool = (v) => (typeof v === 'boolean' ? null : 'other');
+const rId = (v) => (v === null || (typeof v === 'string' && v.length > 0 && v.length <= 200) ? null : 'other');
+const rOneOf = (list) => (v) => (list.includes(v) ? null : 'choice');
+const rAssumption = (field) => (v) => {
+    if (!isNumber(v)) return 'number';
+    const probe = { multiple: 25, expectedReturn: 7, inflation: 2.5, [field]: v };
+    return validateAssumptions(probe, new Date().getFullYear())[field] ? 'range' : null;
+};
+const PAY_SCHEDULES = ['weekly', 'fortnightly', 'monthly', 'quarterly'];
+
+export const REAL_FIELDS = {
+    expense: { amount: rMoney, name: rText, frequency: rOneOf(BILL_FREQUENCIES), inTotals: rBool, bucketId: rId, categoryId: rId, anchorDue: rDate },
+    goal: { name: rText, cost: rMoney, saved: rMoney, due: rDate, share: rPercent, parentId: rId },
+    split: { percentage: rPercent },
+    assumption: { multiple: rAssumption('multiple'), expectedReturn: rAssumption('expectedReturn'), inflation: rAssumption('inflation') },
+    income: { grossAnnual: rMoney, hourlyRate: rMoney, hoursPerWeek: between(0, 168) },
+    incomeAdd: { name: rText, incomeType: rOneOf(['salaried']), grossAnnual: rMoney, hourlyRate: rMoney, hoursPerWeek: between(0, 168), paySchedule: rOneOf(PAY_SCHEDULES) },
+    debtAdd: { name: rText, balance: rMoney, interestRate: rPercent },
+};
+
+const ownKey = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
+/** The allowed keys of a new row's `value`, copied (and nothing else). */
+export function pickRealFields(kind, value) {
+    const table = REAL_FIELDS[kind];
+    const out = {};
+    if (!table || !isObj(value)) return out;
+    for (const k of Object.keys(table)) if (ownKey(value, k) && value[k] !== undefined && value[k] !== null) out[k] = value[k];
+    return out;
+}
+
+/** Why one value cannot be written to `kind`.`field` (a reason code), or null. */
+export function realValueProblem(kind, field, value) {
+    const table = REAL_FIELDS[kind];
+    if (!table || typeof field !== 'string' || !ownKey(table, field)) return 'field';
+    return table[field](value);
+}
+
+/** Why a change cannot be made real from its own data (no live row needed): a reason code, or null. One-offs and funded goals are never applied. */
+export function changeRealProblem(c, { onRestore = false } = {}) {
+    if (!isObj(c)) return 'other';
+    const table = REAL_FIELDS[c.kind];
+    if (!table || c.op === 'remove') return null;
+    const isNew = isObj(c.target) && c.target.id == null && c.target.collection !== 'fiSettings';
+    if (isNew) {
+        if (c.op !== 'add' || !isObj(c.value)) return 'other';
+        for (const [k, rule] of Object.entries(table)) {
+            if (!ownKey(c.value, k) || c.value[k] === undefined || c.value[k] === null) continue;
+            const bad = rule(c.value[k]);
+            if (bad) return bad;
+        }
+        return null;
+    }
+    if (typeof c.field !== 'string' || !ownKey(table, c.field)) return 'field';
+    if (c.op === 'set') return onRestore && c.value !== null && typeof c.value === 'object' ? null : table[c.field](c.value);   // a stored object value is refused when applied, not dropped from the file
+    if (c.op === 'scale') return isNumber(c.value) && c.value > 0 && c.value <= 100 ? null : 'range';
+    return isNumber(c.value) ? null : 'number';
+}
+
+/** Like changeRealProblem, and for a scale or add also checks the figure it would give from the live row. */
+export function changeApplyProblem(data, c) {
+    const bad = changeRealProblem(c);
+    if (bad || !isObj(c) || !REAL_FIELDS[c.kind] || c.op === 'remove' || c.op === 'set' || !isObj(c.target) || !isObj(data)) return bad;
+    if (c.target.collection === 'fiSettings') {
+        const fi = isObj(data.fiSettings) ? data.fiSettings : {};
+        return realValueProblem(c.kind, c.field, applyOp(fi[c.field], c));
+    }
+    if (c.target.id == null) return null;
+    const row = liveRow(data, c);
+    return row ? realValueProblem(c.kind, c.field, applyOp(row[c.field], c)) : null;
+}
+
+/** The first reason (code) a step of `makeRealPlan` cannot be applied, or null. */
+export function stepProblem(data, step) {
+    for (const c of step.changes) { const bad = changeApplyProblem(data, c); if (bad) return bad; }
+    return null;
+}
+
+/** Human text for a reason code (never an object, never a code). */
+export const problemText = (code) => t(`f.res.mr.why.${['number', 'range', 'date', 'choice', 'text', 'field'].includes(code) ? code : 'other'}`);
+
+// ---------- Make this real: made-real marks (G6W15-5) ----------
+
+/** True when every change of the step is marked as made real on the scenario. */
+export function isStepMadeReal(scenario, step) {
+    const m = scenario && isObj(scenario.madeReal) ? scenario.madeReal : {};
+    return step.changes.length > 0 && step.changes.every((c) => ownKey(m, c.id));
+}
+
+/** A copy of the scenario with the change ids marked (`madeReal: {changeId: stamp}`), or with those marks removed (`stamp` null). */
+export function withMadeReal(scenario, ids, stamp) {
+    const m = {};
+    if (isObj(scenario.madeReal)) for (const k of Object.keys(scenario.madeReal)) if (!ids.includes(k)) m[k] = scenario.madeReal[k];
+    if (stamp) for (const id of ids) m[id] = stamp;
+    return { ...scenario, madeReal: m };
+}
+
 // ---------- Make this real ----------
 
 const liveRow = (data, c) => (Array.isArray(data[c.target.collection]) ? data[c.target.collection].find((r) => isObj(r) && r.id === c.target.id) : undefined);
 
 function applyPlanChange(data, c) {
-    if (c.target.id == null) return c.op === 'add' ? addPlanItem(data, c.value) : { ok: false, code: 'shape' };
+    if (c.target.id == null) return c.op === 'add' ? addPlanItem(data, pickRealFields('expense', c.value)) : { ok: false, code: 'shape' };
     if (c.op === 'remove') return removePlanItem(data, c.target.id);
     const row = liveRow(data, c);
     if (!row) return { ok: false, code: 'missing' };
@@ -191,7 +314,7 @@ function applyPlanChange(data, c) {
 }
 
 function applyGoalChange(data, c) {
-    if (c.target.id == null) return c.op === 'add' && isObj(c.value) ? addGoal(data, c.value.parentId, c.value) : { ok: false, code: 'shape' };
+    if (c.target.id == null) return c.op === 'add' && isObj(c.value) ? addGoal(data, c.value.parentId, pickRealFields('goal', c.value)) : { ok: false, code: 'shape' };
     if (c.op === 'remove') return removeGoal(data, c.target.id);
     const row = liveRow(data, c);
     if (!row) return { ok: false, code: 'missing' };
@@ -199,7 +322,7 @@ function applyGoalChange(data, c) {
 }
 
 function applySplitChanges(data, cs) {
-    const map = {};
+    const map = Object.create(null);
     for (const c of cs) {
         const row = c.target.id == null ? null : liveRow(data, c);
         if (!row || c.field !== 'percentage') return { ok: false, code: 'shape' };
@@ -236,6 +359,8 @@ export function applyMakeReal(data, steps) {
     for (const step of Array.isArray(steps) ? steps : []) {
         let res = null;
         const c = step.changes[0];
+        const bad = ['plan', 'goal', 'split', 'fi'].includes(step.route) ? stepProblem(data, step) : null;
+        if (bad) { failed.push({ id: step.id, code: bad, reason: problemText(bad) }); continue; }
         switch (step.route) {
             case 'plan': res = applyPlanChange(data, c); break;
             case 'goal': res = applyGoalChange(data, c); break;
@@ -244,7 +369,7 @@ export function applyMakeReal(data, steps) {
             case 'income': case 'debt': case 'asset': sheets.push(step); continue;
             default: skipped.push(step); continue;
         }
-        if (res && res.ok) { applied.push(step.id); undos.push(res); } else failed.push({ id: step.id, code: (res && res.code) || 'failed' });
+        if (res && res.ok) { applied.push(step.id); undos.push(res); } else { const code = (res && res.code) || 'failed'; failed.push({ id: step.id, code, reason: problemText(code) }); }
     }
     let used = false;
     return {

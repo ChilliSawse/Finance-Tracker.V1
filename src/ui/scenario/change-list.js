@@ -32,8 +32,8 @@ const KIND_LABEL = {
 const FIELD_FMT = { grossAnnual: fmtMoney, amount: fmtMoney, cost: fmtMoney, balance: fmtMoney, percentage: (n) => `${round2(n)}%` };
 const fmtValue = (field, v) => {
     if (field === 'due' && typeof v === 'string') return fmtDate(v) || v;
-    if (typeof v === 'number') return (FIELD_FMT[field] || String)(v);
-    return v == null ? '' : String(v);
+    if (typeof v === 'number') return (Object.prototype.hasOwnProperty.call(FIELD_FMT, field) ? FIELD_FMT[field] : String)(v);
+    return typeof v === 'string' || typeof v === 'boolean' || (typeof v === 'number' && Number.isFinite(v)) ? String(v) : ''; // never "[object Object]"
 };
 
 /** What the change does, in one plain line (no markup). */
@@ -65,7 +65,7 @@ function whatText(data, c, missing) {
         case 'goalFund':
             return t('f.wi.what.fund', { name });
         default:
-            return t('f.wi.what.set', { name: c.field || '', from: '', to: fmtValue(c.field, c.value) });
+            return t('f.wi.what.set', { name: typeof c.field === 'string' ? c.field : '', from: '', to: fmtValue(c.field, c.value) });
     }
 }
 
