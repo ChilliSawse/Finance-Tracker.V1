@@ -1,6 +1,74 @@
 # Changelog — finance-tracker
 
-Reconstructed from git history by Build 15c. Entries before 2026-11-17 were not written at the time; they are grouped by month (Build 13 is the only build tag in the history). The first version is 1.0.0, a reconstruction anchor only: `package.json` was first added on 2026-07-07 (commit 9be0163), so the earlier entries predate any version file. Later groups add one minor version each, so the top entry is 1.3.0 and `package.json` now says the same.
+Reconstructed from git history by Build 15c. Entries before 2026-11-17 were not written at the time; they are grouped by month (Build 13 is the only build tag in the history). The first version is 1.0.0, a reconstruction anchor only: `package.json` was first added on 2026-07-07 (commit 9be0163), so the earlier entries predate any version file. Later groups add one minor version each, and from 2.0.0 each release is written at the time. The top entry is 2.0.0 and `package.json` says the same.
+
+## [2.0.0] — 2026-11-22
+
+The phase 1 rebuild of Ledger. Almost every screen is new, and your saved data moves across by itself.
+
+### New look and screens
+- Five screens built around a pay cycle: Today, Activity, Plan, Future and What If, with a "?" help sheet on each
+- Four colour themes, each with light and dark, plus Auto, and a text size setting
+- Today shows where you are this pay: what is left, what is coming up, a monthly review card when a new month's review is ready, and your tax position in any month
+- Activity lists your transactions by pay cycle, with quick-add, search, learned categories and duplicate merging
+- Plan holds your income, bills, expenses, debts, assets and categories, with the bucket plan and the monthly review
+- Future shows your net worth path over 10, 20 or 30 years, how long until financial independence, and a goal planner
+- What If lets you try changes (a pay rise, a new job, extra income, a bigger expense, a goal) and compare them with your plan, then make one real with a single tap
+- Bills now follow their real due dates everywhere they appear
+- Setup is a full-screen walk-through, with a welcome that lets you explore with sample data first
+- Settings is a screen of its own with search, covering your data, appearance and more
+
+### Bucket method
+- Split each pay into buckets such as Daily, Splurge, Smile, Fire and Mojo, with suggested splits and per-bucket "left this pay"
+- Fire works down your targets in order, smallest debt first, then Mojo, a home deposit and super
+- Mojo has a step ladder, and Smile goals show whether they are on track, late or out of reach
+- Each category can sit in a bucket, and transfers are ticked off as you make them
+- A monthly review covers spending, bucket movements, target progress and transfers
+
+### Pay and tax
+- Tax withheld is worked out from the ATO tables for each income year, including HELP
+- Annual tax, the low income tax offset and your likely refund or bill are shown
+- Salary and set-hours layouts, with questions about tax-free threshold, study debt and extra withholding
+- Check a payslip against what was expected, with the likely cause of any difference and one-tap fixes
+
+### Import
+- Bank CSV files, Excel statements (no extra software needed), PDF statements and payslips
+- Imports are checked and limited in size, with a preview, a commit and an undo
+- Merchants you correct once are remembered, and similar rows can follow
+
+### Assets and debts
+- Each asset and debt has its own sheet with balances, rates, repayments and a projection
+- Debts feed your Fire targets and your net worth path
+
+### Safety and backups
+- Back up and restore everything in one file: settings, transactions, events and saved What If scenarios
+- Before any restore, a safety copy is kept, and a failed restore rolls everything back
+- Undo a restore from two places
+- A recovery screen appears if your saved data cannot be read, so you can export what is readable, import a backup or reset
+- Erase all data now really clears everything, after one confirmation
+- Tighter handling of backup and statement files, plus stricter page security rules
+
+### Speed
+- The first load is about 176 KB, helped by loading each screen only when you first open it, a smaller font file and fewer startup requests
+- The PDF reader is bundled, so statement import works offline
+
+### Removed
+- Custom tax brackets, the tax-year picker and the bracket editor (tax now comes from the built-in tables)
+- The old dashboard, income, expenses, savings and liabilities panels
+- The old settings modals and allocation modal
+- "Save as My Defaults" and Reset Appearance (Back up and Restore replace them)
+- The old custom theme and colour tools
+
+### Fixed
+- Savings rate and Fire figures on Today, a doubled percentage on the Mojo tile, and singular and plural wording
+- Toasts no longer appear over an open sheet
+- A tab icon, a Today flash on first run, and several phone and desktop layout defects
+- Plan and Settings use a wider column on desktop
+
+### For developers
+- The tests now gate the deploy
+- Data migrates automatically from v1; the `financeTrackerData_v2` key is kept
+- Storage is IndexedDB `ledger-db` v2 plus `ledger-safety-db`
 
 ## [1.3.0] — 2026-10-17
 

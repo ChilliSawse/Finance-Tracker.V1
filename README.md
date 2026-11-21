@@ -6,7 +6,7 @@ Ledger opens on an activity feed, not a spreadsheet: *"You imported 47 transacti
 
 **Project:** finance-tracker · **Part:** finance-tracker · **System page:** none (no system page covers this project)
 
-Version 1.3.0 (`package.json`, name `ledger`). Changes by version are in [`CHANGELOG.md`](CHANGELOG.md).
+Version 2.0.0 (`package.json`, name `ledger`). Changes by version are in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Features
 
