@@ -117,7 +117,7 @@ export default defineConfig({
     build: {
         rollupOptions: {
             output: {
-                advancedChunks: {
+                codeSplitting: {
                     groups: [
                         { name: 'core', test: startupModule },
                         { name: 'pwa', test: /virtual:pwa-register|workbox-window/ },
