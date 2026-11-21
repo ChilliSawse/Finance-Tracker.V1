@@ -11,6 +11,7 @@ import '../style.css';
 import './ui/shell.css'; // A5 — sidebar, phone bottom bar, screens
 import './ui/today.css'; // A6 — Today screen
 import './ui/income-layout.css'; // C6 — Salary and Set-hours sheets
+import './ui/plan-buckets.css'; // E6 — Plan buckets section
 import { store } from './state/store.js';
 import { FinanceAutoSave } from './state/autosave.js';
 import { loadTheme } from './theme/theme.js';
