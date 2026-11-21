@@ -133,12 +133,14 @@ export const enD = {
     'd.backup.doneNoRows': 'Backup saved, but your transactions and events could not be read, so they are not in it.',
     'd.backup.cantReadCurrent': 'Could not read your current transactions to keep them safe, so nothing was changed.',
     'd.backup.cantWrite': 'Could not write the transactions from the backup. Nothing was changed.',
+    'd.backup.cantKeepCopy': 'Could not keep a safety copy of your current data first (storage may be full), so nothing was changed. Download a backup, then try again.',
+    'd.backup.cantPutBack': 'The restore failed part-way and your previous transactions could not be fully put back. Your previous data is kept on this device as a safety copy. Do not close the app, and download a backup now.',
     'd.backup.restored': 'Backup restored.',
     'd.backup.restoredCounts': 'Backup restored: {transactions} transactions and {events} events.',
     'd.backup.restoredOld': 'Backup restored. This older backup has no transactions, so yours were kept as they are.',
     'd.backup.skipped': '{count} damaged row(s) in the backup were left out.',
-    'd.backup.confirmBody': 'This replaces your settings, transactions and events with the ones in the file. A copy of your current settings is kept on this device first.',
-    'd.backup.confirmBodyOld': 'This replaces your settings with the ones in the file. It is an older backup, so your transactions and events stay as they are. A copy of your current settings is kept on this device first.',
+    'd.backup.confirmBody': 'This replaces your settings, transactions and events with the ones in the file. A copy of your current data is kept on this device first.',
+    'd.backup.confirmBodyOld': 'This replaces your settings with the ones in the file. It is an older backup, so your transactions and events stay as they are. A copy of your current data is kept on this device first.',
 
     // Erase all (D2)
     'd.erase.title': 'Erase all your data?',

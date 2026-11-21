@@ -13,11 +13,13 @@
 // validate, sanitize, migration chain on a clone) and commitImport (safety copy, swap, render, save).
 // Pure apart from the default parts, which use IndexedDB only when called.
 
-import { prepareImport, commitImport, safeNumber, MAX_STRING_LENGTH } from './sanitize.js';
+import { prepareImport, commitImport, snapshotBeforeRestore, PRE_RESTORE_KEY, safeNumber, MAX_STRING_LENGTH } from './sanitize.js';
 import { exportAllTransactions, importTransactions, isValidIsoDate } from './transactions.js';
 import { withStore } from './db.js';
 
 export const BACKUP_VERSION = 2;
+// Sibling of PRE_RESTORE_KEY: the IndexedDB parts' rows as they were before the last restore or erase.
+export const PRE_RESTORE_PARTS_KEY = 'ft-pre-restore-parts';
 export const MAX_PART_ROWS = 500000;
 // Keys the retired "Save as My Defaults" (ft-user-defaults) and the retired info-guide panels (ft-info-collapsed, A11) used.
 // Never read or written now; Erase all removes them. Names are never changed.
@@ -189,25 +191,44 @@ export function prepareBackup(text, parts = BACKUP_PARTS) {
 /** True when the prepared file carries rows (a v2 file), so a restore replaces them. */
 export const carriesParts = (prepared) => !!prepared && Object.keys(prepared.parts || {}).length > 0;
 
+/** Put the old rows back. Returns the keys that could not be put back. */
 async function rollbackParts(list, before) {
+    const failed = [];
     for (const p of list) {
-        try { await p.replace(before[p.key] || []); } catch (err) { console.error(`Backup: could not put back ${p.key}`, err); }
+        try { await p.replace(before[p.key] || []); } catch (err) { console.error(`Backup: could not put back ${p.key}`, err); failed.push(p.key); }
     }
+    return failed;
 }
 
 /**
- * Replace the device's data with a prepared backup. The rows are swapped first (the old rows are
- * kept in memory and put back on any failure), then S1's commitImport takes the settings safety
- * copy, swaps the store, renders and saves. A render failure puts everything back.
+ * G6W12-4: keep a copy of EVERY registered part's rows on the device (PRE_RESTORE_PARTS_KEY), next to
+ * the settings copy (PRE_RESTORE_KEY). One copy, overwritten. Returns false when it cannot be stored.
+ */
+export function snapshotPartsBeforeRestore(storage, before, now = new Date()) {
+    try {
+        storage.setItem(PRE_RESTORE_PARTS_KEY, JSON.stringify({ timestamp: now.toISOString(), parts: before }));
+        return true;
+    } catch (e) { return false; }
+}
+
+/**
+ * Replace the device's data with a prepared backup. BEFORE anything is replaced the current rows of
+ * every registered part are read and kept on the device with the settings copy; if that copy cannot
+ * be stored (storage full) the restore is refused. The rows are then swapped (the old rows are put
+ * back from memory on any failure), then S1's commitImport swaps the settings, renders and saves.
  * @returns {Promise<{ok:boolean, error?:string, detail?:*, counts?:object}>}
  */
 export async function commitBackup(store, prepared, { storage, render, save, parts = BACKUP_PARTS } = {}) {
     const active = parts.filter((p) => prepared.parts && Array.isArray(prepared.parts[p.key]));
     const before = {};
     try {
-        for (const p of active) before[p.key] = await p.read();
+        for (const p of parts) before[p.key] = await p.read();
     } catch (err) {
         return { ok: false, error: 'cantReadCurrent', detail: err };
+    }
+    // Copy first: parts rows, then settings. Both must succeed before anything is replaced.
+    if (!snapshotPartsBeforeRestore(storage, before) || !snapshotBeforeRestore(store, storage)) {
+        return { ok: false, error: 'cantKeepCopy' };
     }
     const touched = [];
     try {
@@ -216,12 +237,36 @@ export async function commitBackup(store, prepared, { storage, render, save, par
             await p.replace(prepared.parts[p.key]);
         }
     } catch (err) {
-        await rollbackParts(touched, before);
-        return { ok: false, error: 'cantWrite', detail: err };
+        const stuck = await rollbackParts(touched, before);
+        return { ok: false, error: 'cantWrite', detail: err, notPutBack: stuck };
     }
     const result = commitImport(store, prepared, { storage, render, save });
-    if (!result.ok) { await rollbackParts(touched, before); return result; }
+    if (!result.ok) {
+        const stuck = await rollbackParts(touched, before);
+        return stuck.length ? { ...result, notPutBack: stuck } : result;
+    }
     return { ok: true, counts: prepared.counts || {} };
+}
+
+/**
+ * Undo the last restore or erase: bring back the settings (PRE_RESTORE_KEY) and every part's rows
+ * (PRE_RESTORE_PARTS_KEY) from the on-device copy, through the same commit (so it keeps a copy of the
+ * state it replaces, which makes it a redo too). Without a rows copy only the settings come back.
+ * @returns {Promise<{ok:boolean, error?:string, detail?:*, counts?:object}>}
+ */
+export async function undoLastRestore(store, { storage, render, save, parts = BACKUP_PARTS } = {}) {
+    let settings, rows;
+    try {
+        const rawSettings = storage.getItem(PRE_RESTORE_KEY);
+        if (!rawSettings) return { ok: false, error: 'noCopy' };
+        settings = JSON.parse(rawSettings);
+        const rawParts = storage.getItem(PRE_RESTORE_PARTS_KEY);
+        rows = rawParts ? (JSON.parse(rawParts).parts || {}) : {};
+    } catch (err) { return { ok: false, error: 'noCopy', detail: err }; }
+    const text = JSON.stringify({ version: BACKUP_VERSION, app: 'ledger', financeData: settings.financeData, guiSettings: settings.guiSettings, ...rows });
+    const prepared = prepareBackup(text, parts);
+    if (!prepared.ok) return prepared;
+    return commitBackup(store, prepared, { storage, render, save, parts });
 }
 
 /** Erase-all: a fresh store and every registered part emptied, through the same commit (so the same safety copy and rollback). */

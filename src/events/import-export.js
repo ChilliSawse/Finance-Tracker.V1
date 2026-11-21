@@ -98,8 +98,8 @@ export function handleJSONImport(event) {
         });
         if (!result.ok) {
             if (result.detail) console.error('Import error:', result.detail);
-            const known = ['cantReadCurrent', 'cantWrite'].includes(result.error);
-            showCustomModal(known ? t('d.backup.' + result.error) : result.error, 'error');
+            const known = ['cantReadCurrent', 'cantWrite', 'cantKeepCopy'].includes(result.error);
+            showCustomModal((result.notPutBack && result.notPutBack.length) ? t('d.backup.cantPutBack') : known ? t('d.backup.' + result.error) : result.error, 'error');
             return;
         }
         try {
