@@ -10,7 +10,8 @@ import { quizQuestions, quizComplete, layoutForJob, layoutsFromAnswers, applyQui
 import {
     moneyRows, moneySheetSpec, makeDebt, debtRows, setupDebtSheetSpec, renderMoney, renderDebts, essentialsStep, nonEssentialsStep, debtsStep,
 } from './setup/steps-money.js';
-import { splitModel, transfersModel, firstStep, modelStep, splitStep, transfersStep, onTemplateSplit } from './setup/steps-basic.js';
+import { firstStep } from './setup/steps-basic.js';
+import { splitModel, transfersModel, modelStep, splitStep, transfersStep, onTemplateSplit, balanceRows, applyStartingBalances, registerBucketSteps } from './setup/steps-buckets.js';
 import { payReadout, renderPay, layoutStep } from './setup/steps-pay.js';
 import { savePlanItem } from './plan-lists.js';
 import {
@@ -251,6 +252,47 @@ export const SETUP_TEST_CASES = [
             assert('Daily stays in the spending account', transfersModel(fresh()).stay.name, 'Daily expenses');
             assert('debts is skippable, quiz is skippable', [debtsStep.skippable !== false, quizStep.skippable !== false], [true, true]);
             noop();
+        },
+    },
+    {
+        name: 'E8 bucket steps: split in dollars with the guide, starting balances, transfers and auto-credit',
+        fn(assert) {
+            const d = fresh();
+            const ctx = mkCtx(d);
+            const html = splitStep.render(ctx);
+            assert('split shows the book guide beside each bucket', html.includes('Book: 60%') && html.includes('Book: 20%'), true);
+            assert('split shows what is left after expenses', html.includes('Left after your expenses'), true);
+            assert('split asks for Smile, Fire and Mojo balances', balanceRows(d).map((r) => r.role), ['smile', 'fire', 'mojo']);
+            assert('rendering writes nothing', onTemplateSplit(d), true);
+            // skipping the balances writes nothing; typed ones land on the row
+            assert('blank and bad input write nothing', applyStartingBalances(d, { mojo: '', 'b-smile': '-5', 'b-fire': 'abc' }), []);
+            splitStep.actions.balance(ctx, { dataset: { id: 'mojo' }, value: '1500.5' });
+            splitStep.actions.balance(ctx, { dataset: { id: 'b-smile' }, value: '200' });
+            assert('typed balance is kept for re-render', splitStep.render(ctx).includes('value="1500.5"'), true);
+            assert('Next saves the split and the balances', splitStep.onNext(ctx), true);
+            assert('mojo balance written', d.allocation.find((r) => r.role === 'mojo').currentBalance, 1500.5);
+            assert('smile balance written', d.allocation.find((r) => r.role === 'smile').currentBalance, 200);
+            assert('fire untouched', d.allocation.find((r) => r.role === 'fire').currentBalance, 0);
+            assert('typed state cleared', ctx.state.balances, {});
+            // escaping
+            const e = fresh();
+            e.allocation.find((r) => r.role === 'smile').name = '<img src=x onerror=alert(1)>';
+            assert('bucket names are escaped', splitStep.render(mkCtx(e)).includes('<img'), false);
+            // transfers: auto-credit is on for a new setup and the toggle writes through setAutoCredit
+            const f = fresh();
+            assert('auto-credit is on for a new setup', transfersModel(f).autoCredit, true);
+            assert('the toggle is on the page, checked', /data-su-change="auto"[^>]*checked/.test(transfersStep.render(mkCtx(f))), true);
+            transfersStep.actions.auto(mkCtx(f), { checked: false });
+            assert('turning it off writes savingModel', f.savingModel.autoCredit.on, false);
+            transfersStep.actions.auto(mkCtx(f), { checked: true });
+            assert('and on again', f.savingModel.autoCredit.on, true);
+            const tm = transfersModel(f);
+            transfersStep.actions.tick(mkCtx(f), { dataset: { id: tm.transfers[0].id } });
+            assert('ticking writes bankSetTo', transfersModel(f).transfers[0].ticked, true);
+            // registry: E8's steps replace C7's placeholders, and nothing is left as a default
+            clearSetupSteps();
+            registerBucketSteps();
+            assert('model, split and transfers are registered for real', getSetupSteps().map((s) => [s.id, s.isDefault]), [['model', false], ['split', false], ['transfers', false]]);
         },
     },
 ];

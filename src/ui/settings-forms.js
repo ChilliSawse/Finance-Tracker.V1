@@ -21,7 +21,6 @@ export function initializeSettingsUI() {
     renderTaxSettings();
     renderAssetsSettings();
     renderLiabilitiesSettings();
-    renderAllocationSettings();
     renderExpensesSettingsLists(); // Combined essential and non-essential
     renderBillsSettings();
     renderCategoriesSettings();
@@ -333,58 +332,6 @@ export function renderLiabilitiesSettings() {
     });
     const totals = calculateTotals(store.financeData);
     setText('total-liabilities-settings', formatCurrency(totals.currentLiabilities));
-}
-
-export function renderAllocationSettings() {
-    const container = getElement('allocation-settings');
-    if (!container) return;
-    container.innerHTML = '';
-    store.financeData.allocation.forEach((alloc, index) => {
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'list-item';
-        itemDiv.style.gridTemplateColumns = '2fr 0.8fr 1fr 1fr 0.6fr auto';
-        const baseId = `alloc-${index}`;
-        itemDiv.innerHTML = `
-            <span>
-                <label for="${baseId}-name" class="visually-hidden">Allocation Category Name ${index + 1}</label>
-                <input type="text" value="${escapeHtml(alloc.name)}" data-collection="allocation" data-index="${index}" data-field="name" id="${baseId}-name" name="${baseId}-name" placeholder="Category Name">
-            </span>
-            <span>
-                <label for="${baseId}-percentage" class="visually-hidden">Allocation Percentage ${index + 1}</label>
-                <input type="number" value="${escNum(alloc.percentage)}" data-collection="allocation" data-index="${index}" data-field="percentage" id="${baseId}-percentage" name="${baseId}-percentage" placeholder="%" step="0.1" min="0">
-            </span>
-            <span>
-                <label for="${baseId}-current" class="visually-hidden">Current Funds ${index + 1}</label>
-                <input type="number" value="${escNum(alloc.currentBalance != null ? alloc.currentBalance : 0)}" data-collection="allocation" data-index="${index}" data-field="currentBalance" id="${baseId}-current" name="${baseId}-current" placeholder="Funds $" step="0.01" min="0">
-            </span>
-            <span>
-                <label for="${baseId}-goal" class="visually-hidden">Savings Goal ${index + 1}</label>
-                <input type="number" value="${escNum(alloc.savingsGoal != null ? alloc.savingsGoal : 0)}" data-collection="allocation" data-index="${index}" data-field="savingsGoal" id="${baseId}-goal" name="${baseId}-goal" placeholder="Goal $ (opt)" step="0.01" min="0">
-            </span>
-            <span style="justify-self: center;" title="${t('taxpot.checkboxTitle')}">
-                <label for="${baseId}-taxpot" class="visually-hidden">Use bucket ${index + 1} as the tax provision pot</label>
-                <input type="checkbox" ${alloc.isTaxProvision ? 'checked' : ''} data-collection="allocation" data-index="${index}" data-field="isTaxProvision" id="${baseId}-taxpot">
-            </span>
-            <button class="delete-btn" data-index="${index}" data-type="allocation" aria-label="Delete Allocation Category ${index + 1}">Delete</button>`;
-        container.appendChild(itemDiv);
-    });
-    updateAllocationTotalDisplay();
-}
-
-export function updateAllocationTotalDisplay(scope) {
-    const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
-    if (!fd) return;
-    const totalSpan = getElement(scope === 'whatif' ? 'whatif-total-percent' : 'total-percent');
-    const total = (fd.allocation || []).reduce((sum, alloc) => sum + (parseFloat(alloc.percentage) || 0), 0);
-    if (totalSpan) {
-        // H.3 — live sum enforcement: show the exact over/under so it's easy to balance to 100%.
-        const ok = Math.abs(total - 100) < 0.11;
-        const diff = total - 100;
-        let label = `${total.toFixed(1)}%`;
-        if (!ok) label += diff > 0 ? ` — ${diff.toFixed(1)}% over` : ` — ${Math.abs(diff).toFixed(1)}% under`;
-        totalSpan.textContent = label;
-        totalSpan.style.color = ok ? 'var(--color-positive)' : 'var(--color-negative)';
-    }
 }
 
 export function renderExpensesSettingsLists() {

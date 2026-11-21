@@ -4,7 +4,7 @@ import { getElement } from '../utils.js';
 import { getFocusables, trapTab } from './focus.js';
 import {
     renderIncomeSourcesSettings, renderTaxBracketsSettings, renderAssetsSettings,
-    renderLiabilitiesSettings, renderAllocationSettings, renderExpensesSettingsLists,
+    renderLiabilitiesSettings, renderExpensesSettingsLists,
     renderFISettings, renderTaxSettings, renderBillsSettings, renderCategoriesSettings,
 } from './settings-forms.js';
 
@@ -100,7 +100,6 @@ export function setupPageSettingsModals() {
     });
     setupModal('savings-settings-modal', 'open-savings-settings', () => {
         renderAssetsSettings();
-        renderAllocationSettings();
         renderFISettings();
     });
     setupModal('liabilities-settings-modal', 'open-liabilities-settings', () => {

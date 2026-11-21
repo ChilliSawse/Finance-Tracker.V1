@@ -10,7 +10,6 @@ import {
 } from '../utils.js';
 import { escNum } from './html.js';
 import { calculateTotals, calculateYearsToFI } from '../calc/calculations.js';
-import { updateAllocationTotalDisplay } from './settings-forms.js';
 
 // Phase 0.4: Seed the What If tab from live data ONLY on first show (or when the user
 // explicitly clicks "Reset to current", which passes force=true). On ordinary tab switches
@@ -38,7 +37,7 @@ export function renderWhatIfSections() {
     renderWhatIfFISettings();
 }
 
-// Scenario allocation editor. Mirrors renderAllocationSettings but reads the sandbox
+// Scenario allocation editor. Reads the sandbox
 // clone and tags inputs with data-scope="whatif" so edits route to whatIfFinanceData.
 export function renderWhatIfAllocation() {
     const container = getElement('whatif-allocation-settings');
@@ -69,7 +68,21 @@ export function renderWhatIfAllocation() {
             <button class="delete-btn" data-scope="whatif" data-index="${index}" data-type="allocation" aria-label="Delete Scenario Allocation ${index + 1}">Delete</button>`;
         container.appendChild(itemDiv);
     });
-    updateAllocationTotalDisplay('whatif');
+    updateWhatIfAllocationTotal();
+}
+
+// The What If sandbox total (the live editor and its total are gone, E8).
+export function updateWhatIfAllocationTotal() {
+    const fd = store.whatIfFinanceData;
+    const totalSpan = getElement('whatif-total-percent');
+    if (!fd || !totalSpan) return;
+    const total = (fd.allocation || []).reduce((sum, alloc) => sum + (parseFloat(alloc.percentage) || 0), 0);
+    const ok = Math.abs(total - 100) < 0.11;
+    const diff = total - 100;
+    let label = `${total.toFixed(1)}%`;
+    if (!ok) label += diff > 0 ? ` — ${diff.toFixed(1)}% over` : ` — ${Math.abs(diff).toFixed(1)}% under`;
+    totalSpan.textContent = label;
+    totalSpan.style.color = ok ? 'var(--color-positive)' : 'var(--color-negative)';
 }
 
 // Scenario Income Sources editor (sandbox clone). Mirrors renderIncomeSourcesSettings;

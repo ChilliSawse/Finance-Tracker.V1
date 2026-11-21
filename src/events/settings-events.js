@@ -4,8 +4,7 @@
 
 import { store } from '../state/store.js';
 import { newLiabilityId } from '../state/bucket-migration.js';
-import { addBucket, deleteBucketWithMove, newBucket } from '../state/saving-model.js';
-import { showToast, showUndoToast } from '../ui/toast.js';
+import { newBucket } from '../state/saving-model.js';
 import {
     getElement, getValue, showFieldError, clearFieldError, validateFieldValue,
     formatCurrency,
@@ -17,15 +16,15 @@ import { cloneDefaultFinanceData, cloneDefaultGuiSettings } from '../state/defau
 import { updateDataAndUI } from '../ui/render.js';
 import {
     initializeSettingsUI, renderIncomeSourcesSettings, renderTaxBracketsSettings,
-    renderAssetsSettings, renderLiabilitiesSettings, renderAllocationSettings,
-    renderExpensesSettingsLists, updateAllocationTotalDisplay, renderTaxSettings,
+    renderAssetsSettings, renderLiabilitiesSettings,
+    renderExpensesSettingsLists, renderTaxSettings,
     renderBillsSettings, renderCategoriesSettings,
 } from '../ui/settings-forms.js';
 import { AU_TAX_YEARS } from '../calc/tax-au.js';
 import { openIncomeSheet, acceptPayslipJobOffer, dismissPayslipJobOffer } from '../ui/income-layout.js';
 import {
     renderWhatIfIncomeSources, renderWhatIfAssets, renderWhatIfLiabilities,
-    renderWhatIfAllocation, renderWhatIfExpensesList,
+    renderWhatIfAllocation, renderWhatIfExpensesList, updateWhatIfAllocationTotal,
 } from '../ui/whatif.js';
 
 // Phase R — the financeData array keys that settings inputs may write to. An input declares
@@ -55,7 +54,6 @@ export function handleSettingsClickEvents(event) {
     else if (target.id === 'add-tax-bracket') addTaxBracket();
     else if (target.id === 'add-asset') addAsset();
     else if (target.id === 'add-liability') addLiability();
-    else if (target.id === 'add-allocation-category') addAllocationCategory();
     else if (target.id === 'whatif-add-allocation') addAllocationCategory('whatif'); // What If sandbox
     else if (target.id === 'whatif-add-asset') addAsset('whatif');
     else if (target.id === 'whatif-add-liability') addLiability('whatif');
@@ -251,14 +249,6 @@ export function handleSettingsChangeEvents(event) {
         const arrayToUpdate = (fd && SETTINGS_COLLECTIONS.includes(collection)) ? fd[collection] : undefined;
 
         if (arrayToUpdate && arrayToUpdate[index] !== undefined) {
-            // Allocation "tax provision pot" checkbox — only one bucket can hold the
-            // tag at a time, so ticking one unticks the rest (and re-renders the list).
-            if (collection === 'allocation' && field === 'isTaxProvision') {
-                const fdAlloc = fd.allocation;
-                fdAlloc.forEach((a, i) => { a.isTaxProvision = i === index ? target.checked : false; });
-                if (scope !== 'whatif') { renderAllocationSettings(); updateDataAndUI(); }
-                return;
-            }
             // Category-editor conversions (checkbox boolean; comma list → keyword array).
             if (collection === 'categories' && field === 'essential') {
                 value = target.checked;
@@ -293,7 +283,7 @@ export function handleSettingsChangeEvents(event) {
             arrayToUpdate[index][field] = value;
 
             if (field === 'percentage' && collection === 'allocation') {
-                 updateAllocationTotalDisplay(scope); // Special update for allocation total
+                 updateWhatIfAllocationTotal(); // What If sandbox total
             }
             if (scope !== 'whatif') updateDataAndUI(); // sandbox edits only touch the clone
         }
@@ -447,38 +437,23 @@ export function removeLiability(index, scope) {
     if (scope === 'whatif') { renderWhatIfLiabilities(); } else { renderLiabilitiesSettings(); updateDataAndUI(); }
 }
 
-// E5: live edits go through the saving-model state API (ids, roles, bounds, undo); the What If
-// sandbox keeps a plain row from the same factory. Out-of-template adds fork quietly here; E6's
-// sheet shows the "Make this your own template?" offer first.
-function undoToast(res) {
-    if (res && res.ok) { showUndoToast({ message: res.message, onUndo: () => { res.onUndo(); renderAllocationSettings(); updateDataAndUI(); } }); return true; }
-    if (res && res.message) showToast(res.message);
-    return false;
-}
-
+// E8: the live allocation editor is gone (Plan's buckets and sheets replace it). Only the What If
+// sandbox keeps a plain row editor, built from the same factory.
 export function addAllocationCategory(scope) {
-    const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
+    if (scope !== 'whatif') return;
+    const fd = store.whatIfFinanceData;
     if (!fd) return;
-    if (scope === 'whatif') {
-        if (!Array.isArray(fd.allocation)) fd.allocation = [];
-        fd.allocation.push(newBucket(fd.allocation, { name: 'New Category' }));
-        renderWhatIfAllocation();
-    } else {
-        undoToast(addBucket(fd, { name: 'New Category' }, { fork: true }));
-        renderAllocationSettings(); updateDataAndUI();
-    }
-    revealNewRow(scope === 'whatif' ? 'whatif-allocation-settings' : 'allocation-settings');
+    if (!Array.isArray(fd.allocation)) fd.allocation = [];
+    fd.allocation.push(newBucket(fd.allocation, { name: 'New Category' }));
+    renderWhatIfAllocation();
+    revealNewRow('whatif-allocation-settings');
 }
 export function removeAllocationCategory(index, scope) {
-    const fd = scope === 'whatif' ? store.whatIfFinanceData : store.financeData;
+    if (scope !== 'whatif') return;
+    const fd = store.whatIfFinanceData;
     if (!fd) return;
-    if (scope === 'whatif') { fd.allocation.splice(index, 1); renderWhatIfAllocation(); return; }
-    const row = fd.allocation[index];
-    if (!row) return;
-    // Money or a share moves to the first other bucket until E7's "Move A$x to..." sheet exists.
-    const dest = fd.allocation.find((r) => r !== row);
-    undoToast(deleteBucketWithMove(fd, row.id, dest ? dest.id : null, { fork: true }));
-    renderAllocationSettings(); updateDataAndUI();
+    fd.allocation.splice(index, 1);
+    renderWhatIfAllocation();
 }
 
 export function addCategory() {

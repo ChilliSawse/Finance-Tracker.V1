@@ -269,4 +269,10 @@ export const enE = {
     'e.sheet.catBucket': 'Bucket',
     'e.sheet.catFollows': 'Follows essential tick',
     'e.sheet.catHint': 'Essential spending goes to Daily and the rest to Splurge unless you pick a bucket.',
+    'e.setup.guide': 'Book: {pct}%',
+    'e.setup.afterExpenses': 'Left after your expenses, each pay',
+    'e.setup.balances.title': 'What is in them now?',
+    'e.setup.balances.lead': 'Optional. Type what Smile, Fire extinguisher and Mojo hold today, or skip this and add it later in Plan.',
+    'e.setup.auto.label': "Add each pay's amounts to my buckets for me",
+    'e.setup.auto.why': 'Ledger adds each pay to your buckets on pay day, assuming your transfers ran. You can fix any balance by editing it, and turn this off any time in Plan.',
 };
