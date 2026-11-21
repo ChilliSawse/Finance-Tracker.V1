@@ -98,7 +98,7 @@ export const PLAN_BUCKETS_TEST_CASES = [
     { name: 'E6.7 Fire list: order, move, skip, add, Mojo note', fn(assert) {
         const d = sample();
         const f = buildBucketsModel(d, TODAY, {}).fire;
-        assert('list order: pot, debts smallest first, Mojo, Home, Super', f.rows.map((r) => r.type), ['saver', 'debt', 'debt', 'mojo', 'home', 'super']);
+        assert('list order: pot, debts smallest first, then the old goal (FT-R-82), Mojo, Home, Super', f.rows.map((r) => r.type), ['debt', 'debt', 'saver', 'mojo', 'home', 'super']);
         assert('one active target', f.rows.filter((r) => r.state === 'active').length, 1);
         assert('Mojo under the starter shows the note', [f.note, has(html(d), 'Mojo is under')], ['mojo-under-starter', true]);
         const id = f.rows[1].id;
@@ -106,7 +106,7 @@ export const PLAN_BUCKETS_TEST_CASES = [
         assert('skip skips', [dispatchBucketAction(d, 'fire-skip', { id, skip: '1' }).res.ok, buildBucketsModel(d, TODAY, {}).fire.rows[0].state], [true, 'skipped']);
         assert('add opens a sheet', dispatchBucketAction(d, 'fire-add-pot').sheet.kind, 'target-pot');
         const h = html(d);
-        assert('controls are labelled', has(h, 'aria-label="Move Credit card down"') && has(h, 'aria-label="Skip Car loan"'), true);
+        assert('controls are labelled', has(h, 'aria-label="Move Credit card down"') && has(h, 'aria-label="Skip Credit card"'), true);
         const d2 = sample();
         d2.allocation.find((r) => r.role === 'mojo').currentBalance = 2500;
         assert('no note at or over the starter', buildBucketsModel(d2, TODAY, {}).fire.note, null);

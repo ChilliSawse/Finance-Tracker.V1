@@ -87,7 +87,7 @@ export function validateModelDef(def) {
 
 // Whole-word matchers, tried in this order. First match per role only.
 const ROLE_MATCHERS = [
-    ['daily', /\bdaily\b/],
+    ['daily', /\bdaily\b|\beveryday\b|\bevery day\b|\bday[ -]to[ -]day\b|\bimportant\b/],
     ['splurge', /\bsplurge\b/],
     ['smile', /\bsmile\b/],
     ['fire', /\bfire\b/],

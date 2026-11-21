@@ -137,6 +137,7 @@ export const TODAY_TEST_CASES = [
         name: 'T1 sample household Fire and Smile tiles show the active target and goal progress',
         fn(assert) {
             const d = legacySampleFinanceData();
+            d.liabilities = []; // no debts: the old goal is the first (active) target (FT-R-82)
             const mem = new Map();
             const storage = { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)) };
             const res = runMigrationChain(d, { raw: JSON.stringify(d), source: 'load', storage });
