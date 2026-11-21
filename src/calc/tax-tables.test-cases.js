@@ -34,6 +34,9 @@ export const TAX_TABLES_TEST_CASES = [
         assert('this year confirmed', taxTablesStatus('2026-07-02', { taxCheck: { fy: '2026-27', done: true } }).checkDue, false);
         assert('this year not done', taxTablesStatus('2026-07-02', { taxCheck: { fy: '2026-27', done: false } }).checkDue, true);
         assert('no data', taxTablesStatus('2026-07-02').activeFy, '2026-27');
+        const job = { incomeSources: [{ incomeType: 'salaried', grossAnnual: 85000 }] };
+        assert('U2: payslip job, never checked, November: due', taxTablesStatus('2026-11-21', job).checkDue, true);
+        assert('U2: no payslip job, November: not due', taxTablesStatus('2026-11-21', {}).checkDue, false);
     } },
     { name: 'C1.3 table sanity', fn(assert) {
         const keys = Object.keys(TAX_TABLES);

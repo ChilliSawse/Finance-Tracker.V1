@@ -1,13 +1,14 @@
 // Today's tax slot (C8, FT-R-66). Two states, both driven by taxTablesStatus (C1):
-//   July card  - from 1 July until a payslip is checked ("New tax year: check one payslip"); with no check ever made,
-//                only for a payslip-job source and only July to September.
+//   July card  - from 1 July, in any month, until a payslip is checked or the card is dismissed for the year (U2);
+//                a payslip-job source with no check ever made gets it too. July to September the heading says
+//                "New tax year"; from October on it says "Check your take-home for <FY>".
 //                Stored as data.taxCheck = { fy, done }; Dismiss is explicit (adds dismissed:true).
 //   Stale      - the shipped tables are older than today's income year: one quiet label.
 // The builders are pure (now, data in; HTML out). Data is escaped; colours are tokens (today.css).
 
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
-import { taxTablesStatus } from '../calc/tax-tables/index.js';
+import { taxTablesStatus, pastFirstQuarter } from '../calc/tax-tables/index.js';
 import { esc } from './html.js';
 import { layoutFor, openIncomeSheet } from './income-layout.js';
 
@@ -16,7 +17,7 @@ export function taxCardModel(now, data) {
     const s = taxTablesStatus(now, data);
     if (s.stale) return { kind: 'stale', fy: s.activeFy };
     const tc = data && data.taxCheck;
-    if (s.checkDue && !(tc && tc.fy === s.activeFy && tc.dismissed === true)) return { kind: 'july', fy: s.activeFy };
+    if (s.checkDue && !(tc && tc.fy === s.activeFy && tc.dismissed === true)) return pastFirstQuarter(now) ? { kind: 'july', fy: s.activeFy, late: true } : { kind: 'july', fy: s.activeFy };
     return null;
 }
 
@@ -35,7 +36,7 @@ export function buildTaxCardHtml(model) {
     }
     return `
       <section class="card today-nudge tax-july" aria-labelledby="h-taxcheck">
-        <div><h2 id="h-taxcheck">${t('c.tax.july.title', { fy: esc(model.fy) })}</h2><p class="muted">${t('c.tax.july.body')}</p></div>
+        <div><h2 id="h-taxcheck">${t(model.late ? 'c.tax.late.title' : 'c.tax.july.title', { fy: esc(model.fy) })}</h2><p class="muted">${t('c.tax.july.body')}</p></div>
         <div class="tax-july-acts">
           <button type="button" class="btn" data-tax-check>${t('c.tax.july.check')}</button>
           <button type="button" class="btn btn-secondary" data-tax-dismiss>${t('c.tax.july.dismiss')}</button>

@@ -284,6 +284,7 @@ export const enC = {
     'c.setup.list.hide': 'Hide this list',
     // Tax slot on Today (C8)
     'c.tax.july.title': 'New tax year: {fy}',
+    'c.tax.late.title': 'Check your take-home for {fy}',
     'c.tax.july.body': 'Check one payslip to confirm your take-home.',
     'c.tax.july.check': 'Check a payslip',
     'c.tax.july.dismiss': 'Dismiss',
