@@ -1,13 +1,14 @@
-// Future screen. A5 stub: embeds the legacy Savings and Liabilities panels only. The old What If
-// panel is deliberately not embedded (B3's cutover would leave it editing ignored arrays); F6
-// replaces this embed. C8 adds the "Income pattern" card (the variable-income volatility card,
-// FT-R-73 C11 / M-7), shown only while a Variable source exists.
+// Future screen (F6). The screen itself lives in src/ui/future/ (model.js, view.js, index.js, future.css);
+// this file keeps C8's "Income pattern" card (the variable-income volatility card, FT-R-73 C11 / M-7), shown
+// only while a Variable source exists, and hands the rest to mountFuture. The legacy Savings and Liabilities
+// panels are hidden by future.css (A12a deletes them); their Debts, HELP payoff and tax-provision cards now
+// render from future/view.js.
 
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
 import { hasVariableSources } from '../calc/income-events.js';
-import { updateSavingsTabUI, updateLiabilitiesTabUI } from './render-tabs.js';
 import { renderIncomeVolatility } from './income-insights.js';
+import { mountFuture } from './future/index.js';
 
 /** Pure: does the Income pattern card show for this data? */
 export function showIncomePattern(data) {
@@ -35,6 +36,5 @@ export function renderFuture(totals) {
         if (showIncomePattern(store.financeData)) renderIncomeVolatility(totals, slot, t('c.pattern.title'));
         else slot.innerHTML = '';
     }
-    updateSavingsTabUI(totals);
-    updateLiabilitiesTabUI(totals);
+    mountFuture(totals);
 }

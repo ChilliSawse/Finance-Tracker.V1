@@ -39,6 +39,7 @@ import { ACTIVITY_TEST_CASES } from './ui/activity.test-cases.js';
 import { TODAY_TEST_CASES } from './ui/today.test-cases.js';
 import { INCOME_LAYOUT_TEST_CASES } from './ui/income-layout.test-cases.js';
 import { TAX_CARD_TEST_CASES } from './ui/tax-card.test-cases.js';
+import { FUTURE_TEST_CASES } from './ui/future/future.test-cases.js';
 import { SETTINGS_TEST_CASES } from './ui/settings.test-cases.js';
 import { PLAN_LISTS_TEST_CASES } from './ui/plan-lists.test-cases.js';
 import { ASSET_DEBT_SHEETS_TEST_CASES } from './ui/plan-assets-debts.test-cases.js';
@@ -88,6 +89,7 @@ export const TEST_GROUPS = [
     { name: 'today', env: 'pure', cases: TODAY_TEST_CASES },
     { name: 'income-layout', env: 'pure', cases: INCOME_LAYOUT_TEST_CASES },
     { name: 'tax-card', env: 'pure', cases: TAX_CARD_TEST_CASES },
+    { name: 'future', env: 'pure', cases: FUTURE_TEST_CASES },
     { name: 'settings', env: 'pure', cases: SETTINGS_TEST_CASES },
     { name: 'plan-lists', env: 'pure', cases: PLAN_LISTS_TEST_CASES },
     { name: 'asset-debt-sheets', env: 'pure', cases: ASSET_DEBT_SHEETS_TEST_CASES },
