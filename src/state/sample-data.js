@@ -9,6 +9,7 @@ import { CURRENT_TAX_YEAR } from '../calc/tax-au.js';
 import { categoriseDescription } from './categories.js';
 import { makeTransaction, addTransactions } from './transactions.js';
 import { logEvent } from './eventlog.js';
+import { runMigrationChain } from './migration-chain.js';
 
 export const SAMPLE_BATCH_ID = 'ledger-sample-data';
 export const SAMPLE_FLAG_KEY = 'ft-sample-data';
@@ -22,8 +23,11 @@ function isoDaysAhead(days) {
     return isoDaysAgo(-days);
 }
 
-function sampleFinanceData() {
+/** The sample household in the legacy (pre plan model) shape. Also the B3 migration fixture. */
+export function legacySampleFinanceData() {
     const data = cloneDefaultFinanceData();
+    delete data.dataVersion;
+    delete data.plan;
     data.primaryIncomeIndex = 0;
     data.incomeSources = [
         { name: 'Alex — marketing coordinator', incomeType: 'salaried', grossAnnual: 85000, paySchedule: 'fortnightly', hoursPerCycle: 76, taxRemoved: null, invoicedPayPostTax: null },
@@ -68,6 +72,13 @@ function sampleFinanceData() {
         if (cat.id === 'groceries') cat.monthlyBudget = 1300;
         if (cat.id === 'dining') cat.monthlyBudget = 550;
     }
+    return data;
+}
+
+// Until B5 rebuilds the sample, it is the legacy shape piped through the migration chain.
+function sampleFinanceData() {
+    const data = legacySampleFinanceData();
+    runMigrationChain(data, { raw: null, source: 'load', storage: null });
     return data;
 }
 

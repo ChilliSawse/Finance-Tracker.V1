@@ -9,6 +9,7 @@
 import { getPayCyclesPerYear, getWeeklyAmount } from '../utils.js';
 import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment } from './tax-au.js';
 import { variableSourceAnnualFigures, activeFyKey } from './income-events.js';
+import { planTotals } from './plan.js';
 
 export function calculateTotals(currentData) {
     let totalGrossAnnualIncome = 0;
@@ -92,12 +93,21 @@ export function calculateTotals(currentData) {
 
     const weeklyNet = totalNetAnnualIncome / 52;
 
-    const essentialWeekly = (currentData.essentialExpenses || []).reduce((sum, exp) => {
-        return sum + getWeeklyAmount(exp.amount, exp.frequency);
-    }, 0);
-    const nonEssentialWeekly = (currentData.nonEssentialExpenses || []).reduce((sum, exp) => {
-        return sum + getWeeklyAmount(exp.amount, exp.frequency);
-    }, 0);
+    // Cutover (Phase 1 B3): dataVersion >= 2 reads plan[]; older data reads the legacy lists.
+    // The legacy arrays stay in a migrated save but are ignored here.
+    let essentialWeekly, nonEssentialWeekly;
+    if (currentData.dataVersion >= 2) {
+        const pt = planTotals(currentData);
+        essentialWeekly = pt.essentialWeekly;
+        nonEssentialWeekly = pt.nonEssentialWeekly;
+    } else {
+        essentialWeekly = (currentData.essentialExpenses || []).reduce((sum, exp) => {
+            return sum + getWeeklyAmount(exp.amount, exp.frequency);
+        }, 0);
+        nonEssentialWeekly = (currentData.nonEssentialExpenses || []).reduce((sum, exp) => {
+            return sum + getWeeklyAmount(exp.amount, exp.frequency);
+        }, 0);
+    }
 
     const totalWeeklyExpenses = essentialWeekly + nonEssentialWeekly;
     const weeklySavings = weeklyNet - totalWeeklyExpenses;

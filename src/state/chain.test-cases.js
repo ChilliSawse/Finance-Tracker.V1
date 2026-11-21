@@ -13,6 +13,7 @@ const NEW_STEPS = ['migratePlanModel', 'migrateBucketModel', 'migrateIncomeField
 // A save the four legacy migrations leave untouched: run them once up front.
 function settledData() {
     const data = {
+        dataVersion: 2, // B3: the plan step has nothing to do on a settled save
         incomeSources: [{ name: 'Job', incomeType: 'salaried' }],
         allocation: [{ name: 'Daily', percentage: 100 }],
     };
