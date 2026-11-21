@@ -23,6 +23,4 @@
 .ils-msg { margin: 0; font-weight: 600; color: var(--sh-ink); border-left: 3px solid var(--sh-warm); padding-left: 10px; }
 .ils-ok { margin: 0; font-weight: 700; color: var(--sh-accent); }
 .ils-acts { display: flex; flex-wrap: wrap; gap: 8px; }
-.income-row-summary { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.income-payslip-job-offer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 

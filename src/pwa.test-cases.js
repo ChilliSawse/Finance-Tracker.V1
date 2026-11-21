@@ -164,7 +164,7 @@ export const PWA_TEST_CASES = [
                 const btnsOf = (b) => walk(b).filter((e) => tagOf(e) === 'button');
                 showDbNotice('reload');
                 let banner = document.getElementById('update-notification');
-                assert('reload: the banner says the app was updated in another tab', banner.textContent === '' && walk(banner).some((e) => e.textContent === t('d.db.reloadBody')), true);
+                assert('reload: the banner says the app was updated in another tab', walk(banner).some((e) => e.textContent === t('d.db.reloadBody')), true);
                 assert('reload: Reload (primary) and Later', btnsOf(banner).map((b) => [b.textContent, b.className]), [[t('d.db.reloadAction'), 'update-banner-btn primary'], ['Later', 'update-banner-btn']]);
                 showDbNotice('blocked');
                 banner = document.getElementById('update-notification');

@@ -17,7 +17,7 @@ Architecture map:
 - **Navigation**: `src/ui/tabs.js` — `showTab()`, single `<nav role="tablist">` serves desktop sidebar AND ≤640px bottom bar (5 slots + More overflow sheet, `.nav-overflow` is display:contents on desktop). Do not duplicate nav DOM.
 - **State**: `src/state/` — `store.js`, `autosave.js` (debounced 2.5s), IndexedDB (`db.js`, `transactions.js` in integer cents, `eventlog.js`), localStorage keys `financeTrackerData_v2`, `ft-*` (never rename).
 - **Calculations**: `src/calc/` — pure, DOM-free; `tax-au.js` = AU brackets + Medicare + HELP. Tax math is verified — do not touch without tests.
-- **Rendering**: `src/ui/render.js` (scoped: only visible tab re-renders), `render-tabs.js` (per-tab), `settings-forms.js` (modal form lists).
+- **Rendering**: `src/ui/render.js` (scoped: only visible tab re-renders), `settings-forms.js` (modal form lists).
 - **Theme**: `src/theme/theme.js` + `appearance.js` — single chokepoint `applyGuiStylesToPage` → `applyTheme`/`deriveTokens`, FOUC inline script + `ft-theme-fouc` cache. Fragile; verify themes visually after touching load order.
 - **PWA**: `src/pwa.js` — `virtual:pwa-register` is dynamically imported with a catch so raw (unbuilt) hosting still boots. Keep it that way.
 - **i18n**: `src/i18n/en.js` + `t()`. New user-facing strings go in the catalogue.
