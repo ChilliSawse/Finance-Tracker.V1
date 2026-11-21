@@ -149,6 +149,6 @@ export function generateBillDueEvents(data) {
         logEvent('bill-due', { billId: bill.id, name: bill.name, amount: bill.amount, dueDate, dueLabel: label }).catch(() => {});
     }
     if (changed) {
-        try { localStorage.setItem(NOTIFIED_KEY, JSON.stringify(notified)); } catch (_) {}
+        try { localStorage.setItem(NOTIFIED_KEY, JSON.stringify(notified)); } catch (_) { /* storage full or blocked: skip, deliberate */ }
     }
 }

@@ -293,7 +293,7 @@ export function buildSampleHousehold(today, opts = {}) {
 export async function loadSampleData() {
     const built = buildSampleHousehold();
     store.financeData = built.data;
-    try { localStorage.setItem(SAMPLE_FLAG_KEY, '1'); } catch (_) {}
+    try { localStorage.setItem(SAMPLE_FLAG_KEY, '1'); } catch (_) { /* storage full or blocked: skip, deliberate */ }
 
     const txns = built.rows.map((r) => makeTransaction({
         date: r.date,
@@ -325,5 +325,5 @@ export function sampleDataActive() {
 }
 
 export function clearSampleFlag() {
-    try { localStorage.removeItem(SAMPLE_FLAG_KEY); } catch (_) {}
+    try { localStorage.removeItem(SAMPLE_FLAG_KEY); } catch (_) { /* storage full or blocked: skip, deliberate */ }
 }

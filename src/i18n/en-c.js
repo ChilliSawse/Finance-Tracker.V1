@@ -103,14 +103,7 @@ export const enC = {
     'c.income.check.reading': 'Reading the payslip.',
     'c.income.check.notNow': 'No, it is not that',
     // Payslip-job offer
-    'c.income.offer.title': 'This looks like a payslip job.',
-    'c.income.offer.body': 'Switch to Salary and check it against a payslip? Nothing changes unless you say yes.',
-    'c.income.offer.accept': 'Switch to Salary',
-    'c.income.offer.dismiss': 'Not now',
     // Settings row
-    'c.income.row.edit': 'Edit pay',
-    'c.income.row.summary': 'A${gross} a year, {cycle}',
-    'c.income.row.summaryHours': 'A${rate} an hour, {hours} hours a week, {cycle}',
     // Setup (C7)
     'c.setup.brand': 'Ledger',
     'c.setup.close': 'Close',

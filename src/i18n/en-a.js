@@ -9,14 +9,9 @@ export const enA = {
     'a.scope.yearly': 'Paid yearly',
 
     // Screen text for the A5 stubs (A6, A7, A9a and F6 own the real screens).
-    'a.activity.title': 'Activity',
     'a.activity.sub': 'Everything that came in and went out.',
-    'a.activity.stub': 'Your transactions and bills will list here. For now, bring in a bank statement with Import.',
-    'a.activity.importCsv': 'Import CSV',
-    'a.activity.importPdf': 'Import PDF',
     'a.plan.title': 'Plan',
     'a.plan.sub': 'Income, bills and where each pay goes.',
-    'a.future.title': 'Future',
     'a.future.sub': 'Savings, debts and where you are heading.',
 
     // Quick-add (A8). FT-R-46 wording: the category line and the changed-bucket line are exact.
@@ -50,7 +45,6 @@ export const enA = {
     'a.quickAdd.thisOneOnly': 'Changes this one purchase only.',
     'a.quickAdd.left': '{amount} left',
     'a.quickAdd.inBucket': '{amount} saved',
-    'a.quickAdd.poolNote': 'your spending money',
     'a.quickAdd.note': 'Note',
     'a.quickAdd.optional': '(optional)',
     'a.quickAdd.date': 'Date',
@@ -98,7 +92,6 @@ export const enA = {
     'a.act.f.nonessential': 'Non-essential',
     'a.act.f.income': 'Income',
     'a.act.f.bills': 'Bills',
-    'a.act.import': 'Import statement',
     'a.act.empty': 'Nothing here yet. Add a transaction, or bring in a bank statement with Import.',
     'a.act.emptyAdd': 'Add a transaction',
     'a.act.noMatch': 'Nothing matches that.',
