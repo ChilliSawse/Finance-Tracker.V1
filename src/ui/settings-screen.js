@@ -302,6 +302,14 @@ function buildShell() {
 
 // ---------- open / close ----------
 
+/** Settings is not a tab: mark its sidebar link current while open, clear it when any tab is shown. */
+function markSettingsCurrent(on) {
+    document.querySelectorAll('.side-settings').forEach((b) => {
+        b.classList.toggle('active', on);
+        if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+}
+
 export function isSettingsOpen() { return !!root && root.classList.contains('active'); }
 
 /** Show the Settings screen in place of the current tab. Any tab tap shows that tab again (showTab). */
@@ -317,6 +325,7 @@ export function openSettings() {
         tab.setAttribute('aria-selected', 'false');
         tab.removeAttribute('aria-current');
     });
+    markSettingsCurrent(true);
     window.scrollTo({ top: 0 });
     const h1 = root.querySelector('#settings-title');
     if (h1) h1.focus();

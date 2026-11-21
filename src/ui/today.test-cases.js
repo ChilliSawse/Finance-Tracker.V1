@@ -229,4 +229,39 @@ export const TODAY_TEST_CASES = [
             showToast('', 'info', 1);
         },
     },
+    {
+        name: 'K3 3.6 the pay line totals every income credit this pay and names the last date',
+        fn(assert) {
+            const two = [...ROWS_A, { id: 'inv', date: '2026-11-03', categoryId: 'income', amountCents: 94000 }];
+            const { html } = run(mkData(), two);
+            assert('total of both credits', /Pay of A?\$4,378\.43 this pay, last in/.test(html), true);
+            assert('the last credit alone is not the pay', /Pay of A?\$940\.00/.test(html), false);
+            const one = run(mkData(), ROWS_A).html;
+            assert('one credit keeps the mock wording', /Pay of A?\$3,438\.43 landed/.test(one), true);
+        },
+    },
+    {
+        name: 'K3 3.11 the Mojo tile uses its own slot class, not Smile',
+        fn(assert) {
+            const mojoAlloc = [...ALLOC, { id: 'mojo', role: 'mojo', name: 'Mojo', percentage: 5 }];
+            const { html } = run(mkData({ allocation: mojoAlloc }), ROWS_A);
+            assert('mojo tile', html.includes('class="tile b-mojo"'), true);
+            assert('smile tile still smile', html.includes('class="tile b-smile"'), true);
+            assert('mojo no longer borrows smile', (html.match(/class="tile b-smile"/g) || []).length, 1);
+        },
+    },
+    {
+        name: 'K3 Due card total is the sum of the rows it lists (a bill from another bucket included)',
+        fn(assert) {
+            const item = (id, name, amount, due, categoryId) => ({ id, categoryId, name, amount, frequency: 'monthly', anchorDue: due, inTotals: true });
+            const plan = [item('nfx', 'Netflix', 18.99, '2026-11-04', 'subscriptions'), item('ph', 'Phone', 65, '2026-11-08', 'phone')];
+            const { model, html } = run(mkData({ plan }), ROWS_A);
+            const listed = model.dueBeforePay.reduce((a, b) => a + Math.round(b.bill.amount * 100), 0);
+            assert('both listed', model.dueBeforePay.length, 2);
+            const card = html.slice(html.indexOf('class="due-total"'));
+            const shown = formatCurrency(listed / 100);
+            assert('card total equals the list sum', card.slice(0, 200).includes(shown), true);
+            assert('hero keeps billsDueCents', html.includes(formatCurrency(model.buckets.length ? model.billsDueCents / 100 : 0)), true);
+        },
+    },
 ];

@@ -25,6 +25,8 @@ export function showTab(name) {
         if (on) tab.setAttribute('aria-current', 'page'); else tab.removeAttribute('aria-current');
     });
 
+    document.querySelectorAll('.side-settings').forEach((b) => { b.classList.remove('active'); b.removeAttribute('aria-current'); });
+
     store.activeTab = tabName;
 
     // Scoped rendering: a screen that changed while hidden re-renders now that it's visible.

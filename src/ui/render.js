@@ -15,6 +15,9 @@ import { renderPlan } from './plan.js';
 import { renderFuture } from './future.js';
 import { recordDailySnapshot } from '../state/snapshots.js';
 import { checkMilestones } from '../state/milestones.js';
+import { activityFeed } from '../state/today-model.js';
+import { t } from '../i18n/strings.js';
+import { renderScopeLine } from './tabs.js'; // tabs.js imports this file; both only call each other at runtime
 
 const TAB_RENDERERS = {
     today: renderToday,
@@ -25,6 +28,24 @@ const TAB_RENDERERS = {
 };
 
 const dirty = new Set();
+
+/** The sidebar "N to review" count by Activity; hidden at 0, and the tab's accessible name carries it. */
+export function renderNavCount() {
+    const el = document.getElementById('activity-review-count');
+    const tab = document.getElementById('tab-activity');
+    if (!el || !tab) return;
+    const feed = activityFeed();
+    const n = feed && feed.ready && feed.toReviewCount > 0 ? feed.toReviewCount : 0;
+    el.hidden = n === 0;
+    el.textContent = n ? t('a.nav.toReview', { n }) : '';
+    if (n) tab.setAttribute('aria-label', t('a.nav.activityAria', { n })); else tab.removeAttribute('aria-label');
+}
+
+/** Chrome that follows the data on every render pass: the scope line and the review count. */
+function renderChrome() {
+    renderScopeLine();
+    renderNavCount();
+}
 
 function renderTab(tabName, totals) {
     const renderer = TAB_RENDERERS[tabName];
@@ -41,6 +62,7 @@ export function updateAllUI() {
     checkMilestones(totals);
     Object.keys(TAB_RENDERERS).forEach(tab => renderTab(tab, totals));
     dirty.clear();
+    renderChrome();
 }
 
 // Data changed — autosave + scoped re-render. Same call-site name as before.
@@ -56,6 +78,7 @@ export function updateDataAndUI(callback) {
 
     Object.keys(TAB_RENDERERS).forEach(tab => dirty.add(tab));
     renderActiveTab();
+    renderChrome();
 }
 
 // Re-render the visible tab if it has pending changes (called on data change and
