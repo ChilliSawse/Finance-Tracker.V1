@@ -16,7 +16,7 @@ import {
     futureModel, chartIds, withPeople, peopleSlots, assumptionValues, validateAssumptions, applyAssumptions, restoreAssumptions,
     HORIZONS, DEFAULT_HORIZON, MAX_ON_CHART,
 } from './model.js';
-import { buildFutureHtml } from './view.js';
+import { buildFutureHtml, whatIfButtonHtml } from './view.js';
 
 const HORIZON_KEY = 'ft-future-horizon';
 const CHART_KEY = 'ft-future-chart';
@@ -64,6 +64,11 @@ function ensureRoot() {
         const anchor = document.getElementById('future-income-pattern') || screen.querySelector('.title-row');
         if (anchor) anchor.insertAdjacentElement('afterend', root); else screen.prepend(root);
         root.addEventListener('click', onClick);
+        const title = screen.querySelector('.title-row');
+        if (title && !title.querySelector('.fu-whatif')) {
+            title.insertAdjacentHTML('beforeend', whatIfButtonHtml());
+            title.querySelector('.fu-whatif').addEventListener('click', () => startNewScenario());
+        }
         // A tab that was not re-rendered (nothing dirty) still needs the latest saved scenarios when it is shown again.
         document.addEventListener('click', (e) => {
             if (e.target.closest && e.target.closest('[data-tab-target="future"]')) loadScenarios(root, undefined);

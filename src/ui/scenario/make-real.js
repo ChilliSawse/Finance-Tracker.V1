@@ -3,7 +3,7 @@
 // applied on its own, with an Apply button. Pay and loan changes open the normal sheet pre-filled. Every direct apply
 // returns F1's one combined undo payload and shows an Undo toast. There is no clock and no timer: nothing is scheduled.
 
-import { t } from '../../i18n/strings.js';
+import { t, plural } from '../../i18n/strings.js';
 import { store } from '../../state/store.js';
 import { makeRealPlan, applyOp } from '../../calc/scenario.js';
 import { applyMakeReal, stepProblem, problemText, isStepMadeReal, withMadeReal, pickRealFields } from '../../state/scenarios.js';
@@ -98,7 +98,7 @@ async function applyDirect(ctx, steps) {
     const res = applyMakeReal(ctx.data, steps);
     const done = steps.filter((s) => res.applied.includes(s.id));
     if (res.failed.length === 1) await refused(res.failed[0].code);
-    else if (res.failed.length) showToast(t('f.res.mr.failed', { count: res.failed.length }), 'error');
+    else if (res.failed.length) showToast(plural(res.failed.length, 'f.res.mr.failed.one', 'f.res.mr.failed'), 'error');
     if (done.length) {
         await setMarks(ctx, done, new Date().toISOString());
         await afterChange();
@@ -114,7 +114,7 @@ async function openIncomeStep(ctx, step) {
     const bad = stepProblem(data, step);
     if (bad) { await refused(bad); return false; }
     const plan = incomeStepPlan(data, step);
-    if (plan.index < 0) { showToast(t('f.res.mr.failed', { count: 1 }), 'error'); return false; }
+    if (plan.index < 0) { showToast(t('f.res.mr.failed.one', { count: 1 }), 'error'); return false; }
     const before = JSON.parse(JSON.stringify(data.incomeSources || []));
     let opened = false;
     try {
@@ -131,7 +131,7 @@ async function openIncomeStep(ctx, step) {
     } catch (err) {
         console.error('income sheet failed', err);
     }
-    if (!opened) showToast(t('f.res.mr.failed', { count: 1 }), 'error');
+    if (!opened) showToast(t('f.res.mr.failed.one', { count: 1 }), 'error');
     return opened;
 }
 
@@ -216,10 +216,10 @@ function panelEl(ctx, plan) {
         panel.textContent = '';
         const notes = [];
         if (plan.droppedUntil.length) notes.push(t('f.res.mr.until'));
-        if (plan.missing.length) notes.push(t('f.res.mr.missing', { count: plan.missing.length }));
-        if (plan.conflicts.length) notes.push(t('f.res.mr.conflicts', { count: plan.conflicts.length }));
+        if (plan.missing.length) notes.push(plural(plan.missing.length, 'f.res.mr.missing.one', 'f.res.mr.missing'));
+        if (plan.conflicts.length) notes.push(plural(plan.conflicts.length, 'f.res.mr.conflicts.one', 'f.res.mr.conflicts'));
         const virtual = plan.now.length + plan.later.length - steps.now.length - steps.later.length;
-        if (virtual) notes.push(t('f.res.mr.virtual', { count: virtual }));
+        if (virtual) notes.push(plural(virtual, 'f.res.mr.virtual.one', 'f.res.mr.virtual'));
         if (steps.now.length) {
             const head = el('div', 'mr-head');
             head.append(el('h3', '', t('f.res.mr.nowTitle')));

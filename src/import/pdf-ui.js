@@ -304,7 +304,7 @@ export async function readPayslip(file, onStatus, onError) {
 // ---- wiring ----
 
 export function setupPdfImport() {
-    setupModal('pdf-import-modal', 'open-pdf-import', resetDraft);
+    setupModal('pdf-import-modal', 'pdf-import-modal-open', resetDraft);
 
     const drop = getElement('pdf-import-drop');
     const fileInput = getElement('pdf-import-file');
@@ -346,4 +346,11 @@ export function setupPdfImport() {
         else if (e.target.id === 'pdf-import-another') resetDraft();
         else if (e.target.id === 'pdf-import-undo') undoLastImport();
     });
+}
+
+/** Opens the PDF statement window and reads this file in it (used by the single Import statement button). */
+export function startPdfImport(file) {
+    const opener = document.getElementById('pdf-import-modal-open');
+    if (opener) opener.click();
+    return handleStatementFile(file);
 }

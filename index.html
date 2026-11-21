@@ -74,8 +74,10 @@
                 <div class="title-row">
                     <div><h1>Activity</h1><p id="activity-sub"></p></div>
                     <div class="title-actions">
-                        <button type="button" class="btn" id="open-import" aria-haspopup="dialog" aria-controls="import-modal">Import CSV</button>
-                        <button type="button" class="btn" id="open-pdf-import" aria-haspopup="dialog" aria-controls="pdf-import-modal">Import PDF</button>
+                        <button type="button" class="btn" id="open-import">Import statement</button>
+                        <input type="file" id="import-pick" accept=".csv,text/csv,text/plain,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.pdf,application/pdf" hidden aria-hidden="true" tabindex="-1">
+                        <button type="button" id="import-modal-open" hidden aria-hidden="true" tabindex="-1"></button>
+                        <button type="button" id="pdf-import-modal-open" hidden aria-hidden="true" tabindex="-1"></button>
                     </div>
                 </div>
                 <div id="activity-body"></div>

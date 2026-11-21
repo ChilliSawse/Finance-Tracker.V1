@@ -7,7 +7,7 @@
 // with fn(container, {scenario, data, today}); until then those regions show a short placeholder.
 // Everything user-visible is set as text; scenario names, notes and target names are never markup.
 
-import { t } from '../../i18n/strings.js';
+import { t, plural } from '../../i18n/strings.js';
 import { store } from '../../state/store.js';
 import {
     getScenario, saveScenario, newScenario, duplicateScenario, renameScenario, pinScenario, archiveScenario,
@@ -136,7 +136,7 @@ async function persist() {
     try {
         const res = await saveScenario(ui.scenario);
         if (res.ok) { ui.scenario = res.scenario; ui.saved = true; }
-        if (res.dropped) showToast(t('f.wi.dropped', { count: res.dropped }), 'error');
+        if (res.dropped) showToast(plural(res.dropped, 'f.wi.dropped.one', 'f.wi.dropped'), 'error');
         return res.ok;
     } catch (err) {
         console.error('scenario save failed', err);
@@ -224,7 +224,7 @@ function howStrip() {
 function stepper() {
     const ol = el('ol', 'stepper');
     ol.setAttribute('aria-label', t('f.wi.steps'));
-    const sub = { ask: t('f.wi.step.ask.sub'), adjust: t('f.wi.step.adjust.sub', { count: ui.scenario.changes.length }), answer: t('f.wi.step.answer.sub') };
+    const sub = { ask: t('f.wi.step.ask.sub'), adjust: plural(ui.scenario.changes.length, 'f.wi.step.adjust.sub.one', 'f.wi.step.adjust.sub'), answer: t('f.wi.step.answer.sub') };
     STEPS.forEach((s, i) => {
         const li = el('li');
         const b = el('button');
@@ -284,7 +284,7 @@ function stepPanel() {
             ol.setAttribute('aria-label', t('f.wi.adjust.list'));
             renderChangeList(ol, data, sc.changes);
             card.appendChild(ol);
-            if (problems) card.appendChild(el('p', 'muted', t('f.wi.adjust.gone', { count: problems })));
+            if (problems) card.appendChild(el('p', 'muted', plural(problems, 'f.wi.adjust.gone.one', 'f.wi.adjust.gone')));
         }
         const add = btn(t('f.wi.adjust.add'), 'add', { cls: 'btn add-ch' });
         card.append(add, stepNav('ask', 'answer'));
