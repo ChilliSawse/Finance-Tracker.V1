@@ -19,7 +19,7 @@
 
 // One copy of the figures: rebuilt from the dated files in ./tax-tables/ (C1).
 // The tables also carry withholding scales, STSL, LITO, effective dates and sources.
-import { TAX_TABLES, resolveTablesForDate } from './tax-tables/index.js';
+import { TAX_TABLES, resolveTablesForDate, tablesForFy } from './tax-tables/index.js';
 export { taxYearKeyForDate, getTablesForDate, taxTablesStatus } from './tax-tables/index.js';
 
 export const AU_TAX_YEARS = TAX_TABLES;
@@ -39,7 +39,7 @@ export const LEGACY_DEFAULT_BRACKETS = [
 // A known key returns that year. An unknown or absent key falls back by DATE (today's
 // table, or the latest shipped when today is past them), no longer to a fixed constant.
 export function getTaxYear(fy) {
-    return AU_TAX_YEARS[fy] || resolveTablesForDate(new Date()).tables;
+    return tablesForFy(fy) || resolveTablesForDate(new Date()).tables;
 }
 
 /**

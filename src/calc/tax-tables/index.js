@@ -13,6 +13,14 @@ export const TAX_TABLES = {
     [AU_2025_26.fy]: AU_2025_26,
 };
 
+// FT-R-124: figures from the shared reference database. Empty until src/state/reference-tax.js has validated a
+// table (legislated figures only, see reference-tables.js); with nothing set every lookup is the built-in table.
+let refTables = {};
+export function setReferenceTaxTables(map) { refTables = map && typeof map === 'object' ? { ...map } : {}; }
+/** The table for an income-year key: the reference table when one was accepted, else the built-in one. */
+export function tablesForFy(fy) { return refTables[fy] || TAX_TABLES[fy]; }
+const allFyKeys = () => Object.keys({ ...TAX_TABLES, ...refTables }).sort();
+
 const ISO = /^(\d{4})-(\d{2})-(\d{2})/;
 
 function ymdOf(date) {
@@ -36,12 +44,12 @@ export function taxYearKeyForDate(date) {
 /** The table that covers the date, or undefined when none is shipped for it. */
 export function getTablesForDate(date) {
     const key = taxYearKeyForDate(date);
-    return key ? TAX_TABLES[key] : undefined;
+    return key ? tablesForFy(key) : undefined;
 }
 
 /** Key of the newest shipped table. */
 export function latestTaxYearKey() {
-    return Object.keys(TAX_TABLES).sort().pop();
+    return allFyKeys().pop();
 }
 
 /**
@@ -52,11 +60,11 @@ export function latestTaxYearKey() {
 export function resolveTablesForDate(date) {
     const exact = getTablesForDate(date);
     if (exact) return { tables: exact, fy: exact.fy, stale: false };
-    const keys = Object.keys(TAX_TABLES).sort();
+    const keys = allFyKeys();
     const key = taxYearKeyForDate(date);
-    if (key && key < keys[0]) return { tables: TAX_TABLES[keys[0]], fy: keys[0], stale: false };
+    if (key && key < keys[0]) return { tables: tablesForFy(keys[0]), fy: keys[0], stale: false };
     const latest = keys[keys.length - 1];
-    return { tables: TAX_TABLES[latest], fy: latest, stale: true };
+    return { tables: tablesForFy(latest), fy: latest, stale: true };
 }
 
 /**

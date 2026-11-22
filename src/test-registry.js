@@ -74,6 +74,7 @@ import { TRANSFERS_TEST_CASES } from './calc/transfers.test-cases.js'; // H9
 import { RECOVERY_UNDO_TEST_CASES, RECOVERY_UNDO_BROWSER_TEST_CASES } from './state/recovery-undo.test-cases.js'; // U3
 import { REFERENCE_TEST_CASES } from './state/reference.test-cases.js'; // R4
 import { REF_OVERRIDES_TEST_CASES } from './state/ref-overrides.test-cases.js'; // DB7
+import { TAX_REFERENCE_TEST_CASES } from './calc/tax-reference.test-cases.js'; // DB14
 
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
@@ -143,4 +144,5 @@ export const TEST_GROUPS = [
     { name: 'recovery-undo-browser', env: 'browser', cases: RECOVERY_UNDO_BROWSER_TEST_CASES }, // U3
     { name: 'reference', env: 'pure', cases: REFERENCE_TEST_CASES }, // R4
     { name: 'ref-overrides', env: 'pure', cases: REF_OVERRIDES_TEST_CASES }, // DB7
+    { name: 'tax-reference', env: 'pure', cases: TAX_REFERENCE_TEST_CASES }, // DB14
 ];

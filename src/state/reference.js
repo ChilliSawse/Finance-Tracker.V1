@@ -106,6 +106,7 @@ const inCodeDefault = {
     merchants: () => [],
     assetTypes: () => [],
     models: () => [],
+    tax: () => null, // no tax file: the app's built-in tables stay in charge (FT-R-124)
 };
 
 async function baselineDoc(env, kind, baselineManifest) {
@@ -129,34 +130,46 @@ async function loadBaselineManifest(env) {
     } catch (_) { return null; }
 }
 
-// The merged view: { dataVersion, sources:{kind:'cache'|'baseline'|'default'}, revs:{kind}, categories, merchants, assetTypes, models }.
+// One kind: cache, then baseline. `ctx` carries the baseline manifest between kinds so it is fetched at most once.
+async function loadKindDoc(env, store, state, kind, ctx) {
+    const entry = state && state.current.files[kind];
+    if (entry && !(state.disabled || []).includes(kind)) {
+        const doc = await readBody(store, kind, entry);
+        if (doc) return { doc, source: 'cache' };
+    }
+    if (!ctx.loaded) { ctx.manifest = await loadBaselineManifest(env); ctx.loaded = true; }
+    const doc = await baselineDoc(env, kind, ctx.manifest);
+    return doc ? { doc, source: 'baseline' } : { doc: null, source: 'default' };
+}
+
+/** One kind's validated file for code that needs only that kind (DB14: the tax tables). { doc, source, dataVersion } */
+export async function getReferenceKind(kind, envIn) {
+    const env = resolveEnv(envIn);
+    const store = await openStore(env);
+    const state = await readState(store);
+    const ctx = {};
+    const r = await loadKindDoc(env, store, state, kind, ctx);
+    const dataVersion = r.source === 'cache' ? state.current.dataVersion : (ctx.manifest ? ctx.manifest.dataVersion : null);
+    return { doc: r.doc, source: r.source, dataVersion };
+}
+
+// The merged view: { dataVersion, sources:{kind:'cache'|'baseline'|'default'}, revs:{kind}, categories, merchants, assetTypes, models, tax }.
 // Load order per kind: cache, baseline, in-code defaults. A kind on the manifest's disabled list skips the cache.
+// `tax` is the file's years object, or null when there is none (DB14).
 export async function getReference(envIn) {
     const env = resolveEnv(envIn);
     const store = await openStore(env);
     const state = await readState(store);
     const out = { dataVersion: null, sources: {}, revs: {} };
-    let baselineManifest;
-    let baselineLoaded = false;
+    const ctx = {};
     for (const kind of REFERENCE_KINDS) {
-        let doc = null;
-        let source = 'default';
-        const entry = state && state.current.files[kind];
-        if (entry && !(state.disabled || []).includes(kind)) {
-            doc = await readBody(store, kind, entry);
-            if (doc) source = 'cache';
-        }
-        if (!doc) {
-            if (!baselineLoaded) { baselineManifest = await loadBaselineManifest(env); baselineLoaded = true; }
-            doc = await baselineDoc(env, kind, baselineManifest);
-            if (doc) source = 'baseline';
-        }
+        const { doc, source } = await loadKindDoc(env, store, state, kind, ctx);
         out.sources[kind] = source;
         out.revs[kind] = doc ? doc.rev : null;
         out[kind] = doc ? referenceList(kind, doc) : inCodeDefault[kind]();
     }
     if (Object.values(out.sources).includes('cache')) out.dataVersion = state.current.dataVersion;
-    else if (baselineManifest) out.dataVersion = baselineManifest.dataVersion;
+    else if (ctx.manifest) out.dataVersion = ctx.manifest.dataVersion;
     return out;
 }
 
