@@ -14,6 +14,9 @@ const KIND_SHAPE = {
 };
 
 export const MAX_FILE_BYTES = 2 * 1024 * 1024;
+// Ceilings on the text fields. Each is at least DB1's schema limit (reference/schemas), so anything CI accepts the
+// client accepts too.
+export const REF_LIMITS = { id: 80, name: 1000, keyword: 200, key: 200, alias: 200, kind: 64, engine: 64, text: 1000 };
 const MAX_DEPTH = 8;
 const MAX_STRING = 2000;
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -83,33 +86,36 @@ export function validateManifest(m) {
 
 const entryChecks = {
     categories(e, at) {
-        if (!isStr(e.id, 60)) return bad(`${at}.id must be a non-empty string`);
-        if (!isStr(e.name, 120)) return bad(`${at}.name must be a non-empty string`);
-        if (!Array.isArray(e.keywords) || !e.keywords.every((k) => isStr(k, 80))) return bad(`${at}.keywords must be a list of strings`);
+        if (!isStr(e.id, REF_LIMITS.id)) return bad(`${at}.id must be a non-empty string`);
+        if (!isStr(e.name, REF_LIMITS.name)) return bad(`${at}.name must be a non-empty string`);
+        if (!Array.isArray(e.keywords) || !e.keywords.every((k) => isStr(k, REF_LIMITS.keyword))) return bad(`${at}.keywords must be a list of strings`);
         if (e.essential !== undefined && typeof e.essential !== 'boolean') return bad(`${at}.essential must be true or false`);
         return OK;
     },
     merchants(e, at) {
-        if (!isStr(e.id, 80)) return bad(`${at}.id must be a non-empty string`);
-        if (!isStr(e.key, 120)) return bad(`${at}.key must be a non-empty string`);
-        if (!isStr(e.categoryId, 60)) return bad(`${at}.categoryId must be a non-empty string`);
-        if (e.match !== 'key' && e.match !== 'keyword') return bad(`${at}.match must be key or keyword`);
+        if (!isStr(e.id, REF_LIMITS.id)) return bad(`${at}.id must be a non-empty string`);
+        if (!isStr(e.key, REF_LIMITS.key)) return bad(`${at}.key must be a non-empty string`);
+        if (!isStr(e.categoryId, REF_LIMITS.id)) return bad(`${at}.categoryId must be a non-empty string`);
+        if (!['key', 'keyword', 'word'].includes(e.match)) return bad(`${at}.match must be key, keyword or word`);
         if (!['high', 'medium', 'low'].includes(e.confidence)) return bad(`${at}.confidence must be high, medium or low`);
-        if (e.aliases !== undefined && !(Array.isArray(e.aliases) && e.aliases.every((k) => isStr(k, 120)))) return bad(`${at}.aliases must be a list of strings`);
+        if (e.aliases !== undefined && !(Array.isArray(e.aliases) && e.aliases.every((k) => isStr(k, REF_LIMITS.alias)))) return bad(`${at}.aliases must be a list of strings`);
         return OK;
     },
     assetTypes(e, at) {
-        if (!isStr(e.id, 60)) return bad(`${at}.id must be a non-empty string`);
-        if (!isStr(e.name, 120)) return bad(`${at}.name must be a non-empty string`);
-        if (!isStr(e.kind, 40)) return bad(`${at}.kind must be a non-empty string`);
-        if (e.match !== undefined && !(Array.isArray(e.match) && e.match.every((k) => isStr(k, 80)))) return bad(`${at}.match must be a list of strings`);
+        if (!isStr(e.id, REF_LIMITS.id)) return bad(`${at}.id must be a non-empty string`);
+        if (!isStr(e.name, REF_LIMITS.name) && !isStr(e.label, REF_LIMITS.name)) return bad(`${at}.name or ${at}.label must be a non-empty string`);
+        if (!isStr(e.kind, REF_LIMITS.kind)) return bad(`${at}.kind must be a non-empty string`);
+        if (e.match !== undefined && !(Array.isArray(e.match) && e.match.every((k) => isStr(k, REF_LIMITS.keyword)))) return bad(`${at}.match must be a list of strings`);
         if (e.defaults !== undefined && !isObj(e.defaults)) return bad(`${at}.defaults must be an object`);
         return OK;
     },
     models(e, at) {
-        if (!isStr(e.id, 80)) return bad(`${at}.id must be a non-empty string`);
-        if (!isStr(e.name, 120)) return bad(`${at}.name must be a non-empty string`);
-        if (!isStr(e.engine, 40)) return bad(`${at}.engine must be a non-empty string`);
+        if (!isStr(e.id, REF_LIMITS.id)) return bad(`${at}.id must be a non-empty string`);
+        if (!isStr(e.name, REF_LIMITS.name)) return bad(`${at}.name must be a non-empty string`);
+        if (!isStr(e.engine, REF_LIMITS.engine)) return bad(`${at}.engine must be a non-empty string`);
+        if (!isSafeRefPath(e.path)) return bad(`${at}.path is not a plain relative path`);
+        if (typeof e.sha256 !== 'string' || !HEX64.test(e.sha256)) return bad(`${at}.sha256 must be 64 hex characters`);
+        if (e.bytes !== undefined && !(Number.isInteger(e.bytes) && e.bytes > 0)) return bad(`${at}.bytes must be a whole number`);
         return OK;
     },
 };

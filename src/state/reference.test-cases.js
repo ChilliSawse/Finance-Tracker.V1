@@ -242,4 +242,60 @@ export const REFERENCE_TEST_CASES = [
             assert('storage that throws does not break a check', (await checkForReferenceUpdate({ env: broken })).status, 'error');
         },
     },
+    {
+        name: 'R4 validator accepts what DB1 schemas allow',
+        fn: async (assert) => {
+            const m = (match) => ({ schema: 1, rev: 1, merchants: [{ id: 'm-a', key: 'a', categoryId: 'groceries', match, confidence: 'high' }] });
+            assert('match word', validateReferenceFile('merchants', m('word')).ok, true);
+            assert('match regex refused', validateReferenceFile('merchants', m('regex')).ok, false);
+            const t = (e) => validateReferenceFile('assetTypes', { schema: 1, rev: 1, types: [{ id: 't', kind: 'car', ...e }] }).ok;
+            assert('asset type with label', t({ label: 'Car' }), true);
+            assert('asset type with name', t({ name: 'Car' }), true);
+            assert('asset type with neither', t({}), false);
+            const long = 'k'.repeat(100);
+            assert('100-char keyword and 1000-char name', validateReferenceFile('categories', { schema: 1, rev: 1, categories: [{ id: 'i'.repeat(64), name: 'n'.repeat(1000), keywords: [long] }] }).ok, true);
+            const sha = 'a'.repeat(64);
+            const mod = (e) => validateReferenceFile('models', { schema: 1, rev: 1, models: [{ id: 'x', name: 'X', blurb: 'b', version: '1.0.0', engine: 'fixed', path: 'models/x.1.json', sha256: sha, bytes: 10, ...e }] }).ok;
+            assert('catalogue entry', mod({}), true);
+            assert('catalogue bad path', mod({ path: '../x.json' }), false);
+            assert('catalogue bad sha', mod({ sha256: 'zz' }), false);
+        },
+    },
+    {
+        name: 'R4 the kill switch still applies while pinned after a rollback',
+        fn: async (assert) => {
+            const env = makeEnv(await makeServer({ dataVersion: '2026.11.1', docs: { categories: catDoc(1, 'One'), merchants: merDoc(1, 'aldi') } }));
+            await check(env);
+            env.net.files = await makeServer({ dataVersion: '2026.11.2', tag: 'b', docs: { categories: catDoc(2, 'Two'), merchants: merDoc(2, 'aldi2') } });
+            await check(env);
+            await rollbackReference(env); // pinned at 2026.11.2
+            const m = JSON.parse(env.net.files.get('manifest.json'));
+            m.disabled = ['merchants'];
+            env.net.files.set('manifest.json', JSON.stringify(m));
+            assert('pinned check', (await check(env)).status, 'unchanged');
+            const view = await getReference(env);
+            assert('merchants disabled anyway, categories still the rolled-back copy', [view.sources.merchants, names(view), view.dataVersion], ['default', ['One'], '2026.11.1']);
+        },
+    },
+    {
+        name: 'R4 a partial update is labelled, flagged, retried in place, and rolls back cleanly',
+        fn: async (assert) => {
+            const env = makeEnv(await makeServer({ dataVersion: '2026.11.1', docs: { categories: catDoc(1, 'One'), merchants: merDoc(1, 'a') } }));
+            await check(env);
+            const files = await makeServer({ dataVersion: '2026.11.2', tag: 'b', docs: { categories: catDoc(2, 'Two'), merchants: merDoc(2, 'b') } },
+                { mutate: (m) => { m.files.merchants.sha256 = 'c'.repeat(64); } });
+            env.net.files = files;
+            const r = await check(env);
+            const view = await getReference(env);
+            assert('partial: new categories, old merchants, new label', [r.status, names(view), view.merchants[0].key, view.dataVersion], ['updated', ['Two'], 'a', '2026.11.2']);
+            // The server fixes the bad file: the retry completes the same release without a second history entry.
+            const fixed = await makeServer({ dataVersion: '2026.11.2', tag: 'b', docs: { categories: catDoc(2, 'Two'), merchants: merDoc(2, 'b') } });
+            env.net.files = fixed;
+            await check(env);
+            assert('retry completes', (await getReference(env)).merchants[0].key, 'b');
+            const rb = await rollbackReference(env);
+            assert('rollback goes to 2026.11.1, not a copy of 2026.11.2', [rb.dataVersion, names(await getReference(env))], ['2026.11.1', ['One']]);
+            assert('and stays there', (await check(env)).status, 'unchanged');
+        },
+    },
 ];

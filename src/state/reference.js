@@ -176,6 +176,11 @@ export function checkForReferenceUpdate(options = {}) {
 async function fetchVerified(env, kind, entry) {
     const res = await env.fetch(refUrl(env, entry.path), { method: 'GET' });
     if (!res || !res.ok) return { ok: false, error: `${kind}: HTTP ${res ? res.status : 'none'}` };
+    // A declared length that disagrees is refused before the body is read. Skipped when the body is compressed, because
+    // Content-Length then counts the encoded bytes, not the file's.
+    const declared = res.headers && res.headers.get && res.headers.get('content-length');
+    const encoded = res.headers && res.headers.get && res.headers.get('content-encoding');
+    if (declared && !encoded && Number(declared) !== entry.bytes) return { ok: false, error: `${kind}: declared length ${declared} is not ${entry.bytes}` };
     const bytes = new Uint8Array(await res.arrayBuffer());
     if (bytes.byteLength !== entry.bytes) return { ok: false, error: `${kind}: size ${bytes.byteLength} is not ${entry.bytes}` };
     const sha = await env.sha256(bytes);
@@ -217,6 +222,8 @@ async function runCheck(options) {
     const disabledChanged = JSON.stringify(disabled) !== JSON.stringify(state.disabled || []);
     if (state.skipVersion && state.skipVersion === manifest.dataVersion) {
         // The person rolled back from this version: do not re-install it. A newer release clears the pin.
+        // The kill switch still applies while pinned.
+        if (disabledChanged) await writeState(store, { ...state, disabled });
         return { status: 'unchanged', dataVersion: state.current.dataVersion };
     }
 
@@ -246,9 +253,13 @@ async function runCheck(options) {
     for (const b of bodies) await store.put(bodyUrl(b.sha), new Response(b.bytes, { headers: { 'content-type': 'application/json' } }));
     const next = { ...state, disabled, skipVersion: null };
     if (changed) {
-        const prior = state.current.dataVersion !== null ? [state.current, ...state.history].slice(0, KEEP_PREVIOUS) : state.history;
-        next.history = prior;
-        next.current = { dataVersion: errors.length ? (state.current.dataVersion || manifest.dataVersion) : manifest.dataVersion, files, at: env.now() };
+        // A retry that completes the same release updates it in place; it does not add a second history entry.
+        const sameRelease = state.current.dataVersion === manifest.dataVersion;
+        next.history = state.current.dataVersion !== null && !sameRelease
+            ? [state.current, ...state.history].slice(0, KEEP_PREVIOUS) : state.history;
+        // A partial update (some file failed) still carries the release's own label, flagged so a rollback can tell.
+        next.current = { dataVersion: manifest.dataVersion, files, at: env.now() };
+        if (errors.length) next.current.partial = true;
     }
     await writeState(store, next);
     await pruneBodies(store, next);
