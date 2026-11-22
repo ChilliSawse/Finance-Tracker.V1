@@ -8,7 +8,7 @@ const LEGACY = [
     'migrateIncomeSourceTypes', 'migrateAllocationFields',
     'migrateLedgerFields', 'migrateVariableIncomeFields',
 ];
-const NEW_STEPS = ['migratePlanModel', 'migrateBucketModel', 'migrateIncomeFields', 'migrateAssetDebtDetail'];
+const NEW_STEPS = ['migratePlanModel', 'migrateBucketModel', 'migrateIncomeFields', 'migrateAssetDebtDetail', 'migrateRuleKeys'];
 
 // A save the four legacy migrations leave untouched: run them once up front.
 function settledData() {

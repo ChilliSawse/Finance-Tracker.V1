@@ -65,27 +65,73 @@ export function cloneDefaultCategories() {
     return JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
 }
 
-// Card-network and wallet prefixes stripped before a merchant key is built.
-const KEY_PREFIX = /^(?:(?:sq|sp|pp|paypal|tyro|zlr|zip|ls)\s*\*\s*|eftpos\s+|visa\s+purchase\s+|card\s+purchase\s+|purchase\s+)+/;
+// Wallet and processor prefixes. The `*` is what makes a short prefix safe, so these are stripped first,
+// while it is still there, and only when it follows ('SQ *CAFE' loses 'SQ'; a bare leading 'SP' stays).
+const KEY_PREFIX = /^(?:(?:sq|sp|pp|paypal|tyro|zlr|zip|ls|dd|lgc)\s*\*\s*)+/;
+
+// Rail text (how the bank describes the payment, not who was paid), removed from the front, repeatedly.
+// Named patterns only: arbitrary leading digit tokens are never skipped ('7-ELEVEN 123' stays empty).
+// Alternatives: visa debit (purchase (card N)), visa purchase, debit card purchase, card purchase (with pin), eftpos (debit|purchase),
+// pos, purchase, tap and pay, contactless, recurring payment, direct debit (N), a NAB 'V2878 06/11' lead, a leading date,
+// a '~448813HJs' card reference, 'card xx1234'.
+const RAIL_PREFIX = /^(?:visa\s+debit(?:\s+purchase(?:\s+card\s+\d+)?)?|visa\s+purchase|debit\s+card\s+purchase|card\s+purchase(?:\s+with\s+pin)?|eftpos(?:\s+(?:debit|purchase))?|pos|purchase|tap\s+and\s+pay|contactless|recurring\s+payment|direct\s+debit(?:\s+\d+)?|v\d{4}\s+\d{1,2}\/\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|~\d{6}[a-z]{0,3}|card\s+x*\d{4})\s+/;
+// Trailing noise that would otherwise be read as part of the name.
+const KEY_TRAILER = /\s+(?:card\s+x+\d+|value\s+date)\b.*$/;
 
 /**
- * Stable merchant key for a bank description (learned rules): lowercase, card prefixes removed,
- * the first one or two alphabetic words kept, stopping at the first word with a digit (store
- * numbers, and the suburb after them). 'WOOLWORTHS 1234 NEWTOWN' gives 'woolworths'.
+ * Stable merchant key for a bank description (learned rules): lowercase, wallet prefixes and bank rail text
+ * removed (VISA DEBIT PURCHASE CARD 1234, EFTPOS, Direct Debit 123456, a NAB 'V2878 06/11' lead), the first
+ * one or two alphabetic words kept, stopping at the first word with a digit (store numbers, and the suburb
+ * after them). 'WOOLWORTHS 1234 NEWTOWN' gives 'woolworths'; 'VISA DEBIT PURCHASE CARD 1234 WOOLWORTHS 5522'
+ * gives 'woolworths'. A one-letter second word is kept after a short first word ('BIG W 0119' gives 'big w').
+ * Idempotent: the key of a key is itself (the rules migration relies on that). Changed in DB2 (D5 4.2).
  * @param {string} description
  * @returns {string} the key, '' when nothing usable is left.
  */
 export function merchantKey(description) {
-    const d = String(description || '').toLowerCase().replace(/\s+/g, ' ').trim().replace(KEY_PREFIX, '').replace(/\*/g, ' ');
+    let d = String(description || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    d = d.replace(KEY_PREFIX, '');
+    for (let again = true; again;) {
+        again = false;
+        const next = d.replace(RAIL_PREFIX, '');
+        if (next !== d) { d = next; again = true; }
+    }
+    d = d.replace(KEY_TRAILER, '').replace(/\*/g, ' ');
     const words = [];
     for (const tok of d.split(/\s+/)) {
         if (/\d/.test(tok)) break;
         const w = tok.replace(/[^a-z]/g, '');
-        if (w.length < 2) continue;
+        if (w.length < 2 && !(w.length === 1 && words.length === 1 && words[0].length <= 3)) continue;
         words.push(w);
         if (words.length === 2) break;
     }
     return words.join(' ');
+}
+
+// Boundary rules for the shipped default keywords (D5 6.4). A keyword not listed here stays a plain substring, as before.
+//   WHOLE   whole word, no letter or digit touching either side ('s' plural accepted): ola, shell, agl, aldi, ...
+//   START   starts a word only: 'coles' no longer hits NICOLES
+//   'rent'  whole word plus RENTS / RENTAL / RENTALS (today's correct hits), never CURRENT or PARENT
+//   'gym'   ends a word: PUREGYM and GYMS hit, GYMPIE does not
+// Only a default category's own default keyword (exact stored text) gets a rule: a keyword the user typed or edited,
+// and every keyword in a category the user made, keeps plain substring matching.
+const WHOLE = new Set('iga |aldi|strata|agl|tpg|belong|nbn|ola|bp |shell|rego|nib |ahm |qbe|rac |kfc|stan |kayo|steam|target|big w|myer|ikea|bcf|temu|rex |ato '.split('|'));
+const START = new Set(['coles', 'rebel', 'binge']);
+const isDefaultKeyword = (catId, kw) => DEFAULT_CATEGORIES.some((c) => c.id === catId && c.keywords.includes(kw));
+const BOUNDARY_RE = new Map();
+const B = '(?:^|[^a-z0-9])';
+const E = '(?![a-z0-9])';
+
+/** Does keyword `kw` (stored text) hit the lowercased description `d`, for category `catId`? */
+function keywordHits(d, kw, catId) {
+    let re = BOUNDARY_RE.get(kw);
+    if (re === undefined) {
+        const w = kw.trim();
+        const src = kw === 'rent' ? B + 'rent(?:s|als?)?' + E : kw === 'gym' ? 'gyms?' + E : WHOLE.has(kw) ? B + w + 's?' + E : START.has(kw) ? B + w : '';
+        re = src ? new RegExp(src) : null;
+        BOUNDARY_RE.set(kw, re);
+    }
+    return re && isDefaultKeyword(catId, kw) ? re.test(d) : d.includes(kw);
 }
 
 // The learned rule that applies to a description: same key, or the description's key starts with
@@ -116,7 +162,7 @@ export function categoriseDetailed(description, categories, rules = []) {
     if (d) {
         for (const cat of categories) {
             for (const kw of (cat.keywords || [])) {
-                if (kw && d.includes(kw)) return { categoryId: cat.id, by: 'keyword' };
+                if (kw && keywordHits(d, kw, cat.id)) return { categoryId: cat.id, by: 'keyword' };
             }
         }
     }

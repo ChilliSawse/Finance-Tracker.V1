@@ -50,16 +50,36 @@ export function matchBucketLabel(description, allocation) {
     return { bucketId: null, ambiguous: winners.size > 1 };
 }
 
+// Own-account transfer wording (DB2, D5 5.2) and investment / super contributions (FT-R-126: both count as transfers).
+// Whole words on the cleaned text. Money out: 'transfer to' and 'transfer from'. Money in: only wordings that say it came
+// from another account ('transfer to' on a credit is odd, so it is left alone). Osko / PayID / NPP count only when the
+// line also says it is to yourself ('own', 'self', 'myself', 'internal'): Osko to a landlord is rent, not a transfer.
+const OWN_BOTH = / (?:internal transfer|internet transfer|funds tfer|funds transfer|tfr|own account|between accounts|transfer from) /;
+const OWN_OUT_ONLY = / transfer to /;
+const INVEST_OUT = / (?:commsec|raiz|spaceship|stake au|superannuation|super contributions?) /;
+
+/** True when a description reads as a move between the person's own accounts, or an investment or super contribution. */
+export function looksLikeOwnTransfer(description, amountCents) {
+    const hay = ` ${normaliseLabelText(description)} `;
+    if (OWN_BOTH.test(hay) || (/ (?:osko|payid|npp) /.test(hay) && / (?:own|self|myself|internal) /.test(hay))) return true;
+    return amountCents < 0 && (OWN_OUT_ONLY.test(hay) || INVEST_OUT.test(hay));
+}
+
+
 /**
- * What an import should add to an outgoing row whose description names a bucket's bank label, or null.
+ * What an import should add to a row, or null. An outgoing row whose description names a bucket's bank label becomes a
+ * transfer to that bucket. Failing that, own-account transfer wording (looksLikeOwnTransfer) makes it a transfer with no bucket.
  * Never overrides a category the person taught (a learned rule) or picked in the preview (`chosenCategoryId`).
- * The row becomes a transfer to that bucket, flagged suggested and left in To review until confirmed.
+ * The row is flagged and left in To review until confirmed.
  * @param {{description:string, amountCents:number}} row
  * @param {{allocation?:Array, categoryBy?:string, chosenCategoryId?:string|null}} ctx categoryBy is 'rule' | 'keyword' | 'none'
  */
 export function transferSuggestion(row, { allocation, categoryBy, chosenCategoryId } = {}) {
-    if (!row || !(row.amountCents < 0) || chosenCategoryId || categoryBy === 'rule') return null;
-    const m = matchBucketLabel(row.description, allocation);
-    if (!m.bucketId) return null;
-    return { categoryId: TRANSFER_CATEGORY, bucketId: m.bucketId, bucketSuggested: true, status: 'review' };
+    if (!row || chosenCategoryId || categoryBy === 'rule') return null;
+    if (row.amountCents < 0) {
+        const m = matchBucketLabel(row.description, allocation);
+        if (m.bucketId) return { categoryId: TRANSFER_CATEGORY, bucketId: m.bucketId, bucketSuggested: true, status: 'review' };
+    }
+    if (looksLikeOwnTransfer(row.description, row.amountCents)) return { categoryId: TRANSFER_CATEGORY, status: 'review' };
+    return null;
 }
