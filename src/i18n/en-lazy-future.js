@@ -106,4 +106,16 @@ Object.assign(en, {
     'f.future.tax.titlePlain': 'Tax to set aside',
     'f.future.tax.noPot': 'No bucket is marked as your tax pot yet, so there is nothing to compare the estimate with.',
     'f.future.tax.barAria': 'Tax pot is {pct} percent of what you would want set aside by today',
+    // FT-0032 DB12: Explain lines, the bridge target, the held-out line and the no-birth-year note
+    'f.fi.explain.nowOut': 'Counted today: {fiNetWorth} (cash, invested and rising assets, less HELP and your debts, except the home loan left out below).',
+    'f.fi.explain.homeLoanOut': 'The loan for your home ({amount}) is left out of FI along with your home. Both still count in your net worth.',
+    'f.fi.explain.fireHomeLoan': 'Fire extinguisher money paying down that home loan builds home equity, which is not part of FI, so it does not bring your FI date closer.',
+    'f.fi.explain.heldOut': '{count} items worth {amount} are not counted toward FI until you confirm them.',
+    'f.fi.explain.heldOut.one': '{count} item worth {amount} is not counted toward FI until you confirm it.',
+    'f.fi.explain.noBirth': 'No birth year is set, so your super is counted now. Add a birth year to count it from {age}.',
+    'f.future.fi.bridge': 'Super is locked until {age}, so the target at that date is {amount}. That is the line on the chart.',
+    'f.future.fi.noBirth': 'Your super is counted now, because no birth year is set.',
+    'f.future.fi.noBirth.add': 'Add a birth year',
+    'f.future.fi.heldOut': '{count} items worth {amount} aren\'t counted toward FI until you confirm',
+    'f.future.fi.heldOut.one': '{count} item worth {amount} isn\'t counted toward FI until you confirm',
 });

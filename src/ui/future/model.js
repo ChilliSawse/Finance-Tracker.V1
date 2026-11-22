@@ -8,7 +8,7 @@ import { planGoalsFromData } from '../../calc/goal-planner.js';
 import { calculateTotals } from '../../calc/calculations.js';
 import { calculateHelpRepayment, projectHelpPayoff, getTaxYear, AU_TAX_YEARS } from '../../calc/tax-au.js';
 import { estimateVariableTaxProvision, hasVariableSources } from '../../calc/income-events.js';
-import { DEBT_LABELS, rateBand } from '../plan-assets-debts.js';
+import { DEBT_LABELS, rateBand } from '../../calc/assets-debts.js';
 
 export const HORIZONS = [10, 20, 30];
 export const DEFAULT_HORIZON = 30;
@@ -250,6 +250,36 @@ export function goalsModel(data, today) {
     };
 }
 
+// ---------- the FI target on screen ----------
+
+/**
+ * The target the net worth line has to reach, as the screen states it. For someone under 60 super is locked, so the target is
+ * the bridge: `fiNeeded` at the moment FI is reached (FT-R-125), read along the line the date was solved on. It is not the plain FI number, and the crossing point only
+ * matches the stated date when the line is drawn at this target. With super counted (60 or over, or no birth year) it is the FI
+ * number. `bridge` is true when the two differ. With no date it is today's target.
+ * @returns {{amount:number, bridge:boolean, year:number}}
+ */
+export function fiTarget(summary) {
+    const path = Array.isArray(summary.path) ? summary.path : [];
+    const y = summary.yearsToFI;
+    const last = Math.max(0, path.length - 1);
+    // The need runs in a straight line from one year end to the next, and the date is solved against that line (fi.js), so
+    // the target at the stated date is read off the same line: the drawn line then crosses it where the date says.
+    const k = Math.max(0, Math.min(Number.isFinite(y) ? Math.floor(y) : 0, last));
+    const frac = Number.isFinite(y) ? Math.max(0, Math.min(1, y - k)) : 0;
+    const p0 = path[k], p1 = path[Math.min(k + 1, last)];
+    const locked = path.some((r) => r && r.superCounted === false);
+    const ok = p0 && p1 && Number.isFinite(p0.fiNeeded) && Number.isFinite(p1.fiNeeded);
+    const amount = locked && ok ? p0.fiNeeded + (p1.fiNeeded - p0.fiNeeded) * frac : summary.fiNumber;
+    return { amount, bridge: locked && Math.abs(amount - summary.fiNumber) >= 1, year: Math.min(k + (frac > 0 ? 1 : 0), last) };
+}
+
+/** What the FI figure leaves out until the person confirms it (FT-R-128 1): {count, value}. */
+export function heldOutModel(summary) {
+    const h = summary.heldOut || { count: 0 };
+    return { count: h.count || 0, value: summary.heldOutValue || 0 };
+}
+
 // ---------- the whole screen ----------
 
 /**
@@ -273,12 +303,13 @@ export function futureModel(data, opts = {}) {
         return { id, name: sc.name, values: p.path.slice(0, horizon + 1).map((r) => r.fiNetWorth), yearsToFI: p.yearsToFI, headline: scenarioHeadline({ fiYears: { now: summary.yearsToFI, scenario: p.yearsToFI } }) };
     });
     const nowValues = path.slice(0, horizon + 1).map((r) => r.fiNetWorth);
+    const target = fiTarget(summary);
     const geometry = chartGeometry({
         series: [{ id: 'now', kind: 'now', values: nowValues }, ...drawn.map((d) => ({ id: d.id, kind: 'scen', values: d.values }))],
-        fiNumber: summary.fiNumber, yearsToFI: summary.yearsToFI, years: horizon,
+        fiNumber: target.amount, yearsToFI: summary.yearsToFI, years: horizon,
     });
     return {
-        today, horizon, summary, geometry, drawn,
+        today, horizon, summary, geometry, drawn, target, heldOut: heldOutModel(summary),
         figures: { now: at(0), in10: at(10), in20: at(20), in30: at(30), fiNumber: summary.fiNumber },
         list: scenarioList(scenarios, ids),
         debts: debtsModel(data, totals),

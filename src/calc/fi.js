@@ -23,7 +23,6 @@ import { calculateHelpRepayment, getTaxYear } from './tax-au.js';
 import { addMonthsClamped, parseIso, toIso } from './pay-cycle.js';
 import { mojoLivingCosts, mojoSteps } from './fire.js';
 import { getBuckets } from '../state/saving-model.js';
-import { t } from '../i18n/strings.js';
 
 /** Past this many years from now a plan is "not at this pace". */
 export const MAX_YEARS = 100;
@@ -142,6 +141,23 @@ function fractionInYear(P, r, A, target) {
     }
     if (!Number.isFinite(f)) f = linear;
     return Math.min(1, Math.max(0, f));
+}
+
+/**
+ * Solve inside the crossing year when the need itself moves across the year (the bridge to 60 shrinks every year): the
+ * net worth (opening P, real rate r, contribution A as a continuous annuity) against a need that runs in a straight line
+ * from `need0` to `need1`. With a constant need this is exactly `fractionInYear`. Net worth starts below the need and ends at
+ * or above it, so the first fraction where it is not below is found by bisection.
+ */
+function fractionAgainstMovingNeed(P, r, A, need0, need1) {
+    if (Math.abs(need1 - need0) < 1e-9) return fractionInYear(P, r, A, need1);
+    const nw = (f) => (Math.abs(r) < 1e-12 ? P + A * f : P * Math.pow(1 + r, f) + (A * (Math.pow(1 + r, f) - 1)) / r);
+    const gap = (f) => nw(f) - (need0 + (need1 - need0) * f);
+    if (gap(1) < 0) return 1;
+    if (gap(0) >= 0) return 0;
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (gap(mid) >= 0) hi = mid; else lo = mid; }
+    return hi;
 }
 
 /**
@@ -276,7 +292,7 @@ export function runPlan(start, inputsFor, opts = {}) {
             const P = before.fiNetWorth;
             const r = P > 1e-9 ? next.growth / P : realInv;
             const A = next.fiNetWorth - P * (1 + r);
-            yearsToFI = y + fractionInYear(P, r, A, next.fiNeeded);
+            yearsToFI = y + fractionAgainstMovingNeed(P, r, A, before.fiNeeded, next.fiNeeded);
         }
     }
     return { path: path.slice(0, Math.max(horizon, 0) + 1), yearsToFI };
@@ -529,40 +545,22 @@ export function fiSummary(data, opts = {}) {
     const libs = (Array.isArray(d.liabilities) ? d.liabilities : []).filter((l) => l && num(l.balance) > 0);
     if (libs.length) notes.push('spendingBias');
     const nudges = libs.filter((l) => !isNum(l.minRepayment) && num(l.interestRate) > 0).map((l) => ({ id: 'minRepayment', name: l.name || '' }));
+    // FT-R-125 / FT-R-128 3: a loan left out of FI with its home, and Fire money paying it (home equity is not part of FI).
+    const st = startFrom(open, base);
+    const outIds = st.debts.filter((l) => loanScope(l, st.assets).fi === 'no').map((l) => l.id);
+    const fireToHomeLoan = outIds.length > 0 && num(base.fireYear) > 0 && st.sinks.some((x) => x.type === 'debt' && outIds.includes(x.id));
+    // No birth year: all super counts now (the screen asks for one). Only said when there is super to count.
+    const superNoBirth = peopleWithBirthYear(d).length === 0 && (num(p0.superBal) > 0 || num(base.superYear) > 0);
     return {
         fiNumber: proj.fiNumber, yearsToFI: proj.yearsToFI, path: proj.path, today: proj.today,
         now: { netWorth: p0.netWorth, fiNetWorth: p0.fiNetWorth, help: p0.help, depreciating: p0.depreciating, debts: p0.debts },
         // FT-R-128: what the FI figure leaves out until the person confirms, for "N items are not counted until you confirm".
-        heldOut: p0.heldOut, loanLinksPending: pendingLoanLinks(open.liabilities),
+        heldOut: p0.heldOut, heldOutValue: p0.heldOutValue, loanLinksPending: pendingLoanLinks(open.liabilities),
+        loansOut: { count: outIds.length, balance: p0.debtsOutOfFi }, fireToHomeLoan, superNoBirth,
         going: { fire: round2(base.fireYear), super: round2(base.superYear), total: round2(base.fireYear + base.superYear) },
         savingsRate: savingsRatePlanned(d, { today: proj.today }),
         savings: savingsPlanned(d, { today: proj.today }),
         fiAge: age, notes, nudges, multiple: base.multiple, spendYear: round2(base.spendYear),
         realReturnPct: round2(base.expectedReturnPct - base.inflationPct), inflationPct: base.inflationPct,
     };
-}
-
-const money = (n) => `A$${Math.round(Math.abs(n)).toLocaleString('en-AU')}`;
-
-/**
- * Explain this number: plain lines with the same figures the summary carries.
- * @param {object} data
- * @param {{summary?:object, today?:*, changes?:Array, resolve?:Function}} [opts]
- * @returns {Array<{id:string, text:string}>}
- */
-export function explainFi(data, opts = {}) {
-    const s = opts.summary || fiSummary(data, opts);
-    const lines = [];
-    const add = (id, key, params) => lines.push({ id, text: t(key, params) });
-    add('number', 'f.fi.explain.number', { number: money(s.fiNumber), multiple: s.multiple, spend: money(s.spendYear) });
-    add('going', 'f.fi.explain.going', { fire: money(s.going.fire), super: money(s.going.super) });
-    add('rate', 'f.fi.explain.rate', { real: s.realReturnPct, inflation: s.inflationPct });
-    add('now', 'f.fi.explain.now', { fiNetWorth: money(s.now.fiNetWorth) });
-    if (s.notes.includes('includesHelp')) add('help', 'f.fi.explain.help', { amount: money(s.now.help) });
-    if (s.notes.includes('losesValue')) add('losesValue', 'f.fi.explain.losesValue', { amount: money(s.now.depreciating) });
-    if (s.notes.includes('superPreservation')) add('superPreservation', 'f.fi.explain.superPreservation', { age: PRESERVATION_AGE });
-    if (s.notes.includes('spendingBias')) add('spendingBias', 'f.fi.explain.spendingBias');
-    add('notModelled', 'f.fi.explain.notModelled');
-    for (const n of s.nudges) add('minRepayment', 'f.fi.explain.minRepayment', { name: n.name });
-    return lines;
 }

@@ -3,8 +3,9 @@
 // The dagger figures were each recomputed independently (docs/phase1-changelog/F3.md).
 
 import {
-    runPlan, projectNetWorth, yearsToFI, fiNumber, fiNumberFrom, goingTowardsPerYear, savingsRatePlanned, fiAge, fiSummary, explainFi,
+    runPlan, projectNetWorth, yearsToFI, fiNumber, fiNumberFrom, goingTowardsPerYear, savingsRatePlanned, fiAge, fiSummary,
 } from './fi.js';
+import { explainFi } from './fi-explain.js';
 import { calculateYearsToFI, calculateTotals } from './calculations.js';
 import { buildSampleHousehold } from '../state/sample-data.js';
 import { migrateAssetDebtDetail } from '../state/asset-debt-migration.js';

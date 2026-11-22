@@ -35,7 +35,7 @@ search `src/` before writing new code; never skip, weaken or delete a test.
 | 20 | `runMigrationChain(data, {raw, source, storage})` with the four modules' `needsX`, `migrateX`, `afterImport` (F2's included) | M0 | autosave, import, dry-run script | yes: all four steps wired, modules are stubs until their owners land | `src/state/migration-chain.js`, `plan-migration.js`, `bucket-migration.js`, `income-migration.js`, `asset-debt-migration.js` |
 | 21 | `resolveAt(data, changes, date)`, `segments(changes, from, to)`, `scenarioHeadline`, `makeRealPlan`; store API `listScenarios`, `saveScenario`, `duplicateScenario` | F1 (body) | F3, F4, F6, F7, F8a, F8b | yes (M-14): `resolveAt` returns a deep clone, `segments` returns `[]` | `src/calc/scenario.js` |
 | 22 | `assetValueAt`, `debtSchedule`, `suggestKind`, `suggestLabel`; `newAsset`, `newDebt`, `assetSheetSpec`, `debtSheetSpec` | F2 (maths), F5 (sheets) | A9b, F3, F6 | yes (M-14): legacy shape | `src/ui/plan-assets-debts.js` |
-| 23 | `fiNumber`, `yearsToFI`, `projectNetWorth`, `goingTowardsPerYear`, `savingsRatePlanned`, `explainFi`, `fiAge` | F3 | F6, F8b | no | n/a |
+| 23 | `fiNumber`, `yearsToFI`, `projectNetWorth`, `goingTowardsPerYear`, `savingsRatePlanned`, `explainFi` (DB12: now in `src/calc/fi-explain.js`, so its lazy strings stay out of the first load), `fiAge` | F3 | F6, F8b | no | n/a |
 | 24 | `planGoals`, `requiredPerPay`, `earningsThreeWays`, `explainRequired` | F4 | F8a, F8b | no | n/a |
 | 25 | `openScenario(id)` | F7 | F6 | yes (M-14): returns false | `src/ui/scenario/index.js` |
 

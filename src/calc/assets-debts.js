@@ -377,7 +377,7 @@ export function debtSchedule(debt, opts = {}) {
 
 // ---------- suggestions (by name, shown on the "Check these N" card; never silent) ----------
 
-/** Suggested asset kind from its name: {kind, isSuper}. Unmatched is cash. */
+/** Suggested asset kind from its name: {kind, isSuper}. Unmatched is cash, marked `fallback: true` (a default, not a keyword hit). */
 export function suggestKind(name) {
     const s = String(name == null ? '' : name).toLowerCase();
     if (/\bsuper(annuation)?\b/.test(s)) return { kind: 'invested', isSuper: true };
@@ -385,7 +385,7 @@ export function suggestKind(name) {
     if (/\b(savings?|offset|cash|everyday|transaction|account)\b/.test(s)) return { kind: 'cash', isSuper: false };
     if (/\b(car|vehicle|ute|motorbike|motorcycle|boat|caravan)\b/.test(s)) return { kind: 'depreciating', isSuper: false };
     if (/\b(house|home|property|unit|apartment|land|flat)\b/.test(s)) return { kind: 'appreciating', isSuper: false };
-    return { kind: 'cash', isSuper: false };
+    return { kind: 'cash', isSuper: false, fallback: true }; // nothing in the name said so: cash is only the default, not a finding
 }
 
 /** Suggested debt label from its name: 'good', 'bad' or null. Display and wording only. */
@@ -394,4 +394,14 @@ export function suggestLabel(name) {
     if (/\b(mortgage|home loan|investment|invest\w*|study|student|help|hecs)\b/.test(s)) return 'good';
     if (/\b(cards?|car|vehicle|personal|bnpl|afterpay|zip|klarna|humm|buy now)\b/.test(s)) return 'bad';
     return null;
+}
+
+// ---------- debt labels and the rate band (moved here from the debt sheet so the Future screen's model stays light) ----------
+
+export const DEBT_LABELS = ['good', 'bad'];
+
+/** The rate band beside the good or bad chip: >10 high, 5 to 10 moderate, else low (the same cut-offs as the old Liabilities card). */
+export function rateBand(rate) {
+    const r = Number(rate) || 0;
+    return r > 10 ? 'high' : r >= 5 ? 'moderate' : 'low';
 }

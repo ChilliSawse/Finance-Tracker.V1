@@ -16,6 +16,7 @@ import { depreciatedValue } from '../calc/assets-debts.js';
 import { defaultFinanceData } from '../state/defaults.js';
 import { makeDebt } from './setup/steps-money.js';
 import { applyQuiz } from './setup/quiz.js';
+import { DB12_TEST_CASES } from './asset-sheet-db12.test-cases.js';
 
 const HOSTILE = '<img src=x onerror=1>';
 const TODAY = '2026-11-21';
@@ -82,15 +83,15 @@ export const ASSET_DEBT_SHEETS_TEST_CASES = [
     {
         name: 'F5.2 sheet specs follow the kind and the interest type',
         fn(assert) {
-            const keys = (spec) => spec.fields.map((f) => f.key);
+            const keys = (spec) => spec.fields.filter((f) => !f.hidden).map((f) => f.key); // DB12: hidden confirm toggles carry a tap and have no row
             assert('add: only the common fields until a kind is chosen', keys(assetSheetSpec(null)), ['name', 'kind', 'balance']);
             assert('cash fields', keys(assetSheetSpec(null, { kind: 'cash' })), ['name', 'kind', 'balance', 'interestRate', 'interestFrequency']);
             assert('invested fields', keys(assetSheetSpec(null, { kind: 'invested' })),
                 ['name', 'kind', 'balance', 'isSuper', 'expectedReturn', 'dividendYield', 'dividendFrequency', 'reinvestDividends']);
-            assert('appreciating fields', keys(assetSheetSpec(null, { kind: 'appreciating' })), ['name', 'kind', 'balance', 'growthRate']);
+            assert('appreciating fields', keys(assetSheetSpec(null, { kind: 'appreciating' })), ['name', 'kind', 'balance', 'use', 'growthRate']);
             assert('depreciating fields', keys(assetSheetSpec(null, { kind: 'depreciating' })),
                 ['name', 'kind', 'balance', 'depPurchasePrice', 'depPurchaseDate', 'depMethod', 'depRatePct', 'depLifeYears', 'depResidual']);
-            assert('kind is a select that reopens the sheet', [assetSheetSpec(null).fields[1].type, assetSheetSpec(null).reopenOn], ['select', ['kind']]);
+            assert('kind is a select that reopens the sheet', [assetSheetSpec(null).fields[1].type, assetSheetSpec(null).reopenOn.includes('kind')], ['select', true]);
             assert('a blank kind offers a "Choose" option; a set kind does not', [assetSheetSpec(null).fields[1].options.length, assetSheetSpec(null, { kind: 'cash' }).fields[1].options.length], [5, 4]);
             const d = mk();
             assert('variable debt has no fixed fields', keys(debtSheetSpec(d.liabilities[0])).includes('fixedUntil'), false);
@@ -112,18 +113,18 @@ export const ASSET_DEBT_SHEETS_TEST_CASES = [
             const spec = assetSheetSpec(car, { today: TODAY });
             const model = createSheetModel({ fields: spec.fields, values: spec.values, validate: spec.validate, plausibility: spec.plausibility });
             const worked = depreciatedValue({ depreciation: car.depreciation }, TODAY);
-            const notes = model.notes();
+            const notes = model.notes().filter((n) => n.field === 'balance'); // DB12: a suggested kind also has its own Confirm note
             assert('one offer on the balance, more than 5% apart', [notes.length, notes[0].field], [1, 'balance']);
             assert('the fix is labelled with the worked-out amount', notes[0].fix.label.includes('7,119'), true);
             assert('nothing changed yet: the entered balance is untouched', [model.current().balance, car.balance], [20000, 20000]);
-            model.applyFix(0);
+            model.applyFix(model.notes().findIndex((n) => n.field === 'balance'));
             assert('only the tap writes the balance', model.current().balance, worked);
-            assert('and the offer goes away once they agree', model.notes().length, 0);
+            assert('and the offer goes away once they agree', model.notes().filter((n) => n.field === 'balance').length, 0);
             const close = { ...car, balance: 7200 };
             const s2 = assetSheetSpec(close, { today: TODAY });
-            assert('within 5%: no offer', createSheetModel({ fields: s2.fields, values: s2.values, plausibility: s2.plausibility }).notes().length, 0);
+            assert('within 5%: no offer', createSheetModel({ fields: s2.fields, values: s2.values, plausibility: s2.plausibility }).notes().filter((n) => n.field === 'balance').length, 0);
             const noDate = assetSheetSpec({ ...car, depreciation: { ...car.depreciation, purchaseDate: null } }, { today: TODAY });
-            assert('no purchase date: no offer', createSheetModel({ fields: noDate.fields, values: noDate.values, plausibility: noDate.plausibility }).notes().length, 0);
+            assert('no purchase date: no offer', createSheetModel({ fields: noDate.fields, values: noDate.values, plausibility: noDate.plausibility }).notes().filter((n) => n.field === 'balance').length, 0);
             assert('saving the sheet without the tap keeps the entered balance', applyAssetValues({ ...car }, { ...spec.values }).balance, 20000);
             assert('values to record', depreciationFromValues({ depMethod: 'straight', depPurchasePrice: 1000, depPurchaseDate: '2024-01-01' }).ratePct, 12.5);
         },
@@ -177,9 +178,9 @@ export const ASSET_DEBT_SHEETS_TEST_CASES = [
             const items = checkItems(d);
             assert('flagged asset and debt are listed', items.map((i) => `${i.type}:${i.index}`), ['asset:1', 'debt:0']);
             const html = checkCardHtml(items);
-            assert('title counts them', html.includes('Check these 2'), true);
+            assert('title counts them', html.includes('2 details to check'), true);
             assert('nothing flagged: no card', checkCardHtml(checkItems({ assets: [], liabilities: [] })), '');
-            assert('one item: singular title', checkCardHtml(items.slice(0, 1)).includes('Check this 1'), true);
+            assert('one item: singular title', checkCardHtml(items.slice(0, 1)).includes('1 detail to check'), true);
             const hostile = { assets: [{ id: 'a-x', name: HOSTILE, balance: 1, kind: 'cash', kindSuggested: true }], liabilities: [] };
             const h = checkCardHtml(checkItems(hostile));
             assert('names are escaped', [h.includes('<img'), h.includes('&lt;img')], [false, true]);
@@ -215,3 +216,5 @@ export const ASSET_DEBT_SHEETS_TEST_CASES = [
         },
     },
 ];
+
+ASSET_DEBT_SHEETS_TEST_CASES.push(...DB12_TEST_CASES); // FT-0032 DB12: the asset screen for the reference database

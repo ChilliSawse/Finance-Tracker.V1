@@ -21,6 +21,9 @@ const NOT_HOME_WORDS = ['car', 'credit', 'card', 'help', 'hecs', 'personal', 'st
 // Words that say nothing about WHICH property.
 const GENERIC = new Set(['loan', 'mortgage', 'home', 'house', 'property', 'investment', 'ip', 'the', 'my', 'our', 'a', 'of', 'at', 'on', 'for', 'and', 'to', 'in', 'new', 'old', 'first', 'second', 'fixed', 'variable', 'unit', 'apartment', 'flat', 'land', 'st', 'rd', 'ave']);
 
+/** Does the loan's name say it is for a home or property? A link suggested without this (a single property and no other clue) is a weak guess. */
+export const hasHomeWord = (name) => words(name).some((w) => HOME_WORDS.includes(w));
+
 /** The properties a loan could be for: assets of kind appreciating that have an id. */
 const propertiesOf = (assets) => (Array.isArray(assets) ? assets : []).filter((a) => isObj(a) && a.kind === 'appreciating' && a.id != null && a.id !== '');
 
