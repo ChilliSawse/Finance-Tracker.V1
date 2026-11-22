@@ -10,6 +10,7 @@ import { buildSampleHousehold } from '../state/sample-data.js';
 import { migrateAssetDebtDetail } from '../state/asset-debt-migration.js';
 import { getBuckets } from '../state/saving-model.js';
 import { FI_SCOPE_TEST_CASES } from '../state/asset-types.test-cases.js';
+import { LOAN_LINK_TEST_CASES } from '../state/loan-link.test-cases.js';
 
 const TODAY = '2026-11-21';
 const near = (a, b, eps) => Math.abs(a - b) < eps;
@@ -31,6 +32,7 @@ const withCar = (d) => {
 
 export const FI_TEST_CASES = [
     ...FI_SCOPE_TEST_CASES, // DB10: FT-R-125 scope, bridge, one net worth, multiple
+    ...LOAN_LINK_TEST_CASES, // DB11: FT-R-128 held-out count, loan links, couples
     {
         name: 'F3.1 regression: one invested pool and flows equal calculateYearsToFI to 1e-9',
         fn(assert) {
@@ -174,7 +176,12 @@ export const FI_TEST_CASES = [
             assert('assets less liabilities 106,650; calculateTotals now also takes HELP off: 82,050 (FT-R-125)', [r2(assetsLess), r2(totals.netWorth)], [106650, 82050]);
             const p = projectNetWorth(d, { today: TODAY, years: 1 });
             assert('net worth 82,050 (106,650 less HELP)', r2(p.path[0].netWorth), 82050);
-            assert('fiNetWorth is 82,050 too (no depreciating asset)', r2(p.path[0].fiNetWorth), 82050);
+            // DB11, FT-R-128 1: the sample's three assets have only suggested kinds, so none counts toward FI until confirmed (was 82,050).
+            assert('fiNetWorth: the suggested assets are held out, the debts and HELP still count (FT-R-128 1)', r2(p.path[0].fiNetWorth), -37650);
+            assert('the sample holds out its three assets', p.path[0].heldOut.count, 3);
+            const confirmedSample = structuredClone(d);
+            confirmedSample.assets.forEach((a) => { a.kindSuggested = false; });
+            assert('confirmed, the same assets give the old 82,050 (no depreciating asset)', r2(projectNetWorth(confirmedSample, { today: TODAY, years: 1 }).path[0].fiNetWorth), 82050);
             assert('HELP is 24,600', p.path[0].help, 24600);
             const sum = fiSummary(d, { today: TODAY });
             assert('includes HELP note', sum.notes.includes('includesHelp'), true);

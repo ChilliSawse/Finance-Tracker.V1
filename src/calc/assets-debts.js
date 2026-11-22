@@ -238,21 +238,66 @@ export function assetValueAt(asset, years, opts = {}) {
 }
 
 /**
- * How an asset counts (FT-R-125). Net worth counts every asset at its value; this says whether it counts toward FI:
+ * How an asset counts (FT-R-125, FT-R-128 1). Net worth counts every asset at its value; this says whether it counts toward FI:
  * fi 'yes' | 'no' | 'fromAge' (super, from the preservation age), with the reason.
- * Things that lose value (and stable ones) never count. A home counts only when the person has said it is an
- * investment (a suggested or missing answer is "I live here"). Super counts from 60. A kind only suggested stays
- * out when it is suggested to lose value, and is otherwise cash (the existing rule).
+ * An asset whose kind is only suggested stays out of FI, whatever kind it would be (reason 'suggested'): a guess never
+ * feeds the FI figure until the person confirms it (FT-R-117, FT-R-128 1). Things that lose value (and stable ones) never
+ * count. A home counts only when the person has said it is an investment (a suggested or missing answer is "I live
+ * here"). Super counts from 60.
  */
 export function assetScope(asset) {
     if (!asset || typeof asset !== 'object') return { fi: 'no', reason: 'none' };
-    if (asset.kind === 'depreciating') return { fi: 'no', reason: asset.kindSuggested ? 'suggested' : (asset.valueStable ? 'stable' : 'losesValue') };
+    if (asset.kindSuggested) return { fi: 'no', reason: 'suggested' };
+    if (asset.kind === 'depreciating') return { fi: 'no', reason: asset.valueStable ? 'stable' : 'losesValue' };
     if (asset.isSuper) return { fi: 'fromAge', reason: 'super' };
     if (asset.kind === 'appreciating') {
-        const investment = asset.use === 'investment' && !asset.useSuggested && !asset.kindSuggested;
+        const investment = asset.use === 'investment' && !asset.useSuggested;
         return investment ? { fi: 'yes', reason: 'investment' } : { fi: 'no', reason: asset.use === 'investment' ? 'suggested' : 'liveIn' };
     }
-    return { fi: 'yes', reason: asset.kindSuggested ? 'suggestedCash' : 'counts' };
+    return { fi: 'yes', reason: 'counts' };
+}
+
+/**
+ * The assets held out of FI only because their kind is suggested (FT-R-128 1): {count, ids}. The UI says "N items are not
+ * counted until you confirm". Net worth still counts them. This counts exactly the assets the "Check these N" card lists
+ * (`checkItems`: kindSuggested === true, a zero balance included, so one confirm clears one line on both). The card's N is
+ * larger when it also lists debts whose good or bad label is only suggested; those never change the maths, so they are
+ * not counted here. Word them as "N items not counted in FI" (this) and "N details to check" (the card).
+ */
+export function heldOutAssets(assets) {
+    const ids = [];
+    (Array.isArray(assets) ? assets : []).forEach((a, i) => {
+        if (a && typeof a === 'object' && a.kindSuggested === true) ids.push(a.id != null ? a.id : `asset-${i}`);
+    });
+    return { count: ids.length, ids };
+}
+
+/**
+ * How a loan counts toward FI (FT-R-128 3). Net worth always counts the loan in full. A loan linked (`forAssetId`) to a
+ * property the person confirmed (`forAssetSuggested` false) follows that property: a home you live in is out of FI, and
+ * so is its loan; an investment property counts, net of the loan, so the loan stays in. A suggested link has no effect
+ * until confirmed (FT-R-117). An unlinked loan, a link to something that is gone or is not a property, and a property
+ * whose own kind is only suggested all leave the loan in FI.
+ * Returns {fi: 'yes' | 'no', reason}: 'unlinked' | 'suggestedLink' | 'missingAsset' | 'notProperty' | 'pendingKind' |
+ * 'investment' | 'liveIn'.
+ */
+export function loanScope(loan, assets) {
+    if (!loan || typeof loan !== 'object' || loan.forAssetId == null || loan.forAssetId === '') return { fi: 'yes', reason: 'unlinked' };
+    if (loan.forAssetSuggested !== false) return { fi: 'yes', reason: 'suggestedLink' }; // a missing flag is a guess too (FT-R-117)
+    const home = (Array.isArray(assets) ? assets : []).find((a) => a && typeof a === 'object' && a.id != null && String(a.id) === String(loan.forAssetId));
+    if (!home) return { fi: 'yes', reason: 'missingAsset' };
+    if (home.kind !== 'appreciating') return { fi: 'yes', reason: 'notProperty' };
+    if (home.kindSuggested) return { fi: 'yes', reason: 'pendingKind' };
+    return assetScope(home).fi === 'yes' ? { fi: 'yes', reason: 'investment' } : { fi: 'no', reason: 'liveIn' };
+}
+
+/** The loans whose link is only suggested (FT-R-128 3): {count, ids}. A cleared loan is not counted. */
+export function pendingLoanLinks(liabilities) {
+    const ids = [];
+    (Array.isArray(liabilities) ? liabilities : []).forEach((l, i) => {
+        if (l && typeof l === 'object' && l.forAssetId != null && l.forAssetId !== '' && l.forAssetSuggested !== false && num(l.balance) > 0) ids.push(l.id != null ? l.id : `debt-${i}`);
+    });
+    return { count: ids.length, ids };
 }
 
 // ---------- debts ----------
