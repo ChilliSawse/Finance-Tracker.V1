@@ -20,11 +20,11 @@ import { calculateTotals } from '../calc/calculations.js';
 import { getCycle, addDays, addMonthsClamped, toIso, parseIso } from '../calc/pay-cycle.js';
 import { taxTablesStatus, taxYearKeyForDate } from '../calc/tax-tables/index.js';
 import { acceptPayslipJob } from '../state/income-migration.js';
-import { rebasePayslipFigures } from '../calc/income-rebase.js';
+import { rebasePayslipFigures, DEFAULT_SUPER_PCT } from '../calc/income-rebase.js';
 import { deleteIncomeSourceFlow } from './income-other.js';
 
 /** Legal minimum super shown when nothing is stored yet (a rate, not a payslip figure). */
-export const DEFAULT_SUPER_PCT = 12;
+export { DEFAULT_SUPER_PCT };
 const CYCLES = ['weekly', 'fortnightly', 'monthly', 'quarterly'];
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const aud = (n) => 'A$' + Number(n).toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });

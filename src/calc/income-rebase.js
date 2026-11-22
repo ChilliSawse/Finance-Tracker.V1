@@ -53,3 +53,23 @@ export function rebaseIncomeSources(before, after, fy) {
         if (was && isNum(Number(was.grossAnnual))) rebasePayslipFigures(row, Number(was.grossAnnual), fy);
     }
 }
+
+/** Legal minimum super, shown by the Salary sheet when nothing is stored yet (a rate, not a payslip figure). */
+export const DEFAULT_SUPER_PCT = 12;
+
+/**
+ * A new salaried source (Extra income in What If) with the fields the Salary sheet writes on a first save, so every
+ * figure that reads them (super in the long-range path, the withholding declaration, the tax owed estimate) matches a
+ * source added in the app (H6). Only fills what is missing; never overwrites. Employee sources only.
+ */
+export function fillNewSalarySource(row) {
+    if (!row || typeof row !== 'object' || row.incomeType === 'selfEmployed' || row.incomeType === 'variable') return row;
+    if (row.incomeType === undefined) row.incomeType = 'salaried';
+    if (row.basis === undefined) row.basis = 'salary';
+    if (row.hourlyRate === undefined) row.hourlyRate = null;
+    if (row.hoursPerWeek === undefined) row.hoursPerWeek = null;
+    if (row.superPct === undefined || row.superPct === null) row.superPct = DEFAULT_SUPER_PCT;
+    if (row.salarySacrifice === undefined) row.salarySacrifice = false;
+    if (row.withholding === undefined || row.withholding === null) row.withholding = { claimsTaxFree: true, hasStudyDebt: null, medicareExemption: false, extraPerPay: 0 };
+    return row;
+}
