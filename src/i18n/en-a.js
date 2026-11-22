@@ -246,6 +246,8 @@ export const enA = {
     'a.today.emptyTitle': 'Add your pay to see what is left',
     'a.today.emptyBody': 'Once Ledger knows your pay and your regular bills, this screen shows what is left until the next pay.',
     'a.today.emptyBtn': 'Open Plan',
+    'a.today.emptyPayDayTitle': 'Set your pay day to see what is left',
+    'a.today.emptyPayDayBody': 'Ledger has your pay amount. Tell it the day your pay lands and this screen shows your bills due before pay day and what is left.',
 
     // Plan screen shell and money lists (A9a). A9b adds the Debts, Assets and Categories keys beside these.
     'a.plan.search': 'Search your lists',
