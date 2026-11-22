@@ -274,4 +274,26 @@ export const SORTING_TEST_CASES = [
             assert('keywordMatch substring on category keywords', referenceHit('ZEDFITNESS', -1, cats, { sources: { categories: 'cache' }, keywordMatch: 'substring', categories: [{ id: 'fitness', keywords: ['zedfit'] }], merchants: [] }).categoryId, 'fitness');
         },
     },
+    {
+        name: 'DB6.1 D5 6.1: a reference merchant beats an unchanged shipped keyword, not a keyword the person added or edited',
+        fn(assert) {
+            const ref = { sources: { categories: 'baseline' }, categories: [], merchants: [
+                { id: 'coles-express', key: 'coles express', match: 'word', patterns: ['coles express'], categoryId: 'transport', confidence: 'high' },
+            ] };
+            const by = (d, c = cats, rules = []) => { const r = categoriseWithReference(d, -100, c, rules, ref); return [r.categoryId, r.by]; };
+            assert('shipped keyword coles, the specific merchant wins', by('COLES EXPRESS 7 BELMONT'), ['transport', 'reference']);
+            assert('the plain keyword still works', by('COLES 1234'), ['groceries', 'keyword']);
+            const mine = clone(cats);
+            mine.find((c) => c.id === 'groceries').keywords.push('coles express');
+            assert('a keyword the person added ends the reference steps', by('COLES EXPRESS 7 BELMONT', mine), ['groceries', 'keyword']);
+            const edited = clone(cats);
+            const g = edited.find((c) => c.id === 'groceries');
+            g.keywords = g.keywords.map((k) => (k === 'coles' ? 'coles ' : k));
+            assert('an edited default keyword counts as the person own', by('COLES EXPRESS 7 BELMONT', edited), ['groceries', 'keyword']);
+            const rules = [{ key: merchantKey('COLES EXPRESS 7 BELMONT'), categoryId: 'shopping' }];
+            assert('a learned rule still wins', by('COLES EXPRESS 7 BELMONT', cats, rules)[1], 'rule');
+            const r = resolveImportRow('COLES EXPRESS 7 BELMONT', -100, undefined, { categories: cats, rules: [] }, ref);
+            assert('the hit is stored as a suggestion', [r.categoryId, r.status, r.referenceSuggested], ['transport', 'review', true]);
+        },
+    },
 ];

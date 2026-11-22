@@ -6,7 +6,7 @@
 // Every reference hit is by:'reference' and status 'review' (FT-R-126 item 3), so a guess never silently feeds totals;
 // its confidence is carried as refConfidence.
 
-import { categoriseDetailed, resolveCategory, merchantKey } from './categories.js';
+import { categoriseDetailed, resolveCategory, merchantKey, DEFAULT_CATEGORIES } from './categories.js';
 
 const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
@@ -92,13 +92,29 @@ export function referenceHit(description, amountCents, categories, ref) {
     return null;
 }
 
+// The person's categories with every unchanged shipped default keyword removed: what is left is theirs (added or edited).
+function withoutShippedKeywords(categories) {
+    return (categories || []).map((c) => {
+        const d = DEFAULT_CATEGORIES.find((x) => x.id === c.id);
+        const shipped = new Set(d ? d.keywords : []);
+        return { ...c, keywords: (c.keywords || []).filter((k) => !shipped.has(k)) };
+    });
+}
+
 /**
  * categoriseDetailed with the reference layers below the person's own: { categoryId, by: 'rule' | 'keyword' | 'reference' | 'none',
  * rule?, reference? }. With no `ref`, or no reference hit, the answer is categoriseDetailed's own.
  */
 export function categoriseWithReference(description, amountCents, categories, rules, ref) {
     const det = categoriseDetailed(description, categories, rules);
-    if (det.by !== 'none' || !ref) return det;
+    if (!ref || (det.by !== 'none' && det.by !== 'keyword')) return det;
+    if (det.by === 'keyword') {
+        // D5 6.1: only a keyword the person added or edited ends the reference steps. An unchanged shipped default keyword is
+        // reference level, so a more specific reference merchant beats it (coles-express over coles).
+        if (categoriseDetailed(description, withoutShippedKeywords(categories), []).by === 'keyword') return det;
+        const m = referenceHit(description, amountCents, categories, { ...ref, categories: [] });
+        return m && m.via === 'merchant' ? { categoryId: m.categoryId, by: 'reference', reference: m } : det;
+    }
     const hit = referenceHit(description, amountCents, categories, ref);
     return hit ? { categoryId: hit.categoryId, by: 'reference', reference: hit } : det;
 }
