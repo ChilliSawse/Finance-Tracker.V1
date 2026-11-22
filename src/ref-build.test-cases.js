@@ -47,7 +47,7 @@ export const REF_BUILD_TEST_CASES = [
         assert('no problems', problems(e, e.refSrc), []);
         const built = e.build.buildRef(e.build.loadSource(e.refSrc));
         assert('builds without errors', built.errors, []);
-        assert('manifest names the four required kinds', Object.keys(built.manifest.files).sort(), ['assetTypes', 'categories', 'merchants', 'models']);
+        assert('manifest names the four required kinds and the tax file (DB14)', Object.keys(built.manifest.files).sort(), ['assetTypes', 'categories', 'merchants', 'models', 'tax']);
         assert('dataVersion is CalVer', /^\d{4}\.\d{2}\.\d+$/.test(built.manifest.dataVersion), true);
     } },
     { name: 'DB1.2 a merchant whose key is not its own merchantKey fails with a clear message', async fn(assert) {
