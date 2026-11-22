@@ -130,4 +130,33 @@ export const ACTIVITY_TEST_CASES = [
             assert('a confirmed row has no Confirm button', html.includes('data-act-confirm="plain"'), false);
         },
     },
+    {
+        name: 'FT-R-120 To review lists every waiting row, whatever pay it is from',
+        fn(assert) {
+            // 2026-10-20 is in the previous pay (the current one starts 2026-10-31).
+            const older = out('2026-10-20', 'other', 15, { id: 'oldrev', description: 'Old market', status: 'review' });
+            const oldDone = out('2026-10-21', 'other', 8, { id: 'olddone', description: 'Old done', status: 'ok' });
+            const oldSug = { ...out('2026-10-22', 'transfer', 50, { id: 'oldsug', description: 'To savings' }), bucketId: 'smile', bucketSuggested: true, status: 'review' };
+            const rows = [...ROWS, older, oldDone, oldSug];
+            const feed = buildActivityFeed({ data: DATA, rows, today: TODAY });
+            const model = buildTodayModel({ data: DATA, rows, today: TODAY });
+            const v = buildActivityView({ feed, model, data: DATA, today: TODAY, filter: 'review' });
+            const ids = v.days.flatMap((d) => d.items).map((d) => d.id);
+            assert('last pay review rows are listed, newest first', ids, ['mkt', 'oldsug', 'oldrev']);
+            assert('a confirmed row is not listed', ids.includes('olddone'), false);
+            assert('the chip and the feed count agree with the list', [v.chips.find((c) => c.id === 'review').count, feed.toReviewCount], [3, 3]);
+            assert('Today count agrees', model.toReviewAll, 3);
+            assert('the cycle count is untouched', model.toReview, 1);
+            assert('each older row sits under its own date', v.days.map((d) => d.date), ['2026-11-04', '2026-10-22', '2026-10-20']);
+            assert('spending figures do not move', [model.spentCents, feed.spentCents], [buildTodayModel({ data: DATA, rows: ROWS, today: TODAY }).spentCents, buildActivityFeed({ data: DATA, rows: ROWS, today: TODAY }).spentCents]);
+            assert('older rows from before the cache window still count', buildActivityFeed({ data: DATA, rows: ROWS, today: TODAY, olderReview: [older] }).toReviewCount, 2);
+            // Confirming the suggested transfer takes it out of To review.
+            const confirmed = rows.map((r) => (r.id === 'oldsug' ? { ...r, status: 'ok', bucketSuggested: undefined } : r));
+            const f2 = buildActivityFeed({ data: DATA, rows: confirmed, today: TODAY });
+            const v2 = buildActivityView({ feed: f2, model: buildTodayModel({ data: DATA, rows: confirmed, today: TODAY }), data: DATA, today: TODAY, filter: 'review' });
+            assert('Confirm removes the suggested transfer', v2.days.flatMap((d) => d.items).map((d) => d.id), ['mkt', 'oldrev']);
+            assert('and the count drops', f2.toReviewCount, 2);
+            assert('the older row shows a Confirm button before', renderListHtml(v).includes('data-act-confirm="oldsug"'), true);
+        },
+    },
 ];

@@ -65,6 +65,11 @@ const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** 'Tue 4 Nov' from an ISO date, no locale (the same text on every device). */
+/** A day heading that names the year when it is not this one (older To review rows, FT-R-120). */
+export function dayLabelYear(iso, today) {
+    return String(iso).slice(0, 4) === String(today).slice(0, 4) ? dayLabel(iso) : `${dayLabel(iso)} ${String(iso).slice(0, 4)}`;
+}
+
 export function dayLabel(iso, withWeekday = true) {
     const d = parseIso(iso);
     const base = `${d.getDate()} ${MON[d.getMonth()]}`;
@@ -264,6 +269,21 @@ export function buildActivityView({ feed, model, data, today, filter = 'all', qu
         });
     }
 
+    // FT-R-120: To review lists every waiting row, any pay, newest first, each day headed by its date.
+    if (f === 'review') {
+        days.length = 0;
+        const byDate = new Map();
+        for (const r of feed.toReview) {
+            const d = decorate({ type: 'txn', row: r }, ctx);
+            if (!keep(d)) continue;
+            if (!byDate.has(r.date)) byDate.set(r.date, []);
+            byDate.get(r.date).push(d);
+        }
+        for (const [date, items] of byDate) {
+            days.push({ date, spentCents: 0, inCents: 0, isToday: date === today, isPay: false, label: date === today ? t('a.act.day.today', { date: dayLabel(date) }) : dayLabelYear(date, today), items });
+        }
+    }
+
     const coming = feed.comingUp.map((o) => decorate(o, ctx));
     const comingShown = coming.filter(keep);
     const comingTotal = comingShown.reduce((a, d) => a + abs(d.amountCents), 0);
@@ -325,7 +345,7 @@ export function buildActivityView({ feed, model, data, today, filter = 'all', qu
         coveredBox: covered.length ? { items: covered } : null,
         coming: { items: comingShown, totalCents: comingTotal, monthMode },
         days, where,
-        empty: txnCount === 0 && feed.comingUp.length === 0,
+        empty: txnCount === 0 && feed.comingUp.length === 0 && reviewRows.length === 0,
         hasResults: days.length > 0 || comingShown.length > 0,
     };
 }
@@ -513,7 +533,7 @@ export function editRow(row) {
  * the row out of To review. Undo puts the row back as it was. Returns true when a row was confirmed.
  */
 export async function confirmWentTo(id) {
-    const found = lastFeed && lastFeed.days.flatMap((d) => d.items).find((it) => it.type === 'txn' && it.row.id === id);
+    const found = lastFeed && (lastFeed.days.flatMap((d) => d.items).find((it) => it.type === 'txn' && it.row.id === id) || (lastFeed.toReview || []).map((row) => ({ row })).find((it) => it.row.id === id));
     if (!found || !found.row.bucketSuggested) return false;
     const prev = found.row;
     const next = { ...prev, status: 'ok' };
@@ -551,7 +571,9 @@ export function setupActivityEvents() {
         if (ed && lastFeed) {
             const id = ed.dataset.actEdit;
             const row = lastFeed.days.flatMap((d) => d.items).find((it) => it.type === 'txn' && it.row.id === id);
+            const older = row ? null : (lastFeed.toReview || []).find((r) => r.id === id);
             if (row) editRow(row.row);
+            else if (older) editRow(older);
             return;
         }
         if (event.target.closest('[data-act-plan]')) {

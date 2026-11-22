@@ -23,12 +23,24 @@ function spendByCategory(rows) {
         .sort((a, b) => b.spentCents - a.spentCents || a.categoryId.localeCompare(b.categoryId));
 }
 
+/** FT-R-120: every row still waiting for review, any date, newest first (the one definition behind the To review list and counts). */
+export function waitingRows(rows, olderReview) {
+    const seen = new Set();
+    const out = [];
+    for (const r of [...(Array.isArray(rows) ? rows : []), ...(Array.isArray(olderReview) ? olderReview : [])]) {
+        if (!r || r.status !== 'review' || seen.has(r.id)) continue;
+        seen.add(r.id);
+        out.push(r);
+    }
+    return out.sort((a, b) => b.date.localeCompare(a.date));
+}
+
 /**
  * Today's figures from rows in hand. Left, buckets and the so-far splits come from
  * leftThisPay (a matched bill counts once, as spend; unmatched Upcoming, Due and Missed
  * bills count once, as bills). `toReview` counts rows still flagged 'review' (FT-R-55).
  */
-export function buildTodayModel({ data, rows, today }) {
+export function buildTodayModel({ data, rows, today, olderReview }) {
     const d = data || {};
     const all = Array.isArray(rows) ? rows : [];
     const left = leftThisPay({ data: d, txns: all, today });
@@ -58,6 +70,7 @@ export function buildTodayModel({ data, rows, today }) {
         nonEssentialSoFarCents: left.nonEssentialSoFarCents,
         unsortedCents: left.unsortedCents,
         toReview: left.toReview,
+        toReviewAll: waitingRows(all, olderReview).length, // FT-R-120: every row waiting, any pay
         byCategory: spendByCategory(cycleRows),
         spendByDay: [...byDay].map(([date, spentCents]) => ({ date, spentCents })).sort((a, b) => a.date.localeCompare(b.date)),
         dueBeforePay,
@@ -79,7 +92,7 @@ function resolveRange(range, cycle, today) {
  * transaction (`row.billMatch`), never as a second item, so a matched bill is counted once.
  * `comingUp` is the unpaid occurrences from today onward in the range.
  */
-export function buildActivityFeed({ data, rows, today, range }) {
+export function buildActivityFeed({ data, rows, today, range, olderReview }) {
     const d = data || {};
     const all = Array.isArray(rows) ? rows : [];
     const cycle = leftThisPay({ data: d, txns: all, today }).cycle;
@@ -106,7 +119,7 @@ export function buildActivityFeed({ data, rows, today, range }) {
     }
     comingUp.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     const dayList = [...days.values()].sort((a, b) => b.date.localeCompare(a.date));
-    const toReview = inRange.filter((r) => r.status === 'review');
+    const toReview = waitingRows(all, olderReview); // FT-R-120: not limited to the range
     return {
         ready: true,
         range: { from, to },
@@ -126,12 +139,12 @@ const todayIso = () => iso(new Date());
 export function todayModel() {
     const c = getSpendCache();
     if (!c.ready) return NOT_READY;
-    return buildTodayModel({ data: store.financeData, rows: c.rows, today: todayIso() });
+    return buildTodayModel({ data: store.financeData, rows: c.rows, today: todayIso(), olderReview: c.olderReview });
 }
 
 /** Activity feed from the live cache. `{ ready:false }` until the cache has loaded. */
 export function activityFeed(range) {
     const c = getSpendCache();
     if (!c.ready) return NOT_READY;
-    return buildActivityFeed({ data: store.financeData, rows: c.rows, today: todayIso(), range });
+    return buildActivityFeed({ data: store.financeData, rows: c.rows, today: todayIso(), range, olderReview: c.olderReview });
 }
