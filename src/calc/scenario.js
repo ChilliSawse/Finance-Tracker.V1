@@ -11,7 +11,8 @@
 // adds a number; `add` with `target.id` null appends `value` to the collection (a new income source, a
 // loan, a goal). `remove` deletes the target row.
 
-import { rebaseIncomeSources } from './income-rebase.js';
+import { rebaseIncomeSources, fillNewSalarySource } from './income-rebase.js';
+import { addGoal, removeGoal } from '../state/saving-model.js';
 
 export const KINDS = ['income', 'expense', 'split', 'goal', 'goalFund', 'incomeAdd', 'debtAdd', 'oneOff', 'assumption'];
 export const OPS = ['set', 'scale', 'add', 'remove'];
@@ -157,15 +158,30 @@ function applyOne(out, c) {
         if (!Array.isArray(out[tg.collection])) out[tg.collection] = [];
         const row = deepClone(c.value);
         if (typeof row.id !== 'string' || !row.id) row.id = `sc-${c.id}`;
-        if (rowIndex(out[tg.collection], row.id) < 0) out[tg.collection].push(row);
+        if (rowIndex(out[tg.collection], row.id) >= 0) return;
+        // H6: a new row goes in the way the app's own save puts it in, so every figure that reads it matches.
+        if (tg.collection === 'incomeSources') fillNewSalarySource(row);
+        if (tg.collection === 'bucketGoals' && isObj(row) && row.parentId != null) {
+            const res = addGoal(out, row.parentId, { name: row.name, cost: row.cost, saved: row.saved, due: row.due }, { fork: true });
+            if (res.ok) { res.item.id = row.id; return; }
+        }
+        out[tg.collection].push(row);
         return;
     }
     const list = out[tg.collection];
     const i = rowIndex(list, tg.id);
     if (i < 0) return; // the target is gone: skipped, never thrown
-    if (c.op === 'remove') { list.splice(i, 1); return; }
+    if (c.op === 'remove') {
+        // H6: dropping a goal moves its saved money up and rebalances its siblings, as the app does.
+        if (tg.collection === 'bucketGoals' && removeGoal(out, tg.id).ok) return;
+        list.splice(i, 1);
+        return;
+    }
     if (!c.field) return;
-    list[i][c.field] = applyOp(list[i][c.field], c);
+    let next = applyOp(list[i][c.field], c);
+    // H6: the app's split save keeps one decimal (setSplit); a scenario split reads the same percentage.
+    if (tg.collection === 'allocation' && c.field === 'percentage' && isNum(next)) next = Math.round(next * 10) / 10;
+    list[i][c.field] = next;
 }
 
 /**

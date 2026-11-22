@@ -35,6 +35,7 @@ import { FI_TEST_CASES } from './calc/fi.test-cases.js';
 import { GOAL_PLANNER_TEST_CASES } from './calc/goal-planner.test-cases.js';
 import { SCENARIO_UI_TEST_CASES } from './ui/scenario-ui.test-cases.js';
 import { SCENARIO_RESULTS_TEST_CASES } from './ui/scenario-results.test-cases.js';
+import { SCENARIO_EQUIVALENCE_TEST_CASES } from './ui/scenario-equivalence.test-cases.js'; // H6
 import { SCENARIO_ANSWER_TOP_TEST_CASES } from './ui/scenario/answer-top.test-cases.js';
 import { SAFETY_DB_TEST_CASES } from './state/safety-db.test-cases.js';
 import { SCENARIO_MAKE_REAL_SAFETY_TEST_CASES } from './ui/scenario/make-real-safety.test-cases.js';
@@ -95,6 +96,7 @@ export const TEST_GROUPS = [
     { name: 'goal-planner', env: 'pure', cases: GOAL_PLANNER_TEST_CASES },
     { name: 'scenario-ui', env: 'pure', cases: SCENARIO_UI_TEST_CASES },
     { name: 'scenario-results', env: 'pure', cases: SCENARIO_RESULTS_TEST_CASES },
+    { name: 'scenario-equivalence', env: 'pure', cases: SCENARIO_EQUIVALENCE_TEST_CASES }, // H6
     { name: 'scenario-answer-top', env: 'pure', cases: SCENARIO_ANSWER_TOP_TEST_CASES }, // F8a
     { name: 'safety-db', env: 'browser', cases: SAFETY_DB_TEST_CASES }, // S9
     { name: 'scenario-make-real-safety', env: 'pure', cases: SCENARIO_MAKE_REAL_SAFETY_TEST_CASES }, // S10
