@@ -1,0 +1,376 @@
+{
+ "note": "Made-up asset names (FT-0032 DB8). expect = asset type id the matcher must pick, or null. appAgrees = the type kind must equal the app suggestKind kind.",
+ "lines": [
+  {
+   "name": "Work van",
+   "expect": "vehicle_van"
+  },
+  {
+   "name": "Van",
+   "expect": "vehicle_van"
+  },
+  {
+   "name": "SUV",
+   "expect": "vehicle_suv"
+  },
+  {
+   "name": "Family SUV",
+   "expect": "vehicle_suv"
+  },
+  {
+   "name": "Box trailer",
+   "expect": "vehicle_trailer"
+  },
+  {
+   "name": "Trailer",
+   "expect": "vehicle_trailer"
+  },
+  {
+   "name": "Boat trailer",
+   "expect": "vehicle_boat_trailer"
+  },
+  {
+   "name": "Camper",
+   "expect": "vehicle_camper_trailer"
+  },
+  {
+   "name": "Camper trailer",
+   "expect": "vehicle_camper_trailer"
+  },
+  {
+   "name": "Jet ski",
+   "expect": "vehicle_jetski"
+  },
+  {
+   "name": "Jetski",
+   "expect": "vehicle_jetski"
+  },
+  {
+   "name": "Scooter",
+   "expect": "vehicle_motorbike"
+  },
+  {
+   "name": "Motorhome",
+   "expect": "vehicle_motorhome"
+  },
+  {
+   "name": "Camper van",
+   "expect": "vehicle_motorhome"
+  },
+  {
+   "name": "Car",
+   "expect": "vehicle_car_medium",
+   "appAgrees": true
+  },
+  {
+   "name": "Work vehicle",
+   "expect": "vehicle_car_medium",
+   "appAgrees": true
+  },
+  {
+   "name": "Ute",
+   "expect": "vehicle_ute",
+   "appAgrees": true
+  },
+  {
+   "name": "Motorbike",
+   "expect": "vehicle_motorbike",
+   "appAgrees": true
+  },
+  {
+   "name": "Motorcycle",
+   "expect": "vehicle_motorbike",
+   "appAgrees": true
+  },
+  {
+   "name": "Boat",
+   "expect": "vehicle_boat_trailer",
+   "appAgrees": true
+  },
+  {
+   "name": "Caravan",
+   "expect": "vehicle_caravan",
+   "appAgrees": true
+  },
+  {
+   "name": "House",
+   "expect": "property_house",
+   "appAgrees": true
+  },
+  {
+   "name": "Investment property",
+   "expect": "property_house",
+   "appAgrees": true
+  },
+  {
+   "name": "Apartment",
+   "expect": "property_unit",
+   "appAgrees": true
+  },
+  {
+   "name": "Unit",
+   "expect": "property_unit",
+   "appAgrees": true
+  },
+  {
+   "name": "Superannuation",
+   "expect": "super_growth",
+   "appAgrees": true
+  },
+  {
+   "name": "ETF portfolio",
+   "expect": "etf_diversified_growth",
+   "appAgrees": true
+  },
+  {
+   "name": "Vanguard shares",
+   "expect": "shares_australian",
+   "appAgrees": true
+  },
+  {
+   "name": "Index fund",
+   "expect": "etf_diversified_growth",
+   "appAgrees": true
+  },
+  {
+   "name": "Savings account",
+   "expect": "cash_savings",
+   "appAgrees": true
+  },
+  {
+   "name": "Mortgage offset",
+   "expect": "cash_offset",
+   "appAgrees": true
+  },
+  {
+   "name": "Cash",
+   "expect": "cash_everyday",
+   "appAgrees": true
+  },
+  {
+   "name": "Everyday account",
+   "expect": "cash_everyday",
+   "appAgrees": true
+  },
+  {
+   "name": "Bitcoin",
+   "expect": "crypto",
+   "appAgrees": true
+  },
+  {
+   "name": "Crypto",
+   "expect": "crypto",
+   "appAgrees": true
+  },
+  {
+   "name": "Raiz",
+   "expect": null,
+   "appAgrees": true
+  },
+  {
+   "name": "",
+   "expect": null,
+   "appAgrees": true
+  },
+  {
+   "name": "Tesla Model 3",
+   "expect": "vehicle_car_bev"
+  },
+  {
+   "name": "Electric car",
+   "expect": "vehicle_car_bev"
+  },
+  {
+   "name": "Toyota hybrid",
+   "expect": "vehicle_car_hybrid"
+  },
+  {
+   "name": "Plug-in hybrid",
+   "expect": "vehicle_car_phev"
+  },
+  {
+   "name": "Dual cab ute",
+   "expect": "vehicle_ute"
+  },
+  {
+   "name": "Land Cruiser",
+   "expect": "vehicle_suv"
+  },
+  {
+   "name": "BMW",
+   "expect": "vehicle_car_luxury"
+  },
+  {
+   "name": "Hatchback",
+   "expect": "vehicle_car_small"
+  },
+  {
+   "name": "Sailboat",
+   "expect": "vehicle_boat_sail"
+  },
+  {
+   "name": "EV charger",
+   "expect": null
+  },
+  {
+   "name": "Evie savings",
+   "expect": "cash_savings"
+  },
+  {
+   "name": "Supercar",
+   "expect": null
+  },
+  {
+   "name": "Superb",
+   "expect": null
+  },
+  {
+   "name": "Car park",
+   "expect": null
+  },
+  {
+   "name": "Unit trust",
+   "expect": "etf_diversified_growth"
+  },
+  {
+   "name": "TV unit",
+   "expect": "home_furniture"
+  },
+  {
+   "name": "Storage unit",
+   "expect": null
+  },
+  {
+   "name": "Console table",
+   "expect": "home_furniture"
+  },
+  {
+   "name": "Games console",
+   "expect": "tech_console"
+  },
+  {
+   "name": "Hybrid bike",
+   "expect": "bike_standard"
+  },
+  {
+   "name": "Electric scooter",
+   "expect": "bike_electric"
+  },
+  {
+   "name": "Mobility scooter",
+   "expect": null
+  },
+  {
+   "name": "Land",
+   "expect": "property_regional"
+  },
+  {
+   "name": "Land Rover",
+   "expect": "vehicle_suv"
+  },
+  {
+   "name": "Rental bond",
+   "expect": null
+  },
+  {
+   "name": "Bond fund",
+   "expect": "bonds_australian"
+  },
+  {
+   "name": "Home theatre",
+   "expect": null
+  },
+  {
+   "name": "Home",
+   "expect": "property_house"
+  },
+  {
+   "name": "Flat",
+   "expect": "property_unit"
+  },
+  {
+   "name": "Flat screen TV",
+   "expect": "tech_tv"
+  },
+  {
+   "name": "Vanguard Super",
+   "expect": "super_growth"
+  },
+  {
+   "name": "Vancouver trip",
+   "expect": null
+  },
+  {
+   "name": "Vandal",
+   "expect": null
+  },
+  {
+   "name": "Super cash option",
+   "expect": "super_cash"
+  },
+  {
+   "name": "PC keyboard",
+   "expect": null
+  },
+  {
+   "name": "Keyboard",
+   "expect": "music_electronic"
+  },
+  {
+   "name": "Digital piano",
+   "expect": "music_electronic"
+  },
+  {
+   "name": "Piano",
+   "expect": "music_piano"
+  },
+  {
+   "name": "Emergency fund",
+   "expect": "cash_savings"
+  },
+  {
+   "name": "Term deposit",
+   "expect": "term_deposit"
+  },
+  {
+   "name": "Gold ring",
+   "expect": "jewellery_gold"
+  },
+  {
+   "name": "Rolex",
+   "expect": "watch_luxury_scarce"
+  },
+  {
+   "name": "Apple Watch",
+   "expect": "tech_smartwatch"
+  },
+  {
+   "name": "iPhone",
+   "expect": "tech_phone_iphone"
+  },
+  {
+   "name": "Android tablet",
+   "expect": "tech_tablet_android"
+  },
+  {
+   "name": "MacBook Pro",
+   "expect": "tech_laptop_macbook"
+  },
+  {
+   "name": "Laptop",
+   "expect": "tech_laptop_windows"
+  },
+  {
+   "name": "Makita drill",
+   "expect": "tools_power_premium"
+  },
+  {
+   "name": "Drill press",
+   "expect": "tools_workshop"
+  },
+  {
+   "name": "Lawn mower",
+   "expect": "tools_garden"
+  }
+ ]
+}

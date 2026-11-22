@@ -13,6 +13,14 @@ Lists added, changed and removed ids per release. Releases are tagged `ref-YYYY.
 - Evidence links point at a third-party directory; no descriptor strings from it are in the repo.
 - baseline not refreshed (done at app release).
 - Agents: claude-code (claude-sonnet-5-5; DB5).
+- asset types rev 2 (FT-0032 DB8, from D2, D3, D4 and their checks): 65 types. 47 depreciating, 1 stable, 3 appreciating, 9 invested, 4 cash, 1 setting. Values are market loss (FT-R-114); the ATO effective life sits in a separate `effectiveLife` tagged `taxOnly` with its instrument (LI 2025/20). Every type is `suggested: true` and `reviewed: null` (no person has reviewed it).
+- Cars carry the D2 section 5.3 powertrain factor (`powertrainFactor`: petrol and diesel 1; hybrid, plug-in hybrid and EV as ratios to the same body's curve at years 1, 3, 5, 10). The hybrid, plug-in and EV types keep their own D2 curves. No schema change was needed (the asset type schema allows extra fields).
+- New `match` words cover van, SUV, trailer, camper, jet ski, scooter, motorhome. Three types have no market curve and a null rate (`vehicle_motorhome`, `vehicle_trailer`, `vehicle_jetski`): only the ATO life is sourced. Also null by design: `property_regional` growth (D4's 5.0 had no source), `crypto` (no reliable rate), `cash_everyday` and `cash_offset` interest. `rentalYield` is folded into the house and unit types. `inflation_cpi` has kind `setting`, `legacyKind: null` and no match words (it is not an asset).
+- `watch_luxury_scarce` has kind `stable` and `legacyKind: depreciating` (the app has no flat kind). The D4 words `td` and bare `diversified` were dropped (wrong-kind risk); `bank account` moved from savings to the new everyday type.
+- Matching: whole word or phrase on normalised text, the same as merchants `match: 'word'` in the app; longest phrase wins; an `exclude` phrase vetoes a type. `reference/tools/asset-match.mjs` runs 87 name cases (`reference/tests/asset-fixtures.json`) and content rules inside `npm run ref:check`.
+- Effective lives are quoted from the ATO determination (legislation.gov.au, CC BY 4.0 as recorded by the D3 check).
+- baseline not refreshed (done at app release).
+- Agents: claude-code (claude-sonnet-5-5; DB8).
 
 ## 2026.11.1 (2026-11-22)
 
