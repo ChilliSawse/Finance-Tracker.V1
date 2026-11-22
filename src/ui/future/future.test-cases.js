@@ -9,9 +9,19 @@ import { enF } from '../../i18n/en-f.js';
 import { t, plural } from '../../i18n/strings.js';
 import {
     futureModel, chartGeometry, chartIds, scenarioList, peopleSlots, withPeople, assumptionValues, validateAssumptions,
-    applyAssumptions, restoreAssumptions, MAX_ON_CHART, HORIZONS, niceStep,
+    applyAssumptions, restoreAssumptions, MAX_ON_CHART, HORIZONS, niceStep, MIN_LAST_TICK_GAP_PCT,
 } from './model.js';
 import { buildFutureHtml, yearsText, axisMoney } from './view.js';
+
+// A source file as text under Node (null in the browser runner, where the check is skipped).
+async function srcText(rel) {
+    try {
+        if (typeof process === 'undefined' || !process.versions || !process.versions.node) return null;
+        const nodeFs = 'node:fs', nodeUrl = 'node:url', nodePath = 'node:path';
+        const [fs, { fileURLToPath }, path] = await Promise.all([import(/* @vite-ignore */ nodeFs), import(/* @vite-ignore */ nodeUrl), import(/* @vite-ignore */ nodePath)]);
+        return fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', rel), 'utf8');
+    } catch (_) { return null; }
+}
 
 const TODAY = '2026-11-21';
 const sample = () => {
@@ -182,6 +192,41 @@ export const FUTURE_TEST_CASES = [
                 multiple: 'f.future.err.multiple', expectedReturn: 'f.future.err.return', inflation: 'f.future.err.inflation', birthYear0: 'f.future.err.birth',
             });
             assert('valid', validateAssumptions({ multiple: 25, expectedReturn: 7, inflation: 2.5, birthYear0: 1990, birthYear1: null }, 2026), {});
+        },
+    },
+    {
+        name: 'H3.1 x ticks: the "N yrs" label never touches the tick before it, at every horizon',
+        fn(assert) {
+            for (const years of HORIZONS) {
+                const g = chartGeometry({ series: [{ id: 'now', kind: 'now', values: [0, 10, 20] }], fiNumber: 15, yearsToFI: 1, years });
+                const n = g.ticks.length;
+                assert(`${years} yrs: first tick is Now, last is the horizon`, [g.ticks[0].year, g.ticks[n - 1].year], [0, years]);
+                assert(`${years} yrs: gap before the last tick >= ${MIN_LAST_TICK_GAP_PCT}%`, g.ticks[n - 1].pct - g.ticks[n - 2].pct >= MIN_LAST_TICK_GAP_PCT, true);
+            }
+            const g30 = chartGeometry({ series: [{ id: 'now', kind: 'now', values: [0, 1] }], fiNumber: 1, yearsToFI: 1, years: 30 });
+            assert('30 yrs drops the crowded 25', g30.ticks.map((t) => t.year), [0, 5, 10, 15, 20, 30]);
+        },
+    },
+    {
+        name: 'H3.2 the FI marker label sits a full row above the FI line label (own row, no overlap)',
+        async fn(assert) {
+            const css = await srcText('ui/future/future.css');
+            if (css === null) return;
+            const tags = css.match(/\.fu-fi-tag\s*\{[^}]*\}/g) || [];
+            assert('every .fu-fi-tag rule lifts it above the dot by >= 22px', tags.length >= 2 && tags.every((r) => /-100% - 22px/.test(r)), true);
+        },
+    },
+    {
+        name: 'H3.3 phone top bar clears the iPhone status bar (viewport-fit=cover + black-translucent)',
+        async fn(assert) {
+            const css = await srcText('styles/base.css');
+            const html = await srcText('../index.html');
+            if (css === null || html === null) return;
+            const rule = (css.match(/\.topbar\s*\{[^}]*\}/g) || []).find((r) => r.includes('sticky')) || '';
+            assert('topbar pads by the top safe-area inset', /padding:\s*env\(safe-area-inset-top, 0px\)/.test(rule), true);
+            assert('topbar grows by the same inset', /height:\s*calc\(56px \+ env\(safe-area-inset-top, 0px\)\)/.test(rule), true);
+            assert('still sticky', rule.includes('position: sticky'), true);
+            assert('the page draws under the status bar', html.includes('viewport-fit=cover') && html.includes('black-translucent'), true);
         },
     },
     {

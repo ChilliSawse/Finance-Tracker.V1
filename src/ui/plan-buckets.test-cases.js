@@ -6,7 +6,7 @@
 
 import { legacySampleFinanceData } from '../state/sample-data.js';
 import { runMigrationChain } from '../state/migration-chain.js';
-import { getBuckets } from '../state/saving-model.js';
+import { getBuckets, addBucket } from '../state/saving-model.js';
 import { buildBucketsModel, buildBucketsHtml, dispatchBucketAction, splitSheetSpec, bucketSheetRoute } from './plan-buckets.js';
 
 const TODAY = '2026-11-21';
@@ -194,5 +194,23 @@ export const PLAN_BUCKETS_TEST_CASES = [
         assert('unknown or empty gives null', [bucketSheetRoute({ kind: 'nope' }), bucketSheetRoute(null)], [null, null]);
         const d = sample();
         assert('add-pot and add-debt actions ask for those sheets', [dispatchBucketAction(d, 'fire-add-pot', {}, { today: TODAY }).sheet.kind, dispatchBucketAction(d, 'fire-add-debt', {}, { today: TODAY }).sheet.kind], ['target-pot', 'target-debt']);
+    } },
+    { name: 'H2 Use these works when extra buckets hold a share (own template)', fn(assert) {
+        const d = sample();
+        d.allocation.find((r) => r.role === 'daily').percentage -= 10;
+        const add = addBucket(d, { name: 'Travel Fund', percentage: 10 }, { fork: true });
+        assert('extra bucket added on an own template', add.ok, true);
+        const m = buildBucketsModel(d, TODAY, {});
+        assert('the nudge is offered and fits the room the four have (90)', [!!m.nudge, Math.round((m.nudge.daily + m.nudge.splurge + m.nudge.smile + m.nudge.fire) * 10) / 10], [true, 90]);
+        const out = dispatchBucketAction(d, 'use-suggested');
+        assert('Use these applies', out.res.ok, true);
+        const total = Math.round(d.allocation.reduce((s, r) => s + r.percentage, 0) * 10) / 10;
+        assert('split totals 100 and Travel keeps its 10', [total, d.allocation.find((r) => r.name === 'Travel Fund').percentage], [100, 10]);
+        assert('the nudge is gone once applied', buildBucketsModel(d, TODAY, {}).nudge, null);
+        const e = sample();
+        addBucket(e, { name: 'Pot', percentage: 0 }, { fork: true });
+        e.allocation.forEach((r) => { r.percentage = r.name === 'Pot' ? 100 : 0; });
+        const refused = dispatchBucketAction(e, 'use-suggested');
+        assert('no room: refused with a message, never silent', [refused.res.ok, refused.res.message.length > 0], [false, true]);
     } },
 ];
