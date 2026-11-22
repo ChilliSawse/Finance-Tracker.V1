@@ -101,7 +101,7 @@ export const PLAN_MIGRATION_TEST_CASES = [
             const fortnight = (w) => Math.round(w * 2 * 100) / 100;
             assert('before essential per fortnight', fortnight(before.ess), 2072);
             assert('before non-essential per fortnight', fortnight(before.non), 366.62);
-            assert('before net worth', before.netWorth, 106650);
+            assert('before net worth (HELP counts, FT-R-125)', before.netWorth, 82050);
             assert('pending', needsPlanMigration(d), true);
             assert('changed', migratePlanModel(d), true);
             assert('dataVersion 2', d.dataVersion, 2);

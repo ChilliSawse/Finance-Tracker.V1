@@ -10,6 +10,7 @@ import { needsAssetDebtMigration, migrateAssetDebtDetail } from './asset-debt-mi
 import { runMigrationChain, BACKUP_KEY } from './migration-chain.js';
 import { buildSampleHousehold, legacySampleFinanceData } from './sample-data.js';
 import { calculateTotals } from '../calc/calculations.js';
+import { ASSET_TYPE_TEST_CASES } from './asset-types.test-cases.js';
 
 const SAMPLE_DAY = '2026-11-21';
 const near = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
@@ -22,13 +23,14 @@ const memStorage = () => {
 const netWorth = (d) => Math.round(calculateTotals(structuredClone(d)).netWorth * 100);
 
 export const ASSETS_DEBTS_TEST_CASES = [
+    ...ASSET_TYPE_TEST_CASES, // DB10: asset types, curves, suggested held out
     { name: 'F2.1 migration on the sample', fn(assert) {
         const d = legacySampleFinanceData();
         const nwBefore = netWorth(d);
-        assert('sample net worth is 106,650 before', nwBefore, 10665000);
+        assert('sample net worth is 82,050 (after HELP, FT-R-125) before', nwBefore, 8205000);
         assert('needs the migration', needsAssetDebtMigration(d), true);
         assert('first run changes the data', migrateAssetDebtDetail(d), true);
-        assert('net worth 106,650 after', netWorth(d), 10665000);
+        assert('net worth 82,050 after', netWorth(d), 8205000);
         assert('asset ids', d.assets.map((a) => a.id), ['a-savings-account', 'a-superannuation', 'a-etf-portfolio']);
         assert('asset kinds', d.assets.map((a) => a.kind), ['cash', 'invested', 'invested']);
         assert('only super is flagged super', d.assets.map((a) => a.isSuper), [false, true, false]);
@@ -48,7 +50,7 @@ export const ASSETS_DEBTS_TEST_CASES = [
         const d = sample();
         assert('sample rate fields are kept by the migration', (() => { migrateAssetDebtDetail(d); return [d.assets[0].interestRate, d.assets[0].interestFrequency, d.assets[2].dividendYield, d.assets[2].dividendFrequency]; })(), [4.8, 'monthly', 3.5, 'quarterly']);
         const live = buildSampleHousehold(SAMPLE_DAY).data;
-        assert('live sample: nothing pending, version 1, net worth 106,650', [needsAssetDebtMigration(live), live.assetDebtVersion, netWorth(live)], [false, 1, 10665000]);
+        assert('live sample: nothing pending, version 1, net worth 82,050', [needsAssetDebtMigration(live), live.assetDebtVersion, netWorth(live)], [false, 1, 8205000]);
         assert('live sample has asset ids and the inflation default', [live.assets.map((a) => a.id), live.fiSettings.inflation], [['a-savings-account', 'a-superannuation', 'a-etf-portfolio'], 2.5]);
         assert('live sample is the pre-5b sample after the migration (same data)', JSON.stringify(live.assets), JSON.stringify(d.assets));
         const st = memStorage();
@@ -133,7 +135,7 @@ export const ASSETS_DEBTS_TEST_CASES = [
         assert('chain ran clean with a backup', [res.aborted, res.backedUp, res.errors], [false, true, []]);
         assert('backup is the old save byte for byte', st.m.get(BACKUP_KEY) === raw, true);
         assert('asset ids', d.assets.map((a) => a.id), ['a-savings-account', 'a-superannuation', 'a-etf-portfolio']);
-        assert('net worth unchanged by the chain (106,650)', [nw, netWorth(d)], [10665000, 10665000]);
+        assert('net worth unchanged by the chain (82,050)', [nw, netWorth(d)], [8205000, 8205000]);
         assert('inflation backfilled', d.fiSettings.inflation, 2.5);
         const again = runMigrationChain(d, { raw: JSON.stringify(d), source: 'load', storage: st });
         assert('second chain run is a no-op', [again.changed, again.aborted], [false, false]);

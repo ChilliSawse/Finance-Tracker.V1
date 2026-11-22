@@ -29,6 +29,9 @@ export function recordDailySnapshot(totals) {
         date,
         netWorth: Math.round(totals.netWorth * 100) / 100,
         savingsRate: Math.round(totals.savingsRate * 10) / 10,
+        // FT-R-125: net worth now takes HELP off. Older entries have no `netWorthDef`: they are left as they were and a
+        // chart can say the measure changed at the first entry that has it.
+        netWorthDef: 'withHelp',
     };
     // FT-R-116: new entries carry the pay-into-saving-buckets definition and its amount. Older entries have
     // no `savingsDef`: their savingsRate is the old net-minus-expenses figure, and they are left as they were.
