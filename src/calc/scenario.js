@@ -11,6 +11,8 @@
 // adds a number; `add` with `target.id` null appends `value` to the collection (a new income source, a
 // loan, a goal). `remove` deletes the target row.
 
+import { rebaseIncomeSources } from './income-rebase.js';
+
 export const KINDS = ['income', 'expense', 'split', 'goal', 'goalFund', 'incomeAdd', 'debtAdd', 'oneOff', 'assumption'];
 export const OPS = ['set', 'scale', 'add', 'remove'];
 export const COLLECTIONS = ['plan', 'allocation', 'bucketGoals', 'liabilities', 'assets', 'incomeSources', 'fiSettings'];
@@ -180,6 +182,9 @@ export function resolveAt(data, changes, date) {
         if (!isObj(c) || changeProblems(c).length || !isActiveOn(c, date)) continue;
         applyOne(out, c);
     }
+    // H5: a new gross on a source with payslip figures must move those figures too, or take-home, tax, per pay
+    // and savings stay on the old payslip while only the long-range numbers move.
+    rebaseIncomeSources(data.incomeSources, out.incomeSources, date);
     return out;
 }
 
