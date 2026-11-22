@@ -11,6 +11,7 @@ import { PLAN_MIGRATION_TEST_CASES } from './state/plan-migration.test-cases.js'
 import { TRANSACTIONS_TEST_CASES } from './state/transactions.test-cases.js';
 import { TODAY_MODEL_TEST_CASES } from './state/today-model.test-cases.js';
 import { RULES_TEST_CASES } from './state/rules.test-cases.js';
+import { SORTING_TEST_CASES } from './state/sorting.test-cases.js'; // DB2
 import { BILL_MATCH_TEST_CASES } from './state/bill-match.test-cases.js';
 import { SAMPLE_HOUSEHOLD_TEST_CASES } from './state/sample-household.test-cases.js';
 import { TAX_TABLES_TEST_CASES } from './calc/tax-tables.test-cases.js';
@@ -74,6 +75,7 @@ export const TEST_GROUPS = [
     { name: 'transactions', env: 'browser', cases: TRANSACTIONS_TEST_CASES },
     { name: 'today-model', env: 'pure', cases: TODAY_MODEL_TEST_CASES },
     { name: 'rules', env: 'pure', cases: RULES_TEST_CASES },
+    { name: 'sorting', env: 'pure', cases: SORTING_TEST_CASES }, // DB2
     { name: 'bill-match', env: 'pure', cases: BILL_MATCH_TEST_CASES },
     { name: 'sample-household', env: 'pure', cases: SAMPLE_HOUSEHOLD_TEST_CASES },
     { name: 'tax-tables', env: 'pure', cases: TAX_TABLES_TEST_CASES },

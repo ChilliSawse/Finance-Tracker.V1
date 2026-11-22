@@ -3,9 +3,10 @@
 // the backup round trip. Synthetic data only. Shape: { name, fn(assert) }, assert(label, actual, expected).
 
 import {
-    isTransferRow, normaliseLabelText, matchBucketLabel, transferSuggestion, MIN_LABEL_LENGTH,
+    isTransferRow, normaliseLabelText, MIN_LABEL_LENGTH,
 } from './transfers.js';
-import { resolveImportRow, suggestedTransfersLine } from '../state/rules.js';
+import { matchBucketLabel, transferSuggestion } from './transfer-suggest.js';
+import { resolveImportRow, suggestedTransfersLine } from '../state/import-rows.js';
 import { leftThisPay } from './pay-cycle.js';
 import { buildTodayModel, buildActivityFeed } from '../state/today-model.js';
 import { loadSpendCache, getSpendCache } from '../state/spend-cache.js';

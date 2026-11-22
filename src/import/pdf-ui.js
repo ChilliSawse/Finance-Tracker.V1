@@ -8,7 +8,8 @@
 import { store } from '../state/store.js';
 import { getElement, getValue, setHTML, escapeHtml, formatCurrency } from '../utils.js';
 import { categoriseDescription } from '../state/categories.js';
-import { resolveImportRow, suggestedTransferName, suggestedTransfersLine, commitImportRows, rematchBills } from '../state/rules.js';
+import { commitImportRows, rematchBills } from '../state/rules.js';
+import { resolveImportRow, suggestedTransferName, suggestedTransfersLine } from '../state/import-rows.js';
 import { makeTransaction, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
