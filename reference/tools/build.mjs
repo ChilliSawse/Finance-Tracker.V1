@@ -13,6 +13,7 @@ import { gzipSync } from 'node:zlib';
 import Ajv2020 from 'ajv/dist/2020.js';
 import { validateModelDef } from '../../src/calc/saving-model.js';
 import { merchantKey } from '../../src/state/categories.js';
+import { fixtureErrors, fixtureLines } from './fixtures.mjs';
 
 export const REF_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const KNOWN_ENGINES = ['expenses-first', 'fixed'];
@@ -370,6 +371,9 @@ async function main(argv) {
     }
     const baselineDir = join(REF_DIR, 'baseline');
     if (argv.includes('--refresh-baseline')) { refreshBaseline(built, baselineDir); log('baseline refreshed from the current source'); }
+    const testsDir = join(REF_DIR, 'tests');
+    const fxErr = arg('--src') ? [] : fixtureErrors(s, testsDir);
+    if (fxErr.length) { console.error('REFERENCE FIXTURES FAILED'); for (const e of fxErr) console.error('  ' + e); return 1; }
     const bErr = verifyBuiltDir(baselineDir, v);
     if (bErr.length) { console.error('REFERENCE BASELINE INVALID (run --refresh-baseline)'); for (const e of bErr) console.error('  ' + e); return 1; }
     if (arg('--diff')) {
@@ -385,6 +389,7 @@ async function main(argv) {
         log(`wrote ${r.refDir}`);
     }
     if (!arg('--diff')) {
+        log(`fixtures ok: ${fixtureLines(testsDir).length} lines`);
         log(`reference ok: dataVersion ${built.manifest.dataVersion}, ${built.files.size} files, ${total} bytes gzip (this build), baseline ${bBytes} bytes gzip`);
         for (const r of rows) log('  ' + r);
         const live = JSON.stringify(readJson(join(baselineDir, 'manifest.json')).files);
