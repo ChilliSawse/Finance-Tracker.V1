@@ -34,6 +34,9 @@ export function niceStep(span, lines = 5) {
  * placed in percent so the text never scales. `series`: [{id, kind:'now'|'scen', values:number[]}] (a value a year).
  * @returns {{grid:Array<{pct:number,value:number}>, lines:Array<{id,kind,d}>, fiPct:number, fiDot:?{left:number,top:number}, ticks:Array<{pct:number,year:number}>, yMin:number, yMax:number}}
  */
+/** Least gap (percent of the plot width) between the last x tick and the one before it. */
+export const MIN_LAST_TICK_GAP_PCT = 20;
+
 export function chartGeometry({ series, fiNumber, yearsToFI, years }) {
     const all = series.flatMap((s) => s.values).concat(Number.isFinite(fiNumber) ? [fiNumber] : [], [0]);
     const rawMax = Math.max(...all);
@@ -54,6 +57,8 @@ export function chartGeometry({ series, fiNumber, yearsToFI, years }) {
     const tickStep = years <= 10 ? 2 : 5;
     const ticks = [];
     for (let y = 0; y <= years; y += tickStep) ticks.push({ pct: Math.round((y / years) * 10000) / 100, year: y });
+    // the last tick is the "N yrs" label (wider than a number): drop an earlier tick that would touch it (H3)
+    while (ticks.length > 2 && ticks[ticks.length - 1].pct - ticks[ticks.length - 2].pct < MIN_LAST_TICK_GAP_PCT) ticks.splice(ticks.length - 2, 1);
     return { grid, lines, nowTop: Math.round(pctY(series[0].values[0]) * 100) / 100, fiPct: Math.round(pctY(fiNumber) * 100) / 100, fiDot, ticks, yMin, yMax };
 }
 
