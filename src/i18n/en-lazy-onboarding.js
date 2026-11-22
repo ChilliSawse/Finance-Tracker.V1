@@ -27,7 +27,7 @@ Object.assign(en, {
     'c.setup.model.source': 'After Scott Pape, The Barefoot Investor',
     'c.setup.model.why': 'Your pay is split into Daily expenses, Splurge, Smile and Fire extinguisher, with Mojo for emergencies and Grow for the long run. Simple buckets you can see.',
     'c.setup.model.soon': 'More models coming',
-    'c.setup.model.soonList': '50/30/20, Pay yourself first, Profit First for sole traders and others.',
+    'c.setup.model.soonList': '50/30/20, Pay yourself first and others.',
     'c.setup.model.disclaimer': 'Ledger is not linked to the book or its author. It is a tool for following the method if you choose it.',
     'c.setup.quiz.title': 'About you',
     'c.setup.job.first': 'My job',

@@ -2,13 +2,15 @@
 // They replace C7's placeholder steps under the same ids. Everything shown comes from the engine
 // (netPerPayCents, planTotals, getBuckets, transfersToUpdate); writes go through E5's state API.
 //
-//   model      Bucket method only, with its source and a one-line why (FT-R-29).
+//   model      the catalogue: the Bucket method with its source and a one-line why (FT-R-29), and any other entry the
+//              catalogue ships (none at launch, FT-R-71). Choosing another is checked again on Next against the live data.
 //   split      expenses first, then the buckets in dollars with the book's guide beside each (FT-R-26),
 //              and starting balances for Smile, Fire and Mojo, asked once and skippable.
 //   transfers  a checklist writing bankSetTo (tickTransfer) and "add each pay's amounts for me"
 //              (setAutoCredit, on for new setups, FT-R-80).
 
 import { t } from '../../i18n/strings.js';
+import '../../i18n/en-lazy-models.js'; // the DB15 picker strings (en-lazy)
 import { esc, escNum } from '../html.js';
 import { formatCurrency } from '../../utils.js';
 import { planTotals, netPerPayCents } from '../../calc/plan.js';
@@ -25,18 +27,81 @@ const BALANCE_ROLES = ['smile', 'fire', 'mojo'];
 
 // ---------- model ----------
 
+// The catalogue beyond the Bucket method (DB15). Read once, lazily: with no extra entries (the launch catalogue holds the Bucket
+// method alone) the step is exactly the single card below and nothing is imported.
+let extras = null; // null: not read yet; [] or rows: {id, name, blurb, state, choosable, entry}
+
+function extraRowHtml(r) {
+    const note = r.state === 'needs-newer' ? t('m.pick.needsNewer') : r.state === 'replaces' ? t('m.pick.replaces') : '';
+    return `<label class="su-opt"><input type="radio" name="su-model" value="${esc(r.id)}" data-su-change="pick"${r.choosable ? '' : ' disabled'}>
+            <span class="o-body"><b>${esc(r.name)}</b>${r.blurb ? `<span class="o-why">${esc(r.blurb)}</span>` : ''}${note ? `<span class="su-fine">${esc(note)}</span>` : ''}</span></label>`;
+}
+
 export const modelStep = {
     id: 'model', order: STEP_ORDER.model, title: t('c.setup.model.title'), skippable: false, nextLabel: t('c.setup.model.next'),
-    render() {
+    render(ctx) {
+        if (extras === null && ctx && ctx.data) {
+            extras = [];
+            import('../model-picker.js').then(async (m) => {
+                const { loadCatalogue } = await import('../../state/model-catalogue.js');
+                extras = m.pickerRows(await loadCatalogue(), ctx.data).filter((r) => r.id !== 'bucket-method');
+                if (extras.length && ctx.refresh) ctx.refresh();
+            }).catch(() => { extras = []; });
+        }
+        const more = extras && extras.length ? extras : [];
         const parts = Object.entries(GUIDE)
             .map(([role, pct]) => `<i class="b-${role}" style="flex:${pct}">${esc(pct)}</i>`).join('');
         return `<p class="su-lead">${esc(t('c.setup.model.lead'))}</p>
-            <label class="su-opt on"><input type="radio" name="su-model" value="bucket" checked>
+            <label class="su-opt on"><input type="radio" name="su-model" value="bucket" checked${more.length ? ' data-su-change="pick"' : ''}>
             <span class="o-body"><b>${esc(t('c.setup.model.name'))}</b><span class="o-src">${esc(t('c.setup.model.source'))}</span>
             <span class="su-mini" aria-hidden="true">${parts}</span>
             <span class="o-why">${esc(t('c.setup.model.why'))}</span></span></label>
+            ${more.map(extraRowHtml).join('')}
             <div class="su-soon"><b>${esc(t('c.setup.model.soon'))}</b><span class="su-fine">${esc(t('c.setup.model.soonList'))}</span></div>
             <p class="su-fine">${esc(t('c.setup.model.disclaimer'))}</p>`;
+    },
+    actions: {
+        // A choice other than the Bucket method: start reading and checking its file now; Next waits for it.
+        pick(ctx, el) {
+            if (!ctx.state) return;
+            const row = (extras || []).find((r) => r.id === el.value);
+            if (!row || !row.choosable) { ctx.state.modelPick = null; return; }
+            const promise = import('../../state/model-catalogue.js').then(async (api) => {
+                const res = await api.loadEnvelope(row.entry);
+                return res.ok ? { api, envelope: res.envelope } : null;
+            }).catch(() => null);
+            ctx.state.modelPick = { id: row.id, row, promise };
+        },
+    },
+    onNext(ctx) {
+        const st = ctx.state;
+        if (!st) return true;
+        if (st.modelDone) { st.modelDone = false; return true; }
+        const checked = typeof document !== 'undefined' ? document.querySelector('input[name="su-model"]:checked') : null;
+        const want = checked ? checked.value : 'bucket';
+        const pick = st.modelPick;
+        if (want === 'bucket' || !pick || pick.id !== want) return true; // the radio decides, never a stale fetch
+        const advance = () => { st.modelDone = true; const btn = document.querySelector('[data-su="next"]'); if (btn) btn.click(); };
+        (async () => {
+            const loaded = await pick.promise;
+            const now = document.querySelector('input[name="su-model"]:checked');
+            // Entry states again, against the live data: replace only what is safe, and ask when a setup would change.
+            if (loaded && now && now.value === pick.id && loaded.api.entryState(pick.row.entry, ctx.data) === 'use') {
+                const { confirmDialog } = await import('../confirm.js');
+                const asked = loaded.api.replacesSetup(ctx.data);
+                const yes = !asked || await confirmDialog({ title: t('m.pick.replaceTitle', { name: pick.row.name }), body: t('m.pick.replaceBody'), confirmLabel: t('m.pick.replaceYes') });
+                if (yes && !loaded.api.wouldLoseBuckets(ctx.data)) {
+                    const res = loaded.api.useModel(ctx.data, loaded.envelope, { replaceBuckets: true });
+                    if (res.ok) {
+                        ctx.save();
+                        const { showUndoToast } = await import('../toast.js');
+                        showUndoToast({ message: t('m.pick.used', { name: pick.row.name }), onUndo: () => { res.onUndo(); ctx.save(); ctx.refresh(); } });
+                    }
+                }
+            }
+            advance();
+        })();
+        return false;
     },
 };
 

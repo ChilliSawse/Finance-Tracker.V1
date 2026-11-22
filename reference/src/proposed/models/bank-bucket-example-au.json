@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "schemaVersion": 1,
+  "id": "bank-bucket-example-au",
+  "version": "1.0.0",
+  "meta": {
+    "title": "Bank bucket example (rent, bills, splurge, savings)",
+    "blurb": "A four-account bucket split offered as an example by an Australian bank: 30% rent or mortgage, 30% bills and groceries, 20% splurge, 20% savings.",
+    "after": "A four-bucket split offered as an example by an Australian bank. It is a bank illustration, not a named method.",
+    "source": "https://pnbank.com.au/blog/budgeting-in-buckets",
+    "sourceKind": "secondary (bank marketing page; says it is general advice)",
+    "retrieved": "2026-11-22",
+    "licence": "CC0-1.0",
+    "reviewed": "2026-11-22",
+    "status": "estimate. PROPOSED, NOT SHIPPED (FT-R-71): the catalogue ships only the Bucket method at launch.",
+    "requires": {
+      "engine": "fixed"
+    },
+    "checks": {
+      "validateModelDef": "ok",
+      "naming": "Descriptive title \"Bank bucket example\". Brands (the bank, Up, NAB and so on) are cited in meta.source only, never in a title or meta.after.",
+      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked.",
+      "roles": "The bucket marked daily is the one Today works \"Left this pay\" from; splurge takes non-essential spending."
+    }
+  },
+  "model": {
+    "id": "bank-bucket-example-au",
+    "name": "Bank bucket example",
+    "basis": "net",
+    "engine": "fixed",
+    "buckets": [
+      {
+        "name": "Rent or mortgage",
+        "slot": 1,
+        "kind": "spend",
+        "pct": 30
+      },
+      {
+        "role": "daily",
+        "name": "Bills and groceries",
+        "slot": 2,
+        "kind": "spend",
+        "pct": 30
+      },
+      {
+        "role": "splurge",
+        "name": "Splurge",
+        "slot": 3,
+        "kind": "spend",
+        "pct": 20
+      },
+      {
+        "name": "Savings",
+        "slot": 4,
+        "kind": "save",
+        "pct": 20
+      }
+    ],
+    "rules": {
+      "coreBuckets": [],
+      "renamable": true,
+      "splitEditable": true,
+      "mojoShare": null,
+      "childrenAllowedIn": null,
+      "maxDepth": 3,
+      "remainderRatio": {
+        "smile": 1,
+        "fire": 2
+      },
+      "targetList": "fire",
+      "topLevelAddAllowed": true,
+      "slotCount": 10,
+      "colourRepeat": true
+    }
+  }
+}

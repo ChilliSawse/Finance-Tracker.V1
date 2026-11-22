@@ -42,7 +42,7 @@ export const CUSTOM_RULES = deepFreeze({
 
 const ROLES = ['daily', 'splurge', 'smile', 'fire', 'mojo', 'grow'];
 const BASES = ['net', 'gross', 'realRevenue'];
-const ENGINES = ['expenses-first', 'fixed'];
+export const ENGINES = ['expenses-first', 'fixed'];
 
 /** Shape check for a model definition (so other methods can be imported later). */
 export function validateModelDef(def) {

@@ -11,6 +11,7 @@ import './i18n/en-lazy-onboarding.js';
 import './i18n/en-lazy-income-layout.js';
 import './i18n/en-lazy-scenario.js';
 import './i18n/en-lazy-results.js';
+import './i18n/en-lazy-models.js';
 import { CHAIN_TEST_CASES } from './state/chain.test-cases.js';
 import { PALETTES_TEST_CASES } from './theme/palettes.test-cases.js';
 import { THEME_TEST_CASES } from './theme/theme.test-cases.js';
@@ -74,6 +75,7 @@ import { TRANSFERS_TEST_CASES } from './calc/transfers.test-cases.js'; // H9
 import { RECOVERY_UNDO_TEST_CASES, RECOVERY_UNDO_BROWSER_TEST_CASES } from './state/recovery-undo.test-cases.js'; // U3
 import { REFERENCE_TEST_CASES } from './state/reference.test-cases.js'; // R4
 import { REF_OVERRIDES_TEST_CASES } from './state/ref-overrides.test-cases.js'; // DB7
+import { MODEL_CATALOGUE_TEST_CASES } from './state/model-catalogue.test-cases.js'; // DB15
 import { TAX_REFERENCE_TEST_CASES } from './calc/tax-reference.test-cases.js'; // DB14
 
 export const TEST_GROUPS = [
@@ -144,5 +146,6 @@ export const TEST_GROUPS = [
     { name: 'recovery-undo-browser', env: 'browser', cases: RECOVERY_UNDO_BROWSER_TEST_CASES }, // U3
     { name: 'reference', env: 'pure', cases: REFERENCE_TEST_CASES }, // R4
     { name: 'ref-overrides', env: 'pure', cases: REF_OVERRIDES_TEST_CASES }, // DB7
+    { name: 'model-catalogue', env: 'pure', cases: MODEL_CATALOGUE_TEST_CASES }, // DB15
     { name: 'tax-reference', env: 'pure', cases: TAX_REFERENCE_TEST_CASES }, // DB14
 ];
