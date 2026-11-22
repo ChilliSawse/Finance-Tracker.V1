@@ -8,7 +8,7 @@
 import { getReferenceKind } from './reference.js';
 import { validateReferenceFile, referenceList } from './reference-validate.js';
 import { tablesFromReference } from '../calc/tax-tables/reference-tables.js';
-import { setReferenceTaxTables } from '../calc/tax-tables/index.js';
+import { TAX_TABLES, setReferenceTaxTables } from '../calc/tax-tables/index.js';
 
 let held = {};
 
@@ -21,14 +21,17 @@ export function heldReferenceYears() { return { ...held }; }
  */
 export function applyReferenceTax(doc) {
     try {
-        if (!doc || !validateReferenceFile('tax', doc).ok) { setReferenceTaxTables({}); held = {}; return { used: [], held: {} }; }
+        if (!doc || !validateReferenceFile('tax', doc).ok) { setReferenceTaxTables({}); held = {}; return { used: [], held: {}, changed: false }; }
         const r = tablesFromReference(referenceList('tax', doc));
         setReferenceTaxTables(r.tables);
         held = r.held;
-        return { used: Object.keys(r.tables), held: r.held };
+        // changed: a used table differs from the built-in one (or has none), so screens drawn earlier are stale.
+        const norm = (t) => JSON.stringify(t, (k, x) => (x === Infinity ? 'Infinity' : (k === 'sources' || k === 'updated' || k === 'origin' ? undefined : x)));
+        const changed = Object.keys(r.tables).some((fy) => !Object.hasOwn(TAX_TABLES, fy) || norm(TAX_TABLES[fy]) !== norm(r.tables[fy]));
+        return { used: Object.keys(r.tables), held: r.held, changed };
     } catch (_) {
         setReferenceTaxTables({}); held = {};
-        return { used: [], held: {} };
+        return { used: [], held: {}, changed: false };
     }
 }
 

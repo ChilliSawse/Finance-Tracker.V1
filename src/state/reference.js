@@ -137,6 +137,8 @@ async function loadKindDoc(env, store, state, kind, ctx) {
         const doc = await readBody(store, kind, entry);
         if (doc) return { doc, source: 'cache' };
     }
+    // The kill switch for tax also skips the baseline, so a disabled tax kind always means the built-in tables (DB14).
+    if (kind === 'tax' && state && (state.disabled || []).includes('tax')) return { doc: null, source: 'default' };
     if (!ctx.loaded) { ctx.manifest = await loadBaselineManifest(env); ctx.loaded = true; }
     const doc = await baselineDoc(env, kind, ctx.manifest);
     return doc ? { doc, source: 'baseline' } : { doc: null, source: 'default' };

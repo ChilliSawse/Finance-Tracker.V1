@@ -4,7 +4,7 @@
 
 import taxFile from '../../reference/src/tax.json' with { type: 'json' };
 import { TAX_TABLES, setReferenceTaxTables, tablesForFy, resolveTablesForDate, getTablesForDate } from './tax-tables/index.js';
-import { buildYearTable, tablesFromReference } from './tax-tables/reference-tables.js';
+import { buildYearTable, tablesFromReference, taxFileProblems } from './tax-tables/reference-tables.js';
 import { getTaxYear } from './tax-au.js';
 import { annualOwed } from './tax-owed.js';
 import { withholdingForPay } from './withholding.js';
@@ -164,10 +164,10 @@ export const TAX_REFERENCE_TEST_CASES = [
             applyReferenceTax(noStatus); same('a figure without status');
             const badRows = clone(taxFile); badRows.years['2026-27'].payg.scale2_TFT.value = [[100, 0, 0]]; // last band not open
             const r = applyReferenceTax(badRows);
-            assert('malformed table holds that year', [r.used, r.held['2026-27'].reason], [['2025-26'], 'malformed']);
+            assert('malformed table holds that year', [r.used, r.held['2026-27'].reason], [['2025-26'], 'out-of-range']);
             same('a malformed year falls back to the built-in table');
             const nanRate = clone(taxFile); nanRate.years['2026-27'].medicare.levyRate.value = 'two percent';
-            assert('non-numeric figure is held', applyReferenceTax(nanRate).held['2026-27'].reason, 'malformed');
+            assert('non-numeric figure is held', applyReferenceTax(nanRate).held['2026-27'].reason, 'out-of-range');
             same('non-numeric figure');
             // The client: nothing stored and nothing on the network.
             assert('no cache, no baseline: nothing used', (await loadReferenceTax(fakeEnv())).used, []);
@@ -200,5 +200,90 @@ export const TAX_REFERENCE_TEST_CASES = [
         assert('1000-char unit and source allowed', ok((d) => { const f = d.years['2026-27'].medicare.levyRate; f.unit = 'u'.repeat(1000); f.source = 's'.repeat(1000); }), true);
         assert('prototype key refused', ok((d) => { d.years['2026-27'].medicare = JSON.parse('{"__proto__":{}}'); }), false);
         assert('rev must be a whole number', ok((d) => { d.rev = 1.5; }), false);
+    } },
+    { name: 'DB14.9 hostile figures hold the year (ranges, order, end-to-end bands, years)', fn(assert) {
+        const hostile = {
+            'a rate above 1': (y) => { y.incomeTax.resident.value[1][2] = 1.5; },
+            'a negative rate': (y) => { y.medicare.levyRate.value = -0.02; },
+            'a negative threshold': (y) => { y.medicare.singleLowerThreshold.value = -5; },
+            'Medicare thresholds out of order': (y) => { y.medicare.singleLowerThreshold.value = 40000; },
+            'tax bands that do not meet': (y) => { y.incomeTax.resident.value[2][0] = 46000; },
+            'tax bands that do not start at 0': (y) => { y.incomeTax.resident.value[0][0] = 100; },
+            'HELP bands with a gap': (y) => { y.help.bands.value[2][0] = 130000; },
+            'HELP minimum disagreeing with the bands': (y) => { y.help.minimumRepaymentIncome.value = 70000; },
+            'HELP second threshold disagreeing': (y) => { y.help.secondThreshold.value = 130000; },
+            'HELP cap start disagreeing': (y) => { y.help.capStart.value = 190000; },
+            'a scale a above 1': (y) => { y.payg.scale2_TFT.value[1][1] = 2; },
+            'a scale b out of range': (y) => { y.payg.scale1_noTFT.value[1][2] = 1e9; },
+            'a scale out of order': (y) => { y.payg.scale1_noTFT.value[1][0] = 100; },
+            'a negative LITO value': (y) => { y.incomeTax.lito.value.max = -700; },
+            'LITO thresholds out of order': (y) => { y.incomeTax.lito.value.fullUntil = 50000; },
+            'indexation above 0.2': (y) => { y.help.indexationProjection.value = 0.5; },
+            'a negative indexation': (y) => { y.help.indexationProjection.value = -0.01; },
+            'a date outside the year': (y) => { y.incomeTax.resident.appliesFrom = '2025-07-01'; },
+            'a figure for another year': (y) => { y.medicare.levyRate.fy = '2025-26'; },
+        };
+        for (const [label, mut] of Object.entries(hostile)) {
+            const doc = clone(taxFile);
+            mut(doc.years['2026-27']);
+            const r = tablesFromReference(doc.years);
+            assert(`${label}: the year is held, the other year is used`, [!!r.tables['2026-27'], !!r.tables['2025-26'], r.held['2026-27'] && r.held['2026-27'].reason], [false, true, 'out-of-range']);
+            assert(`${label}: the build refuses the file`, taxFileProblems(doc).length > 0, true);
+        }
+        assert('the shipped file has no range problems', taxFileProblems(taxFile), []);
+        const doc = clone(taxFile);
+        doc.years['2027-28'].medicare.levyRate.value = 3;
+        assert('an out-of-range figure is caught even in a year that is held anyway', taxFileProblems(doc).length, 1);
+    } },
+    { name: 'DB14.10 a gap between years never picks a future table', fn(assert) {
+        tidy(() => {
+            const t = clone(TAX_TABLES['2026-27']); t.fy = '2030-31';
+            setReferenceTaxTables({ '2030-31': t });
+            const g = resolveTablesForDate('2028-07-01');
+            assert('2028-07-01 with a 2030-31-only file: the newest year at or before it, stale', [g.fy, g.stale], ['2026-27', true]);
+            assert('2030-08-01 is the 2030-31 table', [resolveTablesForDate('2030-08-01').fy, resolveTablesForDate('2030-08-01').stale], ['2030-31', false]);
+            assert('2032-01-01 is past it: the 2030-31 table, stale', [resolveTablesForDate('2032-01-01').fy, resolveTablesForDate('2032-01-01').stale], ['2030-31', true]);
+            assert('before every year is the earliest, not stale', [resolveTablesForDate('2020-01-01').fy, resolveTablesForDate('2020-01-01').stale], ['2025-26', false]);
+            assert('a bad date still resolves', resolveTablesForDate('nope').fy, '2030-31');
+        });
+        assert('without the file the old behaviour holds', [resolveTablesForDate('2028-07-01').fy, resolveTablesForDate('2028-07-01').stale], ['2026-27', true]);
+    } },
+    { name: 'DB14.11 the app is told when applied tables differ from the built-in ones', fn(assert) {
+        tidy(() => {
+            assert('the shipped file equals the built-in tables: nothing to redraw', applyReferenceTax(taxFile).changed, false);
+            const d = clone(taxFile);
+            d.years['2026-27'].medicare.singleLowerThreshold.value = 29000;
+            assert('a different legislated figure: redraw', applyReferenceTax(d).changed, true);
+            assert('nothing usable: no redraw', applyReferenceTax(null).changed, false);
+            const x = clone(taxFile);
+            x.years['2026-27'].medicare.singleLowerThreshold.status = 'announced';
+            x.years['2026-27'].medicare.singleLowerThreshold.value = 29000;
+            assert('a held year does not count', applyReferenceTax(x).changed, false);
+        });
+    } },
+    { name: 'DB14.12 disabled tax skips the baseline too', async fn(assert) {
+        const sha = 'a'.repeat(64);
+        const manifest = { schema: 1, dataVersion: 'b', minApp: '2.0.0', files: { tax: { path: 'tax.json', sha256: sha, bytes: 10, rev: 1 } } };
+        const env = (disabled) => ({
+            ...fakeEnv({ state: { current: { dataVersion: 'x', files: {}, at: 0 }, history: [], disabled } }),
+            fetch: async (url) => {
+                const text = url.endsWith('baseline/manifest.json') ? JSON.stringify(manifest) : url.endsWith('baseline/tax.json') ? JSON.stringify(taxFile) : null;
+                return text ? { ok: true, text: async () => text } : { ok: false, status: 404 };
+            },
+        });
+        await tidy(async () => {
+            assert('baseline is used when tax is not disabled', (await loadReferenceTax(env([]))).used, ['2025-26', '2026-27']);
+            assert('disabled tax: no baseline, built-in tables only', (await loadReferenceTax(env(['tax']))).used, []);
+            assert('and nothing is left applied', [tablesForFy('2026-27'), heldReferenceYears()], [TAX_TABLES['2026-27'], {}]);
+        });
+    } },
+    { name: 'DB14.13 a legislated indexation is preferred; lookups ignore inherited keys', fn(assert) {
+        const d = clone(taxFile);
+        d.years['2026-27'].help.indexation = { ...clone(taxFile.years['2025-26'].help.indexation), value: 0.03, fy: '2026-27', appliesFrom: '2027-06-01' };
+        assert('legislated 3% over the 2.8% projection', buildYearTable('2026-27', d.years['2026-27']).table.help.indexationPercentDefault, 3);
+        assert('the shipped 2026-27 (null indexation) uses the projection', TAX_TABLES['2026-27'].help.indexationPercentDefault, 2.8);
+        for (const k of ['__proto__', 'constructor', 'toString', 'hasOwnProperty']) assert(`tablesForFy(${k})`, tablesForFy(k), undefined);
+        assert('getTaxYear with an inherited name falls back by date', typeof getTaxYear('constructor').fy, 'string');
+        assert('a year object with an inherited group name is not read', buildYearTable('2026-27', Object.create({ incomeTax: {} })).held.reason, 'incomplete');
     } },
 ];

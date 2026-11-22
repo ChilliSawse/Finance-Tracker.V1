@@ -101,7 +101,7 @@ function schedulePrefetch() {
             // DB4: the reference-data check, once, after first paint. Dynamic, so the client stays out of the core chunk.
             import('../state/reference.js').then((m) => m.scheduleReferenceCheck()).catch(() => { /* a background check; never blocks */ });
             // DB14: tax figures from the reference data (legislated only); the built-in tables stay the fallback.
-            import('../state/reference-tax.js').then((m) => m.loadReferenceTax()).catch(() => { /* built-in tables stay */ });
+            import('../state/reference-tax.js').then((m) => m.loadReferenceTax()).then((r) => { if (r && r.changed) updateAllUI(); }).catch(() => { /* built-in tables stay */ });
         });
     };
     if (document.readyState === 'complete') setTimeout(run, 3000);

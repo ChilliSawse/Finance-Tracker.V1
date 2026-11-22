@@ -16,6 +16,7 @@ import { merchantKey } from '../../src/state/categories.js';
 import { fixtureErrors, fixtureLines } from './fixtures.mjs';
 import { importPathErrors } from './import-path.mjs';
 import { assetTypeErrors } from './asset-match.mjs';
+import { taxFileProblems } from '../../src/calc/tax-tables/reference-tables.js';
 
 export const REF_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const KNOWN_ENGINES = ['expenses-first', 'fixed'];
@@ -133,7 +134,10 @@ export function validateSource(s, v = makeValidators()) {
         const ids = new Set();
         for (const t of at.types || []) { if (ids.has(t.id)) errors.push(`asset-types.json: duplicate asset type id '${t.id}'`); ids.add(t.id); }
     }
-    if (s.tax) errors.push(...schemaErrors(v['tax-figures'], s.tax, 'tax.json'));
+    if (s.tax) {
+        errors.push(...schemaErrors(v['tax-figures'], s.tax, 'tax.json'));
+        errors.push(...taxFileProblems(s.tax)); // ranges, order, end-to-end bands, years (DB14)
+    }
 
     // merchants
     const keys = new Map();

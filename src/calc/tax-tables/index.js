@@ -18,7 +18,10 @@ export const TAX_TABLES = {
 let refTables = {};
 export function setReferenceTaxTables(map) { refTables = map && typeof map === 'object' ? { ...map } : {}; }
 /** The table for an income-year key: the reference table when one was accepted, else the built-in one. */
-export function tablesForFy(fy) { return refTables[fy] || TAX_TABLES[fy]; }
+export function tablesForFy(fy) {
+    if (typeof fy !== 'string') return undefined;
+    return Object.hasOwn(refTables, fy) ? refTables[fy] : (Object.hasOwn(TAX_TABLES, fy) ? TAX_TABLES[fy] : undefined);
+}
 const allFyKeys = () => Object.keys({ ...TAX_TABLES, ...refTables }).sort();
 
 const ISO = /^(\d{4})-(\d{2})-(\d{2})/;
@@ -63,8 +66,9 @@ export function resolveTablesForDate(date) {
     const keys = allFyKeys();
     const key = taxYearKeyForDate(date);
     if (key && key < keys[0]) return { tables: tablesForFy(keys[0]), fy: keys[0], stale: false };
-    const latest = keys[keys.length - 1];
-    return { tables: tablesForFy(latest), fy: latest, stale: true };
+    // Past the shipped years, or in a gap between them: the newest year at or before the date, never a future one.
+    const pick = key ? keys.filter((k) => k <= key).pop() : keys[keys.length - 1];
+    return { tables: tablesForFy(pick), fy: pick, stale: true };
 }
 
 /**
