@@ -342,7 +342,7 @@ export function averageMonthlyExpenses(transactions, now = new Date(), months = 
     let outCents = 0;
     for (const r of transactions || []) {
         if (!r || !r.date || r.date < from) continue;
-        if (r.amountCents < 0) outCents += -r.amountCents;
+        if (r.amountCents < 0 && r.categoryId !== 'transfer') outCents += -r.amountCents; // H9: a transfer is not an expense
     }
     return (outCents / 100) / months;
 }

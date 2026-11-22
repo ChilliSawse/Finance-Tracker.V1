@@ -373,4 +373,22 @@ export const TODAY_TEST_CASES = [
             assert('hero keeps billsDueCents', html.includes(formatCurrency(model.buckets.length ? model.billsDueCents / 100 : 0)), true);
         },
     },
+    {
+        name: 'H9.1 a suggested, unconfirmed transfer counts toward Savings rate (actual); the row stays flagged',
+        fn(assert) {
+            const prior = [{ id: 'p0', date: '2026-10-17', categoryId: 'income', amountCents: 300000 }, row('2026-10-18', 'rent', 1500)];
+            const confirmed = row('2026-10-27', 'transfer', 600, { bucketId: 'fire' });
+            const suggested = row('2026-10-28', 'transfer', 300, { bucketId: 'smile', bucketSuggested: true, status: 'review', source: 'csv' });
+            const r = run(mkData(), [...prior, confirmed, suggested, ...ROWS_A]);
+            const f = savingsRateFigure(r.model, r.ctx);
+            assert('both count: 900 of 3,000', [f.kind, f.value, f.savedCents], ['actual', 30, 90000]);
+            assert('the suggested row is still flagged for review', suggested.bucketSuggested && suggested.status === 'review', true);
+            const only = run(mkData(), [...prior, suggested, ...ROWS_A]);
+            assert('a suggested one alone is enough to show a figure', savingsRateFigure(only.model, only.ctx).savedCents, 30000);
+            const after = run(mkData(), [...prior, confirmed, { ...suggested, bucketSuggested: undefined, status: 'ok' }, ...ROWS_A]);
+            assert('confirming changes nothing in the figure', savingsRateFigure(after.model, after.ctx).savedCents, 90000);
+            const moved = run(mkData(), [...prior, confirmed, { ...suggested, bucketId: 'daily', bucketSuggested: undefined }, ...ROWS_A]);
+            assert('changing it to a spending bucket takes it out', savingsRateFigure(moved.model, moved.ctx).savedCents, 60000);
+        },
+    },
 ];

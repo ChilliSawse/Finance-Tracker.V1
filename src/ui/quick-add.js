@@ -1,4 +1,6 @@
-// Quick-add (A8): one panel for adding spending or income, and for editing a row (FT-R-61).
+// Quick-add (A8): one panel for adding spending, income or a transfer, and for editing a row (FT-R-61).
+// A transfer (H9, FT-R-119) is money moved between your own accounts. It asks "Went to" (a bucket, a goal under a
+// saving bucket, or Somewhere else), is not spending, and is what Today's actual savings rate counts.
 //   openQuickAdd()              add (sidebar Add and the phone "+", wired by delegation in events/setup.js)
 //   openQuickAdd({ txn })       edit mode for a stored transaction, with Delete and an Undo toast
 // Docked at 1281 px and up, a side panel over a scrim from 1024, a bottom sheet on the phone.
@@ -24,8 +26,9 @@ import { rememberFocus, trapTab, getFocusables } from './focus.js';
 import { updateAllUI } from './render.js';
 import {
     REPEAT_FREQUENCIES, parseAmountCents, guessCategory, orderCategoryChips, categoryLine, resolveBucket,
-    bucketLine, afterThisCents, buildTransactionFields, buildRepeatPlanItem,
+    bucketLine, afterThisCents, buildTransactionFields, buildRepeatPlanItem, wentToChoices,
 } from './quick-add-model.js';
+import { TRANSFER_CATEGORY } from '../calc/transfers.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const KNOWN_ROLES = new Set(['daily', 'splurge', 'smile', 'fire', 'mojo', 'grow']);
@@ -82,12 +85,19 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
 
     const cache = getSpendCache();
     const counts = cache.cycleByCategory || new Map();
-    const buckets = getBuckets(data, today).filter((b) => b && !b.parentId && b.kind !== 'goal');
+    const allBuckets = getBuckets(data, today);
+    const buckets = allBuckets.filter((b) => b && !b.parentId && b.kind !== 'goal');
     const bucketById = (id) => buckets.find((b) => b.id === id) || null;
+    const wentChoices = wentToChoices(allBuckets);
+    const wentById = (id) => wentChoices.find((b) => b.id === id) || null;
 
     // ---- state ----
     const s = {
-        kind: edit ? (txn.amountCents > 0 ? 'income' : 'spending') : (startKind === 'income' ? 'income' : 'spending'),
+        kind: edit ? (txn.categoryId === TRANSFER_CATEGORY ? 'transfer' : (txn.amountCents > 0 ? 'income' : 'spending'))
+            : (startKind === 'income' || startKind === 'transfer' ? startKind : 'spending'),
+        incoming: edit && txn.categoryId === TRANSFER_CATEGORY && txn.amountCents > 0, // an existing money-in transfer keeps its direction
+        wentTo: edit && txn.categoryId === TRANSFER_CATEGORY && txn.bucketId && wentChoices.some((b) => b.id === txn.bucketId) ? txn.bucketId : null, // null = not chosen yet, '' = Somewhere else
+        suggested: !!(edit && txn.bucketSuggested),
         amountText: edit ? (Math.abs(txn.amountCents) / 100).toFixed(2) : '',
         categoryId: edit ? txn.categoryId : null,
         guessed: false,
@@ -132,7 +142,7 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
     const closeBtn = el('button', { type: 'button', class: 'icon-btn', 'data-qa': 'close', 'aria-label': t('a.quickAdd.close') }, icon('close'));
     const segBtn = (kind, label) => el('button', { type: 'button', 'data-qa': 'kind', 'data-kind': kind, text: label });
     const seg = el('div', { class: 'seg', role: 'group', 'aria-label': t('a.quickAdd.kind') },
-        segBtn('spending', t('a.quickAdd.spending')), segBtn('income', t('a.quickAdd.income')));
+        segBtn('spending', t('a.quickAdd.spending')), segBtn('income', t('a.quickAdd.income')), segBtn('transfer', t('a.quickAdd.transfer')));
     const effect = el('p', { class: 'effect', id: 'qa-effect', 'aria-live': 'polite' });
     const chips = el('div', { class: 'cats', role: 'group', 'aria-label': t('a.quickAdd.category') });
     const catNote = el('p', { class: 'cat-note', id: 'qa-cat-note', 'aria-live': 'polite' });
@@ -144,6 +154,9 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
         el('summary', null, el('span', { class: 'lbl', text: t('a.quickAdd.bucket') }), bkWord, bkNow),
         el('fieldset', { class: 'bucket-pick' }, bkLegend, bkGrid,
             el('p', { class: 'one-only' }, icon('info'), t('a.quickAdd.thisOneOnly'))));
+    const wentGrid = el('div', { class: 'bk-grid' });
+    const wentNote = el('p', { class: 'one-only', 'aria-live': 'polite' });
+    const wentRow = el('fieldset', { class: 'went-pick' }, el('legend', { id: 'qa-went-label', text: t('a.quickAdd.wentTo') }), wentGrid, wentNote);
     const repeatBox = el('input', { type: 'checkbox', id: 'qa-repeat', 'data-qa': 'repeat' });
     const freqSelect = el('select', { id: 'qa-freq', 'aria-label': t('a.quickAdd.repeatEvery') },
         ...REPEAT_FREQUENCIES.map((f) => el('option', { value: f, text: t(`a.quickAdd.freq.${f}`) })));
@@ -157,14 +170,16 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
     const saveWhy = el('p', { class: 'save-why', id: 'qa-why', 'aria-live': 'polite' });
     const deleteBtn = edit ? el('button', { type: 'button', class: 'btn qa-delete', 'data-qa': 'delete', text: t('a.quickAdd.delete') }) : null;
 
+    const catBlock = el('div', null, el('span', { class: 'field-label', id: 'qa-cat-label', text: t('a.quickAdd.category') }), chips, catNote);
     const panel = el('section', { class: 'qa-panel', role: 'dialog', 'aria-labelledby': titleId },
         el('span', { class: 'qa-handle', 'aria-hidden': 'true' }),
         el('div', { class: 'qa-head' }, heading, closeBtn),
         seg,
         el('div', { class: 'amount qa-amount' },
             el('label', { class: 'field-label-sm', for: 'qa-amount', text: t('a.quickAdd.amount') }), amountInput, effect),
-        el('div', null, el('span', { class: 'field-label', id: 'qa-cat-label', text: t('a.quickAdd.category') }), chips, catNote),
+        catBlock,
         bucketRow,
+        wentRow,
         el('div', { class: 'two' },
             el('div', null, el('label', { class: 'field-label', for: 'qa-note' }, t('a.quickAdd.note') + ' ', el('span', { class: 'muted', text: t('a.quickAdd.optional') })),
                 el('div', { class: 'input' }, noteInput)),
@@ -179,7 +194,9 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
     // ---- derived ----
     const category = () => catById(s.categoryId);
     const amountCents = () => parseAmountCents(amountInput.value);
-    const resolved = () => resolveBucket({ category: s.kind === 'income' ? null : category(), choiceId: s.choiceId, allocation });
+    const isTransfer = () => s.kind === 'transfer';
+    const resolved = () => resolveBucket({ category: s.kind === 'income' || isTransfer() ? null : category(), choiceId: s.choiceId, allocation });
+    const wentName = () => (s.wentTo ? (wentById(s.wentTo) || {}).name || '' : '');
     const bucketName = (id) => (bucketById(id) ? bucketById(id).name : '');
 
     function tint(node, b) {
@@ -210,14 +227,14 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
 
     function renderCatNote() {
         const c = category();
-        if (s.kind === 'income') { catNote.textContent = ''; return; }
+        if (s.kind === 'income' || isTransfer()) { catNote.textContent = ''; return; }
         if (c) catNote.textContent = categoryLine(c, s.guessed);
         else catNote.textContent = s.note.trim() ? t('a.quickAdd.catNoMatch', { note: s.note.trim() }) : t('a.quickAdd.catNone');
     }
 
     function renderBucket() {
         const income = s.kind === 'income';
-        bucketRow.hidden = income || buckets.length === 0;
+        bucketRow.hidden = income || isTransfer() || buckets.length === 0;
         if (bucketRow.hidden) return;
         const r = resolved();
         const needs = !r.bucketId;
@@ -246,9 +263,37 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
         }
     }
 
+    function renderWent() {
+        wentRow.hidden = !isTransfer() || s.incoming;
+        if (wentRow.hidden) return;
+        wentGrid.replaceChildren();
+        const add = (value, name, hint, node) => {
+            const radio = el('input', { type: 'radio', name: 'qa-went', value, 'data-qa': 'went' });
+            radio.checked = value === '__else' ? s.wentTo === '' : s.wentTo === value;
+            const label = el('label', { class: 'bk' }, radio, el('span', { class: 'bn', text: name }), el('span', { class: 'bv', text: hint || '' }));
+            if (node) tint(label, node); else label.classList.add('else');
+            wentGrid.appendChild(label);
+        };
+        for (const c of wentChoices) {
+            const node = c.kind === 'goal' ? allBuckets.find((b) => b.id === c.id) : bucketById(c.id);
+            add(c.id, c.name, c.parentName ? t('a.quickAdd.wentToGoal', { bucket: c.parentName }) : '', node);
+        }
+        add('__else', t('a.quickAdd.wentToElsewhere'), t('a.quickAdd.wentToElsewhereHint'), null);
+        wentNote.textContent = s.suggested && s.wentTo && txn && s.wentTo === txn.bucketId ? t('a.quickAdd.wentToSuggested') : '';
+        wentRow.classList.toggle('needs', s.wentTo === null);
+    }
+
     function renderEffect() {
         const cents = amountCents();
         if (s.kind === 'income') { effect.textContent = t('a.quickAdd.effectIncome'); return; }
+        if (isTransfer()) {
+            const choice = s.wentTo ? wentById(s.wentTo) : null;
+            const saving = choice && (choice.kind === 'save' || choice.kind === 'goal');
+            effect.textContent = s.incoming || s.wentTo === '' ? t('a.quickAdd.effectTransfer')
+                : saving ? t('a.quickAdd.effectTransferSaving', { bucket: choice.name })
+                : choice ? t('a.quickAdd.effectTransfer') : t('a.quickAdd.effectTransferChoose');
+            return;
+        }
         const r = resolved();
         const b = r.bucketId ? bucketById(r.bucketId) : null;
         if (!b) { effect.textContent = buckets.length ? t('a.quickAdd.effectChoose') : ''; return; }
@@ -263,31 +308,34 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
         const r = resolved();
         const b = r.bucketId ? bucketById(r.bucketId) : null;
         const needBucket = s.kind === 'spending' && buckets.length > 0 && !r.bucketId;
+        const needWent = isTransfer() && !s.incoming && s.wentTo === null;
         const dateOk = isValidIsoDate(dateInput.value);
         let label;
         if (edit) label = t('a.quickAdd.saveChanges');
+        else if (isTransfer()) label = cents ? (wentName() ? t('a.quickAdd.saveTransferTo', { amount: money(cents), bucket: wentName() }) : t('a.quickAdd.saveTransfer', { amount: money(cents) })) : t('a.quickAdd.save', { amount: '' }).trim();
         else if (s.kind === 'income') label = cents ? t('a.quickAdd.saveIncome', { amount: money(cents) }) : t('a.quickAdd.save', { amount: '' }).trim();
         else if (cents && b) label = t('a.quickAdd.saveFrom', { amount: money(cents), bucket: b.name });
         else label = cents ? t('a.quickAdd.save', { amount: money(cents) }) : t('a.quickAdd.save', { amount: '' }).trim();
         saveBtn.textContent = label;
-        saveBtn.disabled = s.busy || !cents || needBucket || !dateOk;
-        saveWhy.textContent = !cents ? t('a.quickAdd.saveWhyAmount') : (needBucket ? t('a.quickAdd.saveWhyBucket') : '');
+        saveBtn.disabled = s.busy || !cents || needBucket || needWent || !dateOk;
+        saveWhy.textContent = !cents ? t('a.quickAdd.saveWhyAmount') : (needBucket ? t('a.quickAdd.saveWhyBucket') : (needWent ? t('a.quickAdd.saveWhyWentTo') : ''));
         saveBtn.setAttribute('aria-describedby', saveWhy.textContent ? 'qa-why' : '');
         if (!saveWhy.textContent) saveBtn.removeAttribute('aria-describedby');
     }
 
     function renderKind() {
-        heading.textContent = edit ? t('a.quickAdd.titleEdit') : t(s.kind === 'income' ? 'a.quickAdd.titleIncome' : 'a.quickAdd.titleAdd');
+        heading.textContent = edit ? t('a.quickAdd.titleEdit') : t(s.kind === 'income' ? 'a.quickAdd.titleIncome' : isTransfer() ? 'a.quickAdd.titleTransfer' : 'a.quickAdd.titleAdd');
+        catBlock.hidden = isTransfer();
         seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.kind === s.kind ? 'true' : 'false'));
-        if (!edit) repeatRow.hidden = s.kind === 'income';
+        if (!edit) repeatRow.hidden = s.kind !== 'spending';
     }
 
-    function renderAll() { renderKind(); renderChips(); renderCatNote(); renderBucket(); renderEffect(); renderSave(); }
-    const refreshLight = () => { renderCatNote(); renderBucket(); renderEffect(); renderSave(); };
+    function renderAll() { renderKind(); renderChips(); renderCatNote(); renderBucket(); renderWent(); renderEffect(); renderSave(); }
+    const refreshLight = () => { renderCatNote(); renderBucket(); renderWent(); renderEffect(); renderSave(); };
 
     // ---- behaviour ----
     function applyGuess() {
-        if (s.manual || s.kind === 'income') return;
+        if (s.manual || s.kind === 'income' || isTransfer()) return;
         const g = guessCategory(s.note, categories, data.rules || []);
         const changedOrder = g.categoryId !== s.orderId;
         s.categoryId = g.categoryId; s.guessed = g.guessed; s.orderId = g.categoryId;
@@ -298,6 +346,7 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
         if (kind === s.kind) return;
         s.kind = kind; s.manual = false; s.guessed = false; s.choiceId = null;
         s.categoryId = kind === 'income' && catById('income') ? 'income' : null;
+        if (kind !== 'transfer') s.incoming = false; // switching away from a money-in transfer makes it an ordinary entry
         s.orderId = s.categoryId;
         if (kind === 'spending') applyGuess();
         renderAll();
@@ -335,13 +384,16 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
         const cat = s.kind === 'income' ? catById(s.categoryId) : category();
         const date = dateInput.value;
         const note = noteInput.value;
+        const store = isTransfer() ? (s.wentTo || undefined) : r.store; // a transfer stores where it WENT (never a spend-bucket override)
+        const fieldsFor = () => buildTransactionFields({ kind: s.kind, amountCents: cents, category: cat, note, date, store, incoming: s.incoming });
         try {
             if (edit) {
-                const f = buildTransactionFields({ kind: s.kind, amountCents: cents, category: cat, note, date, store: r.store });
+                const f = fieldsFor();
                 const textNote = f.note;
                 const next = { ...txn, date, amountCents: f.amountCents, categoryId: f.categoryId, note: textNote, status: 'ok',
                     description: textNote && textNote !== (txn.note || '') ? f.description : txn.description };
-                if (r.store) next.bucketId = r.store; else delete next.bucketId;
+                if (store && !(isTransfer() && s.incoming)) next.bucketId = store; else delete next.bucketId;
+                delete next.bucketSuggested; // saving it is confirming it (FT-R-117)
                 const prev = txn;
                 await updateTransaction(next);
                 close();
@@ -352,7 +404,7 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
                 });
                 return;
             }
-            const row = makeTransaction(buildTransactionFields({ kind: s.kind, amountCents: cents, category: cat, note, date, store: r.store }));
+            const row = makeTransaction(fieldsFor());
             const res = await addTransactions([row]);
             if (!res || !res.added) throw new Error('not added');
             let planRes = null;
@@ -412,6 +464,7 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
     layer.addEventListener('change', (e) => {
         const n = e.target;
         if (n.matches && n.matches('[data-qa="bucket"]')) { s.choiceId = n.value; refreshLight(); }
+        else if (n.matches && n.matches('[data-qa="went"]')) { s.wentTo = n.value === '__else' ? '' : n.value; refreshLight(); }
         else if (n === repeatBox) { s.repeat = repeatBox.checked; repeatRow.classList.toggle('on', s.repeat); }
         else if (n === freqSelect) s.freq = freqSelect.value;
     });

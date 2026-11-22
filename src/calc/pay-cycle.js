@@ -7,6 +7,7 @@
 
 import { getPayCyclesPerYear } from '../utils.js';
 import { netPerPayCents, effectiveBucket, SPENDABLE_POOL } from './plan.js';
+import { isTransferRow } from './transfers.js';
 import { allocateCents } from './saving-model.js';
 import { eventFigures } from './income-events.js';
 
@@ -280,6 +281,7 @@ export function leftThisPay({ data, totals, txns, today } = {}) {
         if (r.status === 'review') toReview++;
         if (!(r.amountCents < 0)) continue;
         const cat = cats.get(r.categoryId);
+        if (isTransferRow(r, cat)) continue; // H9: money moved between your own accounts is not spending
         const out = -r.amountCents;
         const item = r.billMatch ? plan.get(r.billMatch.planId) : null;
         const b = byId.get(effectiveBucket(r, cat, item, allocForResolve));

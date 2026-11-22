@@ -8,7 +8,7 @@
 import { store } from '../state/store.js';
 import { getElement, getValue, setHTML, escapeHtml, formatCurrency } from '../utils.js';
 import { categoriseDescription } from '../state/categories.js';
-import { resolveCategory, commitImportRows, rematchBills } from '../state/rules.js';
+import { resolveImportRow, suggestedTransferName, suggestedTransfersLine, commitImportRows, rematchBills } from '../state/rules.js';
 import { makeTransaction, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
@@ -93,12 +93,13 @@ function renderPreview() {
         const shown = txns.slice(0, PREVIEW_ROWS);
         const rowsHtml = shown.map((txn, i) => {
             const catId = txn.categoryId || categoriseDescription(txn.description, store.financeData.categories, store.financeData.rules);
-            txn.categoryId = catId;
+            // txn.categoryId is only ever a category the person picked, so a bank-label transfer suggestion can tell (H9)
+            const xfer = suggestedTransferName(txn.description, txn.amountCents, txn.categoryId, store.financeData);
             return `<tr>
                 <td class="import-cell-date">${escapeHtml(txn.date)}</td>
                 <td class="import-cell-desc">${escapeHtml(txn.description)}</td>
                 <td class="import-cell-amount ${txn.amountCents < 0 ? 'is-out' : 'is-in'}">${formatCurrency(txn.amountCents / 100)}</td>
-                <td><select class="import-cat-select" data-preview-index="${i}">${categoryOptions(catId)}</select></td>
+                <td><select class="import-cat-select" data-preview-index="${i}">${categoryOptions(catId)}</select>${xfer ? `<div class="import-xfer-note muted">${escapeHtml(t('a.import.previewTransfer', { bucket: xfer }))}</div>` : ''}</td>
             </tr>`;
         }).join('');
         const more = txns.length > PREVIEW_ROWS
@@ -204,13 +205,15 @@ async function commitImport() {
     const batchId = crypto.randomUUID();
 
     const txns = draft.transactions.map(txn => {
-        const c = resolveCategory(txn.description, txn.categoryId, store.financeData.categories, store.financeData.rules);
+        const c = resolveImportRow(txn.description, txn.amountCents, txn.categoryId, store.financeData);
         return makeTransaction({
             date: txn.date,
             description: txn.description,
             amountCents: txn.amountCents,
             categoryId: c.categoryId,
             status: c.status,
+            bucketId: c.bucketId,
+            bucketSuggested: c.bucketSuggested,
             source: 'pdf',
             importBatchId: batchId,
         });
@@ -251,6 +254,7 @@ async function commitImport() {
             <p class="import-success-title">${t('import.success.title', { count: result.added, txnWord: txnWord(result.added), dupNote })}</p>
             <p class="import-success-sub">${t('import.success.sub')}</p>
             ${mergeLines(merges)}
+            ${suggestedTransfersLine(txns) ? `<p class="import-success-sub">${suggestedTransfersLine(txns)}</p>` : ''}
             <div class="settings-actions" style="border-top: none; padding-top: 8px; margin-top: 4px;">
                 <button class="btn btn-secondary" id="pdf-import-another">${t('import.another')}</button>
                 ${result.added > 0 ? `<button class="btn btn-secondary" id="pdf-import-undo">${t('import.undo')}</button>` : ''}
@@ -336,6 +340,8 @@ export function setupPdfImport() {
         if (!sel || !draft) return;
         const i = parseInt(sel.dataset.previewIndex, 10);
         if (draft.transactions[i]) draft.transactions[i].categoryId = sel.value;
+        const note = sel.parentElement && sel.parentElement.querySelector('.import-xfer-note');
+        if (note) note.remove();
     });
 
     // Commit / start over / post-commit actions (delegated — result HTML is dynamic).

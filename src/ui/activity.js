@@ -19,6 +19,11 @@ import { effectiveBucket, SPENDABLE_POOL } from '../calc/plan.js';
 import { daysBetween, parseIso } from '../calc/pay-cycle.js';
 import { formatCurrency } from '../utils.js';
 import { openQuickAdd } from './quick-add.js';
+import { isTransferRow } from '../calc/transfers.js';
+import { updateTransaction } from '../state/transactions.js';
+import { refreshSpendCache } from '../state/spend-cache.js';
+import { showUndoToast } from './toast.js';
+import { updateAllUI } from './render.js';
 
 export const ACTIVITY_FILTERS = ['all', 'review', 'essential', 'nonessential', 'income', 'bills'];
 
@@ -79,12 +84,14 @@ export function signedMoney(cents) {
 /** Plain category facts for a row or bill, tolerant of a missing or unknown category. */
 function catFacts(categoryId, cats) {
     const c = cats.get(categoryId);
+    if (categoryId === 'transfer' && !c) return { id: 'transfer', name: t('a.act.cat.transfer'), icon: 'swap', essential: false, known: true, transfer: true };
     return {
         id: categoryId || 'other',
         name: c && typeof c.name === 'string' && c.name ? c.name : (!categoryId || categoryId === 'other' ? t('a.act.cat.other') : String(categoryId)),
         icon: categoryIcon(c || { id: categoryId }),
         essential: !!(c && c.essential),
         known: !!c,
+        transfer: !!c && (c.kind === 'transfer' || c.id === 'transfer'),
     };
 }
 
@@ -135,7 +142,21 @@ export function txnStatus(row, ctx) {
     const plan = row.billMatch ? ctx.plan.get(row.billMatch.planId) : null;
     const cov = coveredFrom(row, cat, plan, ctx.allocation, ctx.buckets);
     if (cov) pills.push({ key: 'covered', label: t('a.act.st.covered', { bucket: cov.name }), icon: 'swap', cls: 'tag', role: cov.role, bucket: cov });
-    return { pills, action, covered: cov };
+    let wentTo = null;
+    if (isTransferRow(row, cat) && row.amountCents < 0) {
+        // H9: where a transfer went. Suggested until confirmed (FT-R-117): one tap on Confirm.
+        const dest = row.bucketId ? ctx.destinations.get(row.bucketId) : null;
+        if (dest) {
+            const suggested = !!row.bucketSuggested;
+            wentTo = { id: dest.id, name: dest.name, suggested };
+            pills.push({ key: 'wentTo', label: t(suggested ? 'a.act.st.wentToSuggested' : 'a.act.st.wentTo', { bucket: dest.name }), icon: 'swap', cls: suggested ? 'review' : 'tag', role: dest.role, suggested });
+            if (suggested) action = { label: t('a.act.st.confirm'), confirm: true, aria: t('a.act.st.confirmAria', { name: row.description || '', bucket: dest.name }) };
+        } else {
+            pills.push({ key: 'unmarked', label: t('a.act.st.notMarked'), icon: 'alert', cls: 'soon' });
+            if (!action) action = { label: t('a.act.st.markWentTo') };
+        }
+    }
+    return { pills, action, covered: cov, wentTo };
 }
 
 /** Pill for one bill occurrence, from billStatus ('Upcoming', 'Due', 'Missed') and today. */
@@ -148,6 +169,7 @@ export function billPill(occ, todayIso) {
 }
 
 function kindWord(cat, amountCents) {
+    if (cat.transfer) return t('a.act.kind.transfer');
     if (amountCents > 0) return t('a.act.kind.income');
     if (cat.id === 'other' || !cat.known) return t('a.act.kind.unsorted');
     return cat.essential ? t('a.act.kind.essential') : t('a.act.kind.nonessential');
@@ -157,7 +179,9 @@ function buildCtx(data, today) {
     const cats = new Map((Array.isArray(data && data.categories) ? data.categories : []).map((c) => [c.id, c]));
     const plan = new Map((Array.isArray(data && data.plan) ? data.plan : []).map((p) => [p.id, p]));
     const allocation = (Array.isArray(data && data.allocation) ? data.allocation : []).filter((a) => a && a.id);
-    return { cats, plan, allocation, buckets: topBuckets(data, today), today };
+    const destinations = new Map(); // every bucket and goal a transfer can have gone to
+    try { getBuckets(data, today).forEach((b) => destinations.set(b.id, { id: b.id, name: b.name, role: b.role })); } catch (_) { /* no buckets */ }
+    return { cats, plan, allocation, buckets: topBuckets(data, today), destinations, today };
 }
 
 function decorate(item, ctx) {
@@ -178,7 +202,7 @@ function decorate(item, ctx) {
     return {
         kind: 'txn', key: row.id, id: row.id, name: row.description || '', date: row.date, amountCents: row.amountCents, cat,
         src: t(SRC_KEYS[row.source] || 'a.act.src.other'), kindText: kindWord(cat, row.amountCents),
-        pills: st.pills, action: st.action, covered: st.covered, isBill: !!row.billMatch, review: row.status === 'review', row,
+        pills: st.pills, action: st.action, covered: st.covered, wentTo: st.wentTo, isBill: !!row.billMatch, review: row.status === 'review', row,
     };
 }
 
@@ -188,7 +212,7 @@ export function matchesFilter(d, filter) {
     switch (filter) {
         case 'review': return d.kind === 'txn' && d.review;
         case 'essential': return d.amountCents < 0 && d.cat.essential;
-        case 'nonessential': return d.amountCents < 0 && !d.cat.essential;
+        case 'nonessential': return d.amountCents < 0 && !d.cat.essential && !d.cat.transfer;
         case 'income': return d.kind === 'txn' && d.amountCents > 0;
         case 'bills': return d.isBill;
         default: return true;
@@ -229,7 +253,7 @@ export function buildActivityView({ feed, model, data, today, filter = 'all', qu
             if (keep(d)) items.push(d);
         }
         if (!items.length) continue;
-        const spent = items.filter((d) => d.kind === 'txn' && d.amountCents < 0).reduce((a, d) => a - d.amountCents, 0);
+        const spent = items.filter((d) => d.kind === 'txn' && d.amountCents < 0 && !d.cat.transfer).reduce((a, d) => a - d.amountCents, 0);
         const inCents = items.filter((d) => d.kind === 'txn' && d.amountCents > 0).reduce((a, d) => a + d.amountCents, 0);
         const isPay = !monthMode && day.date === feed.range.from && inCents > 0;
         days.push({
@@ -311,7 +335,7 @@ export function buildActivityView({ feed, model, data, today, filter = 'all', qu
 const moneyCls = (cents) => (cents > 0 ? 'money plus' : 'money');
 
 function pillHtml(p) {
-    const cls = p.key === 'covered' && p.role ? `pill b-${esc(p.role)}` : `pill ${esc(p.cls)}`;
+    const cls = (p.key === 'covered' || p.key === 'wentTo') && p.role && !p.suggested ? `pill b-${esc(p.role)}` : `pill ${esc(p.cls)}`;
     return `<span class="${cls}">${iconSvg(p.icon)}${esc(p.label)}</span>`;
 }
 
@@ -320,7 +344,9 @@ function rowHtml(d, coming) {
     const label = isTxn ? t('a.act.row.edit', { name: d.name }) : t('a.act.row.bill', { name: d.name });
     const attrs = isTxn ? `data-act-edit="${esc(d.id)}"` : 'data-act-plan="1"';
     const pills = d.pills.map(pillHtml).join('');
-    const action = d.action ? `<button type="button" class="st-act" ${attrs}>${esc(d.action.label)}</button>` : '';
+    const action = d.action ? (d.action.confirm
+        ? `<button type="button" class="st-act" data-act-confirm="${esc(d.id)}" aria-label="${esc(d.action.aria)}">${esc(d.action.label)}</button>`
+        : `<button type="button" class="st-act" ${attrs}>${esc(d.action.label)}</button>`) : '';
     const st = pills || action ? `<span class="st">${pills}${action}</span>` : '<span class="st"></span>';
     const catLine = `<span class="cat">${iconSvg(d.cat.icon)}<span class="cat-name">${esc(d.cat.name)}</span> <span class="k">· ${esc(d.kindText)}</span></span>`;
     const due = coming && d.pills[0] && d.pills[0].key === 'due' ? ' is-due' : '';
@@ -341,7 +367,7 @@ export function renderSummaryHtml(v) {
     const rb = v.reviewBox;
     const review = rb ? `<section class="box box-review" aria-labelledby="act-h-rev">
             <h3 id="act-h-rev">${iconSvg('alert')}${esc(plural(rb.count, 'a.act.review.h.one', 'a.act.review.h.many'))}</h3>
-            <p>${esc(t('a.act.review.p'))}</p>
+            <p>${esc(t(rb.items.some((d) => d.wentTo && d.wentTo.suggested) ? 'a.act.review.pTransfer' : 'a.act.review.p'))}</p>
             <ul>${rb.items.map((d) => `<li><span>${esc(d.name)}</span><span class="money">${esc(dollars(d.amountCents))}</span></li>`).join('')}</ul>
             <button class="btn" type="button" data-act-filter="review">${esc(rb.count === 1 ? t('a.act.review.show.one') : t('a.act.review.show', { count: rb.count }))}</button>
         </section>` : '';
@@ -482,6 +508,27 @@ export function editRow(row) {
     return openQuickAdd({ txn: row });
 }
 
+/**
+ * One tap on a suggested transfer (H9, FT-R-117): keep the bucket the app suggested, drop the suggested flag and take
+ * the row out of To review. Undo puts the row back as it was. Returns true when a row was confirmed.
+ */
+export async function confirmWentTo(id) {
+    const found = lastFeed && lastFeed.days.flatMap((d) => d.items).find((it) => it.type === 'txn' && it.row.id === id);
+    if (!found || !found.row.bucketSuggested) return false;
+    const prev = found.row;
+    const next = { ...prev, status: 'ok' };
+    delete next.bucketSuggested;
+    await updateTransaction(next);
+    await refreshSpendCache();
+    updateAllUI();
+    const dest = getBuckets(store.financeData, todayIsoNow()).find((b) => b.id === prev.bucketId);
+    showUndoToast({
+        message: t('a.act.st.confirmed', { name: prev.description || '', bucket: dest ? dest.name : '' }),
+        onUndo: async () => { await updateTransaction(prev); await refreshSpendCache(); updateAllUI(); },
+    });
+    return true;
+}
+
 let wired = false;
 export function setupActivityEvents() {
     if (wired) return;
@@ -498,6 +545,8 @@ export function setupActivityEvents() {
             renderActivity();
             return;
         }
+        const cf = event.target.closest('[data-act-confirm]');
+        if (cf) { await confirmWentTo(cf.dataset.actConfirm); return; }
         const ed = event.target.closest('[data-act-edit]');
         if (ed && lastFeed) {
             const id = ed.dataset.actEdit;

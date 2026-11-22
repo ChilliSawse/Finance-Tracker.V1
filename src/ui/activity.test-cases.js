@@ -103,4 +103,31 @@ export const ACTIVITY_TEST_CASES = [
             assert('empty state', empty.empty, true);
         },
     },
+    {
+        name: 'H9.1 a transfer row: where it went, suggested until confirmed, kept out of spending',
+        fn(assert) {
+            const xr = (id, extra) => ({ id, date: '2026-11-03', categoryId: 'transfer', description: 'To ' + id, amountCents: -50000, source: 'csv', ...extra });
+            const rows = [...ROWS, xr('plain', { bucketId: 'fire' }), xr('sug', { bucketId: 'smile', bucketSuggested: true, status: 'review' }), xr('none', {}), xr('stale', { bucketId: 'gone' })];
+            const feed = buildActivityFeed({ data: DATA, rows, today: TODAY });
+            const model = buildTodayModel({ data: DATA, rows, today: TODAY });
+            const v = buildActivityView({ feed, model, data: DATA, today: TODAY });
+            const p = (id) => byId(v, id).pills;
+            assert('confirmed: Went to Fire, no action', [p('plain').map((x) => x.label), byId(v, 'plain').action], [['Went to Fire'], null]);
+            assert('suggested: marked suggested, in To review with a one-tap Confirm', [p('sug').map((x) => x.label), byId(v, 'sug').action.confirm, byId(v, 'sug').action.label, byId(v, 'sug').review],
+                [['To review', 'Went to Smile (suggested)'], true, 'Confirm', true]);
+            assert('no bucket or a stale one: not marked, with a way to choose', [p('none').map((x) => x.label), byId(v, 'none').action.label, p('stale').map((x) => x.label)],
+                [['Not marked to a bucket'], 'Choose where it went', ['Not marked to a bucket']]);
+            assert('named Transfer, between your accounts', [byId(v, 'plain').cat.name, byId(v, 'plain').kindText], ['Transfer', 'between your accounts']);
+            assert('not a covered row', byId(v, 'plain').covered, null);
+            assert('To review lists the suggested one', v.reviewBox.items.some((d) => d.id === 'sug'), true);
+            assert('and its box says what to do about a guessed bucket', renderSummaryHtml(v).includes('where the app guessed the bucket'), true);
+            assert('without one the box keeps its old wording', renderSummaryHtml(build()).includes('These have no category yet.'), true);
+            const day = v.days.find((d) => d.date === '2026-11-03');
+            assert('the day total ignores transfers', day.spentCents, 4000);
+            assert('essential and non-essential filters leave transfers out', [build({ filter: 'nonessential' }).days.flatMap((d) => d.items).some((d) => d.cat.transfer), buildActivityView({ feed, model, data: DATA, today: TODAY, filter: 'nonessential' }).days.flatMap((d) => d.items).some((d) => d.cat.transfer)], [false, false]);
+            const html = renderListHtml(v);
+            assert('the Confirm button is its own tap target, labelled for a screen reader', [html.includes('data-act-confirm="sug"'), html.includes('Confirm that To sug went to Smile')], [true, true]);
+            assert('a confirmed row has no Confirm button', html.includes('data-act-confirm="plain"'), false);
+        },
+    },
 ];
