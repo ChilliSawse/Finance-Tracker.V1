@@ -69,7 +69,8 @@ export function cloneDefaultCategories() {
 // and only when it follows ('SQ *CAFE' loses 'SQ'; a bare leading 'SP' stays).
 const WALLET = 'sq|sp|pp|paypal|tyro|zlr|zip|ls|dd|lgc';
 const KEY_PREFIX = new RegExp('^(?:(?:' + WALLET + ')\\s*\\*\\s*)+');
-const BARE_WALLET = new RegExp('^(?:' + WALLET + ')\\s+');
+// Only the two prefixes the old key function did not strip; the rest were removed before, so a stored key never carries them.
+const BARE_WALLET = /^(?:dd|lgc)\s+/;
 
 // Punctuation that separates words (D5 4.2 step 2). A dot, apostrophe or dash inside a word is not here: those are removed
 // word by word below, so 'COCA-COLA' and "McDonald's" keep the keys they always had.

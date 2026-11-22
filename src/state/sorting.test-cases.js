@@ -133,6 +133,12 @@ export const SORTING_TEST_CASES = [
             assert('a bare SP line matches the stored sp key', by('SP SPORTS 12').categoryId, 'travel');
             assert('BIG W line matches the old big rule', by('BIG W 0119').categoryId, 'health');
             assert('rules array untouched', rules, before);
+            const wide = (key, d) => categoriseDetailed(d, cats, [{ key, categoryId: 'shopping' }]).by;
+            assert('paypal australia does not catch AUSTRALIA POST', wide('paypal australia', 'AUSTRALIA POST 3071'), 'none');
+            assert('zip pay does not catch PAY ANYONE', wide('zip pay', 'PAY ANYONE J SMITH'), 'none');
+            assert('zip water does not catch a water line', wide('zip water', 'WATERLINE 12'), 'none');
+            assert('sp builders / tyro payments / ls travel / sq cafe do not catch the second word', [wide('sp builders', 'BUILDERS 12'), wide('tyro payments', 'PAYMENTS 1'), wide('ls travel', 'TRAVEL 1'), wide('sq zedshop', 'ZEDSHOP 1')], ['none', 'none', 'none', 'none']);
+            assert('dd and lgc keys still match', [wide('dd doordash', 'DOORDASH 12'), wide('lgc officeworks', 'OFFICEWORKS 1')], ['rule', 'rule']);
             const data = { rules: [] };
             learnRule(data, 'PURCHASE, ZEDCO', 'dining');
             assert('a rule learned now still matches', categoriseDescription('PURCHASE, ZEDCO 7', cats, data.rules), 'dining');
