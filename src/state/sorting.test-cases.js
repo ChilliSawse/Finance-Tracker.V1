@@ -225,21 +225,21 @@ export const SORTING_TEST_CASES = [
         },
     },
     {
-        name: 'DB4.3 status: a high-confidence merchant gives ok, anything else from the database gives review',
+        name: 'DB4.3 status: every reference hit gives review and carries its confidence (FT-R-126 item 3)',
         fn(assert) {
             const mk = (confidence) => ({ sources: { categories: 'cache' }, categories: [{ id: 'fitness', keywords: ['zedfit'] }],
                 merchants: [{ id: 'm1', key: 'zedmart', categoryId: 'shopping', match: 'key', confidence }] });
             const data = { categories: cats, allocation: [], rules: [] };
             const row = (d, ref, amt = -500) => resolveImportRow(d, amt, undefined, data, ref);
-            assert('high: ok', row('ZEDMART 12', mk('high')), { categoryId: 'shopping', status: 'ok' });
-            assert('medium: review', row('ZEDMART 12', mk('medium')), { categoryId: 'shopping', status: 'review', referenceSuggested: true });
-            assert('low: review', row('ZEDMART 12', mk('low')).status, 'review');
-            assert('a category keyword hit is review', row('ZEDFIT 3', mk('high')), { categoryId: 'fitness', status: 'review', referenceSuggested: true });
-            assert('a high hit on income is still review (never silently feeds totals)', resolveImportRow('ZEDMART PAY', 5000, undefined, data,
+            assert('high: still review, confidence carried', row('ZEDMART 12', mk('high')), { categoryId: 'shopping', status: 'review', referenceSuggested: true, refConfidence: 'high', refId: 'm1' });
+            assert('medium: review', row('ZEDMART 12', mk('medium')), { categoryId: 'shopping', status: 'review', referenceSuggested: true, refConfidence: 'medium', refId: 'm1' });
+            assert('low: review', [row('ZEDMART 12', mk('low')).status, row('ZEDMART 12', mk('low')).refConfidence], ['review', 'low']);
+            assert('a category keyword hit is review', row('ZEDFIT 3', mk('high')), { categoryId: 'fitness', status: 'review', referenceSuggested: true, refConfidence: 'low', refId: 'fitness' });
+            assert('a high hit on income is review too', resolveImportRow('ZEDMART PAY', 5000, undefined, data,
                 { sources: {}, categories: [{ id: 'income', kind: 'income' }], merchants: [{ id: 'm2', key: 'zedmart', categoryId: 'income', match: 'key', confidence: 'high' }] }).status, 'review');
             assert('a preview pick still wins', resolveImportRow('ZEDMART 12', -500, 'dining', data, mk('high')), { categoryId: 'dining', status: 'ok' });
             assert('the preview shows a medium hit as suggested', previewCategory('ZEDMART 12', -500, data, mk('medium')), { categoryId: 'shopping', suggested: true });
-            assert('the preview shows a high hit as plain', previewCategory('ZEDMART 12', -500, data, mk('high')), { categoryId: 'shopping', suggested: false });
+            assert('the preview shows a high hit as suggested too', previewCategory('ZEDMART 12', -500, data, mk('high')), { categoryId: 'shopping', suggested: true });
             assert('a bucket label still turns the row into a transfer', resolveImportRow('Transfer to Fire ZEDMART', -500, undefined, { ...data, allocation: [{ id: 'fire', bankLabel: 'Fire' }] }, mk('high')).bucketSuggested, true);
         },
     },

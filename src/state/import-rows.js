@@ -12,8 +12,8 @@ import { plural } from '../i18n/strings.js';
  * Own-account wording alone (looksLikeOwnTransfer) never changes the category: a row with no rule and no keyword hit keeps its
  * category, stays in To review and carries `transferSuggested: true`, so it still counts until the person confirms it.
  * `ref` is the reference view from loadImportReference() (DB4): it adds the reference layers below the person's own, a hit
- * stored 'review' unless its merchant has confidence 'high'. Without it the result is what it was before.
- * @returns {{categoryId:string, status:'ok'|'review', referenceSuggested?:true, bucketId?:string, bucketSuggested?:true, transferSuggested?:true}}
+ * is always stored 'review', with its confidence carried as refConfidence. Without it the result is what it was before.
+ * @returns {{categoryId:string, status:'ok'|'review', referenceSuggested?:true, refConfidence?:string, refId?:string, bucketId?:string, bucketSuggested?:true, transferSuggested?:true}}
  */
 export function resolveImportRow(description, amountCents, chosenId, data, ref) {
     const d = data || {};

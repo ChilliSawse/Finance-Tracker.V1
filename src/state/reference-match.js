@@ -3,13 +3,12 @@
 // in by the caller; nothing here imports reference.js, and with no view the result is exactly categoriseDetailed's.
 //
 // Order (R3 5.2, D5 6.1): learned rules, user category keywords, reference merchants, reference category keywords, other.
-// A reference hit is by:'reference' and 'review' unless the merchant's confidence is 'high'. A hit on a category that moves
-// money (income, transfer, refund, a saving) stays 'review' whatever its confidence, so a guess never silently feeds totals.
+// Every reference hit is by:'reference' and status 'review' (FT-R-126 item 3), so a guess never silently feeds totals;
+// its confidence is carried as refConfidence.
 
 import { categoriseDetailed, resolveCategory, merchantKey } from './categories.js';
 
 const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-const MONEY_KINDS = new Set(['income', 'transfer', 'refund']);
 
 // Whole word or whole phrase on the normalised text. `hay` is ' text ' (space padded).
 const hasWord = (hay, p) => { const n = norm(p); return !!n && hay.includes(' ' + n + ' '); };
@@ -55,10 +54,6 @@ function localId(refId, ref, ids) {
     return c && c.legacyCategoryId && ids.has(c.legacyCategoryId) ? c.legacyCategoryId : null;
 }
 
-const movesMoney = (refId, ref, id) => {
-    const c = (ref.categories || []).find((x) => x && x.id === refId);
-    return MONEY_KINDS.has(c && c.kind) || !!(c && c.countsAs) || id === 'income' || id === 'transfer';
-};
 
 /**
  * The reference hit for a description, or null: { categoryId, confidence, refId, via: 'merchant' | 'keyword' }.
@@ -79,7 +74,7 @@ export function referenceHit(description, amountCents, categories, ref) {
         const id = localId(m.categoryId, ref, ids);
         if (!id) continue;
         const s = merchantScore(m, d, k, hay, tokens, amountCents);
-        if (s > bestScore) { best = { categoryId: id, confidence: m.confidence, refId: m.id, via: 'merchant', money: movesMoney(m.categoryId, ref, id) }; bestScore = s; }
+        if (s > bestScore) { best = { categoryId: id, confidence: m.confidence, refId: m.id, via: 'merchant' }; bestScore = s; }
     }
     if (best) return best;
     // Category keywords only come from real reference data: the in-code default list is the person's own list already.
@@ -90,7 +85,7 @@ export function referenceHit(description, amountCents, categories, ref) {
         if (!id) continue;
         for (const kw of c.keywords || []) {
             if (kw && (word ? hasWord(hay, kw) : d.includes(String(kw).toLowerCase()))) {
-                return { categoryId: id, confidence: 'low', refId: c.id, via: 'keyword', money: movesMoney(c.id, ref, id) };
+                return { categoryId: id, confidence: 'low', refId: c.id, via: 'keyword' };
             }
         }
     }
@@ -109,15 +104,15 @@ export function categoriseWithReference(description, amountCents, categories, ru
 }
 
 /**
- * resolveCategory with the reference layers. A category the person picked wins. A reference hit is 'ok' only when its merchant
- * has confidence 'high' and the category does not move money; otherwise 'review'.
- * @returns {{categoryId:string, status:'ok'|'review', referenceSuggested?:true}}
+ * resolveCategory with the reference layers. A category the person picked wins. Every reference hit is 'review' and
+ * referenceSuggested, whatever its confidence (FT-R-117, FT-R-126 item 3); `refConfidence` ('high' | 'medium' | 'low') is
+ * carried so a later "confirm all the sure ones" action can use it. It never skips the suggested mark.
+ * @returns {{categoryId:string, status:'ok'|'review', referenceSuggested?:true, refConfidence?:string, refId?:string}}
  */
 export function resolveWithReference(description, amountCents, chosenId, categories, rules, ref) {
     if (chosenId || !ref) return resolveCategory(description, chosenId, categories, rules);
     const det = categoriseWithReference(description, amountCents, categories, rules, ref);
     if (det.by !== 'reference') return resolveCategory(description, chosenId, categories, rules);
     const h = det.reference;
-    const sure = h.via === 'merchant' && h.confidence === 'high' && !h.money;
-    return sure ? { categoryId: det.categoryId, status: 'ok' } : { categoryId: det.categoryId, status: 'review', referenceSuggested: true };
+    return { categoryId: det.categoryId, status: 'review', referenceSuggested: true, refConfidence: h.confidence, refId: h.refId };
 }
