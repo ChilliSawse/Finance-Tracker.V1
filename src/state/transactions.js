@@ -148,6 +148,12 @@ export async function listTransactions(opts = {}) {
     return limit ? result.slice(0, limit) : result;
 }
 
+/** One stored row by id, or null. */
+export async function getTransaction(id) {
+    const row = await withStore('transactions', 'readonly', (store) => store.get(id));
+    return row ? normaliseTransaction(row) : null;
+}
+
 export async function countTransactions() {
     return withStore('transactions', 'readonly', (store) => store.count());
 }

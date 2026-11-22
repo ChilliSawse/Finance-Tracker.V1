@@ -65,7 +65,7 @@ Object.assign(en, {
     'a.act.st.markWentTo': 'Choose where it went',
     'a.act.st.confirmAria': 'Confirm that {name} went to {bucket}',
     'a.act.st.transferGuess': 'Looks like a transfer — confirm?',
-    'a.act.st.transferConfirmAria': 'Confirm that {name} is a transfer between your own accounts',
+    'a.act.st.transferConfirmAria': 'Confirm that {name} is a transfer, not spending',
     'a.act.st.transferConfirmed': 'Confirmed: {name} is a transfer.',
     'a.act.st.notTransfer': 'Not a transfer',
     'a.act.st.notTransferAria': '{name} is not a transfer, keep it as spending',

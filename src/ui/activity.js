@@ -21,7 +21,7 @@ import { daysBetween, parseIso } from '../calc/pay-cycle.js';
 import { formatCurrency } from '../utils.js';
 import { openQuickAdd } from './quick-add.js';
 import { isTransferRow, TRANSFER_CATEGORY } from '../calc/transfers.js';
-import { updateTransaction } from '../state/transactions.js';
+import { updateTransaction, getTransaction } from '../state/transactions.js';
 import { refreshSpendCache } from '../state/spend-cache.js';
 import { showUndoToast } from './toast.js';
 import { updateAllUI } from './render.js';
@@ -371,7 +371,7 @@ function rowHtml(d, coming) {
     const attrs = isTxn ? `data-act-edit="${esc(d.id)}"` : 'data-act-plan="1"';
     const pills = d.pills.map(pillHtml).join('');
     const action = d.action ? (d.action.confirmTransfer
-        ? `<button type="button" class="st-act" data-act-confirm="${esc(d.id)}" aria-label="${esc(d.action.aria)}">${esc(d.action.label)}</button><button type="button" class="st-act" data-act-not-transfer="${esc(d.id)}" aria-label="${esc(d.action.dismissAria)}">${esc(d.action.dismissLabel)}</button>`
+        ? `<button type="button" class="st-act" data-act-confirm-transfer="${esc(d.id)}" aria-label="${esc(d.action.aria)}">${esc(d.action.label)}</button><button type="button" class="st-act" data-act-not-transfer="${esc(d.id)}" aria-label="${esc(d.action.dismissAria)}">${esc(d.action.dismissLabel)}</button>`
         : d.action.confirm
         ? `<button type="button" class="st-act" data-act-confirm="${esc(d.id)}" aria-label="${esc(d.action.aria)}">${esc(d.action.label)}</button>`
         : `<button type="button" class="st-act" ${attrs}>${esc(d.action.label)}</button>`) : '';
@@ -542,20 +542,36 @@ export function editRow(row) {
  */
 export async function confirmWentTo(id) {
     const found = lastFeed && (lastFeed.days.flatMap((d) => d.items).find((it) => it.type === 'txn' && it.row.id === id) || (lastFeed.toReview || []).map((row) => ({ row })).find((it) => it.row.id === id));
-    if (found && !found.row.bucketSuggested && found.row.transferSuggested) return confirmTransfer(found.row);
     if (!found || !found.row.bucketSuggested) return false;
     const prev = found.row;
     const next = { ...prev, status: 'ok' };
     delete next.bucketSuggested;
+    const dest = getBuckets(store.financeData, todayIsoNow()).find((b) => b.id === prev.bucketId);
+    await writeWithUndo(prev, next, t('a.act.st.confirmed', { name: prev.description || '', bucket: dest ? dest.name : '' }));
+    return true;
+}
+
+/** True when two stored rows are the same row as written (same fields, same updatedAt). Used so Undo never overwrites a later edit. */
+export function sameStoredRow(a, b) {
+    return !!a && !!b && JSON.stringify(Object.entries(a).sort()) === JSON.stringify(Object.entries(b).sort());
+}
+
+/** Write `next`, then show an Undo toast. Undo puts `prev` back only if the stored row is still what this write stored. */
+async function writeWithUndo(prev, next, message) {
     await updateTransaction(next);
+    const written = await getTransaction(next.id);
     await refreshSpendCache();
     updateAllUI();
-    const dest = getBuckets(store.financeData, todayIsoNow()).find((b) => b.id === prev.bucketId);
     showUndoToast({
-        message: t('a.act.st.confirmed', { name: prev.description || '', bucket: dest ? dest.name : '' }),
-        onUndo: async () => { await updateTransaction(prev); await refreshSpendCache(); updateAllUI(); },
+        message,
+        onUndo: async () => {
+            const now = await getTransaction(prev.id);
+            if (!sameStoredRow(now, written)) return; // edited since: leave their edit alone
+            await updateTransaction(prev);
+            await refreshSpendCache();
+            updateAllUI();
+        },
     });
-    return true;
 }
 
 /** The row once the person confirms the wording guess: the transfer category, out of To review, flag gone. */
@@ -578,15 +594,10 @@ function findRow(id) {
 }
 
 /** FT-R-129 (1): the person confirms a wording guess. The row becomes a transfer, leaves spending and To review. Undo restores it. */
-async function confirmTransfer(prev) {
-    const next = confirmedTransferRow(prev);
-    await updateTransaction(next);
-    await refreshSpendCache();
-    updateAllUI();
-    showUndoToast({
-        message: t('a.act.st.transferConfirmed', { name: prev.description || '' }),
-        onUndo: async () => { await updateTransaction(prev); await refreshSpendCache(); updateAllUI(); },
-    });
+export async function confirmTransferGuess(id) {
+    const prev = findRow(id);
+    if (!prev || !prev.transferSuggested) return false;
+    await writeWithUndo(prev, confirmedTransferRow(prev), t('a.act.st.transferConfirmed', { name: prev.description || '' }));
     return true;
 }
 
@@ -594,14 +605,7 @@ async function confirmTransfer(prev) {
 export async function dismissTransferGuess(id) {
     const prev = findRow(id);
     if (!prev || !prev.transferSuggested) return false;
-    const next = dismissedTransferRow(prev);
-    await updateTransaction(next);
-    await refreshSpendCache();
-    updateAllUI();
-    showUndoToast({
-        message: t('a.act.st.notTransferDone', { name: prev.description || '' }),
-        onUndo: async () => { await updateTransaction(prev); await refreshSpendCache(); updateAllUI(); },
-    });
+    await writeWithUndo(prev, dismissedTransferRow(prev), t('a.act.st.notTransferDone', { name: prev.description || '' }));
     return true;
 }
 
@@ -621,6 +625,8 @@ export function setupActivityEvents() {
             renderActivity();
             return;
         }
+        const ct = event.target.closest('[data-act-confirm-transfer]');
+        if (ct) { await confirmTransferGuess(ct.dataset.actConfirmTransfer); return; }
         const cf = event.target.closest('[data-act-confirm]');
         if (cf) { await confirmWentTo(cf.dataset.actConfirm); return; }
         const nt = event.target.closest('[data-act-not-transfer]');
