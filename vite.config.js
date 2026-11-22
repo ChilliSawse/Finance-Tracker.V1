@@ -91,6 +91,7 @@ const STARTUP_MODULES = new Set([
     'state/migrations.js',
     'state/milestones.js',
     'state/plan-migration.js',
+    'state/ref-overrides-migration.js',
     'state/safety-db.js',
     'state/sample-flag.js',
     'state/sanitize.js',

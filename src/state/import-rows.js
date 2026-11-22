@@ -17,8 +17,8 @@ import { plural } from '../i18n/strings.js';
  */
 export function resolveImportRow(description, amountCents, chosenId, data, ref) {
     const d = data || {};
-    const base = resolveWithReference(description, amountCents, chosenId, d.categories || [], d.rules || [], ref);
-    const by = categoriseWithReference(description, amountCents, d.categories || [], d.rules || [], ref).by;
+    const base = resolveWithReference(description, amountCents, chosenId, d.categories || [], d.rules || [], ref, d.refOverrides);
+    const by = categoriseWithReference(description, amountCents, d.categories || [], d.rules || [], ref, d.refOverrides).by;
     const sug = transferSuggestion({ description, amountCents }, { allocation: d.allocation, categoryBy: by, chosenCategoryId: chosenId });
     if (sug) return sug;
     if (!chosenId && by === 'none' && looksLikeOwnTransfer(description, amountCents)) return { ...base, status: 'review', transferSuggested: true };
@@ -26,6 +26,8 @@ export function resolveImportRow(description, amountCents, chosenId, data, ref) 
 }
 
 let refPromise = null;
+/** Forget the loaded reference view so the next import screen reads the current rules (after a rollback or a reset). */
+export function resetImportReference() { refPromise = null; }
 /** The reference view for the import screens (cache, then baseline, then nothing), loaded once. Resolves to null when it cannot load. */
 export function loadImportReference() {
     if (!refPromise) {
@@ -42,8 +44,8 @@ export function loadImportReference() {
  */
 export function previewCategory(description, amountCents, data, ref) {
     const d = data || {};
-    const det = categoriseWithReference(description, amountCents, d.categories || [], d.rules || [], ref);
-    const r = resolveWithReference(description, amountCents, undefined, d.categories || [], d.rules || [], ref);
+    const det = categoriseWithReference(description, amountCents, d.categories || [], d.rules || [], ref, d.refOverrides);
+    const r = resolveWithReference(description, amountCents, undefined, d.categories || [], d.rules || [], ref, d.refOverrides);
     return { categoryId: det.categoryId, suggested: !!r.referenceSuggested };
 }
 
