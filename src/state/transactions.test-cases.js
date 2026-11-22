@@ -2,12 +2,13 @@
 // Browser only: runs on the throwaway IndexedDB `ledger-test-db`, never the app's DB.
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 
-import { configureDb, deleteDb, openDb } from './db.js';
+import { configureDb, deleteDb, openDb, withStore } from './db.js';
 import {
     makeTransaction, addTransactions, listTransactions, updateTransaction, deleteImportBatch,
     exportAllTransactions, importTransactions, transactionStatus, countTransactions, isValidIsoDate,
 } from './transactions.js';
 import { commitImportRows } from './rules.js';
+import { learnFromCorrection, applyLearnedRule } from './rule-learn.js';
 import { DEFAULT_CATEGORIES, categoryIcon, withFallbackIcons } from './categories.js';
 
 async function fresh() {
@@ -238,6 +239,39 @@ export const TRANSACTIONS_TEST_CASES = [
             await importTransactions(JSON.parse(JSON.stringify(exported)));
             const back = (await listTransactions()).find((r) => r.id === a.id);
             assert('restored with the flag', [back.bucketId, back.bucketSuggested, back.categoryId], ['fire', true, 'transfer']);
+            await deleteDb();
+        },
+    },
+    {
+        name: 'DB9.5 learn on correct: offer count, apply to stored rows, undo',
+        async fn(assert) {
+            await fresh();
+            const mk = (description, o) => makeTransaction({ date: '2026-11-01', description, amountCents: -700, source: 'csv', categoryId: 'other', status: 'review', ...o });
+            const edited = mk('ZEDCO 1 NEWTOWN');
+            const rows = [mk('ZEDCO 2'), mk('ZEDCO 3', { status: 'ok' }), mk('QWERTY 4'), mk('ZEDCO 5', { categoryId: 'transfer' })];
+            await addTransactions([edited, ...rows]);
+            await updateTransaction({ ...edited, categoryId: 'dining', status: 'ok' }); // what Quick-add saves before it learns
+            const data = { rules: [], categories: DEFAULT_CATEGORIES };
+            const l = await learnFromCorrection(data, edited, 'dining');
+            assert('rule learned, one unconfirmed same-key row offered', [data.rules, l.count], [[{ key: 'zedco', categoryId: 'dining' }], 1]);
+            assert('nothing else changed until Apply (only the edited row is dining)', (await listTransactions()).filter((r) => r.categoryId === 'dining').length, 1);
+            const res = await applyLearnedRule(l.rule, data.categories);
+            const after = await listTransactions();
+            const get = (d) => after.find((r) => r.description === d);
+            assert('applied count and the one row', [res.count, get('ZEDCO 2').categoryId, get('ZEDCO 2').status], [1, 'dining', 'ok']);
+            assert('confirmed, other-merchant and transfer rows untouched', [get('ZEDCO 3').categoryId, get('QWERTY 4').status, get('ZEDCO 5').categoryId], ['other', 'review', 'transfer']);
+            await res.undo();
+            const back = (await listTransactions()).find((r) => r.description === 'ZEDCO 2');
+            assert('undo puts the row back', [back.categoryId, back.status], ['other', 'review']);
+            await res.undo(); // a second undo is harmless
+            const again = await applyLearnedRule(l.rule, data.categories);
+            const row2 = (await listTransactions()).find((r) => r.description === 'ZEDCO 2');
+            await withStore('transactions', 'readwrite', (s) => s.put({ ...row2, note: 'edited since' })); // same updatedAt: the same millisecond as the apply
+            await again.undo();
+            const kept = (await listTransactions()).find((r) => r.description === 'ZEDCO 2');
+            assert('undo skips a row edited since the apply', [kept.categoryId, kept.note], ['dining', 'edited since']);
+            const none = await learnFromCorrection(data, mk('VISA DEBIT PURCHASE CARD 1234'), 'dining');
+            assert('a rail-only description learns nothing', [none, data.rules.length], [null, 1]);
             await deleteDb();
         },
     },

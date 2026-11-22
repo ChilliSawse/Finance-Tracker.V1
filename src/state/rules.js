@@ -2,9 +2,11 @@
 //
 // financeData.rules = [{ key, categoryId, bucketId? }], key = merchantKey(description).
 // Categorise order: learned rules, then category keywords, then 'other' (categories.js).
+// learnRule, similarUnconfirmed, applyRuleToSimilar and applyRuleToStored moved to rule-learn.js in DB9: only a
+// dynamic import() uses them, and in this core module they would add to the cold-load budget.
 
-import { merchantKey, categoriseDescription, categoriseDetailed, resolveCategory, ruleMatchLength } from './categories.js';
-import { listTransactions, updateTransaction, isValidIsoDate, addTransactions } from './transactions.js';
+import { merchantKey, categoriseDescription, categoriseDetailed, resolveCategory } from './categories.js';
+import { listTransactions, isValidIsoDate, addTransactions } from './transactions.js';
 import { withStore } from './db.js';
 import { matchBills } from '../calc/bill-match.js';
 
@@ -20,27 +22,6 @@ export function categorise(description, categories, rules = []) {
     return categoriseDescription(description, categories, rules);
 }
 
-/**
- * Learn on correct (FT-R-54). Adds or updates the rule for this merchant on `data.rules`.
- * @returns {{ok:boolean, rule?:object, created?:boolean, onUndo?:Function}}
- */
-export function learnRule(data, description, categoryId, bucketId) {
-    const key = merchantKey(description);
-    if (!data || !key || !categoryId) return { ok: false };
-    if (!Array.isArray(data.rules)) data.rules = [];
-    const rule = { key, categoryId };
-    if (bucketId) rule.bucketId = bucketId;
-    const i = data.rules.findIndex((r) => r && r.key === key);
-    const prev = i >= 0 ? data.rules[i] : null;
-    if (i >= 0) data.rules[i] = rule; else data.rules.push(rule);
-    const onUndo = () => {
-        const j = data.rules.indexOf(rule);
-        if (j < 0) return;
-        if (prev) data.rules[j] = prev; else data.rules.splice(j, 1);
-    };
-    return { ok: true, rule, created: !prev, onUndo };
-}
-
 /** Remove the rule for a key (Settings list). Returns true when one was removed. */
 export function removeRule(data, key) {
     if (!data || !Array.isArray(data.rules)) return false;
@@ -48,37 +29,6 @@ export function removeRule(data, key) {
     if (i < 0) return false;
     data.rules.splice(i, 1);
     return true;
-}
-
-const sameMerchant = (rule, description) => ruleMatchLength(rule, merchantKey(description)) > 0;
-
-/**
- * Past rows a rule may re-categorise: still unconfirmed (status 'review', not flagged confirmed)
- * and the same merchant. A row the user confirmed (status 'ok', or `confirmed`) is never listed.
- */
-export function similarUnconfirmed(rule, rows) {
-    if (!rule || !rule.key) return [];
-    return (rows || []).filter((r) => r && r.status === 'review' && !r.confirmed && sameMerchant(rule, r.description));
-}
-
-/**
- * Apply a rule to similar past unconfirmed rows. Pure: returns new row objects (category from the
- * rule, status 'ok', the rule's bucket when it has one) for the caller to store. Never touches a
- * confirmed row; running it again on the result finds nothing.
- */
-export function applyRuleToSimilar(rule, rows) {
-    return similarUnconfirmed(rule, rows).map((r) => {
-        const next = { ...r, categoryId: rule.categoryId, status: 'ok' };
-        if (rule.bucketId) next.bucketId = rule.bucketId;
-        return next;
-    });
-}
-
-/** Stored version of applyRuleToSimilar; returns how many rows changed. */
-export async function applyRuleToStored(rule) {
-    const changed = applyRuleToSimilar(rule, await listTransactions());
-    for (const r of changed) await updateTransaction(r);
-    return changed.length;
 }
 
 // ---- Manual vs imported duplicates (FT-R-57) ----

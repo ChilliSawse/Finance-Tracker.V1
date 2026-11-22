@@ -48,5 +48,9 @@ ok('G6W12-8 encoded ..%2f traversal refused', [403, 404].includes(await raw('/..
 ok('G6W12-8 encoded backslash traversal refused', [403, 404].includes(await raw('/..%5c..%5csecret')));
 srv.close();
 rmSync(root, { recursive: true, force: true });
+
+// ---- DB9: a string moved to an en-lazy-* catalogue must be loaded before any screen that renders it ----
+const lazy = spawnSync(process.execPath, [join(here, 'lazy-check.mjs')], { encoding: 'utf8' });
+ok('DB9 every en-lazy string is loaded before it is read (tools/lazy-check.mjs)', lazy.status === 0, lazy.stdout + lazy.stderr);
 console.log(failed ? `\n${failed} failed` : '\nall tools checks passed');
 process.exit(failed ? 1 : 0);

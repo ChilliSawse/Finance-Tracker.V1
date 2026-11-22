@@ -5,7 +5,7 @@ import { DEFAULT_CATEGORIES, merchantKey, categoriseDescription, categoriseDetai
 import { looksLikeOwnTransfer, transferSuggestion } from '../calc/transfer-suggest.js';
 import { resolveImportRow, previewCategory } from './import-rows.js';
 import { categoriseWithReference, referenceHit } from './reference-match.js';
-import { learnRule, similarUnconfirmed } from './rules.js';
+import { learnRule, similarUnconfirmed, ruleKeyFor } from './rule-learn.js';
 
 const cats = DEFAULT_CATEGORIES;
 const cat = (d) => categoriseDescription(d, cats);
@@ -143,8 +143,28 @@ export const SORTING_TEST_CASES = [
             const data = { rules: [] };
             learnRule(data, 'PURCHASE, ZEDCO', 'dining');
             assert('a rule learned now still matches', categoriseDescription('PURCHASE, ZEDCO 7', cats, data.rules), 'dining');
-            const rows = [{ id: 'a', description: 'PURCHASE, ZEDCO 9', status: 'review' }, { id: 'b', description: 'OTHER SHOP', status: 'review' }];
+            const rows = [{ id: 'a', description: 'PURCHASE, ZEDCO 9', status: 'review', amountCents: -100 }, { id: 'b', description: 'OTHER SHOP', status: 'review', amountCents: -100 }];
             assert('similarUnconfirmed uses the same matching', similarUnconfirmed(rules[2], rows).map((r) => r.id), ['a']);
+        },
+    },
+    {
+        name: 'DB9.8 every learned rule matches the row it came from, and nothing is learned from bank wording',
+        fn(assert) {
+            const extra = ['Osko Zarnok Quill 55', 'Transfer to Zarnok Quill', 'Payment to Zarnok Plumbing', 'Card payment Zarnok', 'Internet Banking Zarnok', 'NETBANK TFR Zarnok',
+                'PAYPAL *ZARNOKSHOP 4029357733', 'ZIP ZARNOK 12', 'AFTERPAY ZARNOK', 'SQ *ZARNOK CAFE 9', 'UBER EATS 1234', 'Zarnok Quill', 'ZARNOK CAFE 12'];
+            const missed = [];
+            let learnt = 0;
+            for (const d of [...SHAPES, ...extra]) {
+                const key = ruleKeyFor(d);
+                if (!key) continue;
+                learnt++;
+                const r = categoriseDetailed(d, cats, [{ key, categoryId: 'dining' }]);
+                if (!(r.by === 'rule' && r.categoryId === 'dining')) missed.push(d + ' -> ' + key);
+            }
+            assert('a rule learned from a description matches that description', missed, []);
+            assert('a good number of shapes did learn (the test is not vacuous)', learnt > 15, true);
+            assert('payments to a payee, and bare rail wording, learn nothing', ['Osko Zarnok Quill 55', 'Transfer to Zarnok Quill', 'Payment to Zarnok Plumbing', 'Card payment Zarnok', 'Internet Banking Zarnok'].map(ruleKeyFor), ['', '', '', '', '']);
+            assert('a merchant key does not catch a different merchant', categoriseDetailed('ZARNOK HARDWARE 3', cats, [{ key: ruleKeyFor('ZARNOK CAFE 12'), categoryId: 'dining' }]).by, 'none');
         },
     },
     {

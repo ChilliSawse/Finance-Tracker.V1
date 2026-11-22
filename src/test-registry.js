@@ -2,6 +2,15 @@
 // tests.html and by tools/run-cases.mjs. env 'browser' groups need a DOM or
 // IndexedDB and are skipped by the Node runner.
 
+// The tests read strings the app loads with each screen (en-lazy-*): load them all up front.
+import './i18n/en-lazy-activity.js';
+import './i18n/en-lazy-plan.js';
+import './i18n/en-lazy-plan-lists.js';
+import './i18n/en-lazy-future.js';
+import './i18n/en-lazy-onboarding.js';
+import './i18n/en-lazy-income-layout.js';
+import './i18n/en-lazy-scenario.js';
+import './i18n/en-lazy-results.js';
 import { CHAIN_TEST_CASES } from './state/chain.test-cases.js';
 import { PALETTES_TEST_CASES } from './theme/palettes.test-cases.js';
 import { THEME_TEST_CASES } from './theme/theme.test-cases.js';
