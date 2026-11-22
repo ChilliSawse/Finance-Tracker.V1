@@ -4,6 +4,7 @@
 // state survives re-renders; only the section bodies are redrawn. A9b fills the Debts,
 // Assets and Categories mounts (#plan-debts, #plan-assets, #plan-categories).
 
+import '../i18n/en-lazy-plan.js'; // plan strings (en-lazy)
 import './plan.css'; // A9a — Plan screen
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';

@@ -3,7 +3,7 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 
 import { t } from '../i18n/strings.js';
-import { enF } from '../i18n/en-f.js';
+import { en as enF } from '../i18n/en.js'; // the whole catalogue: the f.res strings load with the results screen
 import { starterSpec } from './scenario/starters.js';
 import { buildResultSet, rowsForPreset, diffOf, bestOf, PRESETS, PRESET_ROWS, DEFAULT_PRESET } from './scenario/results.js';
 import { columnsFor } from './scenario/compare.js';

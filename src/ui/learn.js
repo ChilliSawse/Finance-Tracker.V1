@@ -4,7 +4,7 @@
 
 import { t } from '../i18n/strings.js';
 import { showToast, showUndoToast } from './toast.js';
-import { updateTransaction, deleteTransaction, importTransactions } from '../state/transactions.js';
+import { updateTransaction } from '../state/transactions.js';
 import { learnFromCorrection, applyLearnedRule } from '../state/rule-learn.js';
 import { enLearn } from '../i18n/en-learn.js';
 
@@ -63,15 +63,4 @@ async function show(data, prev, next, afterChange) {
     }
     showUndoToast({ message: t('a.quickAdd.updated', { name }), onUndo: undoEdit });
     return true;
-}
-
-/** Delete a row from Quick-add edit: the row goes, the panel closes (a failure rejects before either), then Undo. */
-export async function removeRow(prev, close, afterChange) {
-    await deleteTransaction(prev.id);
-    close();
-    await afterChange();
-    showUndoToast({
-        message: L('a.quickAdd.deleted', { name: prev.description || t('a.quickAdd.entryFallback') }),
-        onUndo: async () => { await importTransactions([prev]); await afterChange(); },
-    });
 }

@@ -6,6 +6,7 @@
 // category's essential flag. Bills are plan items with an anchorDue (FT-R-88). Every figure
 // comes from planTotals-style maths (calc/plan.js) or the plan item itself; none is typed in.
 
+import '../i18n/en-lazy-plan-lists.js'; // plan-lists strings (en-lazy)
 import { t } from '../i18n/strings.js';
 import { esc, escNum } from './html.js';
 import { formatCurrency, getPayCyclesPerYear } from '../utils.js';

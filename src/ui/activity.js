@@ -8,6 +8,7 @@
 // typed). renderActivityView() turns that into HTML, escaping every data string. The DOM layer at
 // the bottom wires delegated events once. Amounts are integer cents.
 
+import '../i18n/en-lazy-activity.js'; // activity strings (en-lazy)
 import './activity.css'; // A7 — Activity screen styles
 import { t, plural } from '../i18n/strings.js';
 import { esc } from './html.js';

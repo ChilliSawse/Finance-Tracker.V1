@@ -8,6 +8,7 @@
 //
 // The model is pure (no DOM); `renderAnswerBottom` and the view registration at the bottom need a document.
 
+import '../../i18n/en-lazy-results.js'; // results strings (en-lazy)
 import './results.css'; // F8b — What If results, Compare, Make this real
 import { t } from '../../i18n/strings.js';
 import { resolveAt } from '../../calc/scenario.js';

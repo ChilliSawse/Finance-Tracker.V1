@@ -5,7 +5,7 @@
 import { buildSampleHousehold } from '../../state/sample-data.js';
 import { migrateAssetDebtDetail } from '../../state/asset-debt-migration.js';
 import { yearsToFI, fiNumber, projectNetWorth } from '../../calc/fi.js';
-import { enF } from '../../i18n/en-f.js';
+import { en as enF } from '../../i18n/en.js'; // the whole catalogue: the f.future strings load with the screen
 import { t, plural } from '../../i18n/strings.js';
 import {
     futureModel, chartGeometry, chartIds, scenarioList, peopleSlots, withPeople, assumptionValues, validateAssumptions,

@@ -16,13 +16,13 @@ import { getBuckets } from '../state/saving-model.js';
 import { leftThisPay } from '../calc/pay-cycle.js';
 import { getSpendCache, refreshSpendCache } from '../state/spend-cache.js';
 import {
-    makeTransaction, addTransactions, updateTransaction, deleteTransaction, isValidIsoDate,
+    makeTransaction, addTransactions, updateTransaction, deleteTransaction, importTransactions, isValidIsoDate,
 } from '../state/transactions.js';
+import { addPlanItem } from '../state/plan.js';
 import { categoryIcon } from '../state/categories.js';
 import { ICON_PATHS } from './icon-paths.js';
 import { showToast, showUndoToast } from './toast.js';
 import { rememberFocus, trapTab, getFocusables } from './focus.js';
-import { addPlanItem } from '../state/plan.js';
 import { updateAllUI } from './render.js';
 import {
     REPEAT_FREQUENCIES, parseAmountCents, guessCategory, orderCategoryChips, categoryLine, resolveBucket,
@@ -426,9 +426,18 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
         }
     }
 
-    // Delete is rare, so it loads with the edit toast (learn.js) instead of sitting in the cold-load core.
-    async function remove() { // only the edit panel has a Delete button
-        try { await (await import('./learn.js')).removeRow(txn, close, afterChange); } catch (_) { showToast(t('a.quickAdd.failed'), 'error'); }
+    async function remove() {
+        if (!edit) return;
+        const prev = txn;
+        try {
+            await deleteTransaction(prev.id);
+        } catch (_) { showToast(t('a.quickAdd.failed'), 'error'); return; }
+        close();
+        await afterChange();
+        showUndoToast({
+            message: t('a.quickAdd.deleted', { name: prev.description || t('a.quickAdd.entryFallback') }),
+            onUndo: async () => { await importTransactions([prev]); await afterChange(); },
+        });
     }
 
     // ---- delegated events, all on the layer ----
