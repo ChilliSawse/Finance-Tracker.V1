@@ -303,8 +303,8 @@ function heroHtml(model, ctx, buckets) {
     const wBills = poolOk ? Math.min(100 - wSpent, pct((Math.max(0, head.billsDueCents) / head.poolCents) * 100)) : 0;
     const rate = savingsRateFigure(model, ctx);
     const netWorth = ctx.totals && Number.isFinite(ctx.totals.netWorth) ? Math.round(ctx.totals.netWorth * 100) : null;
-    const review = model.toReview > 0
-        ? `<p class="hero-review"><button type="button" class="pill review" data-go="activity">${t(model.toReview === 1 ? 'a.today.storyReviewOne' : 'a.today.storyReview', { n: escNum(model.toReview) })}</button></p>`
+    const review = model.toReviewAll > 0
+        ? `<p class="hero-review"><button type="button" class="pill review" data-go="activity">${t(model.toReviewAll === 1 ? 'a.today.storyReviewOne' : 'a.today.storyReview', { n: escNum(model.toReviewAll) })}</button></p>`
         : '';
     return `
       <section class="card hero a-hero" aria-labelledby="h-left">
@@ -439,7 +439,7 @@ function bucketsHtml(model, ctx, buckets) {
 }
 
 function storyHtml(model) {
-    const n = model.toReview;
+    const n = model.toReviewAll;
     const reviewRow = n > 0
         ? `<ol class="rows story"><li><span class="dot now" aria-hidden="true"></span><div><p>${t(n === 1 ? 'a.today.storyReviewOne' : 'a.today.storyReview', { n: escNum(n) })}</p><div class="when">${t('feed.today')} · <button type="button" class="link" data-go="activity">${t('a.today.reviewThem')}</button></div></div></li></ol>`
         : '';
