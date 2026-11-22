@@ -21,6 +21,7 @@ const NET_WORTH_STEPS = [1000, 5000];
 const NET_WORTH_STEP = 10000;
 // Savings-rate thresholds worth calling out (%).
 const SAVINGS_RATE_STEPS = [10, 20, 30, 50];
+const SAVINGS_DEF = 'buckets'; // FT-R-116: savings = pay into saving buckets
 
 function readState() {
     try { return JSON.parse(localStorage.getItem(MILESTONES_KEY)) || {}; }
@@ -66,15 +67,21 @@ export function checkMilestones(totals) {
 
     const srNow = savingsRateThreshold(totals.savingsRate);
     const srCelebrated = state.savingsRate || 0;
-    if (srNow > srCelebrated && totals.savingsRate > 0) {
+    const perPay = Number.isFinite(totals.savingsPerPayCents) ? totals.savingsPerPayCents : null;
+    if (state.savingsDef !== SAVINGS_DEF) {
+        // FT-R-116: the stored threshold was earned under the old definition (net minus expenses). Re-baseline
+        // to the new figure without celebrating, so nothing fires for a number that only changed meaning.
         next.savingsRate = srNow;
-        logEvent('milestone', { kind: 'savings-rate', threshold: srNow, value: Math.round(totals.savingsRate * 10) / 10 }).catch(() => {});
-        announce({ kind: 'savings-rate', threshold: srNow });
+        next.savingsDef = SAVINGS_DEF;
+    } else if (srNow > srCelebrated && totals.savingsRate > 0) {
+        next.savingsRate = srNow;
+        logEvent('milestone', { kind: 'savings-rate', threshold: srNow, value: Math.round(totals.savingsRate * 10) / 10, perPayCents: perPay }).catch(() => {});
+        announce({ kind: 'savings-rate', threshold: srNow, perPayCents: perPay });
     } else if (srNow < srCelebrated) {
         next.savingsRate = srNow;
     }
 
-    if (next.netWorth !== state.netWorth || next.savingsRate !== state.savingsRate) {
+    if (next.netWorth !== state.netWorth || next.savingsRate !== state.savingsRate || next.savingsDef !== state.savingsDef) {
         writeState(next);
     }
 }

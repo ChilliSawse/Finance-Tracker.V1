@@ -59,7 +59,7 @@ function composeEvent(event) {
             if (d.kind === 'savings-rate') {
                 return {
                     kind: 'good',
-                    html: t('feed.milestone.savingsRate', { threshold: escNum(d.threshold), value: escNum(d.value) }),
+                    html: t('feed.milestone.savingsRate', { threshold: escNum(d.threshold), value: escNum(d.value), amount: Number.isFinite(d.perPayCents) ? t('feed.milestone.savingsAmount', { amount: formatCurrency(d.perPayCents / 100, undefined, 0) }) : '' }),
                 };
             }
             return null;

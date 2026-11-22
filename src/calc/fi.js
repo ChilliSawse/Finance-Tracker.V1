@@ -397,14 +397,26 @@ export function goingTowardsPerYear(data, opts = {}) {
   return { fire: round2(inp.fireYear), super: round2(inp.superYear), total: round2(inp.fireYear + inp.superYear) };
 }
 
-/** Planned savings rate as a percent of net pay: every save bucket (Smile, Fire and the rest) over the pay. 0 with no pay. */
-export function savingsRatePlanned(data, opts = {}) {
+/**
+ * Savings, the one definition everywhere (FT-R-116): the pay that goes into saving buckets (kind `save`:
+ * Smile, Fire and the rest), as a share of take-home pay and as money. Take-home minus spending is NOT
+ * savings, because money left unspent can roll into the next pay's spending. Every screen that shows a
+ * savings rate shows the amount beside it.
+ * @returns {{ratePct:number, perPayCents:number, perYearCents:number}} percent to one decimal; all 0 with no pay
+ */
+export function savingsPlanned(data, opts = {}) {
     const d = data && typeof data === 'object' ? data : {};
     const buckets = safe(() => getBuckets(d, todayIsoOf(opts.today)), []).filter((b) => b.parentId == null);
     const net = buckets.reduce((s, b) => s + num(b.perPayCents), 0);
-    if (net <= 0) return 0;
+    if (net <= 0) return { ratePct: 0, perPayCents: 0, perYearCents: 0 };
     const save = buckets.filter((b) => b.kind === 'save').reduce((s, b) => s + num(b.perPayCents), 0);
-    return Math.round((save / net) * 1000) / 10;
+    const cycles = (safe(() => planTotals(d), null) || {}).cyclesPerYear || 26;
+    return { ratePct: Math.round((save / net) * 1000) / 10, perPayCents: Math.round(save), perYearCents: Math.round(save * cycles) };
+}
+
+/** Planned savings rate as a percent of net pay (see `savingsPlanned`). Thin wrapper kept for the existing callers. */
+export function savingsRatePlanned(data, opts = {}) {
+    return savingsPlanned(data, opts).ratePct;
 }
 
 /**
@@ -446,6 +458,7 @@ export function fiSummary(data, opts = {}) {
         now: { netWorth: p0.netWorth, fiNetWorth: p0.fiNetWorth, help: p0.help, depreciating: p0.depreciating, debts: p0.debts },
         going: { fire: round2(base.fireYear), super: round2(base.superYear), total: round2(base.fireYear + base.superYear) },
         savingsRate: savingsRatePlanned(d, { today: proj.today }),
+        savings: savingsPlanned(d, { today: proj.today }),
         fiAge: age, notes, nudges, multiple: base.multiple, spendYear: round2(base.spendYear),
         realReturnPct: round2(base.expectedReturnPct - base.inflationPct), inflationPct: base.inflationPct,
     };
