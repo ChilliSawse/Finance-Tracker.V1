@@ -6,6 +6,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_CATEGORIES, cloneDefaultCategories } from '../../src/state/categories.js';
 import { resolveImportRow } from '../../src/state/import-rows.js';
+import { categoriseWithReference } from '../../src/state/reference-match.js';
 import { fixtureLines, fixtureAmount, referenceView } from './fixtures.mjs';
 
 const TRAPS = ['CURRENT ACCOUNT FEE', 'PARENT TEACHER NIGHT 14', 'COCA COLA AMATIL', 'SHELLHARBOUR VILLAGE 22', 'GYMPIE FRUIT BARN',
@@ -19,7 +20,11 @@ export function importPathErrors(s, testsDir) {
     for (const l of lines) {
         const r = resolveImportRow(l.description, fixtureAmount(l), undefined, data, ref);
         const at = `import path '${l.description}' (${l.direction})`;
-        if (l.ref !== null) {
+        const det = categoriseWithReference(l.description, fixtureAmount(l), data.categories, [], ref);
+        if (l.ref !== null && det.by === 'keyword') {
+            // The app's own shipped keyword agrees with the reference: the keyword result stands, so the row stays 'ok' and unmarked.
+            if (r.categoryId !== l.ref || r.status !== 'ok' || r.referenceSuggested || r.refId) errors.push(`${at}: keyword agrees with ${l.ref}, expected ok and no refId, got ${r.categoryId}/${r.status}${r.refId ? ' @' + r.refId : ''}`);
+        } else if (l.ref !== null) {
             if (r.categoryId !== l.ref) errors.push(`${at}: category ${r.categoryId}, expected ${l.ref}`);
             if (r.status !== 'review') errors.push(`${at}: a reference hit came back '${r.status}', expected 'review' (FT-R-126)`);
             if (r.referenceSuggested !== true || !r.refId) errors.push(`${at}: a reference hit is not marked suggested with its refId`);

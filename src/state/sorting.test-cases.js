@@ -278,7 +278,9 @@ export const SORTING_TEST_CASES = [
         name: 'DB6.1 D5 6.1: a reference merchant beats an unchanged shipped keyword, not a keyword the person added or edited',
         fn(assert) {
             const ref = { sources: { categories: 'baseline' }, categories: [], merchants: [
-                { id: 'coles-express', key: 'coles express', match: 'word', patterns: ['coles express'], categoryId: 'transport', confidence: 'high' },
+                { id: 'coles-express', key: 'coles express', type: 'merchant', match: 'word', patterns: ['coles express'], categoryId: 'transport', confidence: 'high' },
+            { id: 'coles', key: 'coles', type: 'merchant', match: 'word', patterns: ['coles'], categoryId: 'groceries', confidence: 'high' },
+            { id: 'kw-generic', key: 'kw generic', type: 'keyword', match: 'word', patterns: ['woolworths petrol'], categoryId: 'transport', confidence: 'medium' },
             ] };
             const by = (d, c = cats, rules = []) => { const r = categoriseWithReference(d, -100, c, rules, ref); return [r.categoryId, r.by]; };
             assert('shipped keyword coles, the specific merchant wins', by('COLES EXPRESS 7 BELMONT'), ['transport', 'reference']);
@@ -292,8 +294,25 @@ export const SORTING_TEST_CASES = [
             assert('an edited default keyword counts as the person own', by('COLES EXPRESS 7 BELMONT', edited), ['groceries', 'keyword']);
             const rules = [{ key: merchantKey('COLES EXPRESS 7 BELMONT'), categoryId: 'shopping' }];
             assert('a learned rule still wins', by('COLES EXPRESS 7 BELMONT', cats, rules)[1], 'rule');
+            assert('agreeing merchant: the keyword result stands, ok, no refId', [by('COLES 1234'), resolveImportRow('COLES 1234', -100, undefined, { categories: cats, rules: [] }, ref)], [['groceries', 'keyword'], { categoryId: 'groceries', status: 'ok' }]);
+            assert('a generic keyword row never overrides a shipped keyword', by('WOOLWORTHS PETROL 55'), ['groceries', 'keyword']);
             const r = resolveImportRow('COLES EXPRESS 7 BELMONT', -100, undefined, { categories: cats, rules: [] }, ref);
             assert('the hit is stored as a suggestion', [r.categoryId, r.status, r.referenceSuggested], ['transport', 'review', true]);
+        },
+    },
+    {
+        name: 'DB6.2 matcher: digits guard, short patterns, wrappers, longest category keyword',
+        fn(assert) {
+            const m = (o) => ({ id: 'm', key: 'zed', type: 'merchant', categoryId: 'shopping', confidence: 'high', match: 'word', ...o });
+            const hit = (merchants, d, amt = -100) => referenceHit(d, amt, cats, { sources: {}, merchants });
+            const g = m({ guardedPatterns: [{ pattern: 'zedco', requireContext: ['#digits'] }] });
+            assert('#digits counts only right after the pattern', [!!hit([g], 'ZEDCO 1234'), !!hit([g], 'ZEDCO FC MEMBERSHIP 2026'), !!hit([g], '12 ZEDCO FC'), !!hit([g], 'ZEDCO FC ZEDCO 9')], [true, false, false, true]);
+            assert('a pattern of 3 characters or fewer is low', [hit([m({ patterns: ['hjx'] })], 'HJX 12').confidence, hit([m({ patterns: ['zedbar'] })], 'ZEDBAR 12').confidence], ['low', 'high']);
+            const kfc = m({ id: 'kfc', patterns: ['kfc'], categoryId: 'dining' });
+            const pp = m({ id: 'paypal', patterns: ['paypal'], categoryId: 'shopping' });
+            assert('a wrapper loses to the merchant behind it, and wins alone', [hit([pp, kfc], 'PAYPAL *KFC').refId, hit([kfc, pp], 'PAYPAL *KFC').refId, hit([pp, kfc], 'PAYPAL *OTHER').refId], ['kfc', 'kfc', 'paypal']);
+            const ref = { sources: { categories: 'cache' }, merchants: [], categories: [{ id: 'shopping', keywords: ['zed'] }, { id: 'dining', keywords: ['zed cafe'] }] };
+            assert('category keywords: the longest wins, not the first', referenceHit('ZED CAFE 12', -1, cats, ref).categoryId, 'dining');
         },
     },
 ];

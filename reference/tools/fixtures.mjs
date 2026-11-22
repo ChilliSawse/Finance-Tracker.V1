@@ -27,7 +27,9 @@ export function fixtureErrors(s, testsDir) {
         const det = categoriseWithReference(l.description, fixtureAmount(l), DEFAULT_CATEGORIES, [], ref);
         const h = det.by === 'reference' ? det.reference : null;
         const got = h ? h.categoryId : null;
-        if (got !== l.ref) errors.push(`tests/fixtures.json: '${l.description}' (${l.direction}): reference gave ${got}${h ? ` via '${h.refId}' (${h.via})` : ''}, expected ${l.ref}`);
+        // Where the app's own shipped keyword already names the expected category, the keyword result stands (by 'keyword', no refId).
+        const agrees = !h && det.by === 'keyword' && l.ref !== null && det.categoryId === l.ref;
+        if (got !== l.ref && !agrees) errors.push(`tests/fixtures.json: '${l.description}' (${l.direction}): reference gave ${got}${h ? ` via '${h.refId}' (${h.via})` : ''}, expected ${l.ref}`);
         if (l.expect !== undefined && det.categoryId !== l.expect) errors.push(`tests/fixtures.json: '${l.description}': final category ${det.categoryId}, expected ${l.expect}`);
     }
     return errors;
