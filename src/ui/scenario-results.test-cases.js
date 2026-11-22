@@ -14,6 +14,7 @@ import { applyMakeReal } from '../state/scenarios.js';
 import { fiSummary } from '../calc/fi.js';
 import { planGoalsFromData } from '../calc/goal-planner.js';
 import { netPerPayCents } from '../calc/plan.js';
+import { expectedPay } from '../calc/withholding.js';
 import { buildSampleHousehold } from '../state/sample-data.js';
 import { migrateAssetDebtDetail } from '../state/asset-debt-migration.js';
 
@@ -36,6 +37,32 @@ function scenario(d) {
 }
 
 export const SCENARIO_RESULTS_TEST_CASES = [
+    {
+        name: 'H5 a pay rise on a source with payslip figures moves take-home, per pay and the net worth path (it moved only the FI years)',
+        fn(assert) {
+            const d = base();
+            // The live shape: a payslip-job source switched to Salary keeps its stored payslip tax and pay, which
+            // calculateTotals reads as the truth. These are the 85,000 sample's own withholding figures.
+            const src = d.incomeSources[0];
+            const w = expectedPay({ paySchedule: src.paySchedule, grossAnnual: src.grossAnnual, claimsTaxFree: true, hasStudyDebt: false }, TODAY);
+            src.taxRemoved = w.total;
+            src.invoicedPayPostTax = Math.round((src.grossAnnual / 26 - w.total) * 100) / 100;
+            const ch = build(d, 'pay', { sourceId: src.id, newGross: 150000, pct: null, from: '' });
+            const set = buildResultSet(d, ch, TODAY, null);
+            const row = (id) => set.rows.find((r) => r.id === id);
+            for (const id of ['takeHome', 'daily', 'smile', 'nw10', 'nw20', 'fiYears']) assert(id + ' moves', row(id).now.v !== row(id).scen.v, true);
+            assert('take-home rises', row('takeHome').scen.v > row('takeHome').now.v, true);
+            assert('net worth in 10 years rises', row('nw10').scen.v > row('nw10').now.v, true);
+            const res = resolveAt(d, ch, TODAY).incomeSources[0];
+            assert('payslip tax rose with the gross', res.taxRemoved > src.taxRemoved, true);
+            const dGross = (150000 - 85000) / 26;
+            assert('payslip pay + tax rose by the gross difference', Math.round((res.taxRemoved + res.invoicedPayPostTax - src.taxRemoved - src.invoicedPayPostTax) * 100) / 100, Math.round(dGross * 100) / 100);
+            assert('the real data is untouched', d.incomeSources[0].taxRemoved, src.taxRemoved);
+            // a change that leaves the gross alone leaves the payslip figures alone
+            const same = resolveAt(d, build(d, 'pay', { sourceId: src.id, newGross: src.grossAnnual, pct: null, from: '' }), TODAY).incomeSources[0];
+            assert('same gross, same payslip', [same.taxRemoved, same.invoicedPayPostTax], [src.taxRemoved, src.invoicedPayPostTax]);
+        },
+    },
     {
         name: 'F8b.1 the result set comes from the engines',
         fn(assert) {

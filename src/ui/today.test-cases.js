@@ -10,6 +10,10 @@ import { formatCurrency } from '../utils.js';
 import { getBuckets } from '../state/saving-model.js';
 import { legacySampleFinanceData } from '../state/sample-data.js';
 import { runMigrationChain } from '../state/migration-chain.js';
+import { savingsPlanned, savingsRatePlanned } from '../calc/fi.js';
+import { calculateTotals } from '../calc/calculations.js';
+import { recordDailySnapshot, listSnapshots } from '../state/snapshots.js';
+import { checkMilestones } from '../state/milestones.js';
 
 const ALLOC = [
     { id: 'daily', role: 'daily', name: 'Daily expenses', percentage: 60 }, { id: 'splurge', role: 'splurge', name: 'Splurge', percentage: 10 },
@@ -118,11 +122,69 @@ export const TODAY_TEST_CASES = [
         },
     },
     {
+        name: 'FT-R-116 savings = pay going into saving buckets: a pay rise keeps the percent and raises the amount by the save share of the extra take-home',
+        fn(assert) {
+            const lo = mkData();
+            const hi = mkData({ incomeSources: [{ ...SOURCE, grossAnnual: 130000 }] });
+            const a = savingsPlanned(lo, { today: TODAY });
+            const b = savingsPlanned(hi, { today: TODAY });
+            const netLo = getBuckets(lo, TODAY).filter((x) => !x.parentId).reduce((s, x) => s + x.perPayCents, 0);
+            const netHi = getBuckets(hi, TODAY).filter((x) => !x.parentId).reduce((s, x) => s + x.perPayCents, 0);
+            assert('take-home went up', netHi > netLo, true);
+            assert('same percent', b.ratePct, a.ratePct);
+            assert('amount up by the save share of the extra take-home (within a few cents)', Math.abs((b.perPayCents - a.perPayCents) - Math.round((netHi - netLo) * 0.3)) <= 3, true);
+            assert('per year = per pay x pays a year (fortnightly, 26)', [a.perYearCents, b.perYearCents], [a.perPayCents * 26, b.perPayCents * 26]);
+            assert('the thin wrapper returns the same percent', savingsRatePlanned(lo, { today: TODAY }), a.ratePct);
+            // Not take-home minus spending: planned expenses change nothing.
+            const heavy = mkData({ plan: [...PLAN, { id: 'big', categoryId: 'rent', name: 'Big', amount: 900, frequency: 'weekly', anchorDue: '2026-10-10', inTotals: true }] });
+            assert('more planned expenses leave savings as they were', savingsPlanned(heavy, { today: TODAY }), a);
+            assert('no pay gives zeros', savingsPlanned({ dataVersion: 2, incomeSources: [], allocation: [] }, { today: TODAY }), { ratePct: 0, perPayCents: 0, perYearCents: 0 });
+            // Today shows the new figure; the legacy field is still on the totals but is not what is shown.
+            const r = run(lo, ROWS_A, calculateTotals(lo));
+            assert('Today planned = savingsPlanned', savingsRateFigure(r.model, r.ctx).value, Math.round(a.ratePct));
+            assert('legacy totals.savingsRate still exists as a number', Number.isFinite(calculateTotals(lo).savingsRate), true);
+        },
+    },
+    {
+        name: 'FT-R-116 snapshots and milestones: new snapshots carry the new definition and amount, old ones are left alone, an old celebrated threshold is re-baselined without a celebration',
+        async fn(assert) {
+            if (typeof window !== 'undefined') { assert('browser run: this case stubs globals and runs in Node only', true, true); return; }
+            const mem = new Map();
+            const had =Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+            const hadDoc = Object.getOwnPropertyDescriptor(globalThis, 'document');
+            Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (k) => (mem.has(k) ? mem.get(k) : null), setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) } });
+            const heard = [];
+            Object.defineProperty(globalThis, 'document', { configurable: true, value: { dispatchEvent: (e) => { heard.push(e.detail); return true; } } });
+            const CE = globalThis.CustomEvent;
+            if (!CE) globalThis.CustomEvent = class { constructor(n, o) { this.type = n; this.detail = o && o.detail; } };
+            try {
+                mem.set('ft-snapshots', JSON.stringify([{ date: '2000-01-01', netWorth: 1, savingsRate: 12.3 }]));
+                recordDailySnapshot({ netWorth: 100, savingsRate: 29, savingsPerPayCents: 54000 });
+                const snaps = listSnapshots();
+                assert('the old snapshot is untouched (no definition mark)', snaps[0], { date: '2000-01-01', netWorth: 1, savingsRate: 12.3 });
+                assert('the new snapshot is marked and has the amount', [snaps[1].savingsDef, snaps[1].savingsPerPayCents, snaps[1].savingsRate], ['buckets', 54000, 29]);
+                mem.set('ft-milestones', JSON.stringify({ savingsRate: 20 }));
+                checkMilestones({ netWorth: 0, savingsRate: 45, savingsPerPayCents: 80000 });
+                assert('first run after the change: baseline set silently, nothing announced', [heard.length, JSON.parse(mem.get('ft-milestones')).savingsRate, JSON.parse(mem.get('ft-milestones')).savingsDef], [0, 30, 'buckets']);
+                checkMilestones({ netWorth: 0, savingsRate: 52, savingsPerPayCents: 90000 });
+                assert('a later real crossing announces with the amount', heard.map((h) => [h.kind, h.threshold, h.perPayCents]), [['savings-rate', 50, 90000]]);
+            } finally {
+                if (had) Object.defineProperty(globalThis, 'localStorage', had); else delete globalThis.localStorage;
+                if (hadDoc) Object.defineProperty(globalThis, 'document', hadDoc); else delete globalThis.document;
+                if (!CE) delete globalThis.CustomEvent;
+            }
+        },
+    },
+    {
         name: 'T1 savings rate is planned until one complete cycle exists, then actual for the last completed cycle (FT-R-59)',
         fn(assert) {
             // Only the current cycle so far: planned, even with pay landed and spend (the old "92% actual").
             const young = run(mkData(), ROWS_A);
-            assert('planned with only the current cycle', savingsRateFigure(young.model, young.ctx), { kind: 'planned', value: 12 });
+            // FT-R-116: planned = pay into saving buckets (Smile 10 + Fire 20 = 30 percent), whatever the totals mock says
+            const want = savingsPlanned(young.ctx.data, { today: TODAY });
+            assert('planned with only the current cycle', savingsRateFigure(young.model, young.ctx), { kind: 'planned', value: 30, perPayCents: want.perPayCents });
+            assert('the amount is the save buckets share of take-home', want.perPayCents > 0, true);
+            assert('the planned caption shows the amount', young.html.includes(`${formatCurrency(want.perPayCents / 100, undefined, 0)} a pay into savings`), true);
             assert('planned label', young.html.includes('Savings rate (planned)'), true);
             assert('no actual label', young.html.includes('Savings rate (actual)'), false);
             // History starts mid previous cycle (not complete): still planned.

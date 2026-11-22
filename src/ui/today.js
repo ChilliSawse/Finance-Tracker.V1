@@ -11,6 +11,7 @@ import { getSpendCache } from '../state/spend-cache.js';
 import { todayModel } from '../state/today-model.js';
 import { getBuckets } from '../state/saving-model.js';
 import { calculateTotals } from '../calc/calculations.js';
+import { savingsPlanned } from '../calc/fi.js';
 import { inferPayAnchor, billOccurrences, billStatus, addDays, daysBetween, getCycle } from '../calc/pay-cycle.js';
 import { effectiveBucket, SPENDABLE_POOL, netPerPayCents } from '../calc/plan.js';
 import { formatCurrency } from '../utils.js';
@@ -82,7 +83,8 @@ function previousPeriod(model, data) {
  * "Complete" = the history reaches back to that cycle's first day and income landed in it.
  */
 export function savingsRateFigure(model, ctx) {
-    const planned = ctx.totals && Number.isFinite(ctx.totals.savingsRate) ? ctx.totals.savingsRate : 0;
+    // FT-R-116: planned savings = pay going into saving buckets (not net minus expenses), with the amount.
+    const planned = savingsPlanned(ctx.data, { today: model && model.today });
     const rows = Array.isArray(ctx.rows) ? ctx.rows : [];
     if (rows.length && model && model.cycle) {
         const prev = previousPeriod(model, ctx.data);
@@ -97,7 +99,7 @@ export function savingsRateFigure(model, ctx) {
             }
         }
     }
-    return { kind: 'planned', value: Math.round(planned) };
+    return { kind: 'planned', value: Math.round(planned.ratePct), perPayCents: planned.perPayCents };
 }
 
 /** Rows and totals the screen needs besides the model. Reads the store and the spend cache. */
@@ -286,7 +288,7 @@ function heroHtml(model, ctx, buckets) {
           </div>
         </div>
         <ul class="figs">
-          <li><div class="k">${t(rate.kind === 'actual' ? 'a.today.rateActual' : 'a.today.ratePlanned')}</div><div class="v num">${escNum(rate.value)}%</div><div class="s">${rate.kind === 'actual' ? t('a.today.rateCapActual', { from: esc(dayShort(rate.from)), to: esc(dayShort(rate.to)) }) : t('a.today.rateCapPlanned')}</div></li>
+          <li><div class="k">${t(rate.kind === 'actual' ? 'a.today.rateActual' : 'a.today.ratePlanned')}</div><div class="v num">${escNum(rate.value)}%</div><div class="s">${rate.kind === 'actual' ? t('a.today.rateCapActual', { from: esc(dayShort(rate.from)), to: esc(dayShort(rate.to)) }) : t('a.today.rateCapPlanned', { amount: esc(moneyWhole(rate.perPayCents)) })}</div></li>
           <li><div class="k">${t('a.today.essential')}</div><div class="v money">${esc(money(model.essentialSoFarCents))}</div><div class="s">${t('a.today.thisPay')}</div></li>
           <li><div class="k">${t('a.today.nonEssential')}</div><div class="v money">${esc(money(model.nonEssentialSoFarCents))}</div><div class="s">${t('a.today.thisPay')}</div></li>
           ${netWorth == null ? '' : `<li><div class="k">${t('a.today.netWorth')}</div><div class="v money">${esc(moneyWhole(netWorth))}</div><div class="s">${t('a.today.netWorthCap')}</div></li>`}

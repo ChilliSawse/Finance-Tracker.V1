@@ -313,6 +313,18 @@ function startFrom(d, base) {
     };
 }
 
+/**
+ * The data the plan opens from: with scenario changes, the data as it stands today once the changes active today apply
+ * (H6). A new loan, an edited expense (the Mojo target reads the essentials) or a changed assumption then opens the plan
+ * the way the same edit in the app would, instead of only changing the later years.
+ */
+function openingData(d, opts, todayIso) {
+    const changes = Array.isArray(opts.changes) ? opts.changes : [];
+    if (!changes.length) return d;
+    const resolve = typeof opts.resolve === 'function' ? opts.resolve : defaultResolve;
+    return resolve(d, changes, todayIso);
+}
+
 /** Does a dated change apply on `dateIso`? `from <= date < until`, an open end meaning no end. */
 function activeOn(change, dateIso) {
     if (!change || typeof change !== 'object') return false;
@@ -355,16 +367,16 @@ export function projectNetWorth(data, opts = {}) {
     const d = data && typeof data === 'object' ? data : {};
     const { inputsFor, todayIso } = makeInputs(d, opts);
     const base = inputsFor(0);
-    const run = runPlan(startFrom(d, base), inputsFor, { years: opts.years == null ? 30 : opts.years, untilFI: true });
+    const run = runPlan(startFrom(openingData(d, opts, todayIso), base), inputsFor, { years: opts.years == null ? 30 : opts.years, untilFI: true });
     return { path: run.path, yearsToFI: run.yearsToFI, fiNumber: base.fiNumber, today: todayIso };
 }
 
 /** Years until the FI-counted net worth reaches the FI number: fractional, 0 when reached, Infinity when never. */
 export function yearsToFI(data, opts = {}) {
     const d = data && typeof data === 'object' ? data : {};
-    const { inputsFor } = makeInputs(d, opts);
+    const { inputsFor, todayIso } = makeInputs(d, opts);
     const base = inputsFor(0);
-    return runPlan(startFrom(d, base), inputsFor, { years: 0, untilFI: true }).yearsToFI;
+    return runPlan(startFrom(openingData(d, opts, todayIso), base), inputsFor, { years: 0, untilFI: true }).yearsToFI;
 }
 
 /** The FI number in dollars: `fiSettings.multiple` x a year of Daily plus Splurge (see `yearInputs`). */
@@ -385,14 +397,26 @@ export function goingTowardsPerYear(data, opts = {}) {
   return { fire: round2(inp.fireYear), super: round2(inp.superYear), total: round2(inp.fireYear + inp.superYear) };
 }
 
-/** Planned savings rate as a percent of net pay: every save bucket (Smile, Fire and the rest) over the pay. 0 with no pay. */
-export function savingsRatePlanned(data, opts = {}) {
+/**
+ * Savings, the one definition everywhere (FT-R-116): the pay that goes into saving buckets (kind `save`:
+ * Smile, Fire and the rest), as a share of take-home pay and as money. Take-home minus spending is NOT
+ * savings, because money left unspent can roll into the next pay's spending. Every screen that shows a
+ * savings rate shows the amount beside it.
+ * @returns {{ratePct:number, perPayCents:number, perYearCents:number}} percent to one decimal; all 0 with no pay
+ */
+export function savingsPlanned(data, opts = {}) {
     const d = data && typeof data === 'object' ? data : {};
     const buckets = safe(() => getBuckets(d, todayIsoOf(opts.today)), []).filter((b) => b.parentId == null);
     const net = buckets.reduce((s, b) => s + num(b.perPayCents), 0);
-    if (net <= 0) return 0;
+    if (net <= 0) return { ratePct: 0, perPayCents: 0, perYearCents: 0 };
     const save = buckets.filter((b) => b.kind === 'save').reduce((s, b) => s + num(b.perPayCents), 0);
-    return Math.round((save / net) * 1000) / 10;
+    const cycles = (safe(() => planTotals(d), null) || {}).cyclesPerYear || 26;
+    return { ratePct: Math.round((save / net) * 1000) / 10, perPayCents: Math.round(save), perYearCents: Math.round(save * cycles) };
+}
+
+/** Planned savings rate as a percent of net pay (see `savingsPlanned`). Thin wrapper kept for the existing callers. */
+export function savingsRatePlanned(data, opts = {}) {
+    return savingsPlanned(data, opts).ratePct;
 }
 
 /**
@@ -419,7 +443,8 @@ export function fiSummary(data, opts = {}) {
     const d = data && typeof data === 'object' ? data : {};
     const proj = projectNetWorth(d, opts);
     const p0 = proj.path[0];
-    const base = yearInputs(d, proj.today);
+    const open = openingData(d, opts, proj.today); // H6: the summary's own lines read the data with the changes applied
+    const base = yearInputs(open, proj.today);
     const notes = ['notModelled'];
     const age = fiAge(d, proj.yearsToFI, { today: proj.today });
     if (age && age.superNote) notes.push('superPreservation');
@@ -433,6 +458,7 @@ export function fiSummary(data, opts = {}) {
         now: { netWorth: p0.netWorth, fiNetWorth: p0.fiNetWorth, help: p0.help, depreciating: p0.depreciating, debts: p0.debts },
         going: { fire: round2(base.fireYear), super: round2(base.superYear), total: round2(base.fireYear + base.superYear) },
         savingsRate: savingsRatePlanned(d, { today: proj.today }),
+        savings: savingsPlanned(d, { today: proj.today }),
         fiAge: age, notes, nudges, multiple: base.multiple, spendYear: round2(base.spendYear),
         realReturnPct: round2(base.expectedReturnPct - base.inflationPct), inflationPct: base.inflationPct,
     };

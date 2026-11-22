@@ -58,7 +58,8 @@
 .wi .col dl { margin: 0; }
 .wi .col dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid var(--rule); }
 .wi .col.scen dl > div { border-top-color: var(--b7-shade2); }
-.wi .col dt { font-size: var(--fs-small); color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+/* The label wraps between words only (min-content = its longest word), so "Savings rate" never splits mid-word. */
+.wi .col dt { font-size: var(--fs-small); color: var(--muted); min-width: min-content; overflow-wrap: normal; }
 .wi .col dd { margin: 0; font-weight: 600; text-align: right; min-width: 0; overflow-wrap: anywhere; }
 .wi .best { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: var(--r-pill); background: var(--text); color: var(--surface); font-size: 11px; font-weight: 700; vertical-align: 1px; }
 .wi .cmp-diff { font-weight: 500; font-size: var(--fs-small); }

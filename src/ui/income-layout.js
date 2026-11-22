@@ -20,10 +20,11 @@ import { calculateTotals } from '../calc/calculations.js';
 import { getCycle, addDays, addMonthsClamped, toIso, parseIso } from '../calc/pay-cycle.js';
 import { taxTablesStatus, taxYearKeyForDate } from '../calc/tax-tables/index.js';
 import { acceptPayslipJob } from '../state/income-migration.js';
+import { rebasePayslipFigures, DEFAULT_SUPER_PCT } from '../calc/income-rebase.js';
 import { deleteIncomeSourceFlow } from './income-other.js';
 
 /** Legal minimum super shown when nothing is stored yet (a rate, not a payslip figure). */
-export const DEFAULT_SUPER_PCT = 12;
+export { DEFAULT_SUPER_PCT };
 const CYCLES = ['weekly', 'fortnightly', 'monthly', 'quarterly'];
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 const aud = (n) => 'A$' + Number(n).toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -148,6 +149,7 @@ export function draftSource(values, layout, initial = {}) {
 export function applyIncomeValues(source, values, layout, initial = {}) {
     const gross = grossAnnualFrom(values, layout, initial);
     const prev = source.withholding || {};
+    const oldGross = Number(source.grossAnnual);
     source.name = values.name;
     source.incomeType = 'salaried';
     source.basis = 'salary';
@@ -170,6 +172,8 @@ export function applyIncomeValues(source, values, layout, initial = {}) {
         medicareExemption: values.medicareExemption === 'yes',
         extraPerPay: Number(values.extraPerPay) || 0,
     };
+    // H5: a changed gross moves the stored payslip tax and pay with it, or take-home would stay on the old payslip.
+    rebasePayslipFigures(source, oldGross, todayIso());
     // X-9: one stored field. The question is "next pay day"; payAnchor is the pay before it.
     const next = values.nextPay || '';
     const unchanged = next === (initial.nextPay || '') && values.paySchedule === initial.paySchedule;

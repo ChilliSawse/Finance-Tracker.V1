@@ -31,7 +31,8 @@ export function explainLines(set, rowId) {
     } else if (row.id === 'savingsRate') {
         const save = s.buckets.filter((b) => b.kind === 'save').reduce((sum, b) => sum + b.perPayCents, 0);
         const all = s.buckets.reduce((sum, b) => sum + b.perPayCents, 0);
-        lines.push(t('f.res.ex.savings', { save: money(save), net: money(all) }));
+        lines.push(t('f.res.ex.savings', { save: money(save), net: money(all), rate: s.savings ? s.savings.ratePct : 0, year: money(s.savings ? s.savings.perYearCents : 0) }));
+        lines.push(t('f.res.ex.savingsDef'));
     } else if (row.kind === 'goal' || PLAN_ROWS.has(row.id)) {
         const plan = s.plan;
         if (plan) {

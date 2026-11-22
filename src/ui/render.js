@@ -12,6 +12,7 @@ import { fitAllAmounts } from '../utils.js';
 import { renderToday } from './today.js';
 import { recordDailySnapshot } from '../state/snapshots.js';
 import { checkMilestones } from '../state/milestones.js';
+import { savingsPlanned } from '../calc/fi.js';
 import { activityFeed } from '../state/today-model.js';
 import { t } from '../i18n/strings.js';
 import { renderScopeLine } from './tabs.js'; // tabs.js imports this file; both only call each other at runtime
@@ -102,12 +103,21 @@ function schedulePrefetch() {
     else window.addEventListener('load', () => setTimeout(run, 3000), { once: true });
 }
 
+// FT-R-116: snapshots and milestones track savings as pay going into saving buckets (with the amount),
+// not the legacy net-minus-expenses rate that calculateTotals still carries.
+function withPlannedSavings(totals) {
+    let s = { ratePct: totals.savingsRate, perPayCents: null };
+    try { s = savingsPlanned(store.financeData); } catch (_) { /* keep the legacy figure rather than lose the day's snapshot */ }
+    return { ...totals, savingsRate: s.ratePct, savingsPerPayCents: s.perPayCents };
+}
+
 // Full render — initial load, resets, imports. Only the visible tab renders; the rest are
 // marked dirty and render when first opened. Returns a promise that settles when it has.
 export function updateAllUI() {
     const totals = calculateTotals(store.financeData);
-    recordDailySnapshot(totals);
-    checkMilestones(totals);
+    const tracked = withPlannedSavings(totals);
+    recordDailySnapshot(tracked);
+    checkMilestones(tracked);
     TAB_NAMES.forEach((tab) => dirty.add(tab));
     const pending = renderTab(store.activeTab, totals);
     renderChrome();
@@ -123,8 +133,9 @@ export function updateDataAndUI(callback) {
 
     // Trend + celebration bookkeeping ride along with every data change.
     const totals = calculateTotals(store.financeData);
-    recordDailySnapshot(totals);
-    checkMilestones(totals);
+    const tracked = withPlannedSavings(totals);
+    recordDailySnapshot(tracked);
+    checkMilestones(tracked);
 
     TAB_NAMES.forEach((tab) => dirty.add(tab));
     const pending = renderActiveTab();

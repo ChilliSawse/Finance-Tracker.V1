@@ -151,6 +151,22 @@ export const INCOME_LAYOUT_TEST_CASES = [
         },
     },
     {
+        name: 'H5 saving a new salary moves the stored payslip tax and pay with it, and an unchanged salary leaves them',
+        fn(assert) {
+            const src = emp({ grossAnnual: 79500, taxRemoved: 698, invoicedPayPostTax: 2359.69, withholding: { claimsTaxFree: true, hasStudyDebt: false, medicareExemption: false, extraPerPay: 0 } });
+            const initial = { grossAnnual: 79500, paySchedule: 'fortnightly', nextPay: '' };
+            applyIncomeValues(src, { ...vals(), amount: 79500, enterAs: 'year', hasStudyDebt: 'no' }, 'salary', initial);
+            assert('unchanged salary keeps the payslip figures', [src.taxRemoved, src.invoicedPayPostTax], [698, 2359.69]);
+            applyIncomeValues(src, { ...vals(), amount: 150000, enterAs: 'year', hasStudyDebt: 'no' }, 'salary', initial);
+            assert('tax rose', src.taxRemoved > 698, true);
+            assert('pay rose', src.invoicedPayPostTax > 2359.69, true);
+            assert('pay + tax moved by the gross difference', Math.round((src.taxRemoved + src.invoicedPayPostTax - 698 - 2359.69) * 100) / 100, Math.round(((150000 - 79500) / 26) * 100) / 100);
+            const bare = emp({ grossAnnual: 79500, taxRemoved: null, invoicedPayPostTax: null });
+            applyIncomeValues(bare, { ...vals(), amount: 150000, enterAs: 'year' }, 'salary', initial);
+            assert('a source with no payslip figures gets none', [bare.taxRemoved, bare.invoicedPayPostTax], [null, null]);
+        },
+    },
+    {
         name: 'K2.7 running the payslip check in the sheet stores {date, matched} on the source',
         fn(assert) {
             if (typeof document === 'undefined') return;
