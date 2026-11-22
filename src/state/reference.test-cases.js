@@ -2,7 +2,7 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 
 import {
-    checkForReferenceUpdate, getReference, rollbackReference, REF_CHECKED_KEY, REF_CHECK_INTERVAL_MS, sha256Hex,
+    checkForReferenceUpdate, getReference, rollbackReference, getStoredReferenceVersion, setReferenceCheckEnabled, REF_CHECKED_KEY, REF_CHECK_INTERVAL_MS, sha256Hex,
 } from './reference.js';
 import { validateReferenceFile, validateManifest, compareVersions, isSafeRefPath } from './reference-validate.js';
 import { DEFAULT_CATEGORIES } from './categories.js';
@@ -296,6 +296,39 @@ export const REFERENCE_TEST_CASES = [
             const rb = await rollbackReference(env);
             assert('rollback goes to 2026.11.1, not a copy of 2026.11.2', [rb.dataVersion, names(await getReference(env))], ['2026.11.1', ['One']]);
             assert('and stays there', (await check(env)).status, 'unchanged');
+        },
+    },
+    {
+        name: 'DB7 two rollbacks keep both versions pinned; only a release newer than all of them installs',
+        fn: async (assert) => {
+            const env = makeEnv(new Map());
+            for (let i = 1; i <= 3; i++) {
+                env.net.files = await makeServer({ dataVersion: '2026.11.' + i, tag: 'p' + i, docs: { categories: catDoc(i, 'V' + i) } });
+                await check(env);
+            }
+            await rollbackReference(env); // off 2026.11.3
+            await rollbackReference(env); // off 2026.11.2, now on 2026.11.1
+            assert('on v1', names(await getReference(env)), ['V1']);
+            env.net.files = await makeServer({ dataVersion: '2026.11.2', tag: 'p2', docs: { categories: catDoc(2, 'V2') } });
+            assert('v2 stays pinned', [(await check(env)).status, names(await getReference(env))], ['unchanged', ['V1']]);
+            env.net.files = await makeServer({ dataVersion: '2026.11.3', tag: 'p3', docs: { categories: catDoc(3, 'V3') } });
+            assert('v3 stays pinned', [(await check(env)).status, names(await getReference(env))], ['unchanged', ['V1']]);
+            env.net.files = await makeServer({ dataVersion: '2026.11.4', tag: 'p4', docs: { categories: catDoc(4, 'V4') } });
+            assert('a newer release installs and clears the pins', [(await check(env)).status, names(await getReference(env))], ['updated', ['V4']]);
+        },
+    },
+    {
+        name: 'DB7 the stored version is read without any request; a blocked setting is reported, not shown as saved',
+        fn: async (assert) => {
+            const env = makeEnv(await makeServer({ dataVersion: '2026.11.1', docs: { categories: catDoc(1, 'One') } }));
+            assert('nothing downloaded yet: built-in (null)', await getStoredReferenceVersion(env), null);
+            await check(env);
+            const n = env.urls.length;
+            assert('after an update: its version', await getStoredReferenceVersion(env), '2026.11.1');
+            assert('reading the version made no request', env.urls.length, n);
+            const blocked = { storage: { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } } };
+            assert('blocked storage: not saved', setReferenceCheckEnabled(false, blocked), false);
+            assert('working storage: saved', setReferenceCheckEnabled(false, env), true);
         },
     },
 ];

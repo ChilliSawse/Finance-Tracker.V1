@@ -2,6 +2,10 @@
 // Five groups, one list, search on top. Plan holds money; Settings is housekeeping only.
 
 import { t } from '../i18n/strings.js';
+import { en } from '../i18n/en.js';
+import { enDRef } from '../i18n/en-d-ref.js';
+
+Object.assign(en, enDRef); // DB7: the shared-rules strings load with Settings, not with the first page
 import { taxTablesStatus } from '../calc/tax-tables/index.js';
 
 export const GROUP_IDS = ['data', 'look', 'tax', 'setup', 'about'];
@@ -65,14 +69,15 @@ export function taxTablesRow(now, data) {
 }
 
 /**
- * The rows, grouped. kind: action | theme | mode | size | currency | link | info.
+ * The rows, grouped. kind: action | theme | mode | size | currency | link | info | seg (an On / Off choice).
  * `search` is extra words the search field also matches.
- * @param {{financeData?:object, now?:Date, installAvailable?:boolean, version?:string}} ctx
+ * @param {{financeData?:object, now?:Date, installAvailable?:boolean, version?:string, reference?:{checkEnabled?:boolean, dataVersion?:string|null}}} ctx
  */
 export function buildSettings(ctx = {}) {
     const fd = ctx.financeData || {};
     const tax = taxTablesRow(ctx.now || new Date(), fd);
     const version = ctx.version || '';
+    const ref = ctx.reference || {};
     const g = (id, rows) => ({ id, title: t(`d.settings.g.${id}`), hint: t(`d.settings.g.${id}.hint`), rows });
 
     const about = [];
@@ -92,6 +97,10 @@ export function buildSettings(ctx = {}) {
             { id: 'restore', kind: 'action', label: t('d.settings.restore'), value: t('d.settings.restore.value'), search: 'import backup load json' },
             { id: 'export', kind: 'action', label: t('d.settings.export'), value: t('d.settings.export.value'), search: 'csv spreadsheet transactions' },
             { id: 'rules', kind: 'action', label: t('d.settings.rules'), hint: t('d.settings.rules.hint'), value: t('d.settings.rules.value', { count: keywordCount(fd) }), search: 'keywords categories sort' },
+            { id: 'refcheck', kind: 'seg', on: ref.checkEnabled !== false, label: t('d.settings.refCheck'), hint: t('d.settings.refCheck.hint'), search: 'updated rules sorting download check update shared reference' },
+            { id: 'refversion', kind: 'info', label: t('d.settings.refVersion'), value: ref.dataVersion || t('d.settings.refVersion.builtIn'), search: 'rules version sorting reference' },
+            { id: 'refback', kind: 'action', label: t('d.settings.refBack'), value: t('d.settings.refBack.value'), search: 'earlier rules previous version undo update rollback' },
+            { id: 'refreset', kind: 'action', label: t('d.settings.refReset'), value: t('d.settings.refReset.value'), search: 'reference rules only clear changes hidden overrides' },
             { id: 'erase', kind: 'action', quiet: true, label: t('d.settings.erase'), value: t('d.settings.erase.value'), search: 'reset delete clear wipe factory' },
         ]),
         g('look', [

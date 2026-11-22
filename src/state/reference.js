@@ -15,6 +15,7 @@ import {
 /* global __APP_VERSION__ */
 export const REF_CACHE_NAME = 'ft-ref-v1';
 export const REF_CHECKED_KEY = 'ft-ref-checked';
+export const REF_ENABLED_KEY = 'ft-ref-enabled'; // '0' = the person turned the update check off (Settings, DB7)
 export const REF_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STATE_URL = '/__ft-ref__/state.json';
 const bodyUrl = (sha) => '/__ft-ref__/f/' + sha;
@@ -161,12 +162,37 @@ export async function getReference(envIn) {
 
 // ---------- the update check ----------
 
+// The versions the person rolled back from (skipVersions, plus the older single skipVersion field).
+function pinnedVersions(state) {
+    return [...(Array.isArray(state.skipVersions) ? state.skipVersions : []), ...(state.skipVersion ? [state.skipVersion] : [])];
+}
+
+/** The data version in the downloaded cache, or null (built-in). Reads local storage only: no request of any kind. */
+export async function getStoredReferenceVersion(envIn) {
+    const env = resolveEnv(envIn);
+    const state = await readState(await openStore(env));
+    return state && state.current && Object.keys(state.current.files || {}).length ? state.current.dataVersion : null;
+}
+
+/** Whether the person allows the update check (default on; only the stored value '0' turns it off). */
+export function isReferenceCheckEnabled(envIn) {
+    return storageGet(resolveEnv(envIn), REF_ENABLED_KEY) !== '0';
+}
+
+/** Turn the update check on or off for this device. */
+export function setReferenceCheckEnabled(on, envIn) {
+    const env = resolveEnv(envIn);
+    // Returns true only when the value is really stored (blocked storage reads back as unset, which means on).
+    try { env.storage.setItem(REF_ENABLED_KEY, on ? '1' : '0'); } catch (_) { return false; }
+    return isReferenceCheckEnabled(envIn) === !!on;
+}
+
 let inFlight = null;
 
 // options: { enabled: false } makes the check do nothing at all (the Settings toggle arrives in R9); { force: true }
 // skips the 24 h limit; { env } is the test seam. Resolves to { status, ... } and never throws.
 export function checkForReferenceUpdate(options = {}) {
-    if (options.enabled === false) return Promise.resolve({ status: 'off' });
+    if (options.enabled === false || !isReferenceCheckEnabled(options.env)) return Promise.resolve({ status: 'off' });
     if (inFlight) return inFlight;
     inFlight = runCheck(options).catch((err) => ({ status: 'error', error: String(err && err.message || err) }))
         .finally(() => { inFlight = null; });
@@ -220,8 +246,9 @@ async function runCheck(options) {
     const state = (await readState(store)) || { current: { dataVersion: null, files: {}, at: 0 }, history: [], disabled: [], skipVersion: null };
     const disabled = (manifest.disabled || []).filter((k) => REFERENCE_KINDS.includes(k));
     const disabledChanged = JSON.stringify(disabled) !== JSON.stringify(state.disabled || []);
-    if (state.skipVersion && state.skipVersion === manifest.dataVersion) {
-        // The person rolled back from this version: do not re-install it. A newer release clears the pin.
+    const pins = pinnedVersions(state);
+    if (pins.includes(manifest.dataVersion)) {
+        // The person rolled back from this version: do not re-install it. A release newer than every pin clears them.
         // The kill switch still applies while pinned.
         if (disabledChanged) await writeState(store, { ...state, disabled });
         return { status: 'unchanged', dataVersion: state.current.dataVersion };
@@ -251,7 +278,8 @@ async function runCheck(options) {
     }
     // Swap: write the new bodies first, then the state record that points at them, so a crash never leaves a pointer to nothing.
     for (const b of bodies) await store.put(bodyUrl(b.sha), new Response(b.bytes, { headers: { 'content-type': 'application/json' } }));
-    const next = { ...state, disabled, skipVersion: null };
+    const next = { ...state, disabled };
+    if (pins.length && pins.every((p) => compareVersions(manifest.dataVersion, p) > 0)) { next.skipVersion = null; next.skipVersions = []; }
     if (changed) {
         // A retry that completes the same release updates it in place; it does not add a second history entry.
         const sameRelease = state.current.dataVersion === manifest.dataVersion;
@@ -268,9 +296,9 @@ async function runCheck(options) {
 
 // Idle scheduling. Not wired in at this step: nothing calls it. Returns a cancel function.
 export function scheduleReferenceCheck(options = {}) {
-    if (options.enabled === false) return () => {};
+    if (options.enabled === false || !isReferenceCheckEnabled(options.env)) return () => {};
     let done = false;
-    const run = () => { if (!done) checkForReferenceUpdate(options); };
+    const run = () => { if (!done) checkForReferenceUpdate(options); }; // checks the toggle again: it may be turned off while waiting
     if (typeof requestIdleCallback === 'function') {
         const id = requestIdleCallback(run, { timeout: 30000 });
         return () => { done = true; if (typeof cancelIdleCallback === 'function') cancelIdleCallback(id); };
@@ -287,7 +315,9 @@ export async function rollbackReference(envIn) {
     const state = await readState(store);
     if (!state || !state.history.length) return { ok: false };
     const [previous, ...rest] = state.history;
-    const next = { ...state, current: previous, history: rest, skipVersion: state.current.dataVersion };
+    // Every version rolled back from stays pinned (a second rollback must not un-pin the first) until a newer release arrives.
+    const skipVersions = [...new Set([state.current.dataVersion, ...pinnedVersions(state)])].filter(Boolean);
+    const next = { ...state, current: previous, history: rest, skipVersion: state.current.dataVersion, skipVersions };
     await writeState(store, next);
     await pruneBodies(store, next);
     return { ok: true, dataVersion: previous.dataVersion };
