@@ -164,6 +164,30 @@ export function suggestSplit({ netCents, essentialCents, nonEssentialCents, rule
 }
 
 /**
+ * H2: the suggestion only moves Daily, Splurge, Smile and Fire, so under an own template with other buckets
+ * holding a share (Travel, Grow, Mojo...) it must fit the room they leave: 100 minus `otherPct`. Each of the four
+ * is scaled to that room (tenths, largest remainder, total exactly the room). Unchanged when otherPct is 0.
+ * Returns null when there is no room left. Pure; keeps the other fields (overspent, raw figures).
+ */
+export function fitSuggestionToRoom(s, otherPct) {
+    if (!s) return null;
+    const other = Math.max(0, num(otherPct));
+    if (other < 0.05) return s;
+    const room10 = Math.round((100 - other) * 10);
+    if (room10 <= 0) return null;
+    const keys = ['daily', 'splurge', 'smile', 'fire'];
+    const sum10 = keys.reduce((a, k) => a + Math.round(num(s[k]) * 10), 0);
+    if (sum10 <= 0) return null;
+    const raw = keys.map((k) => (Math.round(num(s[k]) * 10) * room10) / sum10);
+    const fl = raw.map(Math.floor);
+    let left = room10 - fl.reduce((a, b) => a + b, 0);
+    raw.map((r, i) => [r - fl[i], i]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).forEach(([, i]) => { if (left > 0) { fl[i] += 1; left -= 1; } });
+    const out = { ...s };
+    keys.forEach((k, i) => { out[k] = fl[i] / 10; });
+    return out;
+}
+
+/**
  * Whole cents per percentage, largest remainder, ties to the earlier row. The result
  * always sums to netCents exactly: shares are taken against the total of the given
  * percentages (so 99.9 or 100.04 still lands every cent). Negative percentages count

@@ -7,6 +7,8 @@ export const enE = {
     'e.bucket.forkOffer': 'That goes beyond the Bucket method. Make this your own template?',
     'e.bucket.renamed': 'Renamed {from} to {to}',
     'e.bucket.split': 'Changed the split',
+    'e.bucket.suggestFail': 'Could not apply the suggested split. Use Edit split to set it by hand.',
+    'e.bucket.suggestNoRoom': 'Your other buckets already hold all of the split, so there is no room to apply the suggestion. Use Edit split.',
     'e.bucket.splitSuggested': 'Applied the suggested split',
     'e.bucket.forked': 'This is now your own template',
     'e.bucket.switchedBack': 'Back on the Bucket method',

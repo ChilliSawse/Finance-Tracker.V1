@@ -16,7 +16,7 @@ import {
     tickTransfer, moveTarget, skipTarget, removeTarget, addTarget, applyCashToTarget, setMojo, addGoal, updateGoal,
     setGoalShares, setAutoCredit,
 } from '../state/saving-model.js';
-import { BUCKET_METHOD, suggestSplit, checkTemplateBounds, canReturnToBase } from '../calc/saving-model.js';
+import { BUCKET_METHOD, suggestSplit, fitSuggestionToRoom, checkTemplateBounds, canReturnToBase } from '../calc/saving-model.js';
 import { fireStatus, mojoLivingCosts, mojoSteps, payoffPays, MOJO_STARTER_CENTS } from '../calc/fire.js';
 import { smilePlan, suggestGoalShares, housingCheck, transfersToUpdate } from '../calc/smile.js';
 import { planTotals, netPerPayCents, effectiveBucket } from '../calc/plan.js';
@@ -66,6 +66,8 @@ function categoriesIn(d, bucketId) {
         .filter((c) => effectiveBucket({ amountCents: -1 }, c, null, d.allocation) === bucketId)
         .map((c) => ({ id: c.id, name: c.name || c.id, explicit: c.bucketId === bucketId }));
 }
+
+const FOUR = ['daily', 'splurge', 'smile', 'fire'];
 
 function nudgeOf(sm, rows, s) {
     if (!s || s.overspent) return null;
@@ -212,7 +214,7 @@ export function buildBucketsModel(data, today, ctx = {}) {
         whyNot: custom ? [...new Set(bounds.violations.map((v) => v.code))] : [],
         tiles, linkable: linkable.map((b) => ({ id: b.id, name: b.name, slot: slotOf(b) })),
         hasMojo: !!mojoRow, hasGrow: true,
-        suggestion, nudge: nudgeOf(sm, tops, suggestion),
+        suggestion, nudge: nudgeOf(sm, tops, fitSuggestionToRoom(suggestion, num(d.allocation.filter((r) => r && !FOUR.includes(r.role)).reduce((a, r) => a + num(r.percentage), 0)))),
         guide: BUCKET_METHOD.guide,
         firstRun: mig && !mig.cardDismissed ? { outcome: mig.outcome === 'own' ? 'own' : 'template', unmapped, autoOn: !!(sm.autoCredit && sm.autoCredit.on) } : null,
         transfers: xf, fire, mojo, groups,
@@ -488,8 +490,8 @@ export function dispatchBucketAction(data, action, a = {}, ctx = {}) {
         case 'use-suggested': return { res: applySuggestedSplit(data) };
         case 'dismiss-nudge': {
             const m = buildBucketsModel(data, today, ctx);
-            if (!sm || !m || !m.suggestion) return { changed: false };
-            sm.splitNudge = { ...(sm.splitNudge || {}), dismissedAt: { daily: m.suggestion.daily, splurge: m.suggestion.splurge } };
+            if (!sm || !m || !m.nudge) return { changed: false };
+            sm.splitNudge = { ...(sm.splitNudge || {}), dismissedAt: { daily: m.nudge.daily, splurge: m.nudge.splurge } };
             return { changed: true };
         }
         case 'chip': return { ui: { moving: a.cat === ctx.moving ? null : a.cat } };
