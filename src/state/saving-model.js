@@ -10,7 +10,7 @@
 import { t } from '../i18n/strings.js';
 import {
     BUCKET_METHOD, allocateCents, bucketBalanceCents, bucketByRole, buildTree, canReturnToBase as canReturn,
-    checkTemplateBounds, forkToCustom, suggestSplit, validateSplit,
+    checkTemplateBounds, fitSuggestionToRoom, forkToCustom, suggestSplit, validateSplit,
 } from '../calc/saving-model.js';
 import { applyPay, fireStatus, mojoLivingCosts, mojoSteps } from '../calc/fire.js';
 import { netPerPayCents, planTotals } from '../calc/plan.js';
@@ -271,15 +271,20 @@ export function applySuggestedSplit(data, inputs = {}) {
             if (nonEssentialCents == null) nonEssentialCents = Math.round(pt.nonEssentialPerCycle * 100);
         }
     } catch (e) { return failed('inputs'); }
-    const s = suggestSplit({ netCents, essentialCents, nonEssentialCents, rules: data.savingModel && data.savingModel.rules });
-    if (!s) return failed('suggest');
+    const raw = suggestSplit({ netCents, essentialCents, nonEssentialCents, rules: data.savingModel && data.savingModel.rules });
+    if (!raw) return failed('suggest', { message: t('e.bucket.suggestFail') });
+    const fourRoles = ['daily', 'splurge', 'smile', 'fire'];
+    const others = (Array.isArray(data.allocation) ? data.allocation : []).filter((r) => r && !fourRoles.includes(r.role)).reduce((a, r) => a + num(r.percentage), 0);
+    const s = fitSuggestionToRoom(raw, others);
+    if (!s) return failed('room', { message: t('e.bucket.suggestNoRoom') });
     const splits = {};
     for (const role of ['daily', 'splurge', 'smile', 'fire']) {
         const row = bucketByRole(data, role);
-        if (!row) return failed('role', { role });
+        if (!row) return failed('role', { role, message: t('e.bucket.suggestFail') });
         splits[row.id] = s[role];
     }
-    return setSplit(data, splits, { suggested: true });
+    const res = setSplit(data, splits, { suggested: true });
+    return res.ok || res.message ? res : { ...res, message: t('e.bucket.suggestFail') };
 }
 
 /** Make this your own template (FT-R-78, FT-R-85). Undo puts the Bucket method back. */
