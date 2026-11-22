@@ -4,7 +4,7 @@
 
 import {
     layoutFor, sheetValuesFor, draftSource, applyIncomeValues, readoutFor, describeCheck,
-    patchForFix, payAnchorFromNext, grossAnnualFrom, recordPayslipCheck, openIncomeSheet,
+    patchForFix, payAnchorFromNext, grossAnnualFrom, recordPayslipCheck, openIncomeSheet, saveIncomeSheet,
 } from './income-layout.js';
 import { store } from '../state/store.js';
 import { acceptPayslipJob } from '../state/income-migration.js';
@@ -115,6 +115,39 @@ export const INCOME_LAYOUT_TEST_CASES = [
             assert('bad date falls back to today', recordPayslipCheck(s, true, 'x', TODAY) && s.taxCheck.date, TODAY);
             assert('non-boolean ignored', recordPayslipCheck(s, 'yes', '2026-03-06', TODAY), false);
             assert('no source', recordPayslipCheck(null, true, '2026-03-06', TODAY), false);
+        },
+    },
+    {
+        name: 'H4 the Salary sheet saves a pay day through its own onSave path (it threw "t is not a function")',
+        async fn(assert) {
+            const saved = store.financeData;
+            const savedAuto = store.autoSave;
+            let autosaved = 0;
+            store.autoSave = { onDataChange() { autosaved++; } };
+            // A migrated Self-employed source with no pay date, offered the Salary layout (the live shape).
+            const src = { name: 'Job', incomeType: 'selfEmployed', basis: 'invoiced', paySchedule: 'fortnightly', grossAnnual: 0,
+                invoicedPayPostTax: 2000, taxRemoved: 0, migrationPrompt: 'payslip-job' };
+            const data = { primaryIncomeIndex: 0, incomeSources: [src], taxSettings: {}, plan: [] };
+            store.financeData = data;
+            try {
+                assert('offer accepted', acceptPayslipJob(src), true);
+                const layout = layoutFor(src);
+                const initial = { grossAnnual: Number(src.grossAnnual) || 0, paySchedule: 'fortnightly', nextPay: '' };
+                const v = { ...sheetValuesFor(src, layout, '2026-11-22'), nextPay: '2026-12-02' };
+                let threw = null;
+                try { await saveIncomeSheet({ source: src, data, layout, initial, draft: null, onSaved: null }, v); } catch (e) { threw = String(e && e.message || e); }
+                // Node has no DOM, so the redraw after the autosave may fail on "document"; that is not this bug.
+                if (threw && /document/.test(threw)) threw = null;
+                assert('save does not throw', threw, null);
+                assert('pay anchor stored', src.payAnchor, '2026-11-18');
+                assert('autosave ran', autosaved > 0, true);
+                // The Self-employed editor (H1 field) goes through the same persist.
+                const { persist } = await import('./income-layout.js');
+                let threw2 = null;
+                try { await persist(); } catch (e) { threw2 = String(e && e.message || e); }
+                if (threw2 && /document/.test(threw2)) threw2 = null;
+                assert('persist does not throw', threw2, null);
+            } finally { store.financeData = saved; store.autoSave = savedAuto; }
         },
     },
     {

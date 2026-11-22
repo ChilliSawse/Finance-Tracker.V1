@@ -328,12 +328,21 @@ function node(tag, cls, text) {
     return n;
 }
 
-async function persist() {
-    const [{ updateDataAndUI }, { renderIncomeSourcesSettings }] = await Promise.all([
-        import('./render.js'), import('./settings-forms.js'),
-    ]);
-    renderIncomeSourcesSettings();
+// H4: this used to call settings-forms' renderIncomeSourcesSettings, which A12b removed; every Salary and Set-hours
+// save threw "t is not a function" after the edit and before updateDataAndUI saved it. updateDataAndUI redraws
+// the Plan list, so nothing else is needed.
+export async function persist() {
+    const { updateDataAndUI } = await import('./render.js');
     updateDataAndUI();
+}
+
+/** The Salary / Set-hours sheet's save: write the values on the source, add a draft, persist, tell the caller. */
+export async function saveIncomeSheet(ctx, v) {
+    const { source, data, layout, initial, draft, onSaved } = ctx;
+    applyIncomeValues(source, v, layout, initial);
+    if (draft && !data.incomeSources.includes(draft)) data.incomeSources.push(draft);
+    await persist();
+    if (typeof onSaved === 'function') onSaved(source);
 }
 
 /** A matched payslip was just written to `taxCheck`: save, and refresh Today's tax slot. */
@@ -369,12 +378,7 @@ export function openIncomeSheet(index, opts = {}) {
         saveLabel: t('c.income.save'),
         validate: validateValues(layout),
         plausibility: plausibilityFor(layout),
-        onSave: async (v) => {
-            applyIncomeValues(source, v, layout, initial);
-            if (draft && !data.incomeSources.includes(draft)) data.incomeSources.push(draft);
-            await persist();
-            if (typeof opts.onSaved === 'function') opts.onSaved(source);
-        },
+        onSave: (v) => saveIncomeSheet({ source, data, layout, initial, draft, onSaved: opts.onSaved }, v),
         // A12b: delete with Undo; the last source is refused (the old guard, now a toast).
         onDelete: draft ? undefined : () => { deleteIncomeSourceFlow(index); },
     });

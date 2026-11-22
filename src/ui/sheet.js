@@ -423,7 +423,12 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
             if (r === false) { saving = false; saveBtn.disabled = false; saveBtn.textContent = saveLabel || t('d.sheet.save'); return; }
             close();
         } catch (err) {
-            console.error('sheet save failed', err);
+            // H4: log what failed and where, never the values: error type, a short message, the top stack frames, field keys.
+            const stack = String(err && err.stack || '').split('\n').slice(0, 5).map((l) => l.trim()).join(' | ');
+            console.error('sheet save failed', JSON.stringify({
+                type: err && err.name, message: String(err && err.message || err).slice(0, 160), stack: stack.slice(0, 600),
+                fields: fields.map((f) => f.key),
+            }));
             saving = false;
             saveBtn.disabled = false;
             saveBtn.textContent = saveLabel || t('d.sheet.save');
