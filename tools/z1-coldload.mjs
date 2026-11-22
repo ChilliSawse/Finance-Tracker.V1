@@ -41,6 +41,8 @@ async function measure(width, returning) {
         const page = await ctx.newPage();
         if (returning) await page.addInitScript(() => { try { localStorage.setItem('ft-onboarded', '1'); } catch (e) { console.warn('storage blocked', e); } });
         const rows = [];
+        const refRequests = []; // R4 (FT-0032): nothing may ask for /ref/ inside the cold-load window
+        page.on('request', (q) => { if (/\/ref\//.test(new URL(q.url()).pathname)) refRequests.push(q.url()); });
         page.on('response', async (r) => {
             try {
                 const b = await r.body();
@@ -50,7 +52,7 @@ async function measure(width, returning) {
         await page.goto(`http://127.0.0.1:${served.port}/index.html`);
         await page.waitForTimeout(2500);
         const ok = rows.filter((x) => x.status < 400);
-        return { width, returning, ok, gzip: ok.reduce((s, x) => s + x.gzip, 0), failed: rows.filter((x) => x.status >= 400).map((x) => x.url) };
+        return { width, returning, ok, gzip: ok.reduce((s, x) => s + x.gzip, 0), failed: rows.filter((x) => x.status >= 400).map((x) => x.url), refRequests };
     } finally { await ctx.close(); }
 }
 
@@ -62,6 +64,7 @@ try {
             console.log(`${label}: ${m.ok.length} requests, ${(m.gzip / 1024).toFixed(1)} KB gzip`);
             if (table) m.ok.slice().sort((a, b) => b.gzip - a.gzip).forEach((r) => console.log(`   ${String(r.gzip).padStart(6)}  ${r.url}`));
             if (m.ok.some((r) => /pdf\.min|pdf\.worker|pdfjs/i.test(r.url) && !/pdfjs-loader/i.test(r.url))) fails.push(`${label}: pdf.js loaded at startup`);
+            if (m.refRequests.length) fails.push(`${label}: reference data requested during cold load: ${m.refRequests.join(', ')}`);
             if (m.failed.length) fails.push(`${label}: failed requests ${m.failed.join(', ')}`);
             if (returning && m.gzip > BUDGET.gzipBytes) fails.push(`${label}: ${(m.gzip / 1024).toFixed(1)} KB gzip is over ${BUDGET.gzipBytes / 1024} KB`);
             if (returning && m.ok.length > BUDGET.requests) fails.push(`${label}: ${m.ok.length} requests is over ${BUDGET.requests}`);

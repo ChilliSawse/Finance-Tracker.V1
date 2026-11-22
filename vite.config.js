@@ -172,10 +172,10 @@ export default defineConfig({
                 cleanupOutdatedCaches: true,
                 // FT-0032 R3: ref/ data is fetched and cached at run time, so a data-only deploy leaves sw.js unchanged (no update
                 // banner). Only ref/baseline/** (the pinned offline fallback) is precached.
-                globIgnores: ['ref/*.json', 'ref/models/**'],
+                globIgnores: ['ref/*.json', 'ref/!(baseline)/**'],
                 runtimeCaching: [
                     { urlPattern: /\/ref\/manifest\.json$/, handler: 'NetworkFirst', options: { cacheName: 'ft-ref-manifest', networkTimeoutSeconds: 3 } },
-                    { urlPattern: /\/ref\/(?!baseline\/)[^?]+\.json$/, handler: 'CacheFirst', options: { cacheName: 'ft-ref-data' } },
+                    { urlPattern: /\/ref\/(?!baseline\/)[^?]+\.json$/, handler: 'NetworkOnly' }, // the client keeps its own verified copies (ft-ref-v1)
                 ],
             },
         }),

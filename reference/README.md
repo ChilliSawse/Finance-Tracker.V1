@@ -53,3 +53,16 @@ categories 20 KB, merchants 150 KB, asset types 40 KB, models index 10 KB, each 
 ## Provenance
 
 Append the agent name and model that touched a file to the changelog entry for that release.
+
+## App release steps (reference data)
+
+The repo keeps no other release checklist, so this is the one. Before cutting an app release:
+
+1. Refresh the baseline: `node reference/tools/build.mjs --refresh-baseline`.
+2. `npm run ref:check`, then commit `reference/baseline/` with the release.
+
+Data-only reference changes between app releases do not touch the baseline, so they ship without an "Update available" banner.
+
+## Service worker rules
+
+`vite.config.js` precaches only `ref/baseline/**` (`globIgnores: ['ref/*.json', 'ref/!(baseline)/**']`, so a new `ref/` subfolder is also left out). `ref/manifest.json` is NetworkFirst (3 s timeout); the hashed data files are NetworkOnly because the browser client keeps its own hash-verified copies (`ft-ref-v1`). `tools/z1-coldload.mjs` fails if anything requests `/ref/` during the cold-load window.
