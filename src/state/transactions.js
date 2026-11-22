@@ -32,7 +32,7 @@ export function transactionHash(date, description, amountCents) {
 }
 
 export function makeTransaction({ date, description, amountCents, categoryId = 'other', source = 'manual', importBatchId = null,
-    status, bucketId, bucketSuggested, billMatch, note }) {
+    status, bucketId, bucketSuggested, transferSuggested, billMatch, note }) {
     const cents = Math.round(amountCents || 0);
     const id = crypto.randomUUID();
     const row = {
@@ -49,6 +49,7 @@ export function makeTransaction({ date, description, amountCents, categoryId = '
     if (status !== undefined) row.status = status;
     if (bucketId !== undefined) row.bucketId = bucketId;
     if (bucketSuggested) row.bucketSuggested = true;
+    if (transferSuggested) row.transferSuggested = true; // wording guess only (FT-R-129): never changes the category or the totals
     if (billMatch !== undefined) row.billMatch = billMatch;
     if (note !== undefined) row.note = note;
     return row;

@@ -224,6 +224,7 @@ async function commitImport() {
             status: c.status,
             bucketId: c.bucketId,
             bucketSuggested: c.bucketSuggested,
+            transferSuggested: c.transferSuggested,
             source: 'pdf',
             importBatchId: batchId,
         });
