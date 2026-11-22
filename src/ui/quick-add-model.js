@@ -6,6 +6,7 @@
 import { t } from '../i18n/strings.js';
 import { categorise } from '../state/rules.js';
 import { effectiveBucket } from '../calc/plan.js';
+import { TRANSFER_CATEGORY } from '../calc/transfers.js';
 
 export const TOP_CHIPS = 6;
 export const REPEAT_FREQUENCIES = ['weekly', 'fortnightly', 'monthly', 'quarterly', 'yearly'];
@@ -89,9 +90,25 @@ export function afterThisCents(leftCents, amountCents) {
     return (Number(leftCents) || 0) - (Number(amountCents) || 0);
 }
 
-/** Fields for makeTransaction. bucketId is present only when it differs from the usual one. */
-export function buildTransactionFields({ kind, amountCents, category, note, date, store }) {
+/**
+ * Fields for makeTransaction. bucketId is present only when it differs from the usual one.
+ * A transfer (H9, FT-R-119) is category 'transfer', money out unless `incoming` (an existing money-in transfer being
+ * edited), and its `store` is the bucket it WENT TO. Setting it by hand never leaves a suggested flag behind.
+ */
+export function buildTransactionFields({ kind, amountCents, category, note, date, store, incoming = false }) {
     const text = String(note == null ? '' : note).trim();
+    if (kind === 'transfer') {
+        const fields = {
+            date,
+            description: text || t('a.quickAdd.transferWord'),
+            amountCents: incoming ? Math.abs(amountCents) : -Math.abs(amountCents),
+            categoryId: TRANSFER_CATEGORY,
+            source: 'manual',
+            note: text,
+        };
+        if (store && !incoming) fields.bucketId = store;
+        return fields;
+    }
     const fields = {
         date,
         description: text || (category ? category.name : ''),
@@ -102,6 +119,22 @@ export function buildTransactionFields({ kind, amountCents, category, note, date
     };
     if (store) fields.bucketId = store;
     return fields;
+}
+
+/**
+ * The "Went to" choices for a transfer: every top-level bucket, then the goals under a SAVING bucket (those are
+ * the destinations Today's actual savings figure counts, H8). `buckets` is getBuckets() output.
+ * @returns {Array<{id:string, name:string, kind:string, parentName:string|null}>}
+ */
+export function wentToChoices(buckets) {
+    const list = Array.isArray(buckets) ? buckets : [];
+    const top = list.filter((b) => b && !b.parentId && b.kind !== 'goal');
+    const byId = new Map(top.map((b) => [b.id, b]));
+    const goals = list.filter((b) => b && b.kind === 'goal' && b.parentId && byId.has(b.parentId) && byId.get(b.parentId).kind === 'save');
+    return [
+        ...top.map((b) => ({ id: b.id, name: b.name, kind: b.kind, parentName: null })),
+        ...goals.map((g) => ({ id: g.id, name: g.name, kind: 'goal', parentName: byId.get(g.parentId).name })),
+    ];
 }
 
 /** Fields for addPlanItem when Repeat is on: name, amount (dollars), frequency, and the entry's date as anchorDue. */

@@ -10,6 +10,7 @@
 import { listTransactions } from './transactions.js';
 import { store } from './store.js';
 import { leftThisPay } from '../calc/pay-cycle.js';
+import { isTransferRow } from '../calc/transfers.js';
 
 function emptyCache() {
     return {
@@ -64,6 +65,7 @@ export function loadSpendCache(rows, { data, today } = {}) {
     for (const r of all) {
         if (!r.date.startsWith(`${year}-`)) continue;
         fresh.count++;
+        if (isTransferRow(r)) continue; // H9: a transfer is neither spending nor income
         if (r.amountCents >= 0) {
             fresh.yearIncomeCents += r.amountCents;
             continue;
@@ -82,7 +84,7 @@ export function loadSpendCache(rows, { data, today } = {}) {
         fresh.cycle = left.cycle;
         fresh.cycleRows = all.filter((r) => r.date >= start && r.date < end); // end is exclusive: a row on it is next cycle
         for (const r of fresh.cycleRows) {
-            if (r.amountCents < 0) fresh.cycleByCategory.set(r.categoryId, (fresh.cycleByCategory.get(r.categoryId) || 0) - r.amountCents);
+            if (r.amountCents < 0 && !isTransferRow(r)) fresh.cycleByCategory.set(r.categoryId, (fresh.cycleByCategory.get(r.categoryId) || 0) - r.amountCents);
         }
         for (const b of left.buckets) fresh.cycleByBucket.set(b.id, b.spentCents);
         fresh.toReview = left.toReview;

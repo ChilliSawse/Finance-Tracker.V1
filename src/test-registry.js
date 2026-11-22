@@ -59,6 +59,7 @@ import { IMPORT_ROUTE_TEST_CASES, IMPORT_ROUTE_BROWSER_TEST_CASES } from './impo
 import { ACCEPT_TEST_CASES, ACCEPT_XLSX_TEST_CASES } from './import/accept.test-cases.js';
 import { BUCKET_METHOD_TEST_CASES } from './ui/bucket-method.test-cases.js';
 import { INCOME_OTHER_TEST_CASES } from './ui/income-other.test-cases.js';
+import { TRANSFERS_TEST_CASES } from './calc/transfers.test-cases.js'; // H9
 import { RECOVERY_UNDO_TEST_CASES, RECOVERY_UNDO_BROWSER_TEST_CASES } from './state/recovery-undo.test-cases.js'; // U3
 
 export const TEST_GROUPS = [
@@ -122,6 +123,7 @@ export const TEST_GROUPS = [
     { name: 'income-other', env: 'pure', cases: INCOME_OTHER_TEST_CASES },
     { name: 'lazy-setup', env: 'pure', cases: LAZY_SETUP_TEST_CASES }, // P3b
     { name: 'lazy-setup-browser', env: 'browser', cases: LAZY_SETUP_BROWSER_TEST_CASES }, // P3b
+    { name: 'transfers', env: 'pure', cases: TRANSFERS_TEST_CASES }, // H9
     { name: 'recovery-undo', env: 'pure', cases: RECOVERY_UNDO_TEST_CASES }, // U3
     { name: 'recovery-undo-browser', env: 'browser', cases: RECOVERY_UNDO_BROWSER_TEST_CASES }, // U3
 ];

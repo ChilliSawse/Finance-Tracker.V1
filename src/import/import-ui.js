@@ -10,7 +10,7 @@ import { store } from '../state/store.js';
 import { getElement, getValue, setHTML, escapeHtml, formatCurrency } from '../utils.js';
 import { parseCsv, detectColumns, normaliseRows, CSV_LIMITS, CsvLimitError } from './csv.js';
 import { categoriseDescription } from '../state/categories.js';
-import { resolveCategory, commitImportRows, rematchBills } from '../state/rules.js';
+import { resolveImportRow, suggestedTransferName, suggestedTransfersLine, commitImportRows, rematchBills } from '../state/rules.js';
 import { makeTransaction, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
@@ -146,6 +146,11 @@ function categoryOptions(selectedId) {
         .join('');
 }
 
+// H9: the line under a preview row that will be stored as a suggested transfer ('' when it will not).
+function xferNote(bucket) {
+    return bucket ? `<div class="import-xfer-note muted">${escapeHtml(t('a.import.previewTransfer', { bucket }))}</div>` : '';
+}
+
 function renderPreview() {
     if (!draft) return;
     const { transactions, errors, outOfRange } = buildNormalised();
@@ -158,12 +163,13 @@ function renderPreview() {
         const shown = transactions.slice(0, PREVIEW_ROWS);
         const rowsHtml = shown.map((t, i) => {
             const catId = t.categoryId || categoriseDescription(t.description, store.financeData.categories, store.financeData.rules);
-            t.categoryId = catId;
+            // t.categoryId is only ever a category the person picked, so a bank-label transfer suggestion can tell (H9)
+            const xfer = suggestedTransferName(t.description, t.amountCents, t.categoryId, store.financeData);
             return `<tr>
                 <td class="import-cell-date">${escapeHtml(t.date)}</td>
                 <td class="import-cell-desc">${escapeHtml(t.description)}</td>
                 <td class="import-cell-amount ${t.amountCents < 0 ? 'is-out' : 'is-in'}">${formatCurrency(t.amountCents / 100)}</td>
-                <td><select class="import-cat-select" data-preview-index="${i}">${categoryOptions(catId)}</select></td>
+                <td><select class="import-cat-select" data-preview-index="${i}">${categoryOptions(catId)}</select>${xferNote(xfer)}</td>
             </tr>`;
         }).join('');
         const more = transactions.length > PREVIEW_ROWS
@@ -288,13 +294,15 @@ async function commitImport() {
     const batchId = crypto.randomUUID();
 
     const txns = draft.normalised.map(t => {
-        const c = resolveCategory(t.description, t.categoryId, store.financeData.categories, store.financeData.rules);
+        const c = resolveImportRow(t.description, t.amountCents, t.categoryId, store.financeData);
         return makeTransaction({
             date: t.date,
             description: t.description,
             amountCents: t.amountCents,
             categoryId: c.categoryId,
             status: c.status,
+            bucketId: c.bucketId,
+            bucketSuggested: c.bucketSuggested,
             source: 'csv',
             importBatchId: batchId,
         });
@@ -337,6 +345,7 @@ async function commitImport() {
             <p class="import-success-title">${t('import.success.title', { count: result.added, txnWord: txnWord(result.added), dupNote })}</p>
             <p class="import-success-sub">${t('import.success.sub')}</p>
             ${mergeLines(merges)}
+            ${suggestedTransfersLine(txns) ? `<p class="import-success-sub">${suggestedTransfersLine(txns)}</p>` : ''}
             <div class="settings-actions" style="border-top: none; padding-top: 8px; margin-top: 4px;">
                 <button class="btn btn-secondary" id="import-another">${t('import.another')}</button>
                 ${result.added > 0 ? `<button class="btn btn-secondary" id="import-undo">${t('import.undo')}</button>` : ''}
@@ -412,6 +421,8 @@ export function setupImport() {
         if (!sel || !draft) return;
         const i = parseInt(sel.dataset.previewIndex, 10);
         if (draft.normalised[i]) draft.normalised[i].categoryId = sel.value;
+        const note = sel.parentElement && sel.parentElement.querySelector('.import-xfer-note');
+        if (note) note.remove();
     });
 
     // Commit / start over / post-commit actions (delegated — result HTML is dynamic).

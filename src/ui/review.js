@@ -221,7 +221,7 @@ async function spendFor(month) {
     const cache = getSpendCache();
     try { return await monthlySpendByCategory(month); } catch (e) { /* no IndexedDB: fall back to the cache */ }
     const map = new Map();
-    ((cache && cache.rows) || []).filter((r) => inMonth(r.date, month) && r.amountCents < 0)
+    ((cache && cache.rows) || []).filter((r) => inMonth(r.date, month) && r.amountCents < 0 && r.categoryId !== 'transfer')
         .forEach((r) => map.set(r.categoryId, (map.get(r.categoryId) || 0) + -r.amountCents));
     return map;
 }

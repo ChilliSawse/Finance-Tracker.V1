@@ -5,7 +5,7 @@
 
 import {
     parseAmountCents, guessCategory, orderCategoryChips, categoryLine, resolveBucket, bucketLine,
-    afterThisCents, buildTransactionFields, buildRepeatPlanItem,
+    afterThisCents, buildTransactionFields, buildRepeatPlanItem, wentToChoices,
 } from './quick-add-model.js';
 import { DEFAULT_CATEGORIES } from '../state/categories.js';
 import { makeTransaction } from '../state/transactions.js';
@@ -124,6 +124,35 @@ export const QUICK_ADD_TEST_CASES = [
             assert('different ids', a.id !== b.id, true);
             assert('different hashes', a.hash !== b.hash, true);
             assert('hash is manual|id', a.hash, 'manual|' + a.id);
+        },
+    },
+    {
+        name: 'H9.1 a transfer is saved as category transfer, money out, with where it went',
+        fn(assert) {
+            const f = buildTransactionFields({ kind: 'transfer', amountCents: 25000, category: null, note: 'To Fire', date: '2026-11-14', store: 'a-fire' });
+            assert('fields', f, { date: '2026-11-14', description: 'To Fire', amountCents: -25000, categoryId: 'transfer', source: 'manual', note: 'To Fire', bucketId: 'a-fire' });
+            const none = buildTransactionFields({ kind: 'transfer', amountCents: 100, category: null, note: '', date: '2026-11-14' });
+            assert('Somewhere else stores no bucket, and a blank note is named Transfer', ['bucketId' in none, none.description], [false, 'Transfer']);
+            const inc = buildTransactionFields({ kind: 'transfer', amountCents: 100, category: null, note: 'x', date: '2026-11-14', store: 'a-fire', incoming: true });
+            assert('an existing money-in transfer stays money in and takes no bucket', [inc.amountCents, 'bucketId' in inc], [100, false]);
+            assert('a transfer is never given a suggested flag', 'bucketSuggested' in f, false);
+            const row = makeTransaction(f);
+            assert('it makes a manual row', [row.categoryId, row.bucketId, row.source], ['transfer', 'a-fire', 'manual']);
+        },
+    },
+    {
+        name: 'H9.2 the Went to choices: every top-level bucket, then goals under a saving bucket',
+        fn(assert) {
+            const b = [
+                { id: 'd', name: 'Daily', kind: 'spend', parentId: null }, { id: 'f', name: 'Fire', kind: 'save', parentId: null },
+                { id: 's', name: 'Smile', kind: 'save', parentId: null }, { id: 'g1', name: 'Trip', kind: 'goal', parentId: 's' },
+                { id: 'g2', name: 'Lunch', kind: 'goal', parentId: 'd' }, { id: 'g3', name: 'Orphan', kind: 'goal', parentId: 'zz' },
+            ];
+            assert('choices', wentToChoices(b), [
+                { id: 'd', name: 'Daily', kind: 'spend', parentName: null }, { id: 'f', name: 'Fire', kind: 'save', parentName: null },
+                { id: 's', name: 'Smile', kind: 'save', parentName: null }, { id: 'g1', name: 'Trip', kind: 'goal', parentName: 'Smile' },
+            ]);
+            assert('empty', wentToChoices(null), []);
         },
     },
 ];
