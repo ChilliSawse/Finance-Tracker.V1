@@ -184,4 +184,29 @@ export const REF_OVERRIDES_TEST_CASES = [
             assert('no context: defaults to on and built-in', [byId(rows(undefined), 'refcheck').on, byId(rows(undefined), 'refversion').value], [true, 'built-in']);
         },
     },
+    {
+        name: 'DB7 a junk backup patch never reaches the matcher; inherited kind names are not kinds',
+        fn(assert) {
+            const d = cloneDefaultFinanceData();
+            d.incomeSources = []; d.essentialExpenses = []; d.nonEssentialExpenses = []; d.assets = []; d.liabilities = [];
+            const junk = (patch) => ({ 'merchant:m-zzfoods': { op: 'patch', patch, baseRev: 1, at: '2026-11-22' } });
+            const bad = [{ aliases: 5 }, { excludePatterns: 'x' }, { match: 'word', patterns: 7 }, { categoryId: 5 }, { confidence: 'sure' }, { status: 'ok', by: 'rule' }];
+            for (const p of bad) {
+                d.refOverrides = { v: 1, dataVersionSeen: '2026.11.1', items: junk(p) };
+                const r = prepareImport(JSON.stringify({ financeData: d, guiSettings: {} }));
+                const fd = { categories: cats(), rules: [], refOverrides: r.ok ? r.financeData.refOverrides : null };
+                let out;
+                try { out = resolveImportRow(DESC, -2500, undefined, fd, view()); } catch (e) { out = 'threw ' + e.message; }
+                assert('junk patch ' + JSON.stringify(p) + ' imports and the row still sorts from upstream', [r.ok, out.categoryId], [true, 'groceries']);
+            }
+            const mixed = { v: 1, items: junk({ categoryId: 'dining', aliases: 5, status: 'ok' }) };
+            assert('only the allowed, well-typed fields survive', categoriseWithReference(DESC, -2500, cats(), [], view(), mixed).categoryId, 'dining');
+            const inherited = { v: 1, items: { 'toString:x': { op: 'hide' }, 'constructor:y': { op: 'hide' }, '__proto__:z': { op: 'hide' } } };
+            assert('inherited names are not kinds', applyRefOverrides(view(), inherited) === view() || Object.keys(applyRefOverrides(view(), inherited)).includes('merchants'), true);
+            assert('and make no entries', hit(view(), inherited).by, 'reference');
+            assert('patchRefItem refuses a junk patch', [patchRefItem(cloneDefaultFinanceData(), view(), 'merchant:m-zzfoods', { aliases: 5 }).ok, patchRefItem(cloneDefaultFinanceData(), view(), 'merchant:m-zzfoods', { categoryId: 'dining' }).ok], [false, true]);
+            const at = applyRefOverrides({ ...view(), assetTypes: [{ id: 'car', defaults: { depreciation: { ratePct: 15, years: 5 } } }] }, { v: 1, items: { 'assetType:car': { op: 'patch', patch: { defaults: { depreciation: { ratePct: 20 } }, evil: 1 } } } });
+            assert('asset type: only the depreciation rate is patchable and the rest is kept', at.assetTypes[0], { id: 'car', defaults: { depreciation: { ratePct: 20, years: 5 } } });
+        },
+    },
 ];

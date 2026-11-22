@@ -162,6 +162,18 @@ export async function getReference(envIn) {
 
 // ---------- the update check ----------
 
+// The versions the person rolled back from (skipVersions, plus the older single skipVersion field).
+function pinnedVersions(state) {
+    return [...(Array.isArray(state.skipVersions) ? state.skipVersions : []), ...(state.skipVersion ? [state.skipVersion] : [])];
+}
+
+/** The data version in the downloaded cache, or null (built-in). Reads local storage only: no request of any kind. */
+export async function getStoredReferenceVersion(envIn) {
+    const env = resolveEnv(envIn);
+    const state = await readState(await openStore(env));
+    return state && state.current && Object.keys(state.current.files || {}).length ? state.current.dataVersion : null;
+}
+
 /** Whether the person allows the update check (default on; only the stored value '0' turns it off). */
 export function isReferenceCheckEnabled(envIn) {
     return storageGet(resolveEnv(envIn), REF_ENABLED_KEY) !== '0';
@@ -170,7 +182,9 @@ export function isReferenceCheckEnabled(envIn) {
 /** Turn the update check on or off for this device. */
 export function setReferenceCheckEnabled(on, envIn) {
     const env = resolveEnv(envIn);
-    if (env.storage) { try { env.storage.setItem(REF_ENABLED_KEY, on ? '1' : '0'); } catch (_) { /* blocked storage: stays on */ } }
+    // Returns true only when the value is really stored (blocked storage reads back as unset, which means on).
+    try { env.storage.setItem(REF_ENABLED_KEY, on ? '1' : '0'); } catch (_) { return false; }
+    return isReferenceCheckEnabled(envIn) === !!on;
 }
 
 let inFlight = null;
@@ -232,8 +246,9 @@ async function runCheck(options) {
     const state = (await readState(store)) || { current: { dataVersion: null, files: {}, at: 0 }, history: [], disabled: [], skipVersion: null };
     const disabled = (manifest.disabled || []).filter((k) => REFERENCE_KINDS.includes(k));
     const disabledChanged = JSON.stringify(disabled) !== JSON.stringify(state.disabled || []);
-    if (state.skipVersion && state.skipVersion === manifest.dataVersion) {
-        // The person rolled back from this version: do not re-install it. A newer release clears the pin.
+    const pins = pinnedVersions(state);
+    if (pins.includes(manifest.dataVersion)) {
+        // The person rolled back from this version: do not re-install it. A release newer than every pin clears them.
         // The kill switch still applies while pinned.
         if (disabledChanged) await writeState(store, { ...state, disabled });
         return { status: 'unchanged', dataVersion: state.current.dataVersion };
@@ -263,7 +278,8 @@ async function runCheck(options) {
     }
     // Swap: write the new bodies first, then the state record that points at them, so a crash never leaves a pointer to nothing.
     for (const b of bodies) await store.put(bodyUrl(b.sha), new Response(b.bytes, { headers: { 'content-type': 'application/json' } }));
-    const next = { ...state, disabled, skipVersion: null };
+    const next = { ...state, disabled };
+    if (pins.length && pins.every((p) => compareVersions(manifest.dataVersion, p) > 0)) { next.skipVersion = null; next.skipVersions = []; }
     if (changed) {
         // A retry that completes the same release updates it in place; it does not add a second history entry.
         const sameRelease = state.current.dataVersion === manifest.dataVersion;
@@ -299,7 +315,9 @@ export async function rollbackReference(envIn) {
     const state = await readState(store);
     if (!state || !state.history.length) return { ok: false };
     const [previous, ...rest] = state.history;
-    const next = { ...state, current: previous, history: rest, skipVersion: state.current.dataVersion };
+    // Every version rolled back from stays pinned (a second rollback must not un-pin the first) until a newer release arrives.
+    const skipVersions = [...new Set([state.current.dataVersion, ...pinnedVersions(state)])].filter(Boolean);
+    const next = { ...state, current: previous, history: rest, skipVersion: state.current.dataVersion, skipVersions };
     await writeState(store, next);
     await pruneBodies(store, next);
     return { ok: true, dataVersion: previous.dataVersion };

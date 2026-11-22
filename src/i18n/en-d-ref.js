@@ -3,9 +3,10 @@
 
 export const enDRef = {
     'd.settings.licence.value': 'Ledger will be free and open source (AGPL-3.0) at its public launch.',
-    'd.settings.privacy.detail': 'Ledger keeps your figures on this device. There is no account and none of your data is sent anywhere. It only downloads shared sorting rules, which you can turn off under Your data. Backups are files you keep yourself.',
+    'd.settings.privacy.detail': 'Ledger keeps your figures on this device. There is no account and none of your data is sent anywhere. Ledger downloads only app updates and shared sorting rules from its own site, and you can turn off the rules check under Your data. Backups are files you keep yourself.',
     'd.settings.refCheck': 'Check for updated rules',
     'd.settings.refCheck.hint': 'Ledger downloads shared sorting rules from its own site. It sends nothing about you and makes no request with your data.',
+    'd.settings.refCheck.failed': 'Could not save that on this device, so the setting has not changed.',
     'd.settings.refCheck.on': 'On',
     'd.settings.refCheck.off': 'Off',
     'd.settings.refVersion': 'Rules version',

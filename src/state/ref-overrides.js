@@ -13,7 +13,23 @@ function parseKey(key) {
     const i = String(key).indexOf(':');
     if (i <= 0) return null;
     const kind = key.slice(0, i);
-    return KIND_LIST[kind] ? { kind, list: KIND_LIST[kind], id: key.slice(i + 1) } : null;
+    return Object.hasOwn(KIND_LIST, kind) ? { kind, list: KIND_LIST[kind], id: key.slice(i + 1) } : null;
+}
+
+// What a person may patch, with type checks (R3 section 8). A restored backup is untrusted: anything else is dropped, so a
+// junk patch can never reach the matcher. Merchants: categoryId and confidence. Asset types: the depreciation rate only.
+// Categories and models are not patchable (hide only). Returns the clean patch, or null when nothing usable is left.
+export function cleanPatch(list, patch) {
+    if (!isObj(patch)) return null;
+    const out = {};
+    if (list === 'merchants') {
+        if (typeof patch.categoryId === 'string' && patch.categoryId && patch.categoryId.length <= 64) out.categoryId = patch.categoryId;
+        if (['high', 'medium', 'low'].includes(patch.confidence)) out.confidence = patch.confidence;
+    } else if (list === 'assetTypes') {
+        const r = isObj(patch.defaults) && isObj(patch.defaults.depreciation) ? patch.defaults.depreciation.ratePct : undefined;
+        if (typeof r === 'number' && Number.isFinite(r) && r >= 0 && r <= 100) out.defaults = { depreciation: { ratePct: r } };
+    }
+    return Object.keys(out).length ? out : null;
 }
 
 function mergePatch(base, patch) {
@@ -34,7 +50,7 @@ export function overrideEntries(overrides) {
         const it = items[key];
         if (!p || !isObj(it)) continue;
         if (it.op === 'hide') out.push({ key, ...p, op: 'hide', baseRev: it.baseRev });
-        else if (it.op === 'patch' && isObj(it.patch)) out.push({ key, ...p, op: 'patch', patch: it.patch, baseRev: it.baseRev });
+        else if (it.op === 'patch' && cleanPatch(p.list, it.patch)) out.push({ key, ...p, op: 'patch', patch: cleanPatch(p.list, it.patch), baseRev: it.baseRev });
     }
     return out;
 }
@@ -86,7 +102,9 @@ export function hideRefItem(data, ref, key) { return put(data, ref, key, { op: '
 
 /** Patch one reference item (for example {categoryId}) for this person. Returns {ok, onUndo}. */
 export function patchRefItem(data, ref, key, patch) {
-    return isObj(patch) ? put(data, ref, key, { op: 'patch', patch }) : { ok: false };
+    const p = parseKey(key);
+    const clean = p && cleanPatch(p.list, patch);
+    return clean ? put(data, ref, key, { op: 'patch', patch: clean }) : { ok: false };
 }
 
 /** Put one item back to what the reference says. */

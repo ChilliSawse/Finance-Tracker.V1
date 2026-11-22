@@ -128,8 +128,7 @@ async function undoRestoreFromRow() {
 async function refreshRefInfo() {
     try {
         const m = await import('../state/reference.js');
-        const v = await m.getReference();
-        const next = { checkEnabled: m.isReferenceCheckEnabled(), dataVersion: v && v.dataVersion ? v.dataVersion : null };
+        const next = { checkEnabled: m.isReferenceCheckEnabled(), dataVersion: await m.getStoredReferenceVersion() }; // reads the cache only: no request
         const changed = next.checkEnabled !== refInfo.checkEnabled || next.dataVersion !== refInfo.dataVersion;
         refInfo = next;
         if (changed) renderList();
@@ -138,8 +137,8 @@ async function refreshRefInfo() {
 
 async function chooseRefCheck(on) {
     const m = await import('../state/reference.js');
-    m.setReferenceCheckEnabled(on);
-    refInfo = { ...refInfo, checkEnabled: on };
+    if (!m.setReferenceCheckEnabled(on)) showToast(t('d.settings.refCheck.failed'), 'error');
+    refInfo = { ...refInfo, checkEnabled: m.isReferenceCheckEnabled() }; // the real stored state
     renderList();
 }
 
@@ -147,6 +146,7 @@ async function goBackRules() {
     const m = await import('../state/reference.js');
     const r = await m.rollbackReference();
     if (!r.ok) { showToast(t('d.settings.refBack.none'), 'info'); return; }
+    (await import('../state/import-rows.js')).resetImportReference(); // this session's import screens read the rules you went back to
     showToast(t('d.settings.refBack.done', { version: r.dataVersion }), 'success');
     await refreshRefInfo();
 }
@@ -160,6 +160,7 @@ async function useReferenceOnly() {
     if (!yes) return;
     const { resetRefOverrides } = await import('../state/ref-overrides.js');
     const res = resetRefOverrides(store.financeData);
+    (await import('../state/import-rows.js')).resetImportReference();
     save();
     showUndoToast({ message: t('d.settings.refReset.done'), onUndo: () => { res.onUndo(); save(); } });
 }
