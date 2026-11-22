@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledger.invalid/ref/schemas/models-index.schema.json",
+  "title": "Built models/index.<hash>.json: the catalogue only (R3 section 5)",
+  "type": "object",
+  "required": ["schema", "rev", "models"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "rev": { "$ref": "common.schema.json#/$defs/rev" },
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "blurb", "version", "engine", "path", "sha256", "bytes"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/id" },
+          "name": { "$ref": "common.schema.json#/$defs/text" },
+          "blurb": { "$ref": "common.schema.json#/$defs/text" },
+          "version": { "$ref": "common.schema.json#/$defs/semver" },
+          "engine": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "pattern": "^models/[a-z0-9][a-z0-9_-]*\\.[0-9a-f]{8}\\.json$" },
+          "sha256": { "$ref": "common.schema.json#/$defs/sha256" },
+          "bytes": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}

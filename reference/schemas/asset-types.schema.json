@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledger.invalid/ref/schemas/asset-types.schema.json",
+  "title": "Asset types (R3 section 5.3). Holds the D2, D3 and D4 shapes: a value curve, effective life, valuation method.",
+  "type": "object",
+  "required": ["schema", "rev", "types"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "rev": { "$ref": "common.schema.json#/$defs/rev" },
+    "types": { "type": "array", "items": { "$ref": "#/$defs/assetType" } }
+  },
+  "$defs": {
+    "curvePoint": {
+      "type": "object",
+      "required": ["year"],
+      "properties": {
+        "year": { "type": "number", "minimum": 0 },
+        "pctOfPricePaid": { "type": "number", "minimum": 0 },
+        "pctOfNew": { "type": "number", "minimum": 0 }
+      },
+      "anyOf": [{ "required": ["pctOfPricePaid"] }, { "required": ["pctOfNew"] }]
+    },
+    "assetType": {
+      "type": "object",
+      "description": "Extra fields are allowed on purpose: the research shapes differ and are reshaped when real content enters (R10). Unknown value = null, never guessed.",
+      "required": ["id", "kind", "reviewed"],
+      "additionalProperties": true,
+      "anyOf": [{ "required": ["name"] }, { "required": ["label"] }],
+      "allOf": [{ "anyOf": [{ "required": ["source"] }, { "required": ["sources"] }] }],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "name": { "$ref": "common.schema.json#/$defs/text" },
+        "label": { "$ref": "common.schema.json#/$defs/text" },
+        "group": { "type": "string", "maxLength": 64 },
+        "kind": { "enum": ["depreciating", "appreciating", "stable", "flat", "yield", "invested", "cash", "setting"], "description": "Kinds used by the D2 to D4 drafts" },
+        "match": { "$ref": "common.schema.json#/$defs/stringList" },
+        "defaults": { "type": "object" },
+        "curve": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/curvePoint" } },
+        "effectiveLife": { "type": "object" },
+        "valuationMethod": { "type": "object" },
+        "source": { "$ref": "common.schema.json#/$defs/text" },
+        "sources": { "type": "array", "minItems": 1, "items": { "type": "object" } },
+        "reviewed": { "$ref": "common.schema.json#/$defs/dateOrNull" }
+      }
+    }
+  }
+}

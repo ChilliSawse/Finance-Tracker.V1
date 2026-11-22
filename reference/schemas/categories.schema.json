@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledger.invalid/ref/schemas/categories.schema.json",
+  "title": "Categories (R3 section 5.2, with the D5 additions)",
+  "type": "object",
+  "required": ["schema", "rev", "categories"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "rev": { "$ref": "common.schema.json#/$defs/rev" },
+    "locale": { "type": "string", "maxLength": 16 },
+    "keywordMatch": { "enum": ["substring", "word"], "description": "How category keywords are matched: the app's own lists are substrings, D5 lists are whole words. Default word." },
+    "groups": {
+      "type": "array",
+      "items": { "type": "object", "required": ["id", "name"], "additionalProperties": false,
+        "properties": { "id": { "$ref": "common.schema.json#/$defs/id" }, "name": { "$ref": "common.schema.json#/$defs/text" } } }
+    },
+    "categories": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/category" } }
+  },
+  "$defs": {
+    "category": {
+      "type": "object",
+      "required": ["id", "name", "icon", "essential", "bucketRole", "keywords", "source", "reviewed"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "name": { "$ref": "common.schema.json#/$defs/text" },
+        "icon": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "essential": { "type": "boolean" },
+        "bucketRole": { "$ref": "common.schema.json#/$defs/bucketRole", "description": "A role, never a bucket id (user bucket ids differ per user)" },
+        "keywords": { "type": "array", "items": { "type": "string", "minLength": 1, "maxLength": 100 } },
+        "source": { "$ref": "common.schema.json#/$defs/text" },
+        "reviewed": { "$ref": "common.schema.json#/$defs/dateOrNull", "description": "Date a person reviewed the entry; null = nobody has" },
+        "group": { "$ref": "common.schema.json#/$defs/id" },
+        "kind": { "enum": ["expense", "income", "transfer", "refund"] },
+        "usuallyBill": { "type": "boolean" },
+        "legacyCategoryId": { "$ref": "common.schema.json#/$defs/id" },
+        "countsAs": { "enum": ["saving", "spending-until-confirmed"] },
+        "netAgainstMatchedCategory": { "type": "boolean" },
+        "whatGoesHere": { "$ref": "common.schema.json#/$defs/text" },
+        "monthlyBudget": { "type": ["number", "null"], "minimum": 0 }
+      }
+    }
+  }
+}

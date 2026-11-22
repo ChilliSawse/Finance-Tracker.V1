@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledger.invalid/ref/schemas/merchants-part.schema.json",
+  "title": "One source file reference/src/merchants/<a-z|0>.json (split by first letter of the key)",
+  "type": "object",
+  "required": ["schema", "merchants"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "merchants": { "type": "array", "items": { "$ref": "merchants.schema.json#/$defs/merchant" } }
+  }
+}
