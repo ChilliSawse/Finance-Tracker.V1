@@ -22,6 +22,7 @@
         "name": { "$ref": "common.schema.json#/$defs/text" },
         "type": { "enum": ["merchant", "keyword"] },
         "categoryId": { "$ref": "common.schema.json#/$defs/id" },
+        "refCategory": { "$ref": "common.schema.json#/$defs/id", "description": "D5's finer category, kept for when new reference categories are offered (R3 section 8). Never used for sorting today: categoryId is one of the app's own ids." },
         "direction": { "enum": ["any", "credit", "debit"] },
         "match": { "enum": ["key", "keyword", "word"], "description": "key/keyword = R3 5.2; word = whole word or phrase on the normalised text (D5). Never a regular expression." },
         "patterns": { "$ref": "common.schema.json#/$defs/stringList" },
