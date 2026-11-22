@@ -6,7 +6,7 @@
 //   2. if any gated migration is pending, write the raw save to BACKUP_KEY
 //      (byte for byte, only if the key is absent). A failed write aborts: no
 //      new migration runs and the app carries on with the legacy shape;
-//   3-5b. plan, bucket, income fields, asset and debt detail, then (DB2) the learned-rule keys;
+//   3-5b. plan, bucket, income fields, asset and debt detail;
 //   6. forceSave() once if any of 3-5b changed the data;
 //   7. on import only, each module's afterImport(data).
 // Each owner module keeps its own version guard and totals check, so the chain
@@ -23,7 +23,6 @@ import * as plan from './plan-migration.js';
 import * as bucket from './bucket-migration.js';
 import * as income from './income-migration.js';
 import * as assetDebt from './asset-debt-migration.js';
-import * as rulesKeys from './rules-migration.js';
 
 export const BACKUP_KEY = 'ft-backup-pre-plan';
 
@@ -34,13 +33,12 @@ const LEGACY_STEPS = [
     ['migrateVariableIncomeFields', migrateVariableIncomeFields],
 ];
 
-/** The owner steps in chain order. backupGate: pending => the backup is taken first. */
+/** The four owner steps in chain order. backupGate: pending => the backup is taken first. */
 export const DEFAULT_MODULES = [
     { name: 'migratePlanModel', needs: plan.needsPlanMigration, migrate: plan.migratePlanModel, afterImport: plan.afterImport, backupGate: true },
     { name: 'migrateBucketModel', needs: bucket.needsBucketMigration, migrate: bucket.migrateBucketModel, afterImport: bucket.afterImport, backupGate: true },
     { name: 'migrateIncomeFields', needs: income.needsIncomeMigration, migrate: income.migrateIncomeFields, afterImport: income.afterImport, backupGate: false },
     { name: 'migrateAssetDebtDetail', needs: assetDebt.needsAssetDebtMigration, migrate: assetDebt.migrateAssetDebtDetail, afterImport: assetDebt.afterImport, backupGate: true },
-    { name: 'migrateRuleKeys', needs: rulesKeys.needsRulesMigration, migrate: rulesKeys.migrateRuleKeys, afterImport: rulesKeys.afterImport, backupGate: true },
 ];
 
 function cloneData(data) {

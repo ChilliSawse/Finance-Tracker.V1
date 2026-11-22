@@ -3,9 +3,10 @@
 // the backup round trip. Synthetic data only. Shape: { name, fn(assert) }, assert(label, actual, expected).
 
 import {
-    isTransferRow, normaliseLabelText, matchBucketLabel, transferSuggestion, MIN_LABEL_LENGTH,
+    isTransferRow, normaliseLabelText, MIN_LABEL_LENGTH,
 } from './transfers.js';
-import { resolveImportRow, suggestedTransfersLine } from '../state/rules.js';
+import { matchBucketLabel, transferSuggestion } from './transfer-suggest.js';
+import { resolveImportRow, suggestedTransfersLine } from '../state/import-rows.js';
 import { leftThisPay } from './pay-cycle.js';
 import { buildTodayModel, buildActivityFeed } from '../state/today-model.js';
 import { loadSpendCache, getSpendCache } from '../state/spend-cache.js';
@@ -100,8 +101,7 @@ export const TRANSFERS_TEST_CASES = [
             const ruled = { ...data, rules: [{ key: 'transfer to', categoryId: 'shopping' }] };
             assert('a learned rule beats the bank label', resolveImportRow('Transfer to Fire', -30000, undefined, ruled).categoryId, 'shopping');
             assert('money in is not touched', resolveImportRow('Fire payout', 30000, undefined, data).categoryId !== 'transfer', true);
-            assert('no data at all', resolveImportRow('Mystery payee', -1, undefined, null).categoryId, 'other');
-            assert('own-account wording is a transfer even with no bucket data (DB2)', resolveImportRow('Transfer to Fire', -1, undefined, null).categoryId, 'transfer');
+            assert('no data at all', resolveImportRow('Transfer to Fire', -1, undefined, null).categoryId, 'other');
             const rows = [{ bucketSuggested: true }, { bucketSuggested: true }, {}];
             assert('summary line, many', suggestedTransfersLine(rows), '2 looked like transfers to your buckets. Check them in To review.');
             assert('summary line, one', suggestedTransfersLine([{ bucketSuggested: true }]), '1 looked like a transfer to one of your buckets. Check it in To review.');
