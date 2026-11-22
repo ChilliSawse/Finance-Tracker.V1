@@ -16,13 +16,13 @@ import { getBuckets } from '../state/saving-model.js';
 import { leftThisPay } from '../calc/pay-cycle.js';
 import { getSpendCache, refreshSpendCache } from '../state/spend-cache.js';
 import {
-    makeTransaction, addTransactions, updateTransaction, deleteTransaction, importTransactions, isValidIsoDate,
+    makeTransaction, addTransactions, updateTransaction, deleteTransaction, isValidIsoDate,
 } from '../state/transactions.js';
-import { addPlanItem } from '../state/plan.js';
 import { categoryIcon } from '../state/categories.js';
 import { ICON_PATHS } from './icon-paths.js';
 import { showToast, showUndoToast } from './toast.js';
 import { rememberFocus, trapTab, getFocusables } from './focus.js';
+import { addPlanItem } from '../state/plan.js';
 import { updateAllUI } from './render.js';
 import {
     REPEAT_FREQUENCIES, parseAmountCents, guessCategory, orderCategoryChips, categoryLine, resolveBucket,
@@ -398,8 +398,9 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
                 await updateTransaction(next);
                 close();
                 await afterChange();
-                // The Undo toast and learn on correct (FT-R-56) load only now, so they stay out of the cold-load core.
-                await (await import('./learn.js')).default(data, prev, next, afterChange);
+                // Learn on correct (FT-R-56) and its toast load only now, so they stay out of the cold-load core. If that fails
+                // the row is still saved: show the plain Updated toast, never "did not save".
+                if (!await import('./learn.js').then((m) => m.default(data, prev, next, afterChange), () => 0)) showUndoToast({ message: t('a.quickAdd.updated', { name: next.description || t('a.quickAdd.entryFallback') }), onUndo: async () => { await updateTransaction(prev); await afterChange(); } });
                 return;
             }
             const row = makeTransaction(fieldsFor());
@@ -425,18 +426,9 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
         }
     }
 
-    async function remove() {
-        if (!edit) return;
-        const prev = txn;
-        try {
-            await deleteTransaction(prev.id);
-        } catch (_) { showToast(t('a.quickAdd.failed'), 'error'); return; }
-        close();
-        await afterChange();
-        showUndoToast({
-            message: t('a.quickAdd.deleted', { name: prev.description || t('a.quickAdd.entryFallback') }),
-            onUndo: async () => { await importTransactions([prev]); await afterChange(); },
-        });
+    // Delete is rare, so it loads with the edit toast (learn.js) instead of sitting in the cold-load core.
+    async function remove() { // only the edit panel has a Delete button
+        try { await (await import('./learn.js')).removeRow(txn, close, afterChange); } catch (_) { showToast(t('a.quickAdd.failed'), 'error'); }
     }
 
     // ---- delegated events, all on the layer ----

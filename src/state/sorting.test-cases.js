@@ -143,7 +143,7 @@ export const SORTING_TEST_CASES = [
             const data = { rules: [] };
             learnRule(data, 'PURCHASE, ZEDCO', 'dining');
             assert('a rule learned now still matches', categoriseDescription('PURCHASE, ZEDCO 7', cats, data.rules), 'dining');
-            const rows = [{ id: 'a', description: 'PURCHASE, ZEDCO 9', status: 'review' }, { id: 'b', description: 'OTHER SHOP', status: 'review' }];
+            const rows = [{ id: 'a', description: 'PURCHASE, ZEDCO 9', status: 'review', amountCents: -100 }, { id: 'b', description: 'OTHER SHOP', status: 'review', amountCents: -100 }];
             assert('similarUnconfirmed uses the same matching', similarUnconfirmed(rules[2], rows).map((r) => r.id), ['a']);
         },
     },

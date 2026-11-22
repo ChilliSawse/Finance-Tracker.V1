@@ -30,13 +30,13 @@ export function createToastQueue({ view, setTimer = setTimeout, clearTimer = cle
         c.timer = setTimer(() => finish(c, 'expire'), c.remaining);
     }
 
-    function finish(c, how) {
+    function finish(c, how, i = 0) {
         if (c.done) return;
         c.done = true;
         if (c.timer != null) clearTimer(c.timer);
         c.timer = null;
         if (cur === c) cur = null;
-        if (how === 'act') safely(c.entry.action && c.entry.action.onAction);
+        if (how === 'act') safely([].concat(c.entry.action)[i].onAction);
         else safely(c.entry.onExpire); // expire, dismiss, replace: the change is committed
         if (how !== 'replace' && !cur) view.hide();
     }
@@ -55,7 +55,7 @@ export function createToastQueue({ view, setTimer = setTimeout, clearTimer = cle
             arm(c);
         },
         /** The action button (Undo): runs onAction, does not commit. */
-        act() { if (cur) finish(cur, 'act'); },
+        act(i) { if (cur) finish(cur, 'act', i); },
         /** The dismiss button: commits. */
         dismiss() { if (cur) finish(cur, 'dismiss'); },
         pause() {
@@ -90,7 +90,7 @@ function ensureToastEl() {
     toastEl.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-toast-act]');
         if (!btn || !queue) return;
-        if (btn.dataset.toastAct === 'action') queue.act(); else queue.dismiss();
+        if (btn.dataset.toastAct === 'action') queue.act(btn.dataset.i | 0); else queue.dismiss();
     });
     toastEl.addEventListener('mouseover', () => queue && queue.pause());
     toastEl.addEventListener('mouseout', (e) => { if (!toastEl.contains(e.relatedTarget) && queue) queue.resume(); });
@@ -107,22 +107,17 @@ const domView = {
         msg.className = 'toast-msg';
         msg.textContent = entry.message; // text only, never HTML
         el.appendChild(msg);
-        if (entry.action) {
+        const button = (cls, act, label, i) => {
             const b = document.createElement('button');
             b.type = 'button';
-            b.className = 'toast-action';
-            b.dataset.toastAct = 'action';
-            b.textContent = entry.action.label;
+            b.className = cls;
+            b.dataset.toastAct = act;
+            b.dataset.i = i;
+            b.textContent = label;
             el.appendChild(b);
-        }
-        if (entry.duration <= 0) {
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'toast-dismiss';
-            b.dataset.toastAct = 'dismiss';
-            b.textContent = t('d.toast.dismiss');
-            el.appendChild(b);
-        }
+        };
+        [].concat(entry.action || []).forEach((a, i) => button('toast-action', 'action', a.label, i)); // action: one { label, onAction } or a list of them
+        if (entry.duration <= 0) button('toast-dismiss', 'dismiss', t('d.toast.dismiss'));
         el.className = `is-${entry.kind}`;
         if (entry.action || entry.duration <= 0) el.classList.add('has-controls');
         // Restart the show animation even when a toast is already visible.
@@ -158,10 +153,10 @@ export function dismissToastTagged(tag) {
 }
 
 /** Toast with an Undo button. onUndo runs on Undo; onExpire when it times out, is dismissed or replaced. */
-export function showUndoToast({ message, onUndo, onExpire, duration = UNDO_DURATION, actionLabel }) {
+export function showUndoToast({ message, onUndo, onExpire, duration = UNDO_DURATION, actions }) {
     getQueue().show({
         message, kind: 'info', duration, onExpire,
-        action: { label: actionLabel || t('d.toast.undo'), onAction: onUndo },
+        action: actions || { label: t('d.toast.undo'), onAction: onUndo },
     });
 }
 

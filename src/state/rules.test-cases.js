@@ -2,7 +2,7 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 
 import { DEFAULT_CATEGORIES, categoriseDescription } from './categories.js';
-import { learnKeyFor, isLearnableKey, learnRule, applyRuleToSimilar, similarUnconfirmed } from './rule-learn.js';
+import { learnKeyFor, ruleKeyFor, isLearnableKey, learnFromCorrection, learnRule, applyRuleToSimilar, similarUnconfirmed } from './rule-learn.js';
 import { resolveImportRow } from './import-rows.js';
 import { merchantKey, categorise, categoriseDetailed, resolveCategory, removeRule, planManualMerges } from './rules.js';
 
@@ -158,6 +158,43 @@ export const RULES_TEST_CASES = [
             const out = applyRuleToSimilar(rule, rows);
             assert('applied rows get the category and ok', out.map((r) => [r.id, r.categoryId, r.status]), [['a', 'dining', 'ok'], ['b', 'dining', 'ok']]);
             assert('inputs untouched', rows[0].status, 'review');
+        },
+    },
+    {
+        name: 'DB9.6 broad keys: processors, BNPL, bank words; a key never catches a different merchant',
+        fn(assert) {
+            const none = ['PAYPAL 4029357733', 'AFTERPAY 99812', 'ZIP PAY 1234', 'ZIPPAY 77', 'KLARNA 12', 'PAYPAL AUSTRALIA 1234', 'AFTERPAY AU PTY LTD', 'Osko payment 1234', 'NETBANK TFR 55', 'Fast transfer', 'Pay Anyone', 'Repayment 1234', 'Member payment', 'Purchase authorisation 9', 'Withdrawal 12'];
+            assert('no merchant, no key', none.map(ruleKeyFor), none.map(() => ''));
+            assert('after a bank word the key is taken again', [ruleKeyFor('Transfer Zarnok Quill'), ruleKeyFor('Payment Zarnok Plumbing'), ruleKeyFor('Osko Zarnok Quill'), ruleKeyFor('Transfer to Zarnok Quill')], ['zarnok quill', 'zarnok plumbing', 'zarnok quill', 'zarnok quill']);
+            assert('a processor with a merchant keeps the merchant', ruleKeyFor('PAYPAL *ZARNOKSHOP 4029357733'), 'zarnokshop');
+            const catches = (src, other) => { const k = ruleKeyFor(src); return !!k && categoriseDetailed(other, cats, [{ key: k, categoryId: 'dining' }]).by === 'rule'; };
+            assert('Zarnok Plumbing does not catch Zarnok Electrical', catches('Payment Zarnok Plumbing', 'PAYMENT ZARNOK ELECTRICAL'), false);
+            assert('Zarnok Quill does not catch Zarnok Other', catches('Osko Zarnok Quill', 'Osko Zarnok Otherco'), false);
+        },
+    },
+    {
+        name: 'DB9.7 spending moved to income learns nothing; a move to other removes the old rule, with undo; apply skips money-in and suggestions',
+        async fn(assert) {
+            const withInc = [...cats, { id: 'wages', kind: 'income', keywords: [] }, { id: 'invest', kind: 'transfer', keywords: [] }];
+            const base = row({ id: 'n', description: 'ZEDCO 12', categoryId: 'dining', status: 'ok', amountCents: -500 });
+            assert('to an income-kind category', [learnKeyFor(base, 'wages', withInc), learnKeyFor(base, 'income', withInc), learnKeyFor(base, 'invest', withInc)], ['', '', '']);
+            const data = { categories: withInc, rules: [{ key: 'zedco', categoryId: 'dining' }, { key: 'qwerty', categoryId: 'health' }] };
+            const res = await learnFromCorrection(data, base, 'other');
+            assert('rule with that exact key removed', data.rules.map((r) => r.key), ['qwerty']);
+            res.onUndo();
+            assert('undo puts it back in place', data.rules.map((r) => r.key), ['zedco', 'qwerty']);
+            assert('no rule for the key: nothing to do', await learnFromCorrection({ categories: withInc, rules: [] }, base, 'other'), null);
+            const rule = { key: 'zedco', categoryId: 'dining' };
+            const rows = [
+                row({ id: 'a', description: 'ZEDCO 1', status: 'review', referenceSuggested: true, refConfidence: 'high', refId: 'x' }),
+                row({ id: 'b', description: 'ZEDCO 2', status: 'review', amountCents: 500 }),
+                row({ id: 'c', description: 'ZEDCO 3', status: 'review', transferSuggested: true }),
+                row({ id: 'd', description: 'ZEDCO 4', status: 'review', bucketSuggested: true }),
+                row({ id: 'e', description: 'ZEDCO 5', status: 'review', categoryId: 'invest' }),
+            ];
+            assert('only the plain money-out row', similarUnconfirmed(rule, rows, withInc).map((r) => r.id), ['a']);
+            const out = applyRuleToSimilar(rule, rows, withInc)[0];
+            assert('reference fields dropped', [out.referenceSuggested, out.refConfidence, out.refId, out.status], [undefined, undefined, undefined, 'ok']);
         },
     },
     {

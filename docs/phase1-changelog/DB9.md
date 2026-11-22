@@ -10,3 +10,10 @@
   `applyRuleToSimilar` and `applyRuleToStored` MOVED from `rules.js` to `rule-learn.js` (left in `rules.js` they were pulled into the core
   chunk); the three strings are in `i18n/en-learn.js`, filled in by `learn.js`, not by `t()`. `showUndoToast` takes an optional `actionLabel`.
 - Tests: `rules` DB9.1 to DB9.4 (pure), `transactions` DB9.5 (stored rows, apply, undo).
+
+## Review fixes
+- The offer toast carries Apply and Undo (and Dismiss: it stays until used, WCAG 2.2.1). `toast.js` accepts `action` as one `{label, onAction}` or a list. Undo puts the row back and takes the learned rule back; the Undo after Apply also takes back the rows, the rule and the edit.
+- Apply: money out only, never a suggested transfer or bucket, a transfer (id or category kind), or a split; reference suggestion fields are dropped. One IndexedDB transaction to apply and one to undo; undo skips rows edited since the apply; a failed apply shows `a.quickAdd.failed` and changes nothing.
+- Keys: processor, BNPL and filler words (paypal, afterpay, zip, klarna, pty, ltd ...) and more bank words never make a key; a key starting with a bank word is taken again from the text after it (`ruleKeyFor`).
+- A correction back to "other" removes the rule with that exact key (undoable). A spending row moved to an income category learns nothing.
+- If `learn.js` fails to load the plain "Updated" + Undo toast shows from core; errors in it never reach the save catch. Delete (with its Undo) now also loads from `learn.js`; `a.quickAdd.deleted` moved to `en-learn.js`.

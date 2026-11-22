@@ -255,7 +255,7 @@ export const TRANSACTIONS_TEST_CASES = [
             const l = await learnFromCorrection(data, edited, 'dining');
             assert('rule learned, one unconfirmed same-key row offered', [data.rules, l.count], [[{ key: 'zedco', categoryId: 'dining' }], 1]);
             assert('nothing else changed until Apply (only the edited row is dining)', (await listTransactions()).filter((r) => r.categoryId === 'dining').length, 1);
-            const res = await applyLearnedRule(l.rule);
+            const res = await applyLearnedRule(l.rule, data.categories);
             const after = await listTransactions();
             const get = (d) => after.find((r) => r.description === d);
             assert('applied count and the one row', [res.count, get('ZEDCO 2').categoryId, get('ZEDCO 2').status], [1, 'dining', 'ok']);
@@ -263,6 +263,13 @@ export const TRANSACTIONS_TEST_CASES = [
             await res.undo();
             const back = (await listTransactions()).find((r) => r.description === 'ZEDCO 2');
             assert('undo puts the row back', [back.categoryId, back.status], ['other', 'review']);
+            await res.undo(); // a second undo is harmless
+            const again = await applyLearnedRule(l.rule, data.categories);
+            const row2 = (await listTransactions()).find((r) => r.description === 'ZEDCO 2');
+            await updateTransaction({ ...row2, note: 'edited since' });
+            await again.undo();
+            const kept = (await listTransactions()).find((r) => r.description === 'ZEDCO 2');
+            assert('undo skips a row edited since the apply', [kept.categoryId, kept.note], ['dining', 'edited since']);
             const none = await learnFromCorrection(data, mk('VISA DEBIT PURCHASE CARD 1234'), 'dining');
             assert('a rail-only description learns nothing', [none, data.rules.length], [null, 1]);
             await deleteDb();

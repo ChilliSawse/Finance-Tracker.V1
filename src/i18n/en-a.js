@@ -86,7 +86,6 @@ export const enA = {
     'a.quickAdd.saved': 'Saved {amount}.',
     'a.quickAdd.savedRepeat': 'Saved {amount}. Added to Plan as {frequency}.',
     'a.quickAdd.updated': 'Updated {name}.',
-    'a.quickAdd.deleted': 'Deleted {name}.',
     'a.quickAdd.failed': 'That did not save. Try again.',
     'a.quickAdd.entryFallback': 'the entry',
     // Activity screen (A7). Statuses are derived from transaction and bill state in code, never typed.
