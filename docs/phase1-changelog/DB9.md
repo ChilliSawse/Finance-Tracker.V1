@@ -18,3 +18,8 @@
 - A correction back to "other" removes the rule with that exact key (undoable). A spending row moved to an income category learns nothing.
 - If `learn.js` fails to load the plain "Updated" + Undo toast shows from core; errors in it never reach the save catch. Delete is as it was (static, no dependence on `learn.js`).
 - Cold-load headroom: 1,049 strings used only by one lazy screen moved out of the first-load catalogue into `src/i18n/en-lazy-<screen>.js` (activity, plan, plan-lists, future, onboarding, income-layout, scenario, results). Each file registers itself in `en` and is the first import of its screen's entry module, so the strings are there before the screen renders. Chosen from the built chunks: a key moved only if every use sits in that one lazy chunk (dynamic key prefixes included); settings-screen strings were left alone. `test-registry.js` loads them all for the tests.
+
+## Second review
+- One key for learning and lookup: `ruleKeyFor` is `merchantKey`, refused when it is only bank/processor wording or starts with bank wording (so `Osko Zarnok Quill`, `Transfer to ...`, `Payment to ...`, `Card payment ...` learn nothing). Test DB9.8 checks every learned rule matches its own row over all the made-up shapes.
+- Undo of Apply compares the exact row written, not `updatedAt`. A row leaving a transfer-kind category learns nothing. If the edit toast fails after a rule was learned, the rule is taken back.
+- `tools/lazy-check.mjs` (also `npm run check:lazy`, run by `tools/tools-check.mjs`) fails when a string in an `en-lazy-*` catalogue could be read before its catalogue loads. It found that `plan-lists.js` builds `a.plan.*` keys, so it now imports the plan catalogue too.

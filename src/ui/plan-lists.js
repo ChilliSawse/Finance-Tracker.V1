@@ -7,6 +7,7 @@
 // comes from planTotals-style maths (calc/plan.js) or the plan item itself; none is typed in.
 
 import '../i18n/en-lazy-plan-lists.js'; // plan-lists strings (en-lazy)
+import '../i18n/en-lazy-plan.js'; // the a.plan.* strings it builds keys for (shared with the Plan screen)
 import { t } from '../i18n/strings.js';
 import { esc, escNum } from './html.js';
 import { formatCurrency, getPayCyclesPerYear } from '../utils.js';

@@ -25,16 +25,15 @@ export function isLearnableKey(key) {
     return key.split(/\s+/).some((w) => w && !RAIL_WORDS.has(w) && !PROCESSOR_WORDS.has(w));
 }
 
-/** The merchant key to learn for a description, or '' when it names no single merchant. */
+/**
+ * The merchant key to learn for a description, or '' when it names no single merchant. It is merchantKey itself, the
+ * same key the lookup uses, so a learned rule always matches the row it came from. A key that starts with bank wording
+ * ('osko zarnok', 'transfer to', 'card payment') is refused: it would catch every payee behind that wording, and
+ * a payment to a person is not a merchant.
+ */
 export function ruleKeyFor(description) {
-    let key = merchantKey(description);
-    if (key && RAIL_WORDS.has(key.split(' ')[0])) {
-        const words = String(description || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-        let i = 0;
-        while (i < words.length && RAIL_WORDS.has(words[i])) i++;
-        key = merchantKey(words.slice(i).join(' '));
-    }
-    return isLearnableKey(key) ? key : '';
+    const key = merchantKey(description);
+    return isLearnableKey(key) && !RAIL_WORDS.has(key.split(' ')[0]) ? key : '';
 }
 
 /**
@@ -88,6 +87,8 @@ export function applyRuleToSimilar(rule, rows, categories) {
     });
 }
 
+const sameRow = (a, b) => { const ka = Object.keys(a).filter((k) => a[k] !== undefined), kb = Object.keys(b).filter((k) => b[k] !== undefined); return ka.length === kb.length && ka.every((k) => JSON.stringify(a[k]) === JSON.stringify(b[k])); };
+
 /**
  * Stored version of applyRuleToSimilar: all rows in ONE transaction (a failure changes none), skipping a row that
  * changed since it was listed. Returns { count, undo }; undo is one transaction too and skips any row edited since
@@ -98,25 +99,27 @@ export async function applyRuleToStoredUndoable(rule, categories) {
     const before = new Map(all.map((r) => [r.id, r]));
     const changed = applyRuleToSimilar(rule, all, categories);
     const stamp = new Date().toISOString();
-    const written = [];
+    const written = new Map(); // id -> the exact row written
     await withStore('transactions', 'readwrite', (store) => {
         for (const r of changed) {
             store.get(r.id).onsuccess = (e) => {
                 const cur = e.target.result;
                 if (!cur || (cur.updatedAt || cur.createdAt) !== before.get(r.id).updatedAt || cur.status !== 'review') return;
-                store.put({ ...r, hash: cur.hash, updatedAt: stamp });
-                written.push(r.id);
+                const put = { ...r, hash: cur.hash, updatedAt: stamp };
+                store.put(put);
+                written.set(r.id, put);
             };
         }
     });
     const undo = async () => {
         await withStore('transactions', 'readwrite', (store) => {
-            for (const id of written) {
-                store.get(id).onsuccess = (e) => { const cur = e.target.result; if (cur && cur.updatedAt === stamp) store.put(before.get(id)); };
+            for (const [id, put] of written) {
+                // Only a row that is still exactly what the apply wrote: an edit since, even in the same millisecond, is kept.
+                store.get(id).onsuccess = (e) => { const cur = e.target.result; if (cur && sameRow(cur, put)) store.put(before.get(id)); };
             }
         });
     };
-    return { count: written.length, undo };
+    return { count: written.size, undo };
 }
 
 /** Stored version of applyRuleToSimilar; returns how many rows changed. */
@@ -129,10 +132,11 @@ function editKey(txn, nextCategoryId, categories) {
     if (!txn || !nextCategoryId || nextCategoryId === txn.categoryId) return '';
     if (txn.source === 'manual' || txn.source === 'sample') return '';
     if (!(txn.amountCents < 0)) return '';
-    const target = (Array.isArray(categories) ? categories : []).find((c) => c && c.id === nextCategoryId);
-    if (nextCategoryId !== 'other') {
-        if (!target || target.kind === 'income' || nextCategoryId === 'income' || isTransferRow(txn, target)) return '';
-    } else if (isTransferRow(txn, null)) return '';
+    const cats = Array.isArray(categories) ? categories : [];
+    const target = cats.find((c) => c && c.id === nextCategoryId);
+    // Neither the category the row leaves nor the one it goes to may be a transfer (investments and super count, FT-R-126).
+    if (isTransferRow(txn, cats.find((c) => c && c.id === txn.categoryId)) || isTransferRow({ categoryId: nextCategoryId }, target)) return '';
+    if (nextCategoryId !== 'other' && (!target || target.kind === 'income' || nextCategoryId === 'income')) return '';
     return ruleKeyFor(txn.description);
 }
 

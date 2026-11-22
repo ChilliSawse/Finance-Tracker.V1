@@ -21,17 +21,25 @@ const L = (key, params) => enLearn[key].replace(/\{(\w+)\}/g, (m, k) => (params 
  * @param {object} next the saved row
  * @param {Function} afterChange refreshes the screens
  */
-export default async function afterEdit(...args) {
-    try { return await show(...args); } catch (err) { console.error('edit toast failed', err); return false; } // never an error for the save
+export default async function afterEdit(data, prev, next, afterChange) {
+    let learned = null;
+    try {
+        return await show(data, prev, next, afterChange, (l) => { learned = l; });
+    } catch (err) { // never an error for the save; a rule learned for an edit that shows no toast is taken back
+        console.error('edit toast failed', err);
+        if (learned) { learned.onUndo(); try { await afterChange({ planChanged: true }); } catch (_) { /* the rule is already out */ } }
+        return false;
+    }
 }
 
-async function show(data, prev, next, afterChange) {
+async function show(data, prev, next, afterChange, remember) {
     const name = next.description || t('a.quickAdd.entryFallback');
     let learned = null;
     try {
         if (next.categoryId !== prev.categoryId) learned = await learnFromCorrection(data, prev, next.categoryId);
+        remember(learned);
         if (learned) await afterChange({ planChanged: true });
-    } catch (err) { console.error('learn on correct failed', err); learned = null; }
+    } catch (err) { console.error('learn on correct failed', err); if (learned) learned.onUndo(); learned = null; remember(null); }
     const undoEdit = async () => { await updateTransaction(prev); if (learned) learned.onUndo(); await afterChange({ planChanged: !!learned }); };
     if (learned && learned.count) {
         const cat = (data.categories || []).find((c) => c && c.id === next.categoryId);

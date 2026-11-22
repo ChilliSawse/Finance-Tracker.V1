@@ -2,7 +2,7 @@
 // Browser only: runs on the throwaway IndexedDB `ledger-test-db`, never the app's DB.
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 
-import { configureDb, deleteDb, openDb } from './db.js';
+import { configureDb, deleteDb, openDb, withStore } from './db.js';
 import {
     makeTransaction, addTransactions, listTransactions, updateTransaction, deleteImportBatch,
     exportAllTransactions, importTransactions, transactionStatus, countTransactions, isValidIsoDate,
@@ -266,7 +266,7 @@ export const TRANSACTIONS_TEST_CASES = [
             await res.undo(); // a second undo is harmless
             const again = await applyLearnedRule(l.rule, data.categories);
             const row2 = (await listTransactions()).find((r) => r.description === 'ZEDCO 2');
-            await updateTransaction({ ...row2, note: 'edited since' });
+            await withStore('transactions', 'readwrite', (s) => s.put({ ...row2, note: 'edited since' })); // same updatedAt: the same millisecond as the apply
             await again.undo();
             const kept = (await listTransactions()).find((r) => r.description === 'ZEDCO 2');
             assert('undo skips a row edited since the apply', [kept.categoryId, kept.note], ['dining', 'edited since']);

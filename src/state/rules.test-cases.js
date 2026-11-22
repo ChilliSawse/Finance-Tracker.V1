@@ -165,11 +165,10 @@ export const RULES_TEST_CASES = [
         fn(assert) {
             const none = ['PAYPAL 4029357733', 'AFTERPAY 99812', 'ZIP PAY 1234', 'ZIPPAY 77', 'KLARNA 12', 'PAYPAL AUSTRALIA 1234', 'AFTERPAY AU PTY LTD', 'Osko payment 1234', 'NETBANK TFR 55', 'Fast transfer', 'Pay Anyone', 'Repayment 1234', 'Member payment', 'Purchase authorisation 9', 'Withdrawal 12'];
             assert('no merchant, no key', none.map(ruleKeyFor), none.map(() => ''));
-            assert('after a bank word the key is taken again', [ruleKeyFor('Transfer Zarnok Quill'), ruleKeyFor('Payment Zarnok Plumbing'), ruleKeyFor('Osko Zarnok Quill'), ruleKeyFor('Transfer to Zarnok Quill')], ['zarnok quill', 'zarnok plumbing', 'zarnok quill', 'zarnok quill']);
+            assert('a key that starts with bank wording is refused, so payments to a payee never learn', ['Transfer Zarnok Quill', 'Payment Zarnok Plumbing', 'Osko Zarnok Quill 55', 'Transfer to Zarnok Quill', 'Payment to Zarnok Plumbing', 'Card payment Zarnok'].map(ruleKeyFor), ['', '', '', '', '', '']);
             assert('a processor with a merchant keeps the merchant', ruleKeyFor('PAYPAL *ZARNOKSHOP 4029357733'), 'zarnokshop');
             const catches = (src, other) => { const k = ruleKeyFor(src); return !!k && categoriseDetailed(other, cats, [{ key: k, categoryId: 'dining' }]).by === 'rule'; };
-            assert('Zarnok Plumbing does not catch Zarnok Electrical', catches('Payment Zarnok Plumbing', 'PAYMENT ZARNOK ELECTRICAL'), false);
-            assert('Zarnok Quill does not catch Zarnok Other', catches('Osko Zarnok Quill', 'Osko Zarnok Otherco'), false);
+            assert('a merchant key does not catch a different merchant', [catches('ZARNOK CAFE 12', 'ZARNOK HARDWARE 3'), catches('ZARNOK CAFE 12', 'ZARNOK CAFE 99')], [false, true]);
         },
     },
     {
@@ -183,6 +182,8 @@ export const RULES_TEST_CASES = [
             assert('rule with that exact key removed', data.rules.map((r) => r.key), ['qwerty']);
             res.onUndo();
             assert('undo puts it back in place', data.rules.map((r) => r.key), ['zedco', 'qwerty']);
+            const away = [...withInc, { id: 'super', kind: 'transfer', keywords: [] }];
+            assert('leaving a transfer-kind category learns nothing', [learnKeyFor({ ...base, categoryId: 'super' }, 'dining', away), learnKeyFor({ ...base, categoryId: 'super' }, 'other', away)], ['', '']);
             assert('no rule for the key: nothing to do', await learnFromCorrection({ categories: withInc, rules: [] }, base, 'other'), null);
             const rule = { key: 'zedco', categoryId: 'dining' };
             const rows = [

@@ -14,6 +14,7 @@
     "preview": "vite preview",
     "test:ci": "node tools/ci-tests.mjs",
     "check:coldload": "node tools/z1-coldload.mjs",
+    "check:lazy": "node tools/lazy-check.mjs",
     "ref:check": "node reference/tools/build.mjs",
     "build:themes": "node scripts/build-themes.mjs"
   },
