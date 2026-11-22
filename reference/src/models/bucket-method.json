@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "schemaVersion": 1,
   "id": "bucket-method",
   "version": "1.0.0",
   "meta": {

@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "schemaVersion": 1,
+  "id": "pay-yourself-first",
+  "version": "1.0.0",
+  "meta": {
+    "title": "Pay yourself first (10%)",
+    "blurb": "Move a set share of every pay into savings before anything else, then spend the rest freely. The classic share is one tenth.",
+    "after": "George S. Clason, The Richest Man in Babylon (pamphlets from 1926, book 1930). Not affiliated with or endorsed by the estate.",
+    "source": "https://www.ifa.com/articles/from_babylon_long_history_paying_yourself_first",
+    "sourceKind": "secondary; primary text not opened",
+    "retrieved": "2026-11-22",
+    "licence": "CC0-1.0",
+    "reviewed": "2026-11-22",
+    "status": "estimate. PROPOSED, NOT SHIPPED (FT-R-71): the catalogue ships only the Bucket method at launch.",
+    "requires": {
+      "engine": "fixed"
+    },
+    "checks": {
+      "validateModelDef": "ok",
+      "naming": "A common phrase, not a brand. Title \"Pay yourself first (10%)\"; credit Clason in meta.after. UNVERIFIED: whether the 1926/1930 text is out of copyright in Australia (Clason died 1956, likely life plus 70).",
+      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked."
+    }
+  },
+  "model": {
+    "id": "pay-yourself-first",
+    "name": "Pay yourself first",
+    "basis": "net",
+    "engine": "fixed",
+    "buckets": [
+      {
+        "name": "Pay yourself first",
+        "slot": 1,
+        "kind": "save",
+        "pct": 10
+      },
+      {
+        "name": "Everything else",
+        "slot": 2,
+        "kind": "spend",
+        "pct": 90
+      }
+    ],
+    "rules": {
+      "coreBuckets": [],
+      "renamable": true,
+      "splitEditable": true,
+      "mojoShare": null,
+      "childrenAllowedIn": null,
+      "maxDepth": 3,
+      "remainderRatio": {
+        "smile": 1,
+        "fire": 2
+      },
+      "targetList": "fire",
+      "topLevelAddAllowed": true,
+      "slotCount": 10,
+      "colourRepeat": true
+    }
+  }
+}

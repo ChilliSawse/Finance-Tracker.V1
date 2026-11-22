@@ -26,7 +26,6 @@ import { todayModel } from '../state/today-model.js';
 import { esc, escNum } from './html.js';
 import { openSheet } from './sheet.js';
 import { showUndoToast, showToast } from './toast.js';
-import { confirmDialog } from './confirm.js';
 import { openBucketSheet } from './bucket-sheets.js';
 
 // ---------- small helpers ----------
@@ -587,15 +586,9 @@ function openSplitSheet(root) {
 
 async function openTemplateSheet(root) {
     const d = store.financeData;
-    const m = buildBucketsModel(d, todayIso(), {});
-    if (!m) return;
-    const name = m.template.baseName;
-    if (m.template.custom) {
-        if (!m.canReturn) { showToast(t('e.plan.tplStays', { name })); return; }
-        if (await confirmDialog({ title: t('e.plan.tplBackAsk', { name }), confirmLabel: t('e.plan.switchBack') })) handleResult(root, switchBackToBase(d));
-        return;
-    }
-    if (await confirmDialog({ title: t('e.plan.ownTitle'), body: t('e.plan.tplAsk'), confirmLabel: t('e.plan.makeMine') })) handleResult(root, forkOwnTemplate(d));
+    if (!d || !d.savingModel) return;
+    const { openModelPicker } = await import('./model-picker.js'); // lazy: the catalogue picker (DB15)
+    openModelPicker({ data: d, onResult: (res) => handleResult(root, res) });
 }
 
 function openGoalSheet(root, id, parent) {

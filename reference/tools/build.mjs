@@ -43,7 +43,7 @@ export function makeValidators(schemaDir = join(REF_DIR, 'schemas')) {
     return fns;
 }
 
-function schemaErrors(fn, data, file) {
+export function schemaErrors(fn, data, file) {
     if (fn(data)) return [];
     return fn.errors.map((e) => {
         let extra = '';

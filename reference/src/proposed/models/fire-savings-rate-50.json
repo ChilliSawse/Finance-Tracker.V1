@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "schemaVersion": 1,
+  "id": "fire-savings-rate-50",
+  "version": "1.0.0",
+  "meta": {
+    "title": "FIRE savings rate (50%)",
+    "blurb": "Put half of take-home pay toward investing and live on the other half. The years-to-independence readout needs the Future screen, not this split.",
+    "after": "Mr Money Mustache, The Shockingly Simple Math Behind Early Retirement (2012). The 50% default is the example the post uses (about 16 to 17 years on its assumptions; the post says about 16).",
+    "source": "https://www.mrmoneymustache.com/2012/01/13/the-shockingly-simple-math-behind-early-retirement/",
+    "sourceKind": "primary",
+    "retrieved": "2026-11-22",
+    "licence": "CC0-1.0",
+    "reviewed": "2026-11-22",
+    "status": "derived (assumes 5% real return, 4% withdrawal rate, start at zero; working in the report). PROPOSED, NOT SHIPPED (FT-R-71): the catalogue ships only the Bucket method at launch.",
+    "requires": {
+      "engine": "fixed"
+    },
+    "checks": {
+      "validateModelDef": "ok",
+      "naming": "FIRE is a movement label, not a brand. Credit Mr Money Mustache in meta.after only; never put his name in the title. Nothing found in the AU register.",
+      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked.",
+      "also": "fi.js for the years-to-FI readout"
+    }
+  },
+  "model": {
+    "id": "fire-savings-rate-50",
+    "name": "FIRE savings rate",
+    "basis": "net",
+    "engine": "fixed",
+    "buckets": [
+      {
+        "name": "Living costs",
+        "slot": 1,
+        "kind": "spend",
+        "pct": 50
+      },
+      {
+        "name": "Invest for independence",
+        "slot": 2,
+        "kind": "save",
+        "pct": 50
+      }
+    ],
+    "rules": {
+      "coreBuckets": [],
+      "renamable": true,
+      "splitEditable": true,
+      "mojoShare": null,
+      "childrenAllowedIn": null,
+      "maxDepth": 3,
+      "remainderRatio": {
+        "smile": 1,
+        "fire": 2
+      },
+      "targetList": "fire",
+      "topLevelAddAllowed": true,
+      "slotCount": 10,
+      "colourRepeat": true
+    }
+  }
+}

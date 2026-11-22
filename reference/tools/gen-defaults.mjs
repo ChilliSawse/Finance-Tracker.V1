@@ -39,6 +39,7 @@ out('categories.json', {
 const m = JSON.parse(JSON.stringify(BUCKET_METHOD));
 out('models/bucket-method.json', {
     schema: 1,
+    schemaVersion: 1,
     id: 'bucket-method',
     version: '1.0.0',
     meta: {

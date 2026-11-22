@@ -35,7 +35,7 @@ const slug = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+
 
 // ---------- undo plumbing ----------
 
-function failed(code, extra) {
+export function failed(code, extra) {
     return { ok: false, code, message: '', onUndo() {}, onExpire: undefined, ...(extra || {}) };
 }
 
@@ -47,14 +47,14 @@ function replaceIn(data, key, value) {
     data[key] = value;
 }
 
-function snapshot(data, keys) {
+export function snapshot(data, keys) {
     const before = {};
     keys.forEach((k) => { before[k] = data[k] === undefined ? undefined : clone(data[k]); });
     return before;
 }
 
 /** Success payload whose onUndo puts the snapshot back (once). */
-function done(data, before, message, extra) {
+export function done(data, before, message, extra) {
     let used = false;
     return {
         ok: true, message, onExpire: undefined, ...(extra || {}),

@@ -9,6 +9,7 @@
 //              (setAutoCredit, on for new setups, FT-R-80).
 
 import { t } from '../../i18n/strings.js';
+import '../../i18n/en-lazy-models.js'; // the DB15 picker strings (en-lazy)
 import { esc, escNum } from '../html.js';
 import { formatCurrency } from '../../utils.js';
 import { planTotals, netPerPayCents } from '../../calc/plan.js';
@@ -25,18 +26,58 @@ const BALANCE_ROLES = ['smile', 'fire', 'mojo'];
 
 // ---------- model ----------
 
+// The catalogue beyond the Bucket method (DB15). Read once, lazily: with no extra entries (the launch catalogue holds the Bucket
+// method alone) the step is exactly the single card below and nothing is imported.
+let extras = null; // null: not read yet; [] or rows: {id, name, blurb, state, choosable, entry}
+
+function extraRowHtml(r) {
+    const note = r.state === 'needs-newer' ? t('m.pick.needsNewer') : r.state === 'replaces' ? t('m.pick.replaces') : '';
+    return `<label class="su-opt"><input type="radio" name="su-model" value="${esc(r.id)}" data-su-change="pick"${r.choosable ? '' : ' disabled'}>
+            <span class="o-body"><b>${esc(r.name)}</b>${r.blurb ? `<span class="o-why">${esc(r.blurb)}</span>` : ''}${note ? `<span class="su-fine">${esc(note)}</span>` : ''}</span></label>`;
+}
+
 export const modelStep = {
     id: 'model', order: STEP_ORDER.model, title: t('c.setup.model.title'), skippable: false, nextLabel: t('c.setup.model.next'),
-    render() {
+    render(ctx) {
+        if (extras === null && ctx && ctx.data) {
+            extras = [];
+            import('../model-picker.js').then(async (m) => {
+                const { loadCatalogue } = await import('../../state/model-catalogue.js');
+                extras = m.pickerRows(await loadCatalogue(), ctx.data).filter((r) => r.id !== 'bucket-method');
+                if (extras.length && ctx.refresh) ctx.refresh();
+            }).catch(() => { extras = []; });
+        }
+        const more = extras && extras.length ? extras : [];
         const parts = Object.entries(GUIDE)
             .map(([role, pct]) => `<i class="b-${role}" style="flex:${pct}">${esc(pct)}</i>`).join('');
         return `<p class="su-lead">${esc(t('c.setup.model.lead'))}</p>
-            <label class="su-opt on"><input type="radio" name="su-model" value="bucket" checked>
+            <label class="su-opt on"><input type="radio" name="su-model" value="bucket" checked${more.length ? ' data-su-change="pick"' : ''}>
             <span class="o-body"><b>${esc(t('c.setup.model.name'))}</b><span class="o-src">${esc(t('c.setup.model.source'))}</span>
             <span class="su-mini" aria-hidden="true">${parts}</span>
             <span class="o-why">${esc(t('c.setup.model.why'))}</span></span></label>
+            ${more.map(extraRowHtml).join('')}
             <div class="su-soon"><b>${esc(t('c.setup.model.soon'))}</b><span class="su-fine">${esc(t('c.setup.model.soonList'))}</span></div>
             <p class="su-fine">${esc(t('c.setup.model.disclaimer'))}</p>`;
+    },
+    actions: {
+        // A choice other than the Bucket method: read and check its file now, so Next can apply it without waiting.
+        async pick(ctx, el) {
+            if (!ctx.state) return;
+            ctx.state.modelApply = null;
+            const row = (extras || []).find((r) => r.id === el.value);
+            if (!row || !row.choosable) return;
+            const { loadEnvelope, useModel } = await import('../../state/model-catalogue.js');
+            const res = await loadEnvelope(row.entry);
+            // Setup: nothing typed yet, and the Bucket method is one tap back, so replacing the buckets is fine.
+            if (res.ok) ctx.state.modelApply = (data) => useModel(data, res.envelope, { replaceBuckets: true });
+        },
+    },
+    onNext(ctx) {
+        const apply = ctx.state && ctx.state.modelApply;
+        if (!apply) return true;
+        ctx.state.modelApply = null;
+        if (apply(ctx.data).ok) ctx.save();
+        return true;
     },
 };
 
