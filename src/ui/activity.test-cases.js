@@ -2,7 +2,10 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected). Fixture: fake household, integer cents.
 
 import { buildTodayModel, buildActivityFeed } from '../state/today-model.js';
-import { buildActivityView, renderListHtml, renderSummaryHtml, renderWhereHtml, matchesQuery, dayLabel } from './activity.js';
+import { buildActivityView, renderListHtml, renderSummaryHtml, renderWhereHtml, matchesQuery, dayLabel, confirmedTransferRow, dismissedTransferRow, sameStoredRow } from './activity.js';
+import { resolveImportRow } from '../state/import-rows.js';
+import { makeTransaction } from '../state/transactions.js';
+import { isTransferRow } from '../calc/transfers.js';
 
 const ALLOC = [
     { id: 'daily', role: 'daily', name: 'Daily expenses', percentage: 60 }, { id: 'splurge', role: 'splurge', name: 'Splurge', percentage: 10 },
@@ -157,6 +160,59 @@ export const ACTIVITY_TEST_CASES = [
             assert('Confirm removes the suggested transfer', v2.days.flatMap((d) => d.items).map((d) => d.id), ['mkt', 'oldrev']);
             assert('and the count drops', f2.toReviewCount, 2);
             assert('the older row shows a Confirm button before', renderListHtml(v).includes('data-act-confirm="oldsug"'), true);
+        },
+    },
+    {
+        name: 'FT-R-129 (1) "Looks like a transfer, confirm?": stored on import, still spending until confirmed',
+        fn(assert) {
+            // Stored on import: the import's own resolver, then the stored row.
+            const r = resolveImportRow('INTERNAL TRANSFER ZEDCO', -4000, undefined, DATA);
+            const stored = makeTransaction({ date: '2026-11-03', description: 'INTERNAL TRANSFER ZEDCO', amountCents: -4000, categoryId: r.categoryId, status: r.status, bucketId: r.bucketId, bucketSuggested: r.bucketSuggested, transferSuggested: r.transferSuggested, source: 'csv' });
+            assert('the flag is stored, with the base category and review', [stored.transferSuggested, stored.status, stored.categoryId === 'transfer'], [true, 'review', false]);
+            const credit = resolveImportRow('INTERNAL TRANSFER ZEDCO', 4000, undefined, DATA);
+            const storedCredit = makeTransaction({ date: '2026-11-03', description: 'INTERNAL TRANSFER ZEDCO', amountCents: 4000, categoryId: credit.categoryId, status: credit.status, transferSuggested: credit.transferSuggested, source: 'csv' });
+            assert('a credit never gets the flag', ['transferSuggested' in storedCredit, credit.transferSuggested], [false, undefined]);
+            const plain = makeTransaction({ date: '2026-11-03', description: 'x', amountCents: -1, transferSuggested: false });
+            assert('a false flag is not stored', 'transferSuggested' in plain, false);
+
+            // Still spending until confirmed.
+            const done0 = () => confirmedTransferRow({ ...stored, id: 'guess' });
+            const flagged = { ...stored, id: 'guess', date: '2026-11-04', categoryId: 'groceries' }; // a wording guess keeps whatever category it would have had
+            const view = (rows) => { const feed = buildActivityFeed({ data: DATA, rows, today: TODAY }); const model = buildTodayModel({ data: DATA, rows, today: TODAY }); return { feed, model, v: buildActivityView({ feed, model, data: DATA, today: TODAY }) }; };
+            const base = view(ROWS);
+            const withFlag = view([...ROWS, flagged]);
+            assert('a flagged row counts in spending', [withFlag.model.spentCents - base.model.spentCents, withFlag.feed.spentCents - base.feed.spentCents], [4000, 4000]);
+            const d = byId(withFlag.v, 'guess');
+            assert('it shows the line and Confirm, in To review', [d.pills.map((x) => x.label), d.action.confirmTransfer, d.review], [['To review', 'Looks like a transfer — confirm?'], true, true]);
+            const html = renderListHtml(withFlag.v);
+            assert('Confirm and Not a transfer are their own taps', [html.includes('data-act-confirm-transfer="guess"'), html.includes('data-act-not-transfer="guess"'), html.includes('Not a transfer')], [true, true, true]);
+            assert('the transfer Confirm is not the Went to Confirm, and its label covers investments and super', [html.includes('data-act-confirm="guess"'), html.includes('is a transfer, not spending')], [false, true]);
+            // A row carrying both flags (for example restored by an Undo): the transfer button never takes the Went to path.
+            const both = view([...ROWS, { ...flagged, id: 'both', bucketId: 'smile', bucketSuggested: true }]);
+            const bothHtml = renderListHtml(both.v);
+            assert('both flags: the line has its own button and no Went to Confirm', [bothHtml.includes('data-act-confirm-transfer="both"'), bothHtml.includes('data-act-confirm="both"')], [true, false]);
+            // Undo only restores a row that is still as written.
+            const written = { ...done0(), updatedAt: 't1' };
+            assert('Undo restores an untouched row', sameStoredRow({ ...written }, written), true);
+            assert('Undo skips a row edited since', sameStoredRow({ ...written, note: 'edited', updatedAt: 't2' }, written), false);
+            assert('Undo skips a row that is gone', sameStoredRow(null, written), false);
+
+            // An un-flagged row shows no line.
+            const noFlag = byId(base.v, 'mkt');
+            assert('an un-flagged review row shows no transfer line', [noFlag.pills.some((x) => x.key === 'transferGuess'), renderListHtml(base.v).includes('data-act-not-transfer')], [false, false]);
+
+            // Confirming: a transfer, out of spending, out of To review.
+            const done = confirmedTransferRow(flagged);
+            assert('confirmed row is a transfer, ok, flag gone', [isTransferRow(done), done.status, 'transferSuggested' in done, done.categoryId], [true, 'ok', false, 'transfer']);
+            const after = view([...ROWS, done]);
+            assert('confirmed: out of spending and out of To review', [after.model.spentCents, after.feed.spentCents, after.feed.toReviewCount], [base.model.spentCents, base.feed.spentCents, base.feed.toReviewCount]);
+            assert('the stored original is untouched, so Undo can put it back', [flagged.transferSuggested, flagged.status, flagged.categoryId], [true, 'review', 'groceries']);
+
+            // Dismissing: flag gone, still spending, still in review, no line.
+            const dis = dismissedTransferRow(flagged);
+            const afterDis = view([...ROWS, dis]);
+            assert('dismissed: flag cleared, category and status kept', [dis.transferSuggested, dis.status, dis.categoryId], [undefined, 'review', flagged.categoryId]);
+            assert('dismissed: still spending, no line', [afterDis.model.spentCents - base.model.spentCents, byId(afterDis.v, 'guess').pills.some((x) => x.key === 'transferGuess')], [4000, false]);
         },
     },
 ];

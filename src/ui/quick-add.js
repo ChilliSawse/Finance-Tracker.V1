@@ -394,6 +394,7 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
                     description: textNote && textNote !== (txn.note || '') ? f.description : txn.description };
                 if (store && !(isTransfer() && s.incoming)) next.bucketId = store; else delete next.bucketId;
                 delete next.bucketSuggested; // saving it is confirming it (FT-R-117)
+                delete next.transferSuggested;
                 const prev = txn;
                 await updateTransaction(next);
                 close();
