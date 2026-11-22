@@ -77,9 +77,38 @@ function previousPeriod(model, data) {
 }
 
 /**
- * Savings rate, labelled by where it came from (FT-R-59). Planned (from the plan) until at least one
+ * What was actually moved into saving buckets in a period (FT-R-118): outgoing transfer rows whose `bucketId`
+ * names a bucket of kind save (or a goal under one). A transfer with no bucket, a spend row, money in, or a
+ * bucket that no longer exists is not counted. Plans, bank-transfer ticks and auto-credit are not read: they
+ * record what was meant to move, not what did. Returns cents and how many rows counted.
+ */
+function movedIntoSavings(rows, data, today) {
+    let list = [];
+    try { list = getBuckets(data, today); } catch (_) { list = []; }
+    const byId = new Map(list.map((b) => [b.id, b]));
+    const isSave = (id) => {
+        const b = byId.get(id);
+        if (!b) return false;
+        const top = b.parentId ? byId.get(b.parentId) : b;
+        return !!top && top.kind === 'save';
+    };
+    const cats = new Map(((data && data.categories) || []).map((c) => [c.id, c]));
+    let saved = 0;
+    let count = 0;
+    for (const r of rows) {
+        if (!(r.amountCents < 0) || !r.bucketId || !isTransfer(r, cats.get(r.categoryId)) || !isSave(r.bucketId)) continue;
+        saved -= r.amountCents;
+        count += 1;
+    }
+    return { cents: saved, count };
+}
+
+/**
+ * Savings rate, labelled by where it came from (FT-R-59, FT-R-118). Planned (from the plan) until at least one
  * COMPLETE pay cycle (month, in month mode) of transactions exists. Then actual for the last completed
- * cycle, never the one in progress, with that cycle's dates (`from`, `to` inclusive).
+ * cycle, never the one in progress, with that cycle's dates (`from`, `to` inclusive): the amount moved into
+ * saving buckets over that pay's income. If nothing in that pay was moved and marked as going to a saving
+ * bucket, the figure is 'unknown' (the app cannot tell saving nothing from not recording it): no number.
  * "Complete" = the history reaches back to that cycle's first day and income landed in it.
  */
 export function savingsRateFigure(model, ctx) {
@@ -93,13 +122,26 @@ export function savingsRateFigure(model, ctx) {
             const inPrev = rows.filter((r) => r.date >= prev.start && r.date < prev.end);
             const income = inPrev.filter((r) => r.amountCents > 0 && r.categoryId === 'income').reduce((a, r) => a + r.amountCents, 0);
             if (income > 0) {
-                const cats = new Map(((ctx.data && ctx.data.categories) || []).map((c) => [c.id, c]));
-                const out = inPrev.filter((r) => r.amountCents < 0 && !isTransfer(r, cats.get(r.categoryId))).reduce((a, r) => a - r.amountCents, 0);
-                return { kind: 'actual', value: Math.round(((income - out) / income) * 100), from: prev.start, to: addDays(prev.end, -1) };
+                const span = { from: prev.start, to: addDays(prev.end, -1) };
+                const moved = movedIntoSavings(inPrev, ctx.data, model.today);
+                if (!moved.count) return { kind: 'unknown', ...span };
+                return { kind: 'actual', value: Math.round((moved.cents / income) * 100), savedCents: moved.cents, ...span };
             }
         }
     }
     return { kind: 'planned', value: Math.round(planned.ratePct), perPayCents: planned.perPayCents };
+}
+
+function rateValueHtml(rate) {
+    return rate.kind === 'unknown'
+        ? `<div class="v rate-unknown">${t('a.today.rateUnknown')}</div>`
+        : `<div class="v num">${escNum(rate.value)}%</div>`;
+}
+
+function rateCaption(rate) {
+    if (rate.kind === 'unknown') return t('a.today.rateCapUnknown');
+    if (rate.kind === 'actual') return t('a.today.rateCapActual', { amount: esc(moneyWhole(rate.savedCents)), from: esc(dayShort(rate.from)), to: esc(dayShort(rate.to)) });
+    return t('a.today.rateCapPlanned', { amount: esc(moneyWhole(rate.perPayCents)) });
 }
 
 /** Rows and totals the screen needs besides the model. Reads the store and the spend cache. */
@@ -288,7 +330,7 @@ function heroHtml(model, ctx, buckets) {
           </div>
         </div>
         <ul class="figs">
-          <li><div class="k">${t(rate.kind === 'actual' ? 'a.today.rateActual' : 'a.today.ratePlanned')}</div><div class="v num">${escNum(rate.value)}%</div><div class="s">${rate.kind === 'actual' ? t('a.today.rateCapActual', { from: esc(dayShort(rate.from)), to: esc(dayShort(rate.to)) }) : t('a.today.rateCapPlanned', { amount: esc(moneyWhole(rate.perPayCents)) })}</div></li>
+          <li><div class="k">${t(rate.kind === 'planned' ? 'a.today.ratePlanned' : 'a.today.rateActual')}</div>${rateValueHtml(rate)}<div class="s">${rateCaption(rate)}</div></li>
           <li><div class="k">${t('a.today.essential')}</div><div class="v money">${esc(money(model.essentialSoFarCents))}</div><div class="s">${t('a.today.thisPay')}</div></li>
           <li><div class="k">${t('a.today.nonEssential')}</div><div class="v money">${esc(money(model.nonEssentialSoFarCents))}</div><div class="s">${t('a.today.thisPay')}</div></li>
           ${netWorth == null ? '' : `<li><div class="k">${t('a.today.netWorth')}</div><div class="v money">${esc(moneyWhole(netWorth))}</div><div class="s">${t('a.today.netWorthCap')}</div></li>`}

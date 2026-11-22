@@ -350,3 +350,5 @@ body.locked { overflow: hidden; }
 }
 .update-banner-btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .update-banner.is-leaving { transform: translateY(-100%); }
+
+.figs .v.rate-unknown { font-size: var(--fs-body, 1rem); line-height: 26px; font-weight: 600; }

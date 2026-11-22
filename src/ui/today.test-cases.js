@@ -190,17 +190,38 @@ export const TODAY_TEST_CASES = [
             // History starts mid previous cycle (not complete): still planned.
             const part = run(mkData(), [...ROWS_A, row('2026-10-20', 'dining', 10)]);
             assert('planned when history starts inside the previous cycle', savingsRateFigure(part.model, part.ctx).kind, 'planned');
-            // A complete previous cycle 17 Oct to 30 Oct: income 3,000, spend 2,400, transfer 500 ignored.
+            // A complete previous cycle 17 Oct to 30 Oct: income 3,000, spend 2,400, and a 500 transfer with no bucket.
+            // FT-R-118: actual = what was moved into saving buckets, from tagged transfers. Untagged is not enough to tell.
             const prior = [{ id: 'p0', date: '2026-10-17', categoryId: 'income', amountCents: 300000 }, row('2026-10-18', 'rent', 1500),
                 row('2026-10-25', 'groceries', 900), row('2026-10-26', 'transfer', 500)];
             const full = run(mkData(), [...prior, ...ROWS_A]);
             const f = savingsRateFigure(full.model, full.ctx);
-            assert('actual for the last completed cycle', [f.kind, f.value, f.from, f.to], ['actual', 20, '2026-10-17', '2026-10-30']);
-            assert('actual label', full.html.includes('Savings rate (actual)'), true);
-            assert('caption carries the cycle dates', full.html.includes('last pay, 17 Oct to 30 Oct'), true);
+            assert('income and history but no tagged transfer: not enough to tell, never a made-up rate', [f.kind, f.value, f.savedCents, f.from, f.to], ['unknown', undefined, undefined, '2026-10-17', '2026-10-30']);
+            assert('unknown shows the label, the words and the hint', [full.html.includes('Savings rate (actual)'), full.html.includes('Not enough to tell yet'), full.html.includes('Mark each transfer to a savings bucket to see it')], [true, true, true]);
+            assert('unknown shows no percent from spending', full.html.includes('class="v num">20%'), false);
+            // Tagged transfers: 600 to Fire, 300 to Smile out of the 3,000 pay = 30 percent, A$900.
+            const tagged = [...prior, row('2026-10-27', 'transfer', 600, { bucketId: 'fire' }), row('2026-10-28', 'transfer', 300, { bucketId: 'smile' })];
+            const ok = run(mkData(), [...tagged, ...ROWS_A]);
+            const g = savingsRateFigure(ok.model, ok.ctx);
+            assert('actual = tagged transfers into save buckets over that pay', [g.kind, g.value, g.savedCents, g.from, g.to], ['actual', 30, 90000, '2026-10-17', '2026-10-30']);
+            assert('actual label', ok.html.includes('Savings rate (actual)'), true);
+            assert('caption has the amount and the cycle dates', ok.html.includes(`${formatCurrency(900, undefined, 0)} last pay, 17 Oct to 30 Oct`), true);
+            // What does not count: a transfer to a spend bucket, an untagged one, money in, a spend row tagged to a save bucket, a stale bucket id, the pay in progress.
+            const noise = [...tagged, row('2026-10-20', 'transfer', 250, { bucketId: 'daily' }), row('2026-10-21', 'transfer', 80, { bucketId: 'gone' }),
+                row('2026-10-22', 'dining', 200, { bucketId: 'fire' }), { id: 'cr', date: '2026-10-23', categoryId: 'transfer', amountCents: 40000, bucketId: 'fire' },
+                row('2026-11-02', 'transfer', 700, { bucketId: 'fire' })];
+            const nz = savingsRateFigure(run(mkData(), [...noise, ...ROWS_A]).model, run(mkData(), [...noise, ...ROWS_A]).ctx);
+            assert('only outgoing transfers tagged to a save bucket in that pay count', [nz.value, nz.savedCents], [30, 90000]);
+            // A goal under a save bucket counts as saving.
+            const kid = mkData({ bucketGoals: [{ id: 'g1', parentId: 'smile', name: 'Trip', share: 0, cost: 500, saved: 0, order: 0, done: false }] });
+            const kr = run(kid, [...prior, row('2026-10-27', 'transfer', 150, { bucketId: 'g1' }), ...ROWS_A]);
+            assert('transfer tagged to a goal counts', savingsRateFigure(kr.model, kr.ctx).savedCents, 15000);
             // The in-progress cycle's own pay and spend never move it.
-            const more = run(mkData(), [...prior, ...ROWS_A, row('2026-11-04', 'dining', 900)]);
-            assert('in-progress spend ignored', savingsRateFigure(more.model, more.ctx).value, 20);
+            const more = run(mkData(), [...tagged, ...ROWS_A, row('2026-11-04', 'dining', 900)]);
+            assert('in-progress spend ignored', savingsRateFigure(more.model, more.ctx).value, 30);
+            // Spending does not change it any more.
+            const spendy = run(mkData(), [...tagged, row('2026-10-19', 'dining', 400), ...ROWS_A]);
+            assert('spending in the pay does not move it', savingsRateFigure(spendy.model, spendy.ctx).value, 30);
             // Complete history but no income in the previous cycle: planned.
             const noInc = run(mkData(), [row('2026-10-18', 'rent', 100), ...ROWS_A]);
             assert('no income in the cycle gives planned', savingsRateFigure(noInc.model, noInc.ctx).kind, 'planned');
@@ -211,7 +232,7 @@ export const TODAY_TEST_CASES = [
         fn(assert) {
             const monthData = mkData({ incomeSources: [{ incomeType: 'variable', paySchedule: 'monthly', grossAnnual: 90000 }] });
             const rows = [{ id: 'i1', date: '2026-10-01', categoryId: 'income', amountCents: 400000 }, row('2026-10-10', 'rent', 1000),
-                row('2026-10-20', 'groceries', 1000), { id: 'i2', date: '2026-11-02', categoryId: 'income', amountCents: 400000 }, row('2026-11-03', 'rent', 3500)];
+                row('2026-10-20', 'groceries', 1000), row('2026-10-25', 'transfer', 2000, { bucketId: 'fire' }), { id: 'i2', date: '2026-11-02', categoryId: 'income', amountCents: 400000 }, row('2026-11-03', 'rent', 3500)];
             const r = run(monthData, rows);
             const f = savingsRateFigure(r.model, r.ctx);
             assert('mode is month', r.model.cycle.mode, 'month');
