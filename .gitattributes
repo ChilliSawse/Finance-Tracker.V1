@@ -1,1 +1,3 @@
 src/styles/tokens.generated.css text eol=lf
+# FT-0032: the baseline is hash-checked, so never convert its line endings
+reference/baseline/** -text

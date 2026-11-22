@@ -14,9 +14,11 @@
     "preview": "vite preview",
     "test:ci": "node tools/ci-tests.mjs",
     "check:coldload": "node tools/z1-coldload.mjs",
+    "ref:check": "node reference/tools/build.mjs",
     "build:themes": "node scripts/build-themes.mjs"
   },
   "devDependencies": {
+    "ajv": "8.20.0",
     "playwright-core": "1.65.1",
     "vite": "^8.1.3",
     "vite-plugin-pwa": "^2.0.0"

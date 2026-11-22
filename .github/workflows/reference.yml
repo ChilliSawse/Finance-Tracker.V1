@@ -1,0 +1,62 @@
+name: Reference data check
+
+# FT-0032 DB1 (R3 section 10): every PR that touches reference/ runs the schema and app-validator gate,
+# then posts the added / changed / removed ids as one PR comment. deploy.yml is not involved.
+on:
+  pull_request:
+    paths:
+      - "reference/**"
+      - "src/calc/saving-model.js"
+      - "src/state/categories.js"
+      - ".github/workflows/reference.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reference-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Schemas, then the app's own validators (validateModelDef, merchantKey), gzip caps, baseline integrity.
+      - name: Check the reference data
+        run: npm run ref:check
+      # The base revision's reference/ folder, to diff against. A first PR (no reference/ on base) diffs against nothing.
+      - name: Diff against the base branch
+        run: |
+          mkdir -p "$RUNNER_TEMP/base"
+          if git cat-file -e "${{ github.event.pull_request.base.sha }}:reference/src/release.json" 2>/dev/null; then
+            git archive "${{ github.event.pull_request.base.sha }}" reference/src | tar -x -C "$RUNNER_TEMP/base"
+            node reference/tools/build.mjs --quiet --diff "$RUNNER_TEMP/base/reference" > "$RUNNER_TEMP/diff.md"
+          else
+            printf '## Reference data changes\n\nNo reference data on the base branch: everything is new.\n' > "$RUNNER_TEMP/diff.md"
+          fi
+          cat "$RUNNER_TEMP/diff.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Post the diff as a PR comment
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- reference-diff -->';
+            const body = marker + '\n' + fs.readFileSync(process.env.RUNNER_TEMP + '/diff.md', 'utf8');
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const old = comments.find((c) => c.body && c.body.startsWith(marker));
+            if (old) await github.rest.issues.updateComment({ owner, repo, comment_id: old.id, body });
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body });

@@ -57,6 +57,7 @@ import { PWA_TEST_CASES } from './pwa.test-cases.js';
 import { LAZY_SETUP_TEST_CASES, LAZY_SETUP_BROWSER_TEST_CASES } from './lazy-setup.test-cases.js';
 import { IMPORT_ROUTE_TEST_CASES, IMPORT_ROUTE_BROWSER_TEST_CASES } from './import/route.test-cases.js';
 import { ACCEPT_TEST_CASES, ACCEPT_XLSX_TEST_CASES } from './import/accept.test-cases.js';
+import { REF_BUILD_TEST_CASES } from './ref-build.test-cases.js'; // FT-0032 DB1
 import { BUCKET_METHOD_TEST_CASES } from './ui/bucket-method.test-cases.js';
 import { INCOME_OTHER_TEST_CASES } from './ui/income-other.test-cases.js';
 import { TRANSFERS_TEST_CASES } from './calc/transfers.test-cases.js'; // H9
@@ -119,6 +120,7 @@ export const TEST_GROUPS = [
     { name: 'import-route-browser', env: 'browser', cases: IMPORT_ROUTE_BROWSER_TEST_CASES },
     { name: 'accept', env: 'pure', cases: ACCEPT_TEST_CASES },
     { name: 'accept-xlsx', env: 'browser', cases: ACCEPT_XLSX_TEST_CASES },
+    { name: 'ref-build', env: 'pure', cases: REF_BUILD_TEST_CASES }, // FT-0032 DB1 (node only; passes at once in tests.html)
     { name: 'bucket-method', env: 'pure', cases: BUCKET_METHOD_TEST_CASES },
     { name: 'income-other', env: 'pure', cases: INCOME_OTHER_TEST_CASES },
     { name: 'lazy-setup', env: 'pure', cases: LAZY_SETUP_TEST_CASES }, // P3b

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledger.invalid/ref/schemas/release.schema.json",
+  "title": "Release stamp (reference/src/release.json)",
+  "type": "object",
+  "required": ["schema", "dataVersion", "released", "minApp"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "dataVersion": { "type": "string", "pattern": "^\\d{4}\\.(0[1-9]|1[0-2])\\.[1-9]\\d*$", "description": "CalVer YYYY.MM.N, N = nth release that month" },
+    "released": { "$ref": "common.schema.json#/$defs/date" },
+    "minApp": { "$ref": "common.schema.json#/$defs/semver" }
+  }
+}

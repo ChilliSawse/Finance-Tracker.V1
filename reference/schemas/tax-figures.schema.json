@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledger.invalid/ref/schemas/tax-figures.schema.json",
+  "title": "Tax figures, shaped for the D1 draft (FT-R-124: tax moves into the database later). Not wired into the app or the build yet.",
+  "type": "object",
+  "required": ["schema", "rev", "years"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "rev": { "$ref": "common.schema.json#/$defs/rev" },
+    "years": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^\\d{4}-\\d{2}$" },
+      "additionalProperties": {
+        "type": "object",
+        "description": "Groups such as incomeTax, medicare, help, payg, super, deductions",
+        "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9_]*$" },
+        "additionalProperties": {
+          "type": "object",
+          "propertyNames": { "pattern": "^[A-Za-z][A-Za-z0-9_]*$" },
+          "additionalProperties": { "$ref": "#/$defs/figure" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "figure": {
+      "type": "object",
+      "required": ["value", "unit", "status", "source", "retrieved", "quote"],
+      "additionalProperties": false,
+      "anyOf": [{ "required": ["fy"] }, { "required": ["appliesFrom"] }],
+      "properties": {
+        "value": { "description": "A number, a table such as [from,to,rate] rows, or null when unknown (never guessed)" },
+        "unit": { "$ref": "common.schema.json#/$defs/text" },
+        "fy": { "type": "string", "pattern": "^\\d{4}-\\d{2}$" },
+        "appliesFrom": { "$ref": "common.schema.json#/$defs/date" },
+        "status": {
+          "type": "string",
+          "pattern": "^(UNVERIFIED:)?(legislated|announced|estimate|derived)$|^guidance$",
+          "description": "legislated, announced, estimate or derived, with an UNVERIFIED: prefix while unconfirmed. guidance = ATO non-legislative rate, kept because the D1 draft uses it."
+        },
+        "source": { "$ref": "common.schema.json#/$defs/text" },
+        "retrieved": { "$ref": "common.schema.json#/$defs/date" },
+        "quote": { "type": "string", "maxLength": 2000 },
+        "note": { "type": "string" },
+        "act": { "description": "The Act (or Acts) that legislate the figure: a string, or a structured record" },
+        "working": { "type": "string" },
+        "settlingCheck": { "type": "string" },
+        "sourceAlso": { "type": "string" }
+      }
+    }
+  }
+}
