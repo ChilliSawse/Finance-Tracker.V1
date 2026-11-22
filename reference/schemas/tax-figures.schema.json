@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://ledger.invalid/ref/schemas/tax-figures.schema.json",
-  "title": "Tax figures, shaped for the D1 draft (FT-R-124: tax moves into the database later). Not wired into the app or the build yet.",
+  "title": "Tax figures (FT-R-124): the shared reference database tax file, built when reference/src/tax.json exists",
   "type": "object",
   "required": ["schema", "rev", "years"],
   "additionalProperties": false,
