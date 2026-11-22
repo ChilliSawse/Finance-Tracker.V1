@@ -31,6 +31,7 @@ function emptyCache() {
         cycleByCategory: new Map(), // categoryId → spent cents this cycle
         cycleByBucket: new Map(),   // bucket id → spent cents this cycle
         toReview: 0,         // cycle rows with status 'review' (uncategorised only, FT-R-55)
+        olderReview: [],     // FT-R-120: rows still in 'review' from before `rows` starts (any pay)
     };
 }
 
@@ -41,6 +42,11 @@ export function getSpendCache() {
 }
 
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+const addDaysIso = (isoDate, n) => {
+    const [y, m, d] = isoDate.split('-').map(Number);
+    return iso(new Date(y, m - 1, d + n));
+};
 
 /** Earliest date a refresh must load: Jan 1, or 62 days back when that is earlier (covers a cycle spanning New Year). */
 export function spendCacheFrom(todayIso) {
@@ -54,7 +60,7 @@ export function spendCacheFrom(todayIso) {
  * Build the cache from rows already in hand (pure apart from replacing the module cache).
  * Used by refreshSpendCache and by tests. `data` is financeData (cycle and bucket resolution).
  */
-export function loadSpendCache(rows, { data, today } = {}) {
+export function loadSpendCache(rows, { data, today, olderReview } = {}) {
     const todayIso = today || iso(new Date());
     const year = todayIso.slice(0, 4);
     const month = todayIso.slice(0, 7);
@@ -62,6 +68,7 @@ export function loadSpendCache(rows, { data, today } = {}) {
     Object.assign(fresh, { ready: true, year, month, today: todayIso });
     const all = Array.isArray(rows) ? rows : [];
     fresh.rows = all;
+    fresh.olderReview = (Array.isArray(olderReview) ? olderReview : []).filter((r) => r && r.status === 'review');
     for (const r of all) {
         if (!r.date.startsWith(`${year}-`)) continue;
         fresh.count++;
@@ -99,10 +106,14 @@ export function loadSpendCache(rows, { data, today } = {}) {
 export async function refreshSpendCache({ data = store.financeData, today } = {}) {
     const todayIso = today || iso(new Date());
     let rows = [];
+    let olderReview = [];
     try {
-        rows = await listTransactions({ from: spendCacheFrom(todayIso) });
+        const from = spendCacheFrom(todayIso);
+        rows = await listTransactions({ from });
+        // FT-R-120: a row still waiting for review stays reachable however old it is.
+        olderReview = (await listTransactions({ to: addDaysIso(from, -1) })).filter((r) => r.status === 'review');
     } catch (_) {
         // IndexedDB unavailable — leave the empty aggregates; consumers hide.
     }
-    return loadSpendCache(rows, { data, today: todayIso });
+    return loadSpendCache(rows, { data, today: todayIso, olderReview });
 }
