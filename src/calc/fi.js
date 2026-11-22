@@ -15,7 +15,7 @@
 // (default F1's `resolveAt`), so flows and the FI number follow the plan as it stands that year.
 // Opening balances (assets, debts, HELP) come from the data as it is today.
 
-import { assetValueAt, valueDetail, assetScope, effectiveAsset, effectiveAnnualRate, debtStep, debtRateAt, PERIODS_PER_YEAR } from './assets-debts.js';
+import { assetValueAt, valueDetail, assetScope, loanScope, heldOutAssets, pendingLoanLinks, effectiveAsset, effectiveAnnualRate, debtStep, debtRateAt, PERIODS_PER_YEAR } from './assets-debts.js';
 import { resolveAt as defaultResolve } from './scenario.js';
 import { planTotals } from './plan.js';
 import { calculateTotals } from './calculations.js';
@@ -78,11 +78,13 @@ function kindOf(asset) {
 }
 
 /**
- * Which pool an asset sits in for the FI count (FT-R-125, see assetScope): 'dep' (loses value or stable, or suggested to:
- * net worth only), 'home' (counts only as an investment), 'super' (from the preservation age) or 'plain'.
+ * Which pool an asset sits in for the FI count (FT-R-125, see assetScope): 'held' (its kind is only suggested: net worth
+ * only until confirmed, FT-R-128 1), 'dep' (loses value or stable: net worth only), 'home' (counts only as an investment),
+ * 'super' (from the preservation age) or 'plain'.
  */
 function classOf(asset) {
     if (!asset) return 'plain';
+    if (asset.kindSuggested) return 'held';
     if (asset.kind === 'depreciating') return 'dep';
     if (asset.isSuper) return 'super';
     if (asset.kind === 'appreciating') return 'home';
@@ -102,7 +104,7 @@ function peopleWithBirthYear(d) {
 
 /**
  * Age of the youngest person with a birth year at `dateIso`, or null when none is known. Assets have no owner, so the
- * youngest decides when super unlocks. UNVERIFIED rule, waiting for Chilli (a couple's own ages): left as it is.
+ * youngest decides when super unlocks (FT-R-128 2: all super unlocks when the younger person turns 60, until super is tracked per person).
  */
 function ageAt(d, dateIso) {
     const years = peopleWithBirthYear(d).map((p) => p.birthYear).filter((y) => y > 1850);
@@ -159,16 +161,20 @@ export function runPlan(start, inputsFor, opts = {}) {
     const untilFI = opts.untilFI !== false;
     // FT-R-117/126: read each asset without what a reference type filled and the person has not confirmed (kind, super, rate, curve).
     const assets = (start.assets || []).map((raw) => { const a = effectiveAsset(raw); return { a, kind: kindOf(a), cls: classOf(a), counts: assetScope(a).fi === 'yes', bal: num(a.balance) }; });
-    const debts = (start.debts || []).map((d) => ({ d, bal: Math.max(0, num(d.balance)) }));
+    // FT-R-128 3: a loan confirmed as for a home you live in leaves FI with the home (and stays in net worth); a suggested link or
+    // no link leaves it in. The same call as the person's own Debts screen would make, from the opening assets.
+    const debts = (start.debts || []).map((d) => ({ d, bal: Math.max(0, num(d.balance)), fi: loanScope(d, start.assets).fi === 'yes' }));
+    const heldOut = heldOutAssets(start.assets);
     const sinks = (start.sinks || []).map((s) => ({ ...s, left: s.type === 'debt' ? null : Math.max(0, num(s.capacity)) }));
     let help = Math.max(0, num(start.helpBalance));
     let pool = { invested: num(start.openInvested), cash: num(start.openCash), super: num(start.openSuper) };
 
     const asOf = inputsFor(0).dateIso;
     const snapshot = (k, inp, extra) => {
-        let cash = pool.cash, invested = pool.invested, appreciating = 0, depreciating = 0, liveIn = 0, superBal = pool.super;
+        let cash = pool.cash, invested = pool.invested, appreciating = 0, depreciating = 0, liveIn = 0, superBal = pool.super, heldBal = 0;
         for (const x of assets) {
-            if (x.cls === 'dep') depreciating += x.a.kindSuggested ? x.bal : valueDetail(x.a, k, { asOf }).value;
+            if (x.cls === 'held') heldBal += x.bal;
+            else if (x.cls === 'dep') depreciating += valueDetail(x.a, k, { asOf }).value;
             else if (x.cls === 'super') superBal += x.bal;
             else if (x.cls === 'home') { if (x.counts) appreciating += x.bal; else liveIn += x.bal; }
             else if (x.kind === 'cash') cash += x.bal;
@@ -176,13 +182,15 @@ export function runPlan(start, inputsFor, opts = {}) {
             else appreciating += x.bal;
         }
         const debtTotal = debts.reduce((s, x) => s + x.bal, 0);
+        const debtFi = debts.reduce((s, x) => s + (x.fi ? x.bal : 0), 0);
+        const debtOut = debtTotal - debtFi;
         // FT-R-125 (2): super counts from 60. Under 60 it is locked, and the money outside it must cover the years to 60
         // (the bridge). An unknown age counts super as before (the Future screen asks for a birth year).
         const age = isNum(inp.age) ? inp.age : null;
         const superCounted = age === null || age >= PRESERVATION_AGE;
         const superLocked = superCounted ? 0 : superBal;
         if (superCounted) invested += superBal;
-        const fiNetWorth = cash + invested + appreciating - debtTotal - help;
+        const fiNetWorth = cash + invested + appreciating - debtFi - help;
         let fiNeeded = num(inp.fiNumber);
         let bridge = 0;
         if (!superCounted) {
@@ -194,9 +202,9 @@ export function runPlan(start, inputsFor, opts = {}) {
             fiNeeded = Math.max(bridge, bridge + num(inp.fiNumber) / Math.pow(1 + r, n) - superLocked);
         }
         return {
-            year: k, fiNetWorth, netWorth: fiNetWorth + superLocked + depreciating + liveIn, cash, invested, appreciating, depreciating,
+            year: k, fiNetWorth, netWorth: fiNetWorth + superLocked + depreciating + liveIn + heldBal - debtOut, cash, invested, appreciating, depreciating,
             liveIn, superLocked, superCounted, superBal, bridge: round2(bridge), fiNeeded: round2(fiNeeded),
-            debts: debtTotal, help, fiNumber: inp.fiNumber, ...extra,
+            debts: debtTotal, debtsFi: debtFi, debtsOutOfFi: debtOut, heldOutValue: heldBal, heldOut, help, fiNumber: inp.fiNumber, ...extra,
         };
     };
 
@@ -228,6 +236,7 @@ export function runPlan(start, inputsFor, opts = {}) {
         // Year-end money: Fire down the sinks in order, super and the rest to the invested pool.
         let fireLeft = Math.max(0, num(inp.fireYear));
         let fireSuper = false;
+        let fireToExcluded = 0; // Fire money that paid a loan which is out of FI: net worth moves, the FI figure does not
         const superYear = Math.max(0, num(inp.superYear));
         for (const s of sinks) {
             if (fireLeft <= 0) break;
@@ -237,6 +246,7 @@ export function runPlan(start, inputsFor, opts = {}) {
                 const pay = Math.min(fireLeft, debtEnd[i]);
                 debtEnd[i] -= pay;
                 fireLeft -= pay;
+                if (!debts[i].fi) fireToExcluded += pay;
             } else if (s.type === 'mojo' || s.type === 'home' || s.type === 'saver') {
                 const pay = Math.min(fireLeft, s.left);
                 s.left -= pay;
@@ -257,7 +267,7 @@ export function runPlan(start, inputsFor, opts = {}) {
         if (contrib > 0) anyFlow = true;
         const next = snapshot(y + 1, inputsFor(y + 1), { fire: fireTotal, super: superYear, growth: 0 });
         // Super flows count only once super does; the jump when it unlocks is not growth.
-        const counted = (next.superCounted ? fireTotal + superYear : fireTotal - toSuper);
+        const counted = (next.superCounted ? fireTotal + superYear : fireTotal - toSuper) - fireToExcluded;
         const unlock = next.superCounted && !before.superCounted ? next.superBal : 0;
         next.growth = next.fiNetWorth - before.fiNetWorth - counted - unlock;
         path.push(next);
@@ -522,6 +532,8 @@ export function fiSummary(data, opts = {}) {
     return {
         fiNumber: proj.fiNumber, yearsToFI: proj.yearsToFI, path: proj.path, today: proj.today,
         now: { netWorth: p0.netWorth, fiNetWorth: p0.fiNetWorth, help: p0.help, depreciating: p0.depreciating, debts: p0.debts },
+        // FT-R-128: what the FI figure leaves out until the person confirms, for "N items are not counted until you confirm".
+        heldOut: p0.heldOut, loanLinksPending: pendingLoanLinks(open.liabilities),
         going: { fire: round2(base.fireYear), super: round2(base.superYear), total: round2(base.fireYear + base.superYear) },
         savingsRate: savingsRatePlanned(d, { today: proj.today }),
         savings: savingsPlanned(d, { today: proj.today }),

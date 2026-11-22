@@ -187,7 +187,9 @@ export const ASSET_TYPE_TEST_CASES = [
             const open = { name: 'Fund', balance: 300000, kind: 'invested', kindSuggested: true, isSuper: false };
             applyTypeSuggestion(open, SUP);
             assert('a suggested super flag is recorded as type-filled', [open.isSuper, open.typeFilled.includes('isSuper')], [true, true]);
-            assert('and held out of the maths: no super lock while only suggested', [effectiveAsset(open).isSuper, assetScope(effectiveAsset(open)).fi, fiOf(open)], [false, 'yes', 300000]);
+            // DB11, FT-R-128 1: a suggested kind is held out of FI whatever it is (it was counted as cash: 'yes', 300,000).
+            assert('and held out of the maths: no super lock while only suggested; the kind itself is held out until confirmed (FT-R-128 1)', [effectiveAsset(open).isSuper, assetScope(effectiveAsset(open)).fi, fiOf(open)], [false, 'no', 0]);
+            assert('with the kind confirmed and the super flag still only suggested, it counts with no lock', fiOf({ ...open, kindSuggested: false }), 300000);
             const crypto = { name: 'BTC', balance: 1, kind: 'invested', kindSuggested: false };
             applyTypeSuggestion(crypto, TYPES[6]);
             assert('rateMode is tracked as type-filled and undone while suggested', [crypto.rateMode, crypto.typeFilled.includes('rateMode'), effectiveAsset(crypto).rateMode], ['noReliableRate', true, null]);
