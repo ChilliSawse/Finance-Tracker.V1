@@ -7,6 +7,7 @@
 // its confidence is carried as refConfidence.
 
 import { categoriseDetailed, resolveCategory, merchantKey, DEFAULT_CATEGORIES } from './categories.js';
+import { applyRefOverrides } from './ref-overrides.js';
 
 const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
@@ -73,7 +74,8 @@ function localId(refId, ref, ids) {
  * The reference hit for a description, or null: { categoryId, confidence, refId, via: 'merchant' | 'keyword' }.
  * `categories` are the person's own, `ref` is the view from getReference().
  */
-export function referenceHit(description, amountCents, categories, ref) {
+export function referenceHit(description, amountCents, categories, ref, overrides) {
+    ref = applyRefOverrides(ref, overrides);
     if (!ref) return null;
     const d = String(description || '').toLowerCase();
     if (!d.trim()) return null;
@@ -121,7 +123,8 @@ function withoutShippedKeywords(categories) {
  * categoriseDetailed with the reference layers below the person's own: { categoryId, by: 'rule' | 'keyword' | 'reference' | 'none',
  * rule?, reference? }. With no `ref`, or no reference hit, the answer is categoriseDetailed's own.
  */
-export function categoriseWithReference(description, amountCents, categories, rules, ref) {
+export function categoriseWithReference(description, amountCents, categories, rules, ref, overrides) {
+    ref = applyRefOverrides(ref, overrides); // the person's hides and patches (DB7): a hidden reference merchant never hits
     const det = categoriseDetailed(description, categories, rules);
     if (!ref || (det.by !== 'none' && det.by !== 'keyword')) return det;
     if (det.by === 'keyword') {
@@ -144,7 +147,8 @@ export function categoriseWithReference(description, amountCents, categories, ru
  * carried so a later "confirm all the sure ones" action can use it. It never skips the suggested mark.
  * @returns {{categoryId:string, status:'ok'|'review', referenceSuggested?:true, refConfidence?:string, refId?:string}}
  */
-export function resolveWithReference(description, amountCents, chosenId, categories, rules, ref) {
+export function resolveWithReference(description, amountCents, chosenId, categories, rules, ref, overrides) {
+    ref = applyRefOverrides(ref, overrides);
     if (chosenId || !ref) return resolveCategory(description, chosenId, categories, rules);
     const det = categoriseWithReference(description, amountCents, categories, rules, ref);
     if (det.by !== 'reference') return resolveCategory(description, chosenId, categories, rules);

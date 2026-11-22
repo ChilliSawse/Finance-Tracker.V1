@@ -8,7 +8,7 @@ const LEGACY = [
     'migrateIncomeSourceTypes', 'migrateAllocationFields',
     'migrateLedgerFields', 'migrateVariableIncomeFields',
 ];
-const NEW_STEPS = ['migratePlanModel', 'migrateBucketModel', 'migrateIncomeFields', 'migrateAssetDebtDetail'];
+const NEW_STEPS = ['migratePlanModel', 'migrateBucketModel', 'migrateIncomeFields', 'migrateAssetDebtDetail', 'migrateRefOverrides'];
 
 // A save the four legacy migrations leave untouched: run them once up front.
 function settledData() {
@@ -19,6 +19,7 @@ function settledData() {
         incomeSources: [{ name: 'Job', incomeType: 'salaried', withholding: { claimsTaxFree: true } }],
         allocation: [{ name: 'Daily', percentage: 100 }],
         assetDebtVersion: 1, // F2: nor has the asset and debt step
+        refOverrides: { v: 1, dataVersionSeen: null, items: {} }, // DB7: nor has the reference overrides step
     };
     runMigrationChain(data, { storage: null, modules: [] });
     return data;
@@ -52,7 +53,7 @@ function fakeModules(log) {
 
 export const CHAIN_TEST_CASES = [
     {
-        name: 'M0.1 chain order: four legacy migrations, then plan, bucket, income, asset and debt',
+        name: 'M0.1 chain order: four legacy migrations, then plan, bucket, income, asset and debt, reference overrides',
         fn(assert) {
             const seen = [];
             runMigrationChain(settledData(), { storage: memStorage(), trace: (n) => seen.push(n) });

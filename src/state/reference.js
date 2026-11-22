@@ -15,6 +15,7 @@ import {
 /* global __APP_VERSION__ */
 export const REF_CACHE_NAME = 'ft-ref-v1';
 export const REF_CHECKED_KEY = 'ft-ref-checked';
+export const REF_ENABLED_KEY = 'ft-ref-enabled'; // '0' = the person turned the update check off (Settings, DB7)
 export const REF_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const STATE_URL = '/__ft-ref__/state.json';
 const bodyUrl = (sha) => '/__ft-ref__/f/' + sha;
@@ -161,12 +162,23 @@ export async function getReference(envIn) {
 
 // ---------- the update check ----------
 
+/** Whether the person allows the update check (default on; only the stored value '0' turns it off). */
+export function isReferenceCheckEnabled(envIn) {
+    return storageGet(resolveEnv(envIn), REF_ENABLED_KEY) !== '0';
+}
+
+/** Turn the update check on or off for this device. */
+export function setReferenceCheckEnabled(on, envIn) {
+    const env = resolveEnv(envIn);
+    if (env.storage) { try { env.storage.setItem(REF_ENABLED_KEY, on ? '1' : '0'); } catch (_) { /* blocked storage: stays on */ } }
+}
+
 let inFlight = null;
 
 // options: { enabled: false } makes the check do nothing at all (the Settings toggle arrives in R9); { force: true }
 // skips the 24 h limit; { env } is the test seam. Resolves to { status, ... } and never throws.
 export function checkForReferenceUpdate(options = {}) {
-    if (options.enabled === false) return Promise.resolve({ status: 'off' });
+    if (options.enabled === false || !isReferenceCheckEnabled(options.env)) return Promise.resolve({ status: 'off' });
     if (inFlight) return inFlight;
     inFlight = runCheck(options).catch((err) => ({ status: 'error', error: String(err && err.message || err) }))
         .finally(() => { inFlight = null; });
@@ -268,9 +280,9 @@ async function runCheck(options) {
 
 // Idle scheduling. Not wired in at this step: nothing calls it. Returns a cancel function.
 export function scheduleReferenceCheck(options = {}) {
-    if (options.enabled === false) return () => {};
+    if (options.enabled === false || !isReferenceCheckEnabled(options.env)) return () => {};
     let done = false;
-    const run = () => { if (!done) checkForReferenceUpdate(options); };
+    const run = () => { if (!done) checkForReferenceUpdate(options); }; // checks the toggle again: it may be turned off while waiting
     if (typeof requestIdleCallback === 'function') {
         const id = requestIdleCallback(run, { timeout: 30000 });
         return () => { done = true; if (typeof cancelIdleCallback === 'function') cancelIdleCallback(id); };

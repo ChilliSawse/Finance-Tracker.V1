@@ -9,7 +9,7 @@
 
 import { store } from '../state/store.js';
 import { t } from '../i18n/strings.js';
-import { showToast } from './toast.js';
+import { showToast, showUndoToast } from './toast.js';
 import { openSheet } from './sheet.js';
 import { showTab } from './tabs.js';
 import { updateDataAndUI } from './render.js';
@@ -32,6 +32,7 @@ const VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '';
 
 let root = null;
 let query = '';
+let refInfo = { checkEnabled: true, dataVersion: null }; // DB7: the shared sorting rules state the rows show
 let restoreCopy = null; // U3: {id, timestamp} while a pre-restore copy exists, else null
 
 function save() { if (store.autoSave) store.autoSave.onDataChange(); }
@@ -123,7 +124,49 @@ async function undoRestoreFromRow() {
     await refreshRestoreCopy();
 }
 
+// DB7: the shared sorting rules. The reference client loads only when one of these is used.
+async function refreshRefInfo() {
+    try {
+        const m = await import('../state/reference.js');
+        const v = await m.getReference();
+        const next = { checkEnabled: m.isReferenceCheckEnabled(), dataVersion: v && v.dataVersion ? v.dataVersion : null };
+        const changed = next.checkEnabled !== refInfo.checkEnabled || next.dataVersion !== refInfo.dataVersion;
+        refInfo = next;
+        if (changed) renderList();
+    } catch (_) { /* the rows keep their last state */ }
+}
+
+async function chooseRefCheck(on) {
+    const m = await import('../state/reference.js');
+    m.setReferenceCheckEnabled(on);
+    refInfo = { ...refInfo, checkEnabled: on };
+    renderList();
+}
+
+async function goBackRules() {
+    const m = await import('../state/reference.js');
+    const r = await m.rollbackReference();
+    if (!r.ok) { showToast(t('d.settings.refBack.none'), 'info'); return; }
+    showToast(t('d.settings.refBack.done', { version: r.dataVersion }), 'success');
+    await refreshRefInfo();
+}
+
+async function useReferenceOnly() {
+    const o = store.financeData.refOverrides;
+    if (!o || !o.items || !Object.keys(o.items).length) { showToast(t('d.settings.refReset.none'), 'info'); return; }
+    const yes = await confirmDialog({
+        title: t('d.settings.refReset.title'), body: t('d.settings.refReset.body'), confirmLabel: t('d.settings.refReset.confirm'), danger: true,
+    });
+    if (!yes) return;
+    const { resetRefOverrides } = await import('../state/ref-overrides.js');
+    const res = resetRefOverrides(store.financeData);
+    save();
+    showUndoToast({ message: t('d.settings.refReset.done'), onUndo: () => { res.onUndo(); save(); } });
+}
+
 const ACTIONS = {
+    refback: goBackRules,
+    refreset: useReferenceOnly,
     undorestore: undoRestoreFromRow,
     backup: () => actionExportDataJSON(),
     restore: () => { const f = root && root.querySelector('#json-import-gui'); if (f) f.click(); },
@@ -255,17 +298,24 @@ function buildAppearanceRows(grp) {
     return nodes;
 }
 
+function buildSegRow(r) {
+    const li = el('li');
+    li.dataset.row = r.id;
+    li.appendChild(segBlock(r, [{ value: 'on', label: t('d.settings.refCheck.on') }, { value: 'off', label: t('d.settings.refCheck.off') }], r.on ? 'on' : 'off', 'refcheck'));
+    return li;
+}
+
 function renderList() {
     const host = root && root.querySelector('#settings-list');
     if (!host) return;
     const all = addUndoRestoreRow(buildSettings({
-        financeData: store.financeData, now: new Date(), installAvailable: canInstall(), version: VERSION,
+        financeData: store.financeData, now: new Date(), installAvailable: canInstall(), version: VERSION, reference: refInfo,
     }), restoreCopy);
     const groups = filterSettings(all, query);
     // Keep focus on the same control across a re-render.
     const active = document.activeElement;
     const keep = active && host.contains(active)
-        ? (active.dataset.sAct ? `[data-s-act="${active.dataset.sAct}"]` : (active.dataset.mode ? `[data-mode="${active.dataset.mode}"]` : (active.dataset.size ? `[data-size="${active.dataset.size}"]` : (active.dataset.palette ? `[data-palette="${active.dataset.palette}"]` : null))))
+        ? (active.dataset.sAct ? `[data-s-act="${active.dataset.sAct}"]` : (active.dataset.mode ? `[data-mode="${active.dataset.mode}"]` : (active.dataset.size ? `[data-size="${active.dataset.size}"]` : (active.dataset.palette ? `[data-palette="${active.dataset.palette}"]` : (active.dataset.refcheck ? `[data-refcheck="${active.dataset.refcheck}"]` : null)))))
         : null;
     host.replaceChildren();
     for (const grp of groups) {
@@ -279,7 +329,7 @@ function renderList() {
             buildAppearanceRows(grp).forEach((n) => card.appendChild(n));
         } else {
             const ul = el('ul', 's-list');
-            grp.rows.forEach((r) => ul.appendChild(buildRow(r)));
+            grp.rows.forEach((r) => ul.appendChild(r.kind === 'seg' ? buildSegRow(r) : buildRow(r)));
             card.appendChild(ul);
         }
         sec.append(label, card);
@@ -339,6 +389,7 @@ export function openSettings() {
     if (!root) return;
     query = '';
     refreshRestoreCopy();
+    refreshRefInfo();
     const input = root.querySelector('#settings-search');
     if (input) input.value = '';
     renderList();
@@ -388,6 +439,8 @@ export function setupSettingsScreen() {
         if (sw) { chooseAppearance({ palette: sw.dataset.palette }); return; }
         const mode = e.target.closest('.seg [data-mode]'); // not bare [data-mode]: <html> carries that attribute
         if (mode && MODES.includes(mode.dataset.mode)) { chooseAppearance({ mode: mode.dataset.mode }); return; }
+        const rc = e.target.closest('[data-refcheck]');
+        if (rc) { chooseRefCheck(rc.dataset.refcheck === 'on'); return; }
         const size = e.target.closest('[data-size]');
         if (size) chooseTextSize(size.dataset.size);
     });
