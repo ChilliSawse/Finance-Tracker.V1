@@ -3,7 +3,8 @@
 
 import { DEFAULT_CATEGORIES, merchantKey, categoriseDescription, categoriseDetailed } from './categories.js';
 import { looksLikeOwnTransfer, transferSuggestion } from '../calc/transfer-suggest.js';
-import { resolveImportRow } from './import-rows.js';
+import { resolveImportRow, previewCategory } from './import-rows.js';
+import { categoriseWithReference, referenceHit } from './reference-match.js';
 import { learnRule, similarUnconfirmed } from './rules.js';
 
 const cats = DEFAULT_CATEGORIES;
@@ -178,6 +179,99 @@ export const SORTING_TEST_CASES = [
             assert('the bucket-label path is unchanged', resolveImportRow('Transfer to Fire', -4000, undefined, { ...data, allocation: [{ id: 'fire', bankLabel: 'Fire' }] }),
                 { categoryId: 'transfer', bucketId: 'fire', bucketSuggested: true, status: 'review' });
             assert('transferSuggestion itself has no wording path', transferSuggestion({ description: 'INTERNAL TRANSFER', amountCents: -1 }, { allocation: [] }), null);
+        },
+    },
+    {
+        name: 'DB4.1 reference layers sit below the own ones: learned rule, user keyword, reference merchant, reference keyword, other',
+        fn(assert) {
+            const mine = clone(cats);
+            mine.find((c) => c.id === 'dining').keywords.push('zedburger'); // a keyword the person added
+            const ref = {
+                sources: { categories: 'cache', merchants: 'cache' },
+                categories: [{ id: 'fitness', keywords: ['zedfit'] }, { id: 'shopping', keywords: ['zedshop'] }],
+                merchants: [
+                    { id: 'm-zedburger', key: 'zedburger', categoryId: 'shopping', match: 'key', confidence: 'high' },
+                    { id: 'm-zedmart', key: 'zedmart', categoryId: 'shopping', match: 'key', confidence: 'high' },
+                ],
+            };
+            const by = (d, rules = [], r = ref) => categoriseWithReference(d, -500, mine, rules, r);
+            const learned = [{ key: 'zedmart', categoryId: 'health' }];
+            assert('a learned rule beats a reference merchant', [by('ZEDMART 12', learned).by, by('ZEDMART 12', learned).categoryId], ['rule', 'health']);
+            assert('a user keyword beats a reference merchant', [by('ZEDBURGER 12').by, by('ZEDBURGER 12').categoryId], ['keyword', 'dining']);
+            assert('a reference merchant is by reference', [by('ZEDMART 12').by, by('ZEDMART 12').categoryId], ['reference', 'shopping']);
+            assert('a reference merchant beats a reference category keyword', by('ZEDMART ZEDFIT').categoryId, 'shopping');
+            assert('a reference category keyword', [by('PAID ZEDFIT CLUB').by, by('PAID ZEDFIT CLUB').categoryId], ['reference', 'fitness']);
+            assert('nothing matches: other', by('QWERTY 9'), { categoryId: 'other', by: 'none' });
+            assert('a category the person does not have is dropped', categoriseWithReference('NOPE 1', -5, mine, [], { sources: {}, merchants: [{ id: 'x', key: 'nope', categoryId: 'ghost', match: 'key', confidence: 'high' }] }).by, 'none');
+            assert('a reference category maps through legacyCategoryId', categoriseWithReference('NOPE 1', -5, mine, [], { sources: {}, categories: [{ id: 'dining-out', legacyCategoryId: 'dining' }], merchants: [{ id: 'x', key: 'nope', categoryId: 'dining-out', match: 'key', confidence: 'high' }] }).categoryId, 'dining');
+        },
+    },
+    {
+        name: 'DB4.2 with no reference data the result equals today\'s',
+        fn(assert) {
+            const probes = ['WOOLWORTHS 1234 NEWTOWN', 'QWERTY HOLDINGS', 'COCA COLA', 'EAGLE FARM', 'Transfer to Fire', '', 'ZEDCO 12', ...SHAPES];
+            const rules = [{ key: 'zedco', categoryId: 'shopping' }];
+            const empties = [undefined, null, { sources: { categories: 'default', merchants: 'default' }, categories: clone(cats), merchants: [] }];
+            for (const e of empties) {
+                for (const d of probes) {
+                    assert('same as categoriseDetailed: ' + d + ' / ' + (e ? 'default view' : String(e)), categoriseWithReference(d, -100, cats, rules, e), categoriseDetailed(d, cats, rules));
+                }
+            }
+            const data = { categories: cats, allocation: [], rules: [] };
+            for (const d of ['WOOLWORTHS 1', 'Mystery payee', 'INTERNAL TRANSFER']) {
+                assert('resolveImportRow with and without a view: ' + d, resolveImportRow(d, -100, undefined, data), resolveImportRow(d, -100, undefined, data, null));
+            }
+            assert('no view: the preview shows no suggestion', previewCategory('Mystery payee', -1, data, null), { categoryId: 'other', suggested: false });
+        },
+    },
+    {
+        name: 'DB4.3 status: a high-confidence merchant gives ok, anything else from the database gives review',
+        fn(assert) {
+            const mk = (confidence) => ({ sources: { categories: 'cache' }, categories: [{ id: 'fitness', keywords: ['zedfit'] }],
+                merchants: [{ id: 'm1', key: 'zedmart', categoryId: 'shopping', match: 'key', confidence }] });
+            const data = { categories: cats, allocation: [], rules: [] };
+            const row = (d, ref, amt = -500) => resolveImportRow(d, amt, undefined, data, ref);
+            assert('high: ok', row('ZEDMART 12', mk('high')), { categoryId: 'shopping', status: 'ok' });
+            assert('medium: review', row('ZEDMART 12', mk('medium')), { categoryId: 'shopping', status: 'review', referenceSuggested: true });
+            assert('low: review', row('ZEDMART 12', mk('low')).status, 'review');
+            assert('a category keyword hit is review', row('ZEDFIT 3', mk('high')), { categoryId: 'fitness', status: 'review', referenceSuggested: true });
+            assert('a high hit on income is still review (never silently feeds totals)', resolveImportRow('ZEDMART PAY', 5000, undefined, data,
+                { sources: {}, categories: [{ id: 'income', kind: 'income' }], merchants: [{ id: 'm2', key: 'zedmart', categoryId: 'income', match: 'key', confidence: 'high' }] }).status, 'review');
+            assert('a preview pick still wins', resolveImportRow('ZEDMART 12', -500, 'dining', data, mk('high')), { categoryId: 'dining', status: 'ok' });
+            assert('the preview shows a medium hit as suggested', previewCategory('ZEDMART 12', -500, data, mk('medium')), { categoryId: 'shopping', suggested: true });
+            assert('the preview shows a high hit as plain', previewCategory('ZEDMART 12', -500, data, mk('high')), { categoryId: 'shopping', suggested: false });
+            assert('a bucket label still turns the row into a transfer', resolveImportRow('Transfer to Fire ZEDMART', -500, undefined, { ...data, allocation: [{ id: 'fire', bankLabel: 'Fire' }] }, mk('high')).bucketSuggested, true);
+        },
+    },
+    {
+        name: 'DB4.4 merchant match modes: key, keyword, word (boundaries, guards, direction)',
+        fn(assert) {
+            const m = (o) => ({ id: 'm', key: 'zed', categoryId: 'shopping', confidence: 'high', ...o });
+            const hit = (merchant, d, amt = -100) => !!referenceHit(d, amt, cats, { sources: {}, merchants: [merchant] });
+            const key = m({ key: 'zedmart', match: 'key', aliases: ['zedm'] });
+            assert('key: equal', hit(key, 'ZEDMART'), true);
+            assert('key: starts with key and a space', hit(key, 'ZEDMART 1234 NEWTOWN'), true);
+            assert('key: alias', hit(key, 'ZEDM 12'), true);
+            assert('key: not a longer word', hit(key, 'ZEDMARTIN 12'), false);
+            assert('key: rail text is stripped first', hit(key, 'VISA DEBIT PURCHASE CARD 1234 ZEDMART 5522'), true);
+            const kw = m({ key: 'zedmart', match: 'keyword' });
+            assert('keyword: substring anywhere', [hit(kw, 'PAY ZEDMARTIN'), hit(kw, 'NOPE')], [true, false]);
+            const word = m({ match: 'word', patterns: ['zedbar', 'zed cafe'] });
+            assert('word: whole word', hit(word, 'PAID ZEDBAR 12'), true);
+            assert('word: not inside a longer word', [hit(word, 'ZEDBARN'), hit(word, 'AZEDBAR'), hit(word, 'ZEDBARS')], [false, false, false]);
+            assert('word: phrase, punctuation as spaces', [hit(word, 'ZED-CAFE 1'), hit(word, 'ZED CAFES')], [true, false]);
+            assert('word: apostrophe is a boundary', hit(m({ match: 'word', patterns: ['zed'] }), "ZED'S PLACE"), true);
+            const guarded = m({ match: 'word', guardedPatterns: [{ pattern: 'zed', requireContext: ['card', '#digits'] }], excludePatterns: ['zed mining'] });
+            assert('guarded: needs its context', [hit(guarded, 'ZED'), hit(guarded, 'ZED CARD'), hit(guarded, 'ZED 12'), hit(guarded, 'ZED MINING 12')], [false, true, true, false]);
+            const tok = m({ match: 'word', tokenPatterns: ['zedx'] });
+            assert('token: the pattern then only digits', [hit(tok, 'ZEDX12 STORE'), hit(tok, 'ZEDX'), hit(tok, 'ZEDXY1'), hit(tok, 'ZEDX1A')], [true, true, false, false]);
+            const ctx = m({ match: 'word', patterns: ['zed'], requireContext: ['council'] });
+            assert('entry-level requireContext', [hit(ctx, 'ZED'), hit(ctx, 'ZED COUNCIL')], [false, true]);
+            const credit = m({ match: 'word', patterns: ['zed'], direction: 'credit' });
+            assert('direction', [hit(credit, 'ZED', 100), hit(credit, 'ZED', -100), hit(credit, 'ZED', undefined)], [true, false, false]);
+            assert('the longest match wins', referenceHit('ZED CAFE BAR', -1, cats, { sources: {}, merchants: [m({ id: 'a', match: 'word', patterns: ['zed'] }), m({ id: 'b', match: 'word', patterns: ['zed cafe'] })] }).refId, 'b');
+            assert('category keywords are whole words by default', referenceHit('ZEDFITNESS', -1, cats, { sources: { categories: 'cache' }, categories: [{ id: 'fitness', keywords: ['zedfit'] }], merchants: [] }), null);
+            assert('keywordMatch substring on category keywords', referenceHit('ZEDFITNESS', -1, cats, { sources: { categories: 'cache' }, keywordMatch: 'substring', categories: [{ id: 'fitness', keywords: ['zedfit'] }], merchants: [] }).categoryId, 'fitness');
         },
     },
 ];

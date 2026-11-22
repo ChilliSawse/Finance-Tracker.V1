@@ -97,7 +97,10 @@ function schedulePrefetch() {
     prefetchScheduled = true;
     const run = () => {
         const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 200));
-        idle(() => { Object.keys(loaders).forEach((tab) => { ensureTabLoaded(tab).catch(() => { /* prefetch only; the real open retries and reports */ }); }); });
+        idle(() => { Object.keys(loaders).forEach((tab) => { ensureTabLoaded(tab).catch(() => { /* prefetch only; the real open retries and reports */ }); });
+            // DB4: the reference-data check, once, after first paint. Dynamic, so the client stays out of the core chunk.
+            import('../state/reference.js').then((m) => m.scheduleReferenceCheck()).catch(() => { /* a background check; never blocks */ });
+        });
     };
     if (document.readyState === 'complete') setTimeout(run, 3000);
     else window.addEventListener('load', () => setTimeout(run, 3000), { once: true });

@@ -7,9 +7,8 @@
 
 import { store } from '../state/store.js';
 import { getElement, getValue, setHTML, escapeHtml, formatCurrency } from '../utils.js';
-import { categoriseDescription } from '../state/categories.js';
 import { commitImportRows, rematchBills } from '../state/rules.js';
-import { resolveImportRow, suggestedTransferName, suggestedTransfersLine } from '../state/import-rows.js';
+import { resolveImportRow, suggestedTransferName, suggestedTransfersLine, previewCategory, loadImportReference } from '../state/import-rows.js';
 import { makeTransaction, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
@@ -25,6 +24,12 @@ const txnWord = (n) => t(n === 1 ? 'feed.import.txnOne' : 'feed.import.txnMany')
 const PREVIEW_ROWS = 15;
 
 // ---- draft state (the sandbox) ----
+// DB4: the reference view (merchants and category keywords), loaded when a file is opened; null until then or when there is none.
+let refView = null;
+function ensureRefView() {
+    return loadImportReference().then((v) => { const fresh = v !== refView; refView = v; return fresh; });
+}
+
 let draft = null; // { pages, fileName, bank, transactions }
 let lastCommit = null; // { batchId, eventId, added } — for undo
 
@@ -91,16 +96,18 @@ function renderPreview() {
     if (!txns.length) {
         previewEl.innerHTML = `<p class="import-empty-note">${t('pdf.noRows')}</p>`;
     } else {
+        const sugPill = ` <span class="pill review">${escapeHtml(t('f.ad.suggested'))}</span>`; // the existing suggested mark
         const shown = txns.slice(0, PREVIEW_ROWS);
         const rowsHtml = shown.map((txn, i) => {
-            const catId = txn.categoryId || categoriseDescription(txn.description, store.financeData.categories, store.financeData.rules);
+            const pre = txn.categoryId ? { categoryId: txn.categoryId, suggested: false } : previewCategory(txn.description, txn.amountCents, store.financeData, refView);
+            const catId = pre.categoryId;
             // txn.categoryId is only ever a category the person picked, so a bank-label transfer suggestion can tell (H9)
-            const xfer = suggestedTransferName(txn.description, txn.amountCents, txn.categoryId, store.financeData);
+            const xfer = suggestedTransferName(txn.description, txn.amountCents, txn.categoryId, store.financeData, refView);
             return `<tr>
                 <td class="import-cell-date">${escapeHtml(txn.date)}</td>
                 <td class="import-cell-desc">${escapeHtml(txn.description)}</td>
                 <td class="import-cell-amount ${txn.amountCents < 0 ? 'is-out' : 'is-in'}">${formatCurrency(txn.amountCents / 100)}</td>
-                <td><select class="import-cat-select" data-preview-index="${i}">${categoryOptions(catId)}</select>${xfer ? `<div class="import-xfer-note muted">${escapeHtml(t('a.import.previewTransfer', { bucket: xfer }))}</div>` : ''}</td>
+                <td><select class="import-cat-select" data-preview-index="${i}">${categoryOptions(catId)}</select>${pre.suggested ? sugPill : ''}${xfer ? `<div class="import-xfer-note muted">${escapeHtml(t('a.import.previewTransfer', { bucket: xfer }))}</div>` : ''}</td>
             </tr>`;
         }).join('');
         const more = txns.length > PREVIEW_ROWS
@@ -191,6 +198,7 @@ async function handleStatementFile(file) {
             : file.name.replace(/\.pdf$/i, '').slice(0, 40);
     }
     renderPreview();
+    ensureRefView().then((fresh) => { if (fresh && draft) renderPreview(); });
 }
 
 // ---- commit / undo (identical flow to the CSV importer) ----
@@ -202,11 +210,12 @@ function mergeLines(merges) {
 
 async function commitImport() {
     if (!draft || !draft.transactions.length) return;
+    await ensureRefView();
     const sourceName = (getValue('pdf-import-source-name') || '').trim();
     const batchId = crypto.randomUUID();
 
     const txns = draft.transactions.map(txn => {
-        const c = resolveImportRow(txn.description, txn.amountCents, txn.categoryId, store.financeData);
+        const c = resolveImportRow(txn.description, txn.amountCents, txn.categoryId, store.financeData, refView);
         return makeTransaction({
             date: txn.date,
             description: txn.description,

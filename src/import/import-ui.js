@@ -9,9 +9,8 @@
 import { store } from '../state/store.js';
 import { getElement, getValue, setHTML, escapeHtml, formatCurrency } from '../utils.js';
 import { parseCsv, detectColumns, normaliseRows, CSV_LIMITS, CsvLimitError } from './csv.js';
-import { categoriseDescription } from '../state/categories.js';
 import { commitImportRows, rematchBills } from '../state/rules.js';
-import { resolveImportRow, suggestedTransferName, suggestedTransfersLine } from '../state/import-rows.js';
+import { resolveImportRow, suggestedTransferName, suggestedTransfersLine, previewCategory, loadImportReference } from '../state/import-rows.js';
 import { makeTransaction, deleteImportBatch } from '../state/transactions.js';
 import { logEvent, deleteEvent } from '../state/eventlog.js';
 import { setupModal } from '../ui/modals.js';
@@ -26,6 +25,12 @@ const MAPPINGS_KEY = 'ft-csv-mappings';
 const PREVIEW_ROWS = 15;
 
 // ---- draft state (the sandbox) ----
+// DB4: the reference view (merchants and category keywords), loaded when a file is opened; null until then or when there is none.
+let refView = null;
+function ensureRefView() {
+    return loadImportReference().then((v) => { const fresh = v !== refView; refView = v; return fresh; });
+}
+
 let draft = null; // { rows, errors(parse), fileName, mapping-ui state lives in the DOM }
 let lastCommit = null; // { batchId, eventId, added } — for undo
 
@@ -161,16 +166,18 @@ function renderPreview() {
     if (!transactions.length) {
         previewEl.innerHTML = `<p class="import-empty-note">${t('import.preview.none')}</p>`;
     } else {
+        const sugPill = ` <span class="pill review">${escapeHtml(t('f.ad.suggested'))}</span>`; // the existing suggested mark
         const shown = transactions.slice(0, PREVIEW_ROWS);
         const rowsHtml = shown.map((t, i) => {
-            const catId = t.categoryId || categoriseDescription(t.description, store.financeData.categories, store.financeData.rules);
+            const pre = t.categoryId ? { categoryId: t.categoryId, suggested: false } : previewCategory(t.description, t.amountCents, store.financeData, refView);
+            const catId = pre.categoryId;
             // t.categoryId is only ever a category the person picked, so a bank-label transfer suggestion can tell (H9)
-            const xfer = suggestedTransferName(t.description, t.amountCents, t.categoryId, store.financeData);
+            const xfer = suggestedTransferName(t.description, t.amountCents, t.categoryId, store.financeData, refView);
             return `<tr>
                 <td class="import-cell-date">${escapeHtml(t.date)}</td>
                 <td class="import-cell-desc">${escapeHtml(t.description)}</td>
                 <td class="import-cell-amount ${t.amountCents < 0 ? 'is-out' : 'is-in'}">${formatCurrency(t.amountCents / 100)}</td>
-                <td><select class="import-cat-select" data-preview-index="${i}">${categoryOptions(catId)}</select>${xferNote(xfer)}</td>
+                <td><select class="import-cat-select" data-preview-index="${i}">${categoryOptions(catId)}</select>${pre.suggested ? sugPill : ''}${xferNote(xfer)}</td>
             </tr>`;
         }).join('');
         const more = transactions.length > PREVIEW_ROWS
@@ -237,6 +244,7 @@ function startDraft(rows, errors, file) {
         nameInput.value = (saved && saved.sourceName) || file.name.replace(/\.(csv|xlsx)$/i, '').slice(0, 40);
     }
     renderPreview();
+    ensureRefView().then((fresh) => { if (fresh && draft) renderPreview(); });
 }
 
 const isXlsx = (file) => /\.xlsx$/i.test(file.name || '') || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -290,12 +298,13 @@ function mergeLines(merges) {
 
 async function commitImport() {
     if (!draft || !draft.normalised.length) return;
+    await ensureRefView();
     const cfg = currentConfig();
     const sourceName = (getValue('import-source-name') || '').trim();
     const batchId = crypto.randomUUID();
 
     const txns = draft.normalised.map(t => {
-        const c = resolveImportRow(t.description, t.amountCents, t.categoryId, store.financeData);
+        const c = resolveImportRow(t.description, t.amountCents, t.categoryId, store.financeData, refView);
         return makeTransaction({
             date: t.date,
             description: t.description,
