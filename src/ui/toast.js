@@ -7,6 +7,7 @@
 // the DOM view below is the single #ledger-toast element.
 
 import { t } from '../i18n/strings.js';
+import { formatCurrency } from '../utils.js';
 
 const DEFAULT_DURATION = 4500;
 const UNDO_DURATION = 6000;
@@ -172,7 +173,7 @@ export function setupMilestoneToasts() {
         if (d.kind === 'net-worth') {
             showToast(t('toast.milestone.netWorth', { threshold: d.thresholdLabel }), 'celebrate', 6000);
         } else if (d.kind === 'savings-rate') {
-            showToast(t('toast.milestone.savingsRate', { threshold: d.threshold }), 'celebrate', 6000);
+            showToast(t('toast.milestone.savingsRate', { threshold: d.threshold, amount: Number.isFinite(d.perPayCents) ? t('feed.milestone.savingsAmount', { amount: formatCurrency(d.perPayCents / 100, undefined, 0) }) : '' }), 'celebrate', 6000);
         }
     });
 }

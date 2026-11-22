@@ -11,7 +11,7 @@
 import './results.css'; // F8b — What If results, Compare, Make this real
 import { t } from '../../i18n/strings.js';
 import { resolveAt } from '../../calc/scenario.js';
-import { fiSummary, savingsRatePlanned } from '../../calc/fi.js';
+import { fiSummary, savingsPlanned } from '../../calc/fi.js';
 import { planGoalsFromData } from '../../calc/goal-planner.js';
 import { getBuckets } from '../../state/saving-model.js';
 import { netPerPayCents } from '../../calc/plan.js';
@@ -65,11 +65,14 @@ export function sideFigures(data, changes, today, date) {
     const plan = safe(() => planGoalsFromData(data, { today, date, changes: list }), null, 'the goal plan');
     const summary = safe(() => fiSummary(data, { today, changes: list }), null, 'the FI figures');
     const debts = (Array.isArray(resolved.liabilities) ? resolved.liabilities : []).reduce((s, l) => s + (isObj(l) ? Math.max(0, toCents(l.balance)) : 0), 0);
-    return {
+    const side = {
         resolved, buckets, byRole, net, plan, summary, debts, date,
-        savingsRate: safe(() => savingsRatePlanned(resolved, { today }), null, 'the savings rate'),
+        savings: safe(() => savingsPlanned(resolved, { today }), null, 'the savings rate'),
+        savingsRate: null, // set just below from `savings`
         goals: goalMap(resolved, plan),
     };
+    side.savingsRate = side.savings ? side.savings.ratePct : null;
+    return side;
 }
 
 function goalMap(resolved, plan) {
@@ -132,7 +135,7 @@ export function buildResultSet(data, changes, today, answer = null) {
         if (role === 'mojo') continue;
         add(role, 'pay', 'money', t('f.res.row.perPay', { name: bucketName(set, role) }), null, ...both(get), { role });
     }
-    add('savingsRate', 'long', 'pct', t('f.res.row.savingsRate'), 'high', ...[now, scen].map((s) => (s.savingsRate == null ? val(null, '') : val(s.savingsRate, t('f.res.pct', { n: round1(s.savingsRate) })))));
+    add('savingsRate', 'long', 'pct', t('f.res.row.savingsRate'), 'high', ...[now, scen].map((s) => (s.savingsRate == null ? val(null, '') : val(s.savingsRate, t('f.res.rateAmount', { n: round1(s.savingsRate), amount: formatMoney(s.savings.perPayCents) })))), { amount: { now: now.savings ? now.savings.perPayCents : null, scen: scen.savings ? scen.savings.perPayCents : null } });
 
     // goals (F4): a row per goal, whichever side has it
     const ids = [...new Set([...now.goals.keys(), ...scen.goals.keys()])];
@@ -230,6 +233,7 @@ export function diffOf(row) {
     const none = { dir: 'none', tone: 'neutral', text: '' };
     if (row.kind === 'goal') return goalDiff(row);
     if (a == null || b == null) return none;
+    if (row.id === 'savingsRate' && row.amount && row.amount.now != null && row.amount.scen != null) return savingsDiff(row);
     if (a === b) return { dir: 'same', tone: 'neutral', text: t('f.res.diff.same') };
     const up = b > a;
     const better = row.better ? ((row.better === 'high') === up) : null;
@@ -240,6 +244,22 @@ export function diffOf(row) {
     else if (b === Infinity) text = t('f.res.diff.neverNow');
     else if (a === Infinity) text = t('f.res.diff.reachesNow');
     else text = t(up ? 'f.res.diff.later' : 'f.res.diff.sooner', { n: round1(Math.abs(b - a)) });
+    return { dir: up ? 'up' : 'down', tone, text };
+}
+
+/** The savings rate with its amount (FT-R-116): the points and the dollars a pay, so a pay change shows as the same rate and more money. */
+function savingsDiff(row) {
+    const a = row.now.v;
+    const b = row.scen.v;
+    const da = row.amount.scen - row.amount.now;
+    if (a === b && da === 0) return { dir: 'same', tone: 'neutral', text: t('f.res.diff.same') };
+    const up = (a === b ? da : b - a) > 0;
+    const tone = up ? 'ok' : 'warn';
+    const amount = formatMoney(Math.abs(da));
+    let text;
+    if (da === 0) text = t(up ? 'f.res.diff.pointsUp' : 'f.res.diff.pointsDown', { n: round1(Math.abs(b - a)) });
+    else if (a === b) text = t(da > 0 ? 'f.res.diff.sameRateMore' : 'f.res.diff.sameRateLess', { amount });
+    else text = t(da > 0 ? 'f.res.diff.rateAndMore' : 'f.res.diff.rateAndLess', { rate: t(up ? 'f.res.diff.pointsUp' : 'f.res.diff.pointsDown', { n: round1(Math.abs(b - a)) }), amount });
     return { dir: up ? 'up' : 'down', tone, text };
 }
 
@@ -262,6 +282,7 @@ export function bestOf(row) {
     if (!row.better) return null;
     const a = row.now.v;
     const b = row.scen.v;
+    if (row.id === 'savingsRate' && a === b && row.amount && row.amount.now != null && row.amount.scen != null && row.amount.now !== row.amount.scen) return row.amount.scen > row.amount.now ? 'scen' : 'now';
     if (a == null || b == null || a === b) return null;
     const low = row.better === 'low';
     return (b < a) === low ? 'scen' : 'now';

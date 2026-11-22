@@ -105,8 +105,8 @@ export function fiCardHtml(m) {
         + (ages ? `<p class="muted">${esc(t('f.future.fi.ages', { list: ages }))}</p>` : '')
         + `<dl class="fu-kv"><div><dt>${esc(t('f.future.fi.number'))}</dt><dd class="money">${esc(whole(s.fiNumber))}</dd></div>`
         + `<div class="sub"><dt>${esc(t('f.future.fi.numberSub', { multiple: escNum(s.multiple), spend: whole(s.spendYear) }))}</dt></div>`
-        + `<div><dt>${esc(t('f.future.fi.rate'))}</dt><dd class="num">${esc(t('f.future.pct', { n: s.savingsRate }))}</dd></div>`
-        + `<div class="sub"><dt>${esc(t('f.future.fi.rateSub'))}</dt></div>`
+        + `<div><dt>${esc(t('f.future.fi.rate'))}</dt><dd class="num">${esc(t('f.future.rateAmount', { n: s.savings.ratePct, amount: whole(s.savings.perPayCents / 100) }))}</dd></div>`
+        + `<div class="sub"><dt>${esc(t('f.future.fi.rateSub', { year: whole(s.savings.perYearCents / 100) }))}</dt></div>`
         + `<div><dt>${esc(t('f.future.fi.going'))}</dt><dd class="money">${esc(whole(s.going.total))}</dd></div>`
         + `<div class="sub"><dt>${esc(t('f.future.fi.goingSub', { fire: whole(s.going.fire), super: whole(s.going.super) }))}</dt></div></dl>`
         + `<p class="fine">${esc(t('f.future.assume', { real: s.realReturnPct, inflation: s.inflationPct }))}</p>`

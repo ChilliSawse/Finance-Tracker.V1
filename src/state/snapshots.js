@@ -20,7 +20,7 @@ export function listSnapshots() {
 
 /**
  * Record (or refresh) today's snapshot from calculated totals.
- * @param {{netWorth:number, savingsRate:number, totalWeeklyExpenses:number}} totals
+ * @param {{netWorth:number, savingsRate:number, savingsPerPayCents?:number, totalWeeklyExpenses:number}} totals
  */
 export function recordDailySnapshot(totals) {
     const snaps = listSnapshots();
@@ -30,6 +30,12 @@ export function recordDailySnapshot(totals) {
         netWorth: Math.round(totals.netWorth * 100) / 100,
         savingsRate: Math.round(totals.savingsRate * 10) / 10,
     };
+    // FT-R-116: new entries carry the pay-into-saving-buckets definition and its amount. Older entries have
+    // no `savingsDef`: their savingsRate is the old net-minus-expenses figure, and they are left as they were.
+    if (Number.isFinite(totals.savingsPerPayCents)) {
+        entry.savingsDef = 'buckets';
+        entry.savingsPerPayCents = totals.savingsPerPayCents;
+    }
     const last = snaps[snaps.length - 1];
     if (last && last.date === date) snaps[snaps.length - 1] = entry;
     else snaps.push(entry);

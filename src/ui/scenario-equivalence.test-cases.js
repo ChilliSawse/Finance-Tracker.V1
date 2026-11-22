@@ -12,11 +12,11 @@
 // scenario does not shows up as a named path.
 // Shape: { name, fn(assert) }, assert(label, actual, expected). Pure (no DOM).
 
-import { buildResultSet } from './scenario/results.js';
+import { buildResultSet, diffOf, bestOf } from './scenario/results.js';
 import { explainLines } from './scenario/explain.js';
-import { starterSpec } from './scenario/starters.js';
+import { starterSpec, fmtMoney } from './scenario/starters.js';
 import { resolveAt } from '../calc/scenario.js';
-import { fiSummary, explainFi, projectNetWorth, savingsRatePlanned } from '../calc/fi.js';
+import { fiSummary, explainFi, projectNetWorth, savingsRatePlanned, savingsPlanned } from '../calc/fi.js';
 import { planGoalsFromData } from '../calc/goal-planner.js';
 import { netPerPayCents } from '../calc/plan.js';
 import { calculateTotals } from '../calc/calculations.js';
@@ -188,7 +188,8 @@ export function whatIfFigures(data, changes) {
     const set = buildResultSet(data, changes, TODAY, null);
     const row = (id) => { const r = set.rows.find((x) => x.id === id); return r ? r.scen.v : null; };
     const out = {
-        takeHome: row('takeHome'), savingsRate: row('savingsRate'), required: row('required'), short: row('short'), earnGap: row('earnGap'),
+        takeHome: row('takeHome'), savingsRate: row('savingsRate'), savingsPerPay: set.scen.savings.perPayCents, savingsPerYear: set.scen.savings.perYearCents,
+        savingsText: (set.rows.find((x) => x.id === 'savingsRate') || { scen: {} }).scen.text, required: row('required'), short: row('short'), earnGap: row('earnGap'),
         debts: row('debts'), help: row('help'), mojoBalance: row('mojoBalance'), fiYears: row('fiYears'), fiNumber: row('fiNumber'),
         nw1: row('nw1'), nw5: row('nw5'), nw10: row('nw10'), nw20: row('nw20'),
         perPay: Object.fromEntries(ROLES.map((r) => [r, row(r === 'mojo' ? 'mojo' : r)])),
@@ -235,6 +236,8 @@ export function appFigures(d) {
     return {
         takeHome: netPerPayCents(d),
         savingsRate: s.savingsRate,
+        savingsPerPay: s.savings.perPayCents, savingsPerYear: s.savings.perYearCents,
+        savingsText: t('f.res.rateAmount', { n: Math.round(s.savingsRate * 10) / 10, amount: fmtMoney(s.savings.perPayCents / 100) }),
         required: plan.perGoal.length ? plan.requiredPerPayCents : null,
         short: plan.perGoal.length ? plan.gapCents : null,
         earnGap: plan.perGoal.length ? plan.options.earn.earnedCents : null,
@@ -295,7 +298,7 @@ export function figureDiffs(a, b, keys) {
     return out;
 }
 
-export const COMPARED = ['takeHome', 'savingsRate', 'required', 'short', 'earnGap', 'debts', 'help', 'mojoBalance', 'fiYears', 'fiNumber', 'nw1', 'nw5', 'nw10', 'nw20',
+export const COMPARED = ['takeHome', 'savingsRate', 'savingsPerPay', 'savingsPerYear', 'savingsText', 'required', 'short', 'earnGap', 'debts', 'help', 'mojoBalance', 'fiYears', 'fiNumber', 'nw1', 'nw5', 'nw10', 'nw20',
     'perPay', 'goals', 'smilePerPay', 'path', 'chart', 'totals'];
 
 /** Everything for one case on one household: the data differences and the figure differences. */
@@ -354,15 +357,38 @@ SCENARIO_EQUIVALENCE_TEST_CASES.push({
 });
 
 SCENARIO_EQUIVALENCE_TEST_CASES.push({
-    name: 'H6 the savings rate on What If is the one the Future FI card shows (savingsRatePlanned), and Today shows the other one',
+    name: 'H7 (FT-R-116) one savings figure: What If, the Future FI card and Today all show pay into saving buckets, with the amount',
     fn(assert) {
-        const d = migratedHousehold(); // on the plain sample the two definitions happen to agree (29 and 29.1)
-        const set = buildResultSet(d, [], TODAY, null);
-        const s = fiSummary(withPeople(d), { today: TODAY });
-        assert('What If now = savingsRatePlanned', set.now.savingsRate, savingsRatePlanned(d, { today: TODAY }));
-        assert('Future FI card = savingsRatePlanned', s.savingsRate, savingsRatePlanned(d, { today: TODAY }));
-        const todayFig = calculateTotals(clone(d)).savingsRate;
-        assert('Today planned (calculateTotals, net minus expenses over net) is a different definition', Math.abs(todayFig - set.now.savingsRate) > 0.1, true);
+        for (const make of Object.values(HOUSEHOLDS)) {
+            const d = make();
+            const set = buildResultSet(d, [], TODAY, null);
+            const s = fiSummary(withPeople(d), { today: TODAY });
+            const want = savingsPlanned(d, { today: TODAY });
+            assert('What If now = savingsPlanned', set.now.savings, want);
+            assert('Future FI card = savingsPlanned', s.savings, want);
+            assert('percent equals savingsRatePlanned', [set.now.savingsRate, s.savingsRate], [savingsRatePlanned(d, { today: TODAY }), want.ratePct]);
+            const row = set.rows.find((x) => x.id === 'savingsRate');
+            assert('the card text carries percent and amount a pay', row.now.text, t('f.res.rateAmount', { n: want.ratePct, amount: fmtMoney(want.perPayCents / 100) }));
+            assert('the explain text carries the definition', explainLines(set, 'savingsRate').slice(1).join(' ').includes(t('f.res.ex.savingsDef')), true);
+        }
         assert('the label text is the same words on What If and the Future card', t('f.res.row.savingsRate'), t('f.future.fi.rate'));
+    },
+});
+
+SCENARIO_EQUIVALENCE_TEST_CASES.push({
+    name: 'H7 (FT-R-116) a pay rise in What If: same savings percent, amount up by the save share of the extra take-home; Compare says so',
+    fn(assert) {
+        const d = sampleHousehold();
+        const c = casesFor(d).find((x) => x.kind === 'income' && x.op === 'scale');
+        const set = buildResultSet(d, c.changes, TODAY, null);
+        const row = set.rows.find((x) => x.id === 'savingsRate');
+        const dNet = set.scen.net - set.now.net;
+        const saveShare = set.now.savings.perPayCents / set.now.net;
+        assert('take-home rose', dNet > 0, true);
+        assert('percent unchanged', set.scen.savings.ratePct, set.now.savings.ratePct);
+        assert('amount rose by the save share of the extra take-home (a few cents of rounding)', Math.abs((set.scen.savings.perPayCents - set.now.savings.perPayCents) - dNet * saveShare) <= 3, true);
+        assert('per year rose too', set.scen.savings.perYearCents > set.now.savings.perYearCents, true);
+        assert('Compare diff is "same rate, ... more a pay" and the scenario is best', [diffOf(row).text.startsWith('same rate,'), diffOf(row).text.endsWith('more a pay'), bestOf(row)], [true, true, 'scen']);
+        assert('the cards show the amount', row.scen.text.includes(' a pay') && row.now.text.includes(' a pay'), true);
     },
 });

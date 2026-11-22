@@ -169,6 +169,8 @@ export function calculateTotals(currentData, opts = {}) {
         currentAssets,
         currentLiabilities,
         netWorth,
+        // LEGACY (FT-R-116): net minus planned expenses over net. Not a displayed savings rate any more;
+        // screens, snapshots and milestones use savingsPlanned() in fi.js. Kept as a total for tests and exports.
         savingsRate // May be negative when spending exceeds income
     };
 }

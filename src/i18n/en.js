@@ -37,14 +37,15 @@ export const en = {
     'feed.import.txnMany': 'transactions',
     'feed.import.fromSource': ' from {source}',
     'feed.milestone.netWorth': "Net worth crossed <strong>{threshold}</strong> — you're at {value}.",
-    'feed.milestone.savingsRate': "Your savings rate hit <strong>{threshold}%</strong> — you're keeping {value}% of what you earn.",
+    'feed.milestone.savingsRate': "Your savings rate hit <strong>{threshold}%</strong> — you're putting {value}% of your pay into savings{amount}.",
     'feed.billDue': '<strong>{name}</strong> is due {due} — {amount}.',
     'feed.billDueSoon': 'soon',
     'feed.incomeAdded': 'You added <strong>{name}</strong>{amountPart}.',
 
     // Toasts
     'toast.milestone.netWorth': 'Nice one — net worth just crossed {threshold}.',
-    'toast.milestone.savingsRate': 'Looking good — your savings rate hit {threshold}%.',
+    'toast.milestone.savingsRate': 'Looking good — your savings rate hit {threshold}%{amount}.',
+    'feed.milestone.savingsAmount': ' ({amount} a pay)',
     'toast.sample.loaded': 'Meet Alex and Sam — a sample household with {count} transactions to explore.',
     'toast.sample.loadedNoTxns': 'Meet Alex and Sam — a sample household to explore.',
 
