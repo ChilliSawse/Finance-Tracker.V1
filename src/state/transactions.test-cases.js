@@ -218,4 +218,27 @@ export const TRANSACTIONS_TEST_CASES = [
             await deleteDb();
         },
     },
+    {
+        name: 'H9.1 the suggested transfer flag survives the store, a backup export and a restore',
+        async fn(assert) {
+            await fresh();
+            const a = makeTransaction({ date: '2026-11-02', description: 'To Fire', amountCents: -30000, categoryId: 'transfer', source: 'csv', status: 'review', bucketId: 'fire', bucketSuggested: true, importBatchId: 'b' });
+            const m = makeTransaction({ date: '2026-11-02', description: 'Coffee', amountCents: -450, source: 'manual' });
+            await addTransactions([a, m]);
+            const listed = (await listTransactions()).find((r) => r.id === a.id);
+            assert('stored with the flag', [listed.bucketId, listed.bucketSuggested, listed.status, listed.categoryId], ['fire', true, 'review', 'transfer']);
+            await updateTransaction({ ...listed, status: 'ok', bucketSuggested: undefined });
+            const edited = (await listTransactions()).find((r) => r.id === a.id);
+            assert('an edit that clears it clears it', [edited.status, edited.bucketId, edited.bucketSuggested], ['ok', 'fire', undefined]);
+            await updateTransaction({ ...edited, bucketSuggested: true, status: 'review' });
+            const exported = await exportAllTransactions();
+            assert('export carries the flag and the bucket', exported.filter((r) => r.bucketSuggested).map((r) => r.bucketId), ['fire']);
+            await deleteDb();
+            await fresh();
+            await importTransactions(JSON.parse(JSON.stringify(exported)));
+            const back = (await listTransactions()).find((r) => r.id === a.id);
+            assert('restored with the flag', [back.bucketId, back.bucketSuggested, back.categoryId], ['fire', true, 'transfer']);
+            await deleteDb();
+        },
+    },
 ];

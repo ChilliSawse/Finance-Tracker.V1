@@ -105,3 +105,14 @@ body.qa-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .qa-panel { animation: none; } }
 .qa-amount { text-align: left; }
 .qa-panel .qa-amount-input:focus-visible { outline: 0; }
+
+/* Transfer: "Went to" (H9). Same tiles as the bucket picker, always open, with a warning edge until one is chosen. */
+.went-pick { margin: 0; padding: 12px 14px 14px; min-width: 0; border: 1px solid var(--border); border-radius: var(--r-tile); }
+.went-pick[hidden] { display: none; }
+.went-pick legend { padding: 0 4px; font-size: var(--fs-small); font-weight: 600; color: var(--muted); }
+.went-pick.needs { border-color: var(--warn-line); background: var(--warn-bg); }
+.went-pick.needs legend { color: var(--warn-ink); }
+.went-pick.needs .bk { box-shadow: 0 0 0 1px var(--border); }
+.went-pick .bk.else { background: var(--raised); color: var(--ink); }
+.went-pick .one-only:empty { display: none; }
+.qa-panel [hidden] { display: none; }

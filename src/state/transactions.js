@@ -23,6 +23,7 @@
 // }
 
 import { openDb, withStore } from './db.js';
+import { isTransferRow } from '../calc/transfers.js';
 
 // Normalised dedupe key: the same bank row re-imported must hash identically.
 export function transactionHash(date, description, amountCents) {
@@ -31,7 +32,7 @@ export function transactionHash(date, description, amountCents) {
 }
 
 export function makeTransaction({ date, description, amountCents, categoryId = 'other', source = 'manual', importBatchId = null,
-    status, bucketId, billMatch, note }) {
+    status, bucketId, bucketSuggested, billMatch, note }) {
     const cents = Math.round(amountCents || 0);
     const id = crypto.randomUUID();
     const row = {
@@ -47,6 +48,7 @@ export function makeTransaction({ date, description, amountCents, categoryId = '
     };
     if (status !== undefined) row.status = status;
     if (bucketId !== undefined) row.bucketId = bucketId;
+    if (bucketSuggested) row.bucketSuggested = true;
     if (billMatch !== undefined) row.billMatch = billMatch;
     if (note !== undefined) row.note = note;
     return row;
@@ -198,7 +200,7 @@ export async function monthlySpendByCategory(month) {
     const rows = await listTransactions({ from: `${month}-01`, to: `${month}-31` });
     const spend = new Map();
     for (const r of rows) {
-        if (r.amountCents >= 0) continue; // income/refunds aren't spend
+        if (r.amountCents >= 0 || isTransferRow(r)) continue; // income/refunds and transfers aren't spend
         spend.set(r.categoryId, (spend.get(r.categoryId) || 0) + (-r.amountCents));
     }
     return spend;

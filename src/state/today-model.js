@@ -8,11 +8,12 @@ import { store } from './store.js';
 import { leftThisPay, billOccurrences, billStatus, addDays } from '../calc/pay-cycle.js';
 import { upcomingBills, missedBills } from './bills.js';
 import { isBillItem } from '../calc/bill-match.js';
+import { isTransferRow } from '../calc/transfers.js';
 
 const NOT_READY = Object.freeze({ ready: false });
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const cents = (dollars) => Math.round((Number(dollars) || 0) * 100);
-const isOut = (r) => r.amountCents < 0;
+const isOut = (r) => r.amountCents < 0 && !isTransferRow(r); // H9: spending only; a transfer between your own accounts is not
 
 function spendByCategory(rows) {
     const m = new Map();
