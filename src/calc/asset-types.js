@@ -70,7 +70,7 @@ export function typeFill(type, opts = {}) {
     const fields = { assetType: type.id, kind, typeSuggested: true };
     const filled = [];
     const put = (k, v) => { fields[k] = v; filled.push(k); };
-    if (type.isSuper) fields.isSuper = true;
+    if (type.isSuper) put('isSuper', true);
     if (kind === 'cash' && typeof d.interestRate === 'number') put('interestRate', d.interestRate);
     if (kind === 'invested' && typeof d.expectedReturn === 'number') put('expectedReturn', d.expectedReturn);
     if (kind === 'appreciating') {
@@ -78,8 +78,8 @@ export function typeFill(type, opts = {}) {
         fields.use = 'liveIn';
         fields.useSuggested = true;
     }
-    if (type.counts && type.counts.rateMode === 'noReliableRate') fields.rateMode = 'noReliableRate';
-    if (type.counts && type.counts.showAs === 'cash') fields.isOffset = true;
+    if (type.counts && type.counts.rateMode === 'noReliableRate') put('rateMode', 'noReliableRate');
+    if (type.counts && type.counts.showAs === 'cash') put('isOffset', true);
     if (kind === 'depreciating') {
         const dep = d.depreciation;
         if (dep) put('depreciation', { method: dep.method || 'diminishing', ratePct: dep.ratePct, lifeYears: null, residual: dep.residual || 0, purchasePrice: null, purchaseDate: null });
@@ -109,6 +109,7 @@ export function applyTypeSuggestion(asset, type, opts = {}) {
     const wasSuggested = asset.typeSuggested === true;
     for (const [k, v] of Object.entries(fields)) {
         if (k === 'kind' && keepKind) continue;
+        if (k === 'isSuper' && keepKind) continue; // never override a kind the person chose (and with it, whether it is super)
         if (k === 'depreciation') {
             if (!isDefaultDep(asset.depreciation) && !wasSuggested) continue;
             asset.depreciation = { ...v, purchasePrice: asset.depreciation ? asset.depreciation.purchasePrice : null, purchaseDate: asset.depreciation ? asset.depreciation.purchaseDate : null };

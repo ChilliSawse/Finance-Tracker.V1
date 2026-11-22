@@ -53,8 +53,8 @@ function stepAsset(assetIn, kind, bal, inflationPct, defaultReturnPct) {
     if (assetIn.kindSuggested) return round2(bal);
     // FT-R-117/126: a rate a reference type filled stays out until confirmed. FT-R-125: a type with no reliable rate
     // (crypto) is flat and never takes the plan's default return.
-    if (assetIn.rateMode === 'noReliableRate') return round2(bal);
     const asset = effectiveAsset(assetIn);
+    if (asset.rateMode === 'noReliableRate') return round2(bal);
     if (kind === 'cash') {
         if (!isNum(asset.interestRate)) return round2(bal);
         const real = effectiveAnnualRate(asset.interestRate, asset.interestFrequency) * 100 - inflationPct;
@@ -89,11 +89,23 @@ function classOf(asset) {
     return 'plain';
 }
 
-/** Age of the youngest person with a birth year at `dateIso`, or null when none is known (data.people, then fiSettings.birthYears). */
+/**
+ * The one source of birth years, for `fiAge` and the super unlock alike: `data.people[].birthYear` when any is given
+ * (the Future screen's view fills it), else `fiSettings.birthYears[]`. Returns [{name, birthYear}].
+ */
+function peopleWithBirthYear(d) {
+    const fromPeople = (d && Array.isArray(d.people) ? d.people : []).filter((p) => p && isNum(p.birthYear));
+    if (fromPeople.length) return fromPeople.map((p) => ({ name: typeof p.name === 'string' ? p.name : '', birthYear: p.birthYear }));
+    const list = d && d.fiSettings && Array.isArray(d.fiSettings.birthYears) ? d.fiSettings.birthYears : [];
+    return list.filter((y) => isNum(y)).map((y) => ({ name: '', birthYear: y }));
+}
+
+/**
+ * Age of the youngest person with a birth year at `dateIso`, or null when none is known. Assets have no owner, so the
+ * youngest decides when super unlocks. UNVERIFIED rule, waiting for Chilli (a couple's own ages): left as it is.
+ */
 function ageAt(d, dateIso) {
-    const fromPeople = (d && Array.isArray(d.people) ? d.people : []).map((p) => p && p.birthYear);
-    const fromSettings = d && d.fiSettings && Array.isArray(d.fiSettings.birthYears) ? d.fiSettings.birthYears : [];
-    const years = [...fromPeople, ...fromSettings].filter((y) => isNum(y) && y > 1850);
+    const years = peopleWithBirthYear(d).map((p) => p.birthYear).filter((y) => y > 1850);
     if (!years.length) return null;
     return parseIso(dateIso).getFullYear() - Math.max(...years);
 }
@@ -145,7 +157,8 @@ function fractionInYear(P, r, A, target) {
 export function runPlan(start, inputsFor, opts = {}) {
     const horizon = opts.years == null ? 30 : Math.max(0, Math.floor(opts.years));
     const untilFI = opts.untilFI !== false;
-    const assets = (start.assets || []).map((a) => ({ a, kind: kindOf(a), cls: classOf(a), counts: assetScope(a).fi === 'yes', bal: num(a.balance) }));
+    // FT-R-117/126: read each asset without what a reference type filled and the person has not confirmed (kind, super, rate, curve).
+    const assets = (start.assets || []).map((raw) => { const a = effectiveAsset(raw); return { a, kind: kindOf(a), cls: classOf(a), counts: assetScope(a).fi === 'yes', bal: num(a.balance) }; });
     const debts = (start.debts || []).map((d) => ({ d, bal: Math.max(0, num(d.balance)) }));
     const sinks = (start.sinks || []).map((s) => ({ ...s, left: s.type === 'debt' ? null : Math.max(0, num(s.capacity)) }));
     let help = Math.max(0, num(start.helpBalance));
@@ -175,7 +188,8 @@ export function runPlan(start, inputsFor, opts = {}) {
         if (!superCounted) {
             const n = PRESERVATION_AGE - age;
             const r = ((isNum(inp.expectedReturnPct) ? inp.expectedReturnPct : DEFAULT_RETURN) - (isNum(inp.inflationPct) ? inp.inflationPct : DEFAULT_INFLATION)) / 100;
-            const annuity = Math.abs(r) < 1e-12 ? n : (1 - Math.pow(1 + r, -n)) / r;
+            // Each year's spending is taken at the START of the year (the cautious choice): an annuity due.
+            const annuity = Math.abs(r) < 1e-12 ? n : ((1 - Math.pow(1 + r, -n)) / r) * (1 + r);
             bridge = num(inp.spendYear) * annuity;
             fiNeeded = Math.max(bridge, bridge + num(inp.fiNumber) / Math.pow(1 + r, n) - superLocked);
         }
@@ -213,6 +227,7 @@ export function runPlan(start, inputsFor, opts = {}) {
 
         // Year-end money: Fire down the sinks in order, super and the rest to the invested pool.
         let fireLeft = Math.max(0, num(inp.fireYear));
+        let fireSuper = false;
         const superYear = Math.max(0, num(inp.superYear));
         for (const s of sinks) {
             if (fireLeft <= 0) break;
@@ -228,19 +243,21 @@ export function runPlan(start, inputsFor, opts = {}) {
                 pool.cash += pay;
                 fireLeft -= pay;
             } else if (s.type === 'super') {
-                break; // open-ended: this and everything after goes to the invested pool
+                fireSuper = true; // open-ended: what is left goes to super (a top-up), locked until 60 like the rest of it
+                break;
             }
         }
         debts.forEach((x, i) => { x.bal = debtEnd[i] / deflate; });
         const fireTotal = Math.max(0, num(inp.fireYear));
-        pool.invested += fireLeft;
-        pool.super += superYear;
+        const toSuper = fireSuper ? fireLeft : 0; // with no super target the rest goes to the invested pool
+        pool.invested += fireLeft - toSuper;
+        pool.super += superYear + toSuper;
 
         const contrib = fireTotal + superYear;
         if (contrib > 0) anyFlow = true;
         const next = snapshot(y + 1, inputsFor(y + 1), { fire: fireTotal, super: superYear, growth: 0 });
         // Super flows count only once super does; the jump when it unlocks is not growth.
-        const counted = fireTotal + (next.superCounted ? superYear : 0);
+        const counted = (next.superCounted ? fireTotal + superYear : fireTotal - toSuper);
         const unlock = next.superCounted && !before.superCounted ? next.superBal : 0;
         next.growth = next.fiNetWorth - before.fiNetWorth - counted - unlock;
         path.push(next);
@@ -397,11 +414,11 @@ function makeInputs(data, opts) {
         const dateIso = dateAt(k);
         if (!changes.length) {
             if (!cache.has('base')) cache.set('base', yearInputs(data, todayIso));
-            return { ...cache.get('base'), dateIso };
+            return { ...cache.get('base'), dateIso, age: ageAt(data, dateIso) };
         }
         const key = changes.map((c, i) => (activeOn(c, dateIso) ? i : '')).join(',');
         if (!cache.has(key)) cache.set(key, yearInputs(resolve(data, changes, dateIso), dateIso));
-        return { ...cache.get(key), dateIso };
+        return { ...cache.get(key), dateIso, age: ageAt(data, dateIso) };
     };
     return { inputsFor, todayIso };
 }
@@ -476,10 +493,10 @@ export function savingsRatePlanned(data, opts = {}) {
  */
 export function fiAge(data, years, opts = {}) {
     if (!Number.isFinite(years)) return null;
-    const people = (data && Array.isArray(data.people) ? data.people : []).filter((p) => p && isNum(p.birthYear));
+    const people = peopleWithBirthYear(data);
     if (!people.length) return null;
     const nowYear = parseIso(todayIsoOf(opts.today)).getFullYear();
-    const ages = people.map((p) => ({ name: typeof p.name === 'string' ? p.name : '', age: nowYear - p.birthYear + Math.ceil(years) }));
+    const ages = people.map((p) => ({ name: p.name, age: nowYear - p.birthYear + Math.ceil(years) }));
     return { ages, superNote: ages.some((a) => a.age < PRESERVATION_AGE) };
 }
 

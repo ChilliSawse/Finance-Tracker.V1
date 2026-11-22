@@ -4,8 +4,8 @@
 
 import { matchAssetType, appKindOf, suggestFromName, typeFill, applyTypeSuggestion, confirmType } from '../calc/asset-types.js';
 import { curvePct, factorAt } from '../calc/value-curve.js';
-import { assetValueAt, valueDetail, assetScope, depreciatedValue } from '../calc/assets-debts.js';
-import { runPlan, projectNetWorth, fiNumber } from '../calc/fi.js';
+import { assetValueAt, valueDetail, assetScope, depreciatedValue, effectiveAsset, claimField } from '../calc/assets-debts.js';
+import { runPlan, projectNetWorth, fiNumber, fiAge } from '../calc/fi.js';
 import { calculateTotals } from '../calc/calculations.js';
 import { migrateAssetScope, needsAssetScopeMigration } from './asset-scope-migration.js';
 import { runMigrationChain } from './migration-chain.js';
@@ -133,7 +133,9 @@ export const ASSET_TYPE_TEST_CASES = [
             assert('a rate the person typed is never replaced', typed.expectedReturn, 9);
             const car = { name: 'Car', balance: 10000, kind: 'depreciating', kindSuggested: false, depreciation: { method: 'diminishing', ratePct: 25, lifeYears: 8, residual: 0, purchasePrice: 30000, purchaseDate: '2024-11-21' } };
             applyTypeSuggestion(car, CAR);
-            assert('a suggested car type: value is flat until confirmed', assetValueAt(car, 3, { asOf: TODAY }), 10000);
+            assert('a suggested car type: its curve is held out; the person own 25% rule still runs (10,000 x 0.75^3)', assetValueAt(car, 3, { asOf: TODAY }), 4218.75);
+            const bare = { name: 'Van', balance: 10000, kind: 'depreciating', kindSuggested: false, assetType: 'x', typeSuggested: true, typeFilled: ['depreciation'], depreciation: { method: 'diminishing', ratePct: 20 } };
+            assert('a rule only the type filled is flat on the future path, not the app default', [assetValueAt(bare, 5), valueDetail(bare, 5).source], [10000, 'suggested']);
             assert('the purchase price and date already entered are kept', [car.depreciation.purchasePrice, car.depreciation.purchaseDate], [30000, '2024-11-21']);
             confirmType(car);
             assert('confirmed: the curve feeds the value (age 2 to 3: 10,000 x 50 / 60)', assetValueAt(car, 1, { asOf: TODAY }), 8333.33);
@@ -174,6 +176,49 @@ export const ASSET_TYPE_TEST_CASES = [
             assert('through the chain', [through.assetScopeVersion, through.assets[0].use], [1, 'liveIn']);
         },
     },
+    {
+        name: 'DB10.14 a type never overrides what the person chose; super and rate mode are suggested too and undone while suggested; an edit makes a field theirs',
+        fn(assert) {
+            const SUP = TYPES[7];
+            const chosen = { name: 'Fund', balance: 300000, kind: 'invested', kindSuggested: false, isSuper: false, expectedReturn: null };
+            assert('a kind the person confirmed as not super: the super flag is not put over it', [applyTypeSuggestion(chosen, SUP), chosen.isSuper], [true, false]);
+            const fiOf = (a) => runPlan({ assets: [a] }, flat({ fiNumber: 1e12 }), { years: 0, untilFI: false }).path[0].fiNetWorth;
+            assert('so its 300,000 still counts toward FI at 40', runPlan({ assets: [chosen] }, flat({ fiNumber: 1e12, age: 40 }), { years: 0, untilFI: false }).path[0].fiNetWorth, 300000);
+            const open = { name: 'Fund', balance: 300000, kind: 'invested', kindSuggested: true, isSuper: false };
+            applyTypeSuggestion(open, SUP);
+            assert('a suggested super flag is recorded as type-filled', [open.isSuper, open.typeFilled.includes('isSuper')], [true, true]);
+            assert('and held out of the maths: no super lock while only suggested', [effectiveAsset(open).isSuper, assetScope(effectiveAsset(open)).fi, fiOf(open)], [false, 'yes', 300000]);
+            const crypto = { name: 'BTC', balance: 1, kind: 'invested', kindSuggested: false };
+            applyTypeSuggestion(crypto, TYPES[6]);
+            assert('rateMode is tracked as type-filled and undone while suggested', [crypto.rateMode, crypto.typeFilled.includes('rateMode'), effectiveAsset(crypto).rateMode], ['noReliableRate', true, null]);
+            const etf = { name: 'ETF', balance: 10000, kind: 'invested', kindSuggested: false };
+            applyTypeSuggestion(etf, TYPES[5]);
+            claimField(etf, 'expectedReturn');
+            etf.expectedReturn = 6;
+            assert('an edited field leaves typeFilled and feeds the maths while the type stays suggested', [etf.typeFilled, etf.typeSuggested, assetValueAt(etf, 1)], [[], true, 10600]);
+            const k = { name: 'x', balance: 1, kind: 'cash', kindSuggested: true };
+            claimField(k, 'kind');
+            assert('editing the kind confirms it', k.kindSuggested, false);
+        },
+    },
+    {
+        name: 'DB10.15 a percent-of-new curve on a second-hand item needs its age and new price; both bases are handled',
+        fn(assert) {
+            const curve = { points: [{ year: 0, pct: 100 }, { year: 1, pct: 80 }, { year: 2, pct: 60 }, { year: 4, pct: 20 }], factors: null };
+            const mk = (basis, dep) => ({ name: 'Phone', balance: 300, kind: 'depreciating', kindSuggested: false, valueCurve: { ...curve, basis }, depreciation: { method: 'diminishing', ratePct: 30, ...dep } });
+            const paid = mk('pricePaid', { purchasePrice: 1000, purchaseDate: '2025-11-21' });
+            assert('price paid, 1 year held: 1,000 x 80%', depreciatedValue(paid, TODAY), 800);
+            const bnew = mk('new', { purchasePrice: 1000, purchaseDate: '2025-11-21', boughtNew: true });
+            assert('percent of new, bought new: the same as price paid', depreciatedValue(bnew, TODAY), 800);
+            const second = mk('new', { purchasePrice: 400, purchaseDate: '2025-11-21', newPrice: 1000, ageAtPurchase: 1 });
+            assert('second-hand: 1,000 new x curve(1 + 1 years) = 600, not 400 x 80%', depreciatedValue(second, TODAY), 600);
+            const unknown = mk('new', { purchasePrice: 400, purchaseDate: '2025-11-21' });
+            assert('second-hand with no age or new price: no offer (the data is missing)', depreciatedValue(unknown, TODAY), null);
+            assert('projection from the balance reads the item age (2 to 3 years: 300 x 40 / 60)', valueDetail(second, 1, { asOf: TODAY }).value, 200);
+            const u = valueDetail(unknown, 1, { asOf: TODAY });
+            assert('with the age unknown the balance projection falls back to the rate, marked', [u.source, u.fallback], ['rate', true]);
+        },
+    },
 ];
 
 // ---- FI scope ----
@@ -183,6 +228,34 @@ const homeInv = { id: 'a-inv', name: 'Rental', balance: 400000, kind: 'appreciat
 const cashA = { id: 'a-cash', name: 'Savings', balance: 10000, kind: 'cash', kindSuggested: false };
 
 export const FI_SCOPE_TEST_CASES = [
+    {
+        name: 'DB10.16 a Fire super top-up target puts the money in super (locked until 60); with no super target the rest goes to invested',
+        fn(assert) {
+            const run = (sinks, age) => runPlan({ sinks }, flat({ fiNumber: 1e12, fireYear: 10000, expectedReturnPct: 0, age }), { years: 1, untilFI: false }).path[1];
+            const a = run([{ type: 'super' }], 40);
+            assert('10,000 of top-up lands in super, locked at 40', [a.superBal, a.superLocked, a.fiNetWorth, a.netWorth], [10000, 10000, 0, 10000]);
+            const b = run([{ type: 'super' }], 61);
+            assert('at 61 the same money counts', [b.superBal, b.fiNetWorth], [10000, 10000]);
+            const c = run([], 40);
+            assert('no super target: invested, counted', [c.superBal, c.invested, c.fiNetWorth], [0, 10000, 10000]);
+            const d = run([{ type: 'home', capacity: 4000 }, { type: 'super' }], 40);
+            assert('a target before it takes its share first: 4,000 to the home pot, 6,000 to super', [d.cash, d.superBal], [4000, 6000]);
+        },
+    },
+    {
+        name: 'DB10.17 one birth-year source for the FI age and the super unlock, and the age moves each year',
+        fn(assert) {
+            const d = { assets: [{ id: 'a-s', name: 'Super', balance: 100000, kind: 'invested', kindSuggested: false, isSuper: true }], liabilities: [], incomeSources: [], fiSettings: { multiple: 25, inflation: 2.5, expectedReturn: 7, birthYears: [1990] } };
+            assert('birthYears only: fiAge sees it (it used to read people only)', fiAge(d, 10, { today: TODAY }).ages, [{ name: '', age: 46 }]);
+            const withPeople = { ...d, people: [{ name: 'Sam', birthYear: 1970 }] };
+            assert('people given: the same list feeds both', [fiAge(withPeople, 0, { today: TODAY }).ages, projectNetWorth(withPeople, { today: TODAY, years: 0 }).path[0].superCounted], [[{ name: 'Sam', age: 56 }], false]);
+            const sm = buildSampleHousehold(TODAY).data;
+            migrateAssetDebtDetail(sm);
+            sm.fiSettings.birthYears = [1970];
+            const path = projectNetWorth(sm, { today: TODAY, years: 6 }).path;
+            assert('age 56 now: locked, then counted from age 60 as the years pass', path.map((p) => p.superCounted), [false, false, false, false, true, true, true]);
+        },
+    },
     {
         name: 'DB10.9 scope: things that lose value and live-in homes are in net worth, not in FI; an investment property is in both (FT-R-125)',
         fn(assert) {
@@ -208,9 +281,10 @@ export const FI_SCOPE_TEST_CASES = [
             const at = (age) => runPlan({ assets: [sup, outside] }, flat({ fiNumber: 1000000, spendYear: 40000, age }), { years: 0, untilFI: false }).path[0];
             const u = at(50);
             assert('under 60 super is locked, not in the FI total', [u.fiNetWorth, u.superLocked, u.superCounted], [100000, 500000, false]);
-            const n = 10, annuity = (1 - Math.pow(1.07, -n)) / 0.07;
+            const n = 10, annuity = ((1 - Math.pow(1.07, -n)) / 0.07) * 1.07; // each year spending at the start of the year
             const bridge = 40000 * annuity;
-            assert('the bridge is ten years of spending at 7%', u.bridge, r2(bridge));
+            assert('the bridge is ten years of spending at 7%, each year paid at its start: 40,000 x 7.5152', u.bridge, r2(bridge));
+            assert('hand check of the factor', Math.round(annuity * 1e4) / 1e4, 7.5152);
             assert('the outside money needed: bridge plus the FI number brought back to today, less the locked super', u.fiNeeded, r2(bridge + 1000000 / Math.pow(1.07, n) - 500000));
             assert('net worth still has the locked super', u.netWorth, 600000);
             const s = at(60);

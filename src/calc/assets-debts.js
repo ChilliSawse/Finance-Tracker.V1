@@ -93,6 +93,29 @@ function ageYears(asset, asOf) {
 }
 
 /**
+ * The age the curve is read at, from years held. A "% of price paid" curve starts at the day of purchase. A "% of new"
+ * curve starts when the item was new, so a second-hand item needs its age when bought (`depreciation.ageAtPurchase`);
+ * `depreciation.boughtNew: true` says the age is 0. With neither, the age is unknown: null (UNVERIFIED data the asset
+ * sheet has to ask for; until then the offer is not shown and the rate does the work).
+ */
+function curveAge(asset, held) {
+    const c = asset && asset.valueCurve;
+    if (!c || c.basis !== 'new') return held;
+    const dep = asset.depreciation || {};
+    if (dep.boughtNew === true) return held;
+    return isNum(dep.ageAtPurchase) && dep.ageAtPurchase >= 0 ? held + dep.ageAtPurchase : null;
+}
+
+/** The price a "% of new" curve is a percent of: the price paid when bought new, else `depreciation.newPrice`; null when unknown. */
+function curveBase(asset) {
+    const dep = asset.depreciation || {};
+    const c = asset.valueCurve;
+    if (!c || c.basis !== 'new') return isNum(dep.purchasePrice) && dep.purchasePrice > 0 ? dep.purchasePrice : null;
+    const p = dep.boughtNew === true ? dep.purchasePrice : dep.newPrice;
+    return isNum(p) && p > 0 ? p : null;
+}
+
+/**
  * Worked-out value of a depreciating asset on `asOf` (ISO date), from purchase price and date.
  * Returns dollars to the cent, or null when the detail is missing. The entered `balance`
  * stays the truth: this is only offered beside it ("use A$X"). With a value curve (DB10) the price is
@@ -103,8 +126,13 @@ export function depreciatedValue(asset, asOf) {
     const dep = asset && asset.depreciation;
     if (!dep || !isNum(dep.purchasePrice) || dep.purchasePrice <= 0 || !dep.purchaseDate || !asOf) return null;
     const years = yearsBetween(dep.purchaseDate, asOf);
-    const frac = asset.valueStable ? 1 : curveFraction(asset.valueCurve, years);
-    if (frac !== null) return round2(dep.purchasePrice * frac);
+    if (asset.valueStable) return round2(dep.purchasePrice);
+    if (asset.valueCurve) {
+        // Both bases (FT-R-114): price paid, or a percent of the new price (second-hand needs the item's age and new price).
+        const age = curveAge(asset, years), base = curveBase(asset);
+        const frac = age === null || base === null ? null : curveFraction(asset.valueCurve, age);
+        return frac === null ? null : round2(base * frac);
+    }
     return round2(decay(dep.purchasePrice, dep, years));
 }
 
@@ -129,9 +157,22 @@ export function effectiveAsset(asset) {
     const out = { ...asset };
     for (const f of Array.isArray(asset.typeFilled) ? asset.typeFilled : []) {
         if (f === 'interestRate') delete out.interestRate;
+        else if (f === 'isSuper' || f === 'valueStable' || f === 'isOffset') out[f] = false;
         else if (f in out) out[f] = null;
     }
     return out;
+}
+
+/**
+ * The rule for a field the person edits: it is theirs from then on. `claimField` takes the field out of `typeFilled`, so
+ * `effectiveAsset` no longer holds it out, and a later reference update never touches it (FT-R-117). Editing the kind
+ * also confirms it (`kindSuggested` false). The sheet calls this for every field it saves.
+ */
+export function claimField(asset, field) {
+    if (!asset) return asset;
+    if (Array.isArray(asset.typeFilled)) asset.typeFilled = asset.typeFilled.filter((f) => f !== field);
+    if (field === 'kind') asset.kindSuggested = false;
+    return asset;
 }
 
 /**
@@ -152,7 +193,6 @@ export function valueDetail(assetIn, years, opts = {}) {
     if (!assetIn) return out(bal, 'entered');
     if (assetIn.kindSuggested) return out(bal, y === 0 ? 'entered' : 'suggested');
     if (y === 0) return out(bal, 'entered');
-    if (assetIn.typeSuggested && assetIn.kind === 'depreciating') return out(bal, 'suggested');
     const asset = effectiveAsset(assetIn);
     if (asset.rateMode === 'noReliableRate') return out(bal, 'noReliableRate');
     const grow = (fraction, source) => out(bal * Math.pow(1 + realRate(fraction, infl), y), source);
@@ -165,13 +205,16 @@ export function valueDetail(assetIn, years, opts = {}) {
             return isNum(asset.growthRate) ? grow(asset.growthRate / 100, 'growth') : out(bal, 'entered');
         case 'depreciating': {
             if (asset.valueStable) return out(bal, 'stable');
-            const age = ageYears(asset, opts.asOf);
+            const held = ageYears(asset, opts.asOf);
+            const age = held === null ? null : curveAge(asset, held);
             if (asset.valueCurve && age !== null) {
                 const now = curveFraction(asset.valueCurve, age);
                 const then = curveFraction(asset.valueCurve, age + y);
                 if (now !== null && now > 0 && then !== null) return { ...out(bal * (then / now), 'curve'), beyond: beyondCurve(asset.valueCurve, age + y) };
             }
             if (asset.depreciation) return out(decay(bal, asset.depreciation, y), 'rate', true);
+            // A type whose rule is still only suggested has no rule here: the value is held flat on the future path (FT-R-117).
+            if (assetIn.typeSuggested && assetIn.assetType) return out(bal, 'suggested');
             if (asset.assetType) return out(decay(bal, { method: 'diminishing', ratePct: VEHICLE_DEPRECIATION.decliningRatePct, residual: 0 }, y), 'appDefault', true);
             return out(bal, 'entered');
         }
