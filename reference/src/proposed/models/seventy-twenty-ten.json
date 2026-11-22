@@ -6,8 +6,8 @@
   "meta": {
     "title": "70/20/10",
     "blurb": "70% to living costs, 20% to savings, 10% to debt paydown (or giving, if you have no debt). A looser cousin of 50/30/20 for high-cost households.",
-    "after": "No known single author. Duke University's student loans and personal finance office defines the version with debt in the 10%.",
-    "source": "https://www.bestmoney.com/financial-advisor/learn-more/70-20-10-rule",
+    "after": "No known single author.",
+    "source": "https://www.bestmoney.com/financial-advisor/learn-more/70-20-10-rule (Duke University's student loans and personal finance office defines the version with debt in the 10%.)",
     "sourceKind": "secondary; no authoritative origin found",
     "retrieved": "2026-11-22",
     "licence": "CC0-1.0",
@@ -18,8 +18,9 @@
     },
     "checks": {
       "validateModelDef": "ok",
-      "naming": "Numbers only, no author to credit; title \"70/20/10\". Duke University is named only as one published definition.",
-      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked."
+      "naming": "Numbers only, no author to credit; title \"70/20/10\". Duke University is named only in meta.source, as one published definition, never in the title or meta.after.",
+      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked.",
+      "roles": "The bucket marked daily is the one Today works \"Left this pay\" from; splurge takes non-essential spending."
     }
   },
   "model": {
@@ -29,6 +30,7 @@
     "engine": "fixed",
     "buckets": [
       {
+        "role": "daily",
         "name": "Living costs",
         "slot": 1,
         "kind": "spend",

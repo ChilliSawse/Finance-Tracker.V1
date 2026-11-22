@@ -5,7 +5,7 @@
 import '../i18n/en-lazy-models.js';
 import { t } from '../i18n/strings.js';
 import { BUCKET_METHOD } from '../calc/saving-model.js';
-import { entryState, updateAvailable, loadCatalogue, loadEnvelope, useModel, OWN_CHOICE } from '../state/model-catalogue.js';
+import { entryState, updateAvailable, loadCatalogue, loadEnvelope, useModel, replacesSetup, OWN_CHOICE } from '../state/model-catalogue.js';
 import { openSheet } from './sheet.js';
 import { confirmDialog } from './confirm.js';
 import { showToast } from './toast.js';
@@ -74,11 +74,15 @@ export async function openModelPicker(deps) {
                 return true;
             }
             const row = rows.find((r) => r.id === v.choice);
-            if (!row || !row.choosable) return false;
+            if (!row || !row.choosable || entryState(row.entry, data) !== row.state) return false; // the data moved since the list was built
             if (row.state === 'switch-back' && !(await confirmDialog({ title: t('e.plan.tplBackAsk', { name: row.name }), confirmLabel: t('e.plan.switchBack') }))) return false;
             const loaded = await loadEnvelope(row.entry, { fetch: deps.fetch });
             if (!loaded.ok) { showToast(t(loaded.code === 'unavailable' ? 'm.pick.unavailable' : 'm.pick.failed'), 'error'); return false; }
-            const res = useModel(data, loaded.envelope, {});
+            // A model that rebuilds the buckets replaces whatever differs from a fresh setup: ask first, and Undo restores it.
+            const rebuilds = row.state === 'use' && row.id !== 'bucket-method';
+            if (rebuilds && replacesSetup(data)
+                && !(await confirmDialog({ title: t('m.pick.replaceTitle', { name: row.name }), body: t('m.pick.replaceBody'), confirmLabel: t('m.pick.replaceYes') }))) return false;
+            const res = useModel(data, loaded.envelope, { replaceBuckets: rebuilds });
             if (!res.ok) { showToast(t('m.pick.failed'), 'error'); return false; }
             onResult({ ...res, message: t('m.pick.used', { name: row.name }) });
             return true;

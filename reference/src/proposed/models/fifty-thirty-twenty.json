@@ -19,7 +19,8 @@
     "checks": {
       "validateModelDef": "ok",
       "naming": "Numbers are not a brand. Title is \"50/30/20\" (descriptive). Credit Warren and Tyagi in meta.after as factual and short: not affiliated with or endorsed by the authors. UNVERIFIED: 27 \"50/30/20\" matches in the AU register were skimmed, not all read; re-run by class 36.",
-      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked."
+      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked.",
+      "roles": "The bucket marked daily is the one Today works \"Left this pay\" from; splurge takes non-essential spending."
     }
   },
   "model": {
@@ -29,12 +30,14 @@
     "engine": "fixed",
     "buckets": [
       {
+        "role": "daily",
         "name": "Needs",
         "slot": 1,
         "kind": "spend",
         "pct": 50
       },
       {
+        "role": "splurge",
         "name": "Wants",
         "slot": 2,
         "kind": "spend",

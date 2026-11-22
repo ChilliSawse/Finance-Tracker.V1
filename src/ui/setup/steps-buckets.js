@@ -2,7 +2,8 @@
 // They replace C7's placeholder steps under the same ids. Everything shown comes from the engine
 // (netPerPayCents, planTotals, getBuckets, transfersToUpdate); writes go through E5's state API.
 //
-//   model      Bucket method only, with its source and a one-line why (FT-R-29).
+//   model      the catalogue: the Bucket method with its source and a one-line why (FT-R-29), and any other entry the
+//              catalogue ships (none at launch, FT-R-71). Choosing another is checked again on Next against the live data.
 //   split      expenses first, then the buckets in dollars with the book's guide beside each (FT-R-26),
 //              and starting balances for Smile, Fire and Mojo, asked once and skippable.
 //   transfers  a checklist writing bankSetTo (tickTransfer) and "add each pay's amounts for me"
@@ -60,24 +61,47 @@ export const modelStep = {
             <p class="su-fine">${esc(t('c.setup.model.disclaimer'))}</p>`;
     },
     actions: {
-        // A choice other than the Bucket method: read and check its file now, so Next can apply it without waiting.
-        async pick(ctx, el) {
+        // A choice other than the Bucket method: start reading and checking its file now; Next waits for it.
+        pick(ctx, el) {
             if (!ctx.state) return;
-            ctx.state.modelApply = null;
             const row = (extras || []).find((r) => r.id === el.value);
-            if (!row || !row.choosable) return;
-            const { loadEnvelope, useModel } = await import('../../state/model-catalogue.js');
-            const res = await loadEnvelope(row.entry);
-            // Setup: nothing typed yet, and the Bucket method is one tap back, so replacing the buckets is fine.
-            if (res.ok) ctx.state.modelApply = (data) => useModel(data, res.envelope, { replaceBuckets: true });
+            if (!row || !row.choosable) { ctx.state.modelPick = null; return; }
+            const promise = import('../../state/model-catalogue.js').then(async (api) => {
+                const res = await api.loadEnvelope(row.entry);
+                return res.ok ? { api, envelope: res.envelope } : null;
+            }).catch(() => null);
+            ctx.state.modelPick = { id: row.id, row, promise };
         },
     },
     onNext(ctx) {
-        const apply = ctx.state && ctx.state.modelApply;
-        if (!apply) return true;
-        ctx.state.modelApply = null;
-        if (apply(ctx.data).ok) ctx.save();
-        return true;
+        const st = ctx.state;
+        if (!st) return true;
+        if (st.modelDone) { st.modelDone = false; return true; }
+        const checked = typeof document !== 'undefined' ? document.querySelector('input[name="su-model"]:checked') : null;
+        const want = checked ? checked.value : 'bucket';
+        const pick = st.modelPick;
+        if (want === 'bucket' || !pick || pick.id !== want) return true; // the radio decides, never a stale fetch
+        const advance = () => { st.modelDone = true; const btn = document.querySelector('[data-su="next"]'); if (btn) btn.click(); };
+        (async () => {
+            const loaded = await pick.promise;
+            const now = document.querySelector('input[name="su-model"]:checked');
+            // Entry states again, against the live data: replace only what is safe, and ask when a setup would change.
+            if (loaded && now && now.value === pick.id && loaded.api.entryState(pick.row.entry, ctx.data) === 'use') {
+                const { confirmDialog } = await import('../confirm.js');
+                const asked = loaded.api.replacesSetup(ctx.data);
+                const yes = !asked || await confirmDialog({ title: t('m.pick.replaceTitle', { name: pick.row.name }), body: t('m.pick.replaceBody'), confirmLabel: t('m.pick.replaceYes') });
+                if (yes && !loaded.api.wouldLoseBuckets(ctx.data)) {
+                    const res = loaded.api.useModel(ctx.data, loaded.envelope, { replaceBuckets: true });
+                    if (res.ok) {
+                        ctx.save();
+                        const { showUndoToast } = await import('../toast.js');
+                        showUndoToast({ message: t('m.pick.used', { name: pick.row.name }), onUndo: () => { res.onUndo(); ctx.save(); ctx.refresh(); } });
+                    }
+                }
+            }
+            advance();
+        })();
+        return false;
     },
 };
 

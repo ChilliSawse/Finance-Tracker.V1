@@ -17,6 +17,7 @@ import {
 } from '../calc/saving-model.js';
 import { compareVersions } from './reference-validate.js';
 import { newBucket, snapshot, done, failed } from './saving-model.js';
+import { templateAllocation } from './bucket-migration.js';
 
 export const MODEL_SCHEMA = 1;
 /** The newest `schemaVersion` of the envelope this app reads. A file with a higher one needs a newer Ledger. */
@@ -36,7 +37,7 @@ const ROLES = ['daily', 'splurge', 'smile', 'fire', 'mojo', 'grow'];
 const BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 const MAX_DEPTH = 8;
 const MAX_STRING = 1000;
-const MAX_BUCKETS = 12;
+const MAX_BUCKETS = 10; // the ten colours (slots 1 to 10)
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const isObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -116,6 +117,11 @@ export function validateEnvelope(env) {
     if (def.id !== env.id) return { ok: false, code: 'id-mismatch' };
     const m = validateModelDef(def);
     if (!m.ok) return { ok: false, code: 'model', detail: m.errors };
+    // Each colour slot is used once, and exactly one spend bucket is the Daily bucket: Today's "Left this pay" is worked out from
+    // it (pay-cycle.js), so a model without one would show a wrong figure.
+    if (new Set(def.buckets.map((b) => b.slot)).size !== def.buckets.length) return { ok: false, code: 'model', detail: 'slot-duplicate' };
+    const daily = def.buckets.filter((b) => b.role === 'daily');
+    if (daily.length !== 1 || daily[0].kind !== 'spend') return { ok: false, code: 'model', detail: 'daily' };
     return { ok: true };
 }
 
@@ -260,6 +266,49 @@ export async function loadEnvelope(entry, env = {}) {
 
 // ---------- "Use this" ----------
 
+const RATIO = (v, d) => (isObj(v) && ['smile', 'fire'].every((k) => typeof v[k] === 'number' && v[k] >= 0 && v[k] <= 10) ? { smile: v.smile, fire: v.fire } : clone(d));
+const ROLE_LIST = (v) => (Array.isArray(v) && v.length <= ROLES.length && v.every((r) => ROLES.includes(r)) ? [...new Set(v)] : null);
+
+/**
+ * The rules a model file may set, and nothing else: a fixed list of keys, each checked and clamped, over CUSTOM_RULES. A file
+ * can never switch off renaming or split editing (FT-R-78): both are forced on, and adding buckets stays allowed.
+ */
+export function cleanRules(rules) {
+    const r = isObj(rules) ? rules : {};
+    const out = clone(CUSTOM_RULES);
+    const core = ROLE_LIST(r.coreBuckets);
+    if (core) out.coreBuckets = core;
+    if (typeof r.mojoShare === 'number' && r.mojoShare >= 0 && r.mojoShare <= 100) out.mojoShare = r.mojoShare;
+    const kids = ROLE_LIST(r.childrenAllowedIn);
+    if (kids) out.childrenAllowedIn = kids;
+    if (Number.isInteger(r.maxDepth)) out.maxDepth = Math.max(1, Math.min(5, r.maxDepth));
+    out.remainderRatio = RATIO(r.remainderRatio, CUSTOM_RULES.remainderRatio);
+    if (typeof r.targetList === 'string' && ROLES.includes(r.targetList)) out.targetList = r.targetList;
+    if (Number.isInteger(r.slotCount)) out.slotCount = Math.max(1, Math.min(10, r.slotCount));
+    if (typeof r.colourRepeat === 'boolean') out.colourRepeat = r.colourRepeat;
+    out.renamable = true;
+    out.splitEditable = true;
+    out.topLevelAddAllowed = true;
+    return out;
+}
+
+/** True when the buckets, their split, bank labels or ticked transfers are not just what a fresh setup has. Taking a model that rebuilds them replaces that. */
+export function allocationDiffersFromDefault(data) {
+    const rows = data && Array.isArray(data.allocation) ? data.allocation : [];
+    const base = templateAllocation();
+    if (rows.length !== base.length) return true;
+    const same = rows.every((r, i) => isObj(r) && ['id', 'name', 'role', 'percentage', 'slot', 'kind', 'bankLabel'].every((k) => r[k] === base[i][k]));
+    if (!same) return true;
+    if (data.bucketGoals && data.bucketGoals.length) return true;
+    const set = data.savingModel && data.savingModel.transfers && data.savingModel.transfers.bankSetTo;
+    return isObj(set) && Object.values(set).some((v) => num(v) !== 0);
+}
+
+/** Would taking a model that rebuilds the buckets replace something the person set up (so it needs asking first)? */
+export function replacesSetup(data) {
+    return wouldLoseBuckets(data) || allocationDiffersFromDefault(data);
+}
+
 /** Rows for a fixed model: names, shares and kinds from the file; every balance and goal at zero. */
 export function modelRows(def) {
     const rows = [];
@@ -296,19 +345,28 @@ export function useModel(data, envelope, opts = {}) {
         return done(data, before, '', { used: BUCKET_ID });
     }
     if (def.engine !== 'fixed') return failed('would-replace');
-    if (wouldLoseBuckets(data) && opts.replaceBuckets !== true) return failed('would-replace');
+    if (replacesSetup(data) && opts.replaceBuckets !== true) return failed('would-replace');
     const rows = modelRows(def);
-    const split = validateSplit(rows.map((r) => ({ id: r.id, role: r.role, pct: r.percentage })), { ...CUSTOM_RULES, ...def.rules });
+    const split = validateSplit(rows.map((r) => ({ id: r.id, role: r.role, pct: r.percentage })), cleanRules(def.rules));
     if (!split.ok) return failed('split', { total: split.total });
-    const before = snapshot(data, ['allocation', 'bucketGoals', 'savingModel']);
+    const before = snapshot(data, ['allocation', 'bucketGoals', 'savingModel', 'categories', 'plan', 'rules']);
+    // Anything pointing at a bucket that is going: remap to the new bucket with the same role, else clear it (back to the default).
+    const oldRole = new Map((Array.isArray(data.allocation) ? data.allocation : []).filter(isObj).map((r) => [String(r.id), r.role]));
+    const newByRole = new Map(rows.filter((r) => r.role).map((r) => [r.role, r.id]));
+    const ids = new Set(rows.map((r) => r.id));
+    const fix = (x) => {
+        if (!isObj(x) || x.bucketId == null || ids.has(x.bucketId)) return;
+        x.bucketId = newByRole.get(oldRole.get(String(x.bucketId))) || null;
+    };
+    for (const k of ['categories', 'plan', 'rules']) if (Array.isArray(data[k])) data[k].forEach(fix);
     if (!Array.isArray(data.allocation)) data.allocation = [];
     data.allocation.length = 0;
     data.allocation.push(...rows);
     if (Array.isArray(data.bucketGoals)) data.bucketGoals.length = 0;
     Object.assign(sm, {
         id: 'custom-1', name: def.name, after: typeof def.after === 'string' && def.after ? def.after : (envelope.meta.after || null),
-        basedOn: envelope.id, basedOnVersion: envelope.version, basis: def.basis,
-        rules: { ...clone(CUSTOM_RULES), ...clone(def.rules), topLevelAddAllowed: true },
+        basedOn: envelope.id, basedOnVersion: envelope.version, basedOnName: envelope.meta.title, basis: def.basis,
+        rules: cleanRules(def.rules),
         transfers: { ...(isObj(sm.transfers) ? sm.transfers : {}), bankSetTo: {} },
     });
     return done(data, before, '', { used: envelope.id, total: split.total });
@@ -327,9 +385,13 @@ export function exportModel(data) {
     if (!isObj(sm) || !rows.length) return { ok: false, code: 'no-model' };
     const name = text(sm.name, 200) ? sm.name : BUCKET_METHOD.name;
     const id = `own-${slug(name) || 'model'}`;
+    if (rows.length > MAX_BUCKETS) return { ok: false, code: 'too-many' };
     const roles = new Set();
-    const buckets = rows.slice(0, MAX_BUCKETS).map((r, i) => {
-        const b = { name: r.name.slice(0, 200), slot: Number.isInteger(r.slot) && r.slot >= 1 && r.slot <= 10 ? r.slot : Math.min(10, i + 1), kind: r.kind === 'spend' ? 'spend' : 'save', pct: Math.max(0, Math.round(num(r.percentage) * 10) / 10) };
+    const usedSlots = new Set();
+    const buckets = rows.map((r, i) => {
+        const slot = Number.isInteger(r.slot) && r.slot >= 1 && r.slot <= 10 && !usedSlots.has(r.slot) ? r.slot : i + 1;
+        usedSlots.add(slot);
+        const b = { name: r.name.slice(0, 200), slot, kind: r.kind === 'spend' ? 'spend' : 'save', pct: Math.max(0, Math.round(num(r.percentage) * 10) / 10) };
         if (ROLES.includes(r.role) && !roles.has(r.role)) { roles.add(r.role); b.role = r.role; }
         return b;
     });

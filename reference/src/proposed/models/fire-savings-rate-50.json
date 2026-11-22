@@ -6,7 +6,7 @@
   "meta": {
     "title": "FIRE savings rate (50%)",
     "blurb": "Put half of take-home pay toward investing and live on the other half. The years-to-independence readout needs the Future screen, not this split.",
-    "after": "Mr Money Mustache, The Shockingly Simple Math Behind Early Retirement (2012). The 50% default is the example the post uses (about 16 to 17 years on its assumptions; the post says about 16).",
+    "after": "Mr Money Mustache, The Shockingly Simple Math Behind Early Retirement (2012). The 50% default is the example the post uses (about 16 to 17 years on its assumptions; the post says about 16). Not affiliated with or endorsed by the author.",
     "source": "https://www.mrmoneymustache.com/2012/01/13/the-shockingly-simple-math-behind-early-retirement/",
     "sourceKind": "primary",
     "retrieved": "2026-11-22",
@@ -18,9 +18,10 @@
     },
     "checks": {
       "validateModelDef": "ok",
-      "naming": "FIRE is a movement label, not a brand. Credit Mr Money Mustache in meta.after only; never put his name in the title. Nothing found in the AU register.",
+      "naming": "FIRE is a movement label, not a brand. Credit Mr Money Mustache in meta.after only, with the \"not affiliated\" line; never put his name in the title. Nothing found in the AU register.",
       "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked.",
-      "also": "fi.js for the years-to-FI readout"
+      "also": "fi.js for the years-to-FI readout",
+      "roles": "The bucket marked daily is the one Today works \"Left this pay\" from; splurge takes non-essential spending."
     }
   },
   "model": {
@@ -30,6 +31,7 @@
     "engine": "fixed",
     "buckets": [
       {
+        "role": "daily",
         "name": "Living costs",
         "slot": 1,
         "kind": "spend",

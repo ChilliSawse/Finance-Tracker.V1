@@ -19,7 +19,8 @@
     "checks": {
       "validateModelDef": "ok",
       "naming": "Descriptive title \"80/20 (save 20% first)\". Do not title it \"anti-budget\": no owner is known and the term is not confirmed free.",
-      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked."
+      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked.",
+      "roles": "The bucket marked daily is the one Today works \"Left this pay\" from; splurge takes non-essential spending."
     }
   },
   "model": {
@@ -35,6 +36,7 @@
         "pct": 20
       },
       {
+        "role": "daily",
         "name": "Everything else",
         "slot": 2,
         "kind": "spend",

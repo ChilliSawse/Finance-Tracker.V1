@@ -8,8 +8,9 @@ import { cloneDefaultFinanceData } from './defaults.js';
 import { forkOwnTemplate, switchBackToBase, getBuckets } from './saving-model.js';
 import {
     validateEnvelope, parseModelFile, builtinEnvelope, catalogueFromIndex, loadCatalogue, entryState, updateAvailable,
-    useModel, exportModel, loadEnvelope, MODEL_FILE_MAX_BYTES, wouldLoseBuckets,
+    useModel, cleanRules, replacesSetup, allocationDiffersFromDefault, exportModel, loadEnvelope, MODEL_FILE_MAX_BYTES, wouldLoseBuckets,
 } from './model-catalogue.js';
+import { leftThisPay } from '../calc/pay-cycle.js';
 import { pickerRows } from '../ui/model-picker.js';
 import { modelStep } from '../ui/setup/steps-buckets.js';
 
@@ -22,7 +23,7 @@ const SPLIT = {
     meta: { title: 'Test split', blurb: 'A test model.', source: 'test fixture', licence: 'CC0-1.0', reviewed: null, requires: { engine: 'fixed' } },
     model: {
         id: 'test-split', name: 'Test split', basis: 'net', engine: 'fixed',
-        buckets: [{ name: 'Needs', slot: 1, kind: 'spend', pct: 50 }, { name: 'Wants', slot: 2, kind: 'spend', pct: 30 }, { name: 'Savings', slot: 3, kind: 'save', pct: 20 }],
+        buckets: [{ role: 'daily', name: 'Needs', slot: 1, kind: 'spend', pct: 50 }, { role: 'splurge', name: 'Wants', slot: 2, kind: 'spend', pct: 30 }, { name: 'Savings', slot: 3, kind: 'save', pct: 20 }],
         rules: { coreBuckets: [], maxDepth: 3, renamable: true, splitEditable: true, topLevelAddAllowed: true },
     },
 };
@@ -60,6 +61,7 @@ export const MODEL_CATALOGUE_TEST_CASES = [
             assert(`${file}: validateModelDef`, validateModelDef(doc.model).ok, true);
             assert(`${file}: schema`, e.build.schemaErrors(v['saving-model'], doc, file), []);
             assert(`${file}: schemaVersion`, doc.schemaVersion, 1);
+            assert(`${file}: one spend bucket is Daily, slots are unique, at most 10`, [doc.model.buckets.filter((b) => b.role === 'daily' && b.kind === 'spend').length, new Set(doc.model.buckets.map((b) => b.slot)).size === doc.model.buckets.length, doc.model.buckets.length <= 10], [1, true, true]);
         }
         for (const { file, doc } of proposed) {
             assert(`${file}: split totals 100`, validateSplit(doc.model.buckets.map((b, i) => ({ id: i, pct: b.pct }))).total, 100);
@@ -77,9 +79,11 @@ export const MODEL_CATALOGUE_TEST_CASES = [
         if (!IS_NODE) return;
         const e = await nodeEnv();
         const BRANDS = /barefoot|baby steps|profit first|ynab|you need a budget|moneysmart|dave ramsey|everydollar/i;
+        const TITLE_BRANDS = new RegExp(BRANDS.source + '|mustache|duke', 'i');
         for (const { file, doc } of readDir(e, e.path.join(e.src, 'proposed', 'models'))) {
-            assert(`${file}: no brand in the title or model name`, [BRANDS.test(doc.meta.title), BRANDS.test(doc.model.name)], [false, false]);
-            assert(`${file}: no brand in meta.after`, BRANDS.test(doc.meta.after || ''), false);
+            assert(`${file}: no brand or person in the title, model name or blurb`, [TITLE_BRANDS.test(doc.meta.title), TITLE_BRANDS.test(doc.model.name), TITLE_BRANDS.test(doc.meta.blurb)], [false, false, false]);
+            assert(`${file}: no brand in meta.after, and no Duke (it is a source, not a credit)`, [BRANDS.test(doc.meta.after || ''), /duke/i.test(doc.meta.after || '')], [false, false]);
+            assert(`${file}: a credited author comes with "not affiliated"`, !/Warren|Clason|Mustache/.test(doc.meta.after || '') || /Not affiliated with or endorsed by/.test(doc.meta.after), true);
             assert(`${file}: carries its naming note and the lookup caveat`, [typeof doc.meta.checks.naming, /not legal advice/.test(doc.meta.checks.trademark)], ['string', true]);
             assert(`${file}: marked proposed, not shipped`, /PROPOSED, NOT SHIPPED/.test(doc.meta.status), true);
         }
@@ -154,6 +158,11 @@ export const MODEL_CATALOGUE_TEST_CASES = [
         assert('id and model id differ', bad((m) => { m.model.id = 'other'; }).code, 'id-mismatch');
         assert('prototype key', parseModelFile('{"schema":1,"__proto__":{"x":1},"id":"a"}').ok, false);
         assert('too deep', bad((m) => { let o = m.model.rules; for (let i = 0; i < 12; i++) { o.n = {}; o = o.n; } }).code, 'hostile');
+        assert('eleven buckets', bad((m) => { m.model.buckets = Array.from({ length: 11 }, (_, i) => ({ role: i ? undefined : 'daily', name: 'B' + i, slot: (i % 10) + 1, kind: i ? 'save' : 'spend', pct: i ? 9 : 10 })); }).code, 'field');
+        assert('duplicate slots', bad((m) => { m.model.buckets[1].slot = 1; }).detail, 'slot-duplicate');
+        assert('no Daily bucket', bad((m) => { delete m.model.buckets[0].role; }).detail, 'daily');
+        assert('two Daily buckets', bad((m) => { m.model.buckets[1].role = 'daily'; }).ok, false);
+        assert('Daily must be a spend bucket', bad((m) => { m.model.buckets[0].kind = 'save'; }).detail, 'daily');
         assert('too many buckets', bad((m) => { m.model.buckets = Array.from({ length: 40 }, (_, i) => ({ name: 'B' + i, slot: 1, kind: 'save', pct: 2.5 })); }).ok, false);
         assert('a long string', bad((m) => { m.meta.blurb = 'x'.repeat(5000); }).code, 'hostile');
         assert('a control character', bad((m) => { m.meta.blurb = 'a\u0000b'; }).code, 'hostile');
@@ -211,5 +220,60 @@ export const MODEL_CATALOGUE_TEST_CASES = [
         assert('a wrong length is refused', (await loadEnvelope({ ...entry, bytes: 5 }, { fetch: ok(text), sha256: sha, base: './' })).code, 'unavailable');
         assert('offline is "unavailable", never a throw', (await loadEnvelope(entry, { fetch: async () => { throw new Error('off'); }, sha256: sha, base: './' })).code, 'unavailable');
         assert('a path off the catalogue pattern is refused', (await loadEnvelope({ ...entry, path: '../x.json' }, { fetch: ok(text), sha256: sha })).code, 'unavailable');
+    } },
+    { name: 'DB15.12 rules from a file are whitelisted and clamped; renaming and split editing stay on (FT-R-78)', fn(assert) {
+        const r = cleanRules({ renamable: false, splitEditable: false, topLevelAddAllowed: false, maxDepth: 99, slotCount: 400, mojoShare: 500, coreBuckets: ['daily', 'x'], remainderRatio: { smile: -1, fire: 3 }, evil: 'x', colourRepeat: 'yes' });
+        assert('forced on', [r.renamable, r.splitEditable, r.topLevelAddAllowed], [true, true, true]);
+        assert('clamped or defaulted', [r.maxDepth, r.slotCount, r.mojoShare, r.coreBuckets, r.remainderRatio, r.colourRepeat], [5, 10, null, [], { smile: 1, fire: 2 }, true]);
+        assert('unknown keys are dropped', 'evil' in r, false);
+        const d = bare();
+        const m = clone(SPLIT);
+        m.model.rules = { coreBuckets: [], maxDepth: 3, renamable: false, splitEditable: false, junk: 1 };
+        useModel(d, m, {});
+        assert('what lands in the data', [d.savingModel.rules.renamable, d.savingModel.rules.splitEditable, 'junk' in d.savingModel.rules], [true, true, false]);
+    } },
+    { name: 'DB15.13 a setup that differs from the defaults is replaced only when asked; bucket pointers are remapped and Undo restores them', fn(assert) {
+        const d = bare();
+        assert('a fresh setup is the default', [allocationDiffersFromDefault(d), replacesSetup(d)], [false, false]);
+        d.allocation[0].name = 'Everyday';
+        assert('a renamed bucket counts', [allocationDiffersFromDefault(d), useModel(d, SPLIT, {}).code], [true, 'would-replace']);
+        const e = bare();
+        e.allocation[3].bankLabel = 'Fire account';
+        assert('a bank label counts', replacesSetup(e), true);
+        const f = bare();
+        f.savingModel.transfers.bankSetTo[f.allocation[1].id] = 5000;
+        assert('a ticked transfer counts', replacesSetup(f), true);
+        const g = bare();
+        g.allocation[0].percentage = 55; g.allocation[3].percentage = 25;
+        assert('a custom split counts', replacesSetup(g), true);
+        const h = bare();
+        h.categories = [{ id: 'groceries', bucketId: 'b-daily' }, { id: 'fun', bucketId: 'b-splurge' }, { id: 'x', bucketId: 'b-smile' }, { id: 'y', bucketId: null }];
+        h.plan = [{ id: 'p', bucketId: 'b-fire' }];
+        h.rules = [{ key: 'k', categoryId: 'fun', bucketId: 'b-daily' }];
+        const before = JSON.stringify(h);
+        const res = useModel(h, SPLIT, { replaceBuckets: true });
+        const ids = new Set(h.allocation.map((r) => r.id));
+        assert('same-role pointers remap, others clear, none dangle', [h.categories.map((c) => (c.bucketId === null ? null : ids.has(c.bucketId))), h.plan[0].bucketId, ids.has(h.rules[0].bucketId)], [[true, true, null, null], null, true]);
+        res.onUndo();
+        assert('Undo restores buckets, pointers and the model', JSON.stringify(h), before);
+        const k = bare();
+        useModel(k, SPLIT, {});
+        assert('the Plan line can name the model it came from', k.savingModel.basedOnName, 'Test split');
+    } },
+    { name: 'DB15.14 Today: applying a fixed model gives a sane "Left this pay"', fn(assert) {
+        const d = bare();
+        d.incomeSources = [{ incomeType: 'salaried', paySchedule: 'fortnightly', payAnchor: '2026-10-31' }];
+        d.primaryIncomeIndex = 0;
+        d.categories = [{ id: 'groceries', essential: true }, { id: 'rent', essential: true }, { id: 'dining', essential: false }, { id: 'income', essential: false }];
+        d.plan = [];
+        const row = (date, categoryId, dollars) => ({ id: `${date}-${categoryId}`, date, categoryId, amountCents: Math.round(-dollars * 100) });
+        const rows = [row('2026-11-01', 'groceries', 142.3), row('2026-11-02', 'rent', 1120), row('2026-11-03', 'dining', 24), { id: 'pay', date: '2026-10-31', categoryId: 'income', amountCents: 343843 }];
+        assert('applied', useModel(d, SPLIT, {}).ok, true);
+        const r = leftThisPay({ data: d, totals: { netCents: 343843 }, txns: rows, today: '2026-11-04' });
+        const daily = r.buckets.find((b) => b.role === 'daily');
+        assert('the Daily pool is its 50%', [daily.poolCents, r.poolCents], [171921, 171921]);
+        assert('the pools add up to the pay', sum(r.buckets.map((b) => b.poolCents)), 343843);
+        assert('essentials come off Daily, the non-essential off Wants', [daily.spentCents, r.buckets.find((b) => b.role === 'splurge').spentCents], [126230, 2400]);
+        assert('left is the pool less spending, and not negative', [r.leftCents, r.leftCents >= 0, Number.isFinite(r.perDayCents)], [171921 - 126230, true, true]);
     } },
 ];

@@ -19,7 +19,8 @@
     "checks": {
       "validateModelDef": "ok",
       "naming": "A common phrase, not a brand. Title \"Pay yourself first (10%)\"; credit Clason in meta.after. UNVERIFIED: whether the 1926/1930 text is out of copyright in Australia (Clason died 1956, likely life plus 70).",
-      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked."
+      "trademark": "IP Australia quick search run 2026-11-22 (a register lookup, not legal advice); US and EU registers not checked.",
+      "roles": "The bucket marked daily is the one Today works \"Left this pay\" from; splurge takes non-essential spending."
     }
   },
   "model": {
@@ -35,6 +36,7 @@
         "pct": 10
       },
       {
+        "role": "daily",
         "name": "Everything else",
         "slot": 2,
         "kind": "spend",
