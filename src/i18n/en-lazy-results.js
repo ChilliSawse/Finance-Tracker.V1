@@ -212,4 +212,6 @@ Object.assign(en, {
     'f.wa.one.label.order': 'one after another',
     'f.wa.one.label.shrink': 'smaller goal',
     'f.wa.one.label.drop': 'dropped goal',
+    'f.res.heldOut': '{count} items worth {amount} aren\'t counted toward FI until you confirm',
+    'f.res.heldOut.one': '{count} item worth {amount} isn\'t counted toward FI until you confirm',
 });

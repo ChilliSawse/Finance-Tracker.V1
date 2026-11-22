@@ -22,7 +22,9 @@ import { getBuckets } from '../state/saving-model.js';
 import { listTransactions, updateTransaction } from '../state/transactions.js';
 import { refreshSpendCache } from '../state/spend-cache.js';
 import { iconSvgHtml } from './icon-paths.js';
-import { checkItems, checkCardHtml, confirmSuggestion } from './plan-assets-debts.js';
+import { checkCardFor, confirmSuggestion } from './plan-assets-debts.js';
+import { assetTypesFor } from '../state/asset-type-list.js';
+import { wireSheetReopen } from './asset-sheet-wire.js';
 import {
     planListsModel, listBodyHtml, payBodyHtml, capsHtml, reviewCardHtml, countText, planItemSheetSpec,
     savePlanItem, deletePlanItem, newIncomeSource, clearReview, markReviewed,
@@ -112,16 +114,17 @@ function openItem(id, kind) {
 
 const todayIso = () => getSpendCache().today || localIso();
 
-function openDebtAsset(kind, index, carry = null) {
+async function openDebtAsset(kind, index, carry = null, changed = null) {
     const data = store.financeData;
     const key = kind === 'debt' ? 'liabilities' : 'assets';
     const row = index == null ? null : (data[key] || [])[index];
     if (index != null && !row) return;
-    const spec = debtAssetSheetSpec(kind, row, { today: todayIso(), carry });
+    const types = kind === 'asset' ? await assetTypesFor(data) : [];
+    const spec = debtAssetSheetSpec(kind, row, { today: todayIso(), carry, changed, types, assets: kind === 'debt' ? data.assets : undefined });
     const handle = openSheet({
         title: spec.title, fields: spec.fields, values: spec.values, validate: spec.validate, plausibility: spec.plausibility,
         onSave(values) {
-            const res = saveDebtAsset(data, kind, index, values);
+            const res = saveDebtAsset(data, kind, index, values, { types });
             if (!res.ok) return false;
             updateDataAndUI();
             undoToast(res);
@@ -135,12 +138,7 @@ function openDebtAsset(kind, index, carry = null) {
         } : undefined,
     });
     // F5: the questions depend on the kind (or the interest type), so the sheet reopens with what was typed so far.
-    if (spec.reopenOn && spec.reopenOn.length) {
-        handle.layer.addEventListener('change', (e) => {
-            const k = e.target && e.target.dataset ? e.target.dataset.key : null;
-            if (k && spec.reopenOn.includes(k)) openDebtAsset(kind, index, handle.getValues());
-        });
-    }
+    wireSheetReopen(handle, spec, (carryNow, changedKey) => openDebtAsset(kind, index, carryNow, changedKey));
 }
 
 /** "Check these N" card: confirm one or all (only the flag clears), or open the row to change it. */
@@ -148,7 +146,7 @@ function checkAct(b) {
     const data = store.financeData;
     if (b.dataset.checkOpen) {
         const [type, i] = b.dataset.checkOpen.split(':');
-        openDebtAsset(type === 'debt' ? 'debt' : 'asset', Number(i));
+        openDebtAsset(type === 'asset' ? 'asset' : 'debt', Number(i)); // a label or a loan link opens the debt sheet
         return;
     }
     const res = confirmSuggestion(data, b.dataset.checkAll ? 'all' : b.dataset.checkConfirm);
@@ -296,7 +294,7 @@ function fillLists() {
     put('assets', debtAssetBodyHtml(assets));
     put('cats', categoriesBodyHtml(cats));
     const review = document.getElementById('plan-review');
-    if (review) review.innerHTML = reviewCardHtml(model.review) + checkCardHtml(checkItems(store.financeData));
+    if (review) review.innerHTML = reviewCardHtml(model.review) + checkCardFor(store.financeData);
     const cur = (n) => formatCurrency(Math.round(n * 100) / 100);
     setFig('pay', cur(model.pay.takeHome), t('a.plan.takeHome'));
     setFig('essential', cur(model.essentials.perPay), countText('essential', model.essentials.count));

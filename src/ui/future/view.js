@@ -36,7 +36,7 @@ export function yearsText(years) {
 
 function chartHtml(m) {
     const g = m.geometry;
-    const fi = m.summary.fiNumber;
+    const fi = m.target.amount; // the bridge target under 60, the FI number otherwise
     const grid = g.grid.map((l) => `<span class="fu-gl" style="top:${escNum(l.pct)}%"><b>${esc(axisMoney(l.value))}</b></span>`).join('');
     const lines = g.lines.map((l) => {
         const idx = Math.max(0, m.drawn.findIndex((d) => d.id === l.id));
@@ -56,7 +56,7 @@ function chartHtml(m) {
 /** The text alternative: the figures the chart shows. */
 export function chartCaption(m) {
     const f = m.figures;
-    let s = t('f.future.chart.cap', { years: m.horizon, now: whole(f.now), end: whole(m.summary.path[Math.min(m.horizon, m.summary.path.length - 1)].fiNetWorth), fi: whole(f.fiNumber), when: yearsText(m.summary.yearsToFI) });
+    let s = t('f.future.chart.cap', { years: m.horizon, now: whole(f.now), end: whole(m.summary.path[Math.min(m.horizon, m.summary.path.length - 1)].fiNetWorth), fi: whole(m.target.amount), when: yearsText(m.summary.yearsToFI) });
     for (const d of m.drawn) s += ` ${t('f.future.chart.capScen', { name: d.name, when: yearsText(d.yearsToFI) })}`;
     return s;
 }
@@ -99,18 +99,22 @@ export function fiCardHtml(m) {
     if (s.fiAge && s.fiAge.superNote) notes.push(t('f.fi.explain.superPreservation', { age: 60 }));
     if (s.notes.includes('spendingBias')) notes.push(t('f.fi.explain.spendingBias'));
     notes.push(t('f.fi.explain.notModelled'));
+    const noBirth = s.superNoBirth ? `<li>${esc(t('f.future.fi.noBirth'))} <button type="button" class="link" data-fu-assume="1">${esc(t('f.future.fi.noBirth.add'))}</button></li>` : '';
+    const held = m.heldOut.count > 0
+        ? `<p class="fine fu-held"><button type="button" class="link" data-fu-check="1">${esc(t(m.heldOut.count === 1 ? 'f.future.fi.heldOut.one' : 'f.future.fi.heldOut', { count: m.heldOut.count, amount: whole(m.heldOut.value) }))}</button></p>` : '';
     const nudges = s.nudges.map((n) => `<li>${esc(t('f.fi.explain.minRepayment', { name: n.name }))}</li>`).join('');
     return `<section class="card fu-fi" aria-labelledby="fu-h-fi"><div class="card-head"><h2 id="fu-h-fi">${esc(t('f.future.fi.title'))}</h2></div>`
         + `<p class="fu-fi-big">${esc(yearsText(s.yearsToFI))}</p>`
         + (ages ? `<p class="muted">${esc(t('f.future.fi.ages', { list: ages }))}</p>` : '')
         + `<dl class="fu-kv"><div><dt>${esc(t('f.future.fi.number'))}</dt><dd class="money">${esc(whole(s.fiNumber))}</dd></div>`
         + `<div class="sub"><dt>${esc(t('f.future.fi.numberSub', { multiple: escNum(s.multiple), spend: whole(s.spendYear) }))}</dt></div>`
+        + (m.target.bridge ? `<div class="sub"><dt>${esc(t('f.future.fi.bridge', { amount: whole(m.target.amount), age: 60 }))}</dt></div>` : '')
         + `<div><dt>${esc(t('f.future.fi.rate'))}</dt><dd class="num">${esc(t('f.future.rateAmount', { n: s.savings.ratePct, amount: whole(s.savings.perPayCents / 100) }))}</dd></div>`
         + `<div class="sub"><dt>${esc(t('f.future.fi.rateSub', { year: whole(s.savings.perYearCents / 100) }))}</dt></div>`
         + `<div><dt>${esc(t('f.future.fi.going'))}</dt><dd class="money">${esc(whole(s.going.total))}</dd></div>`
         + `<div class="sub"><dt>${esc(t('f.future.fi.goingSub', { fire: whole(s.going.fire), super: whole(s.going.super) }))}</dt></div></dl>`
         + `<p class="fine">${esc(t('f.future.assume', { real: s.realReturnPct, inflation: s.inflationPct }))}</p>`
-        + `<ul class="fu-notes">${notes.map((n) => `<li>${esc(n)}</li>`).join('')}${nudges}</ul>`
+        + `<ul class="fu-notes">${notes.map((n) => `<li>${esc(n)}</li>`).join('')}${noBirth}${nudges}</ul>${held}`
         + `<div class="fu-actions"><button type="button" class="btn" data-fu-explain="1">${esc(t('f.future.fi.explain'))}</button>`
         + `<button type="button" class="btn" data-fu-assume="1">${esc(t('f.future.assumptions'))}</button></div>`
         + `<div class="wi-entry"><p><b>${esc(t('f.future.wi.promoTitle'))}</b> ${esc(t('f.future.wi.promoBody'))}</p>${whatIfButtonHtml()}</div></section>`;

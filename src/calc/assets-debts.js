@@ -395,3 +395,13 @@ export function suggestLabel(name) {
     if (/\b(cards?|car|vehicle|personal|bnpl|afterpay|zip|klarna|humm|buy now)\b/.test(s)) return 'bad';
     return null;
 }
+
+// ---------- debt labels and the rate band (moved here from the debt sheet so the Future screen's model stays light) ----------
+
+export const DEBT_LABELS = ['good', 'bad'];
+
+/** The rate band beside the good or bad chip: >10 high, 5 to 10 moderate, else low (the same cut-offs as the old Liabilities card). */
+export function rateBand(rate) {
+    const r = Number(rate) || 0;
+    return r > 10 ? 'high' : r >= 5 ? 'moderate' : 'low';
+}

@@ -4,7 +4,7 @@
 //   openSheet({title, fields, values, onSave, onDelete, validate, plausibility, saveLabel, content, readOnly})
 //     -> { close(), setError(field, message), setNote(field, message, fixes), getValues(), el }
 //
-// fields:       [{key, label, type: text|money|number|select|date|percent|toggle, options, hint, required, unit}]
+// fields:       [{key, label, type: text|money|number|select|date|percent|toggle, options, hint, required, unit, hidden}]
 //               money is returned in the collection's own unit (dollars; `unit:'cents'` gives integer cents).
 // validate:     (values) => {field: message}. Any message blocks Save, and the rejected value is put back.
 // plausibility: (values) => [{field, message, fix?: {label, apply(values) -> patch}}]. A quiet note, never blocks.
@@ -309,7 +309,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
     const form = el('form', 'sheet-body');
     form.noValidate = true;
     if (Array.isArray(content)) for (const n of content) if (n) form.appendChild(n); // A11: read-only blocks (help text), built with textContent
-    for (const f of fields) form.appendChild(buildField(f, model, id));
+    for (const f of fields) if (!f.hidden) form.appendChild(buildField(f, model, id)); // a hidden field has no row: its value only travels (a confirm tap on a note sets it)
     const formError = el('div', 'sheet-error sheet-form-error');
     formError.setAttribute('role', 'alert');
     formError.hidden = true;
