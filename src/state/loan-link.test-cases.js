@@ -4,6 +4,7 @@
 import { runPlan, projectNetWorth, fiSummary } from '../calc/fi.js';
 import { loanScope, heldOutAssets, pendingLoanLinks } from '../calc/assets-debts.js';
 import { calculateTotals } from '../calc/calculations.js';
+import { checkItems } from '../ui/plan-assets-debts.js';
 import { migrateLoanLinks, needsLoanLinkMigration, suggestLoanLink } from './loan-link-migration.js';
 import { runMigrationChain, BACKUP_KEY } from './migration-chain.js';
 import { buildSampleHousehold } from './sample-data.js';
@@ -35,10 +36,11 @@ export const LOAN_LINK_TEST_CASES = [
             assert('only the confirmed 10,000 counts toward FI, even with super unlocked', p.fiNetWorth, 10000);
             assert('net worth counts all of them at the entered balance', p.netWorth, 20000);
             assert('the held-out value is its own line', p.heldOutValue, 10000);
-            assert('the count leaves out the zero balance, and the ids are listed', p.heldOut, { count: 4, ids: ['a-1', 'a-2', 'a-3', 'a-4'] });
+            assert('the count matches the Check card (a zero balance included), and the ids are listed', p.heldOut, { count: 5, ids: ['a-1', 'a-2', 'a-3', 'a-4', 'a-5'] });
             const d = baseData(assets, []);
             const sum = fiSummary(d, { today: TODAY });
-            assert('the summary carries the same count for the screen', sum.heldOut, { count: 4, ids: ['a-1', 'a-2', 'a-3', 'a-4'] });
+            assert('the summary carries the same count for the screen', sum.heldOut, { count: 5, ids: ['a-1', 'a-2', 'a-3', 'a-4', 'a-5'] });
+            assert('and it equals the number of asset lines on the Check card', checkItems(d).filter((x) => x.type === 'asset').length, sum.heldOut.count);
             assert('heldOutAssets gives the same answer on the list alone', heldOutAssets(assets), sum.heldOut);
             const confirmed = assets.map((a) => ({ ...a, kindSuggested: false }));
             const q = run0({ assets: confirmed }, { age: 70 });
@@ -136,11 +138,16 @@ export const LOAN_LINK_TEST_CASES = [
             assert('Mortgage with the only property', suggestLoanLink({ name: 'Westpac mortgage' }, one), 'a-h');
             assert('a car loan never links', suggestLoanLink({ name: 'Car loan' }, one), null);
             assert('a card, HELP and a personal loan never link', [suggestLoanLink({ name: 'Credit card' }, one), suggestLoanLink({ name: 'HELP' }, one), suggestLoanLink({ name: 'Personal loan' }, one)], [null, null, null]);
-            assert('a loan with no property-like name and no match', suggestLoanLink({ name: 'Dad' }, one), null);
+            assert('one property and no never-link word: links without a home word', [suggestLoanLink({ name: 'Dad' }, one), suggestLoanLink({ name: 'Thornbury' }, one)], ['a-h', 'a-h']);
+            assert('finance, lease, novated and car makes never link, even with one property', [suggestLoanLink({ name: 'Car finance' }, one), suggestLoanLink({ name: 'Novated lease' }, one), suggestLoanLink({ name: 'Mazda loan' }, one), suggestLoanLink({ name: 'Toyota' }, one)], [null, null, null, null]);
             const two = [{ id: 'a-1', name: 'Smith St house', kind: 'appreciating' }, { id: 'a-2', name: 'Jones Rd unit', kind: 'appreciating' }];
             assert('several properties, a generic name: unclear', suggestLoanLink({ name: 'Home loan' }, two), null);
             assert('several properties, a name match picks one', suggestLoanLink({ name: 'Jones Rd mortgage' }, two), 'a-2');
             assert('a word that matches both is unclear', suggestLoanLink({ name: 'Smith Jones loan' }, two), null);
+            const makes = [{ id: 'a-1', name: 'Mazda St house', kind: 'appreciating' }, { id: 'a-2', name: 'Thornbury unit', kind: 'appreciating' }];
+            assert('a car make shared with a property name does not link', suggestLoanLink({ name: 'Mazda loan' }, makes), null);
+            assert('a shared word alone does not link when the loan says nothing about a home', [suggestLoanLink({ name: 'Thornbury' }, makes), suggestLoanLink({ name: 'Mazda St' }, makes)], [null, null]);
+            assert('with a home word the name match does link', suggestLoanLink({ name: 'Thornbury mortgage' }, makes), 'a-2');
             assert('no property at all', suggestLoanLink({ name: 'Mortgage' }, [{ id: 'a-c', name: 'Car', kind: 'depreciating' }]), null);
         },
     },
@@ -158,6 +165,10 @@ export const LOAN_LINK_TEST_CASES = [
             assert('the car loan has no link and no suggestion', [d.liabilities[1].forAssetId, d.liabilities[1].forAssetSuggested], [null, false]);
             assert('a field already there (the person left it unlinked) is kept', [d.liabilities[2].forAssetId, d.liabilities[2].forAssetSuggested], [null, false]);
             assert('names and balances are untouched, the version is stamped', [d.liabilities.map((l) => [l.name, l.balance]), d.loanLinkVersion], [[['Home loan', 300000], ['Car loan', 9000], ['Mortgage', 1]], 1]);
+            const flagless = { assets: [{ id: 'a-h', name: 'House', balance: 1, kind: 'appreciating', kindSuggested: false, use: 'liveIn', useSuggested: false }], liabilities: [{ id: 'l-x', name: 'Loan', balance: 5, forAssetId: 'a-h' }] };
+            migrateLoanLinks(flagless);
+            assert('a link with no flag is read as suggested, not confirmed (FT-R-117)', [flagless.liabilities[0].forAssetId, flagless.liabilities[0].forAssetSuggested], ['a-h', true]);
+            assert('and the maths ignores a link whose flag is missing', loanScope({ id: 'l-x', balance: 5, forAssetId: 'a-h' }, flagless.assets), { fi: 'yes', reason: 'suggestedLink' });
             const once = structuredClone(d);
             assert('idempotent: the second run does nothing and changes nothing', [migrateLoanLinks(d), d], [false, once]);
             const confirmed = mk();

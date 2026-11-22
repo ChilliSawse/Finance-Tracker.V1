@@ -259,12 +259,15 @@ export function assetScope(asset) {
 
 /**
  * The assets held out of FI only because their kind is suggested (FT-R-128 1): {count, ids}. The UI says "N items are not
- * counted until you confirm". A zero balance changes nothing, so it is not counted. Net worth still counts them.
+ * counted until you confirm". Net worth still counts them. This counts exactly the assets the "Check these N" card lists
+ * (`checkItems`: kindSuggested === true, a zero balance included, so one confirm clears one line on both). The card's N is
+ * larger when it also lists debts whose good or bad label is only suggested; those never change the maths, so they are
+ * not counted here. Word them as "N items not counted in FI" (this) and "N details to check" (the card).
  */
 export function heldOutAssets(assets) {
     const ids = [];
     (Array.isArray(assets) ? assets : []).forEach((a, i) => {
-        if (a && typeof a === 'object' && a.kindSuggested && num(a.balance) !== 0) ids.push(a.id != null ? a.id : `asset-${i}`);
+        if (a && typeof a === 'object' && a.kindSuggested === true) ids.push(a.id != null ? a.id : `asset-${i}`);
     });
     return { count: ids.length, ids };
 }
@@ -280,7 +283,7 @@ export function heldOutAssets(assets) {
  */
 export function loanScope(loan, assets) {
     if (!loan || typeof loan !== 'object' || loan.forAssetId == null || loan.forAssetId === '') return { fi: 'yes', reason: 'unlinked' };
-    if (loan.forAssetSuggested) return { fi: 'yes', reason: 'suggestedLink' };
+    if (loan.forAssetSuggested !== false) return { fi: 'yes', reason: 'suggestedLink' }; // a missing flag is a guess too (FT-R-117)
     const home = (Array.isArray(assets) ? assets : []).find((a) => a && typeof a === 'object' && a.id != null && String(a.id) === String(loan.forAssetId));
     if (!home) return { fi: 'yes', reason: 'missingAsset' };
     if (home.kind !== 'appreciating') return { fi: 'yes', reason: 'notProperty' };
@@ -292,7 +295,7 @@ export function loanScope(loan, assets) {
 export function pendingLoanLinks(liabilities) {
     const ids = [];
     (Array.isArray(liabilities) ? liabilities : []).forEach((l, i) => {
-        if (l && typeof l === 'object' && l.forAssetId != null && l.forAssetId !== '' && l.forAssetSuggested && num(l.balance) > 0) ids.push(l.id != null ? l.id : `debt-${i}`);
+        if (l && typeof l === 'object' && l.forAssetId != null && l.forAssetId !== '' && l.forAssetSuggested !== false && num(l.balance) > 0) ids.push(l.id != null ? l.id : `debt-${i}`);
     });
     return { count: ids.length, ids };
 }

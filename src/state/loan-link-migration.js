@@ -15,8 +15,9 @@ const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+
 const words = (s) => norm(s).split(' ').filter(Boolean);
 
 // Words that say a loan buys a property, and words that never do.
-const HOME_WORDS = ['mortgage', 'home', 'house', 'property', 'investment', 'ip', 'unit', 'apartment', 'flat', 'land'];
-const NOT_HOME_WORDS = ['car', 'credit', 'card', 'help', 'hecs', 'personal', 'student', 'vehicle', 'ute', 'bike', 'motorbike', 'boat', 'caravan', 'afterpay', 'zip', 'overdraft', 'tax', 'ato', 'business', 'margin'];
+const HOME_WORDS = ['mortgage', 'home', 'house', 'property', 'investment', 'unit', 'apartment'];
+const NOT_HOME_WORDS = ['car', 'credit', 'card', 'help', 'hecs', 'personal', 'student', 'vehicle', 'ute', 'bike', 'motorbike', 'boat', 'caravan', 'afterpay', 'zip', 'overdraft', 'tax', 'ato', 'business', 'margin', 'finance', 'lease', 'novated',
+    'toyota', 'mazda', 'ford', 'holden', 'honda', 'hyundai', 'kia', 'nissan', 'mitsubishi', 'subaru', 'volkswagen', 'vw', 'bmw', 'mercedes', 'audi', 'tesla', 'suzuki', 'isuzu', 'jeep', 'lexus', 'volvo', 'mg', 'ram', 'landcruiser', 'hilux', 'ranger'];
 // Words that say nothing about WHICH property.
 const GENERIC = new Set(['loan', 'mortgage', 'home', 'house', 'property', 'investment', 'ip', 'the', 'my', 'our', 'a', 'of', 'at', 'on', 'for', 'and', 'to', 'in', 'new', 'old', 'first', 'second', 'fixed', 'variable', 'unit', 'apartment', 'flat', 'land', 'st', 'rd', 'ave']);
 
@@ -33,15 +34,15 @@ export function suggestLoanLink(loan, assets) {
     if (lw.some((w) => NOT_HOME_WORDS.includes(w))) return null;
     const props = propertiesOf(assets);
     if (!props.length) return null;
+    if (props.length === 1) return props[0].id; // the one case that needs no home word: a single property and nothing that says "not a home"
+    // Several properties: the loan must say it is a home or property loan, and a name match then picks one. A shared word alone never links.
+    if (!lw.some((w) => HOME_WORDS.includes(w))) return null;
     const distinct = lw.filter((w) => !GENERIC.has(w));
     const named = props.filter((p) => {
         const pw = words(p.name);
         return distinct.some((w) => pw.includes(w));
     });
-    if (named.length === 1) return named[0].id; // a name match decides, even when there are several properties
-    if (named.length > 1) return null;
-    const homeLoan = lw.some((w) => HOME_WORDS.includes(w));
-    return homeLoan && props.length === 1 ? props[0].id : null; // "Home loan" with one property
+    return named.length === 1 ? named[0].id : null;
 }
 
 export const needsLoanLinkMigration = (d) => isObj(d) && !(d.loanLinkVersion >= 1);
@@ -54,9 +55,9 @@ export function migrateLoanLinks(d) {
             if (l.forAssetId === undefined) {
                 const id = suggestLoanLink(l, d.assets);
                 l.forAssetId = id;
-                if (l.forAssetSuggested === undefined) l.forAssetSuggested = id !== null;
             }
-            if (l.forAssetSuggested === undefined) l.forAssetSuggested = false;
+            // A link with no flag is a guess until confirmed (FT-R-117): never read it as the person's own.
+            if (l.forAssetSuggested === undefined) l.forAssetSuggested = l.forAssetId != null && l.forAssetId !== '';
         }
     }
     d.loanLinkVersion = 1;
