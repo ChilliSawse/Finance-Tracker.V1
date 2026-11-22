@@ -398,10 +398,8 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
                 await updateTransaction(next);
                 close();
                 await afterChange();
-                showUndoToast({
-                    message: t('a.quickAdd.updated', { name: next.description || t('a.quickAdd.entryFallback') }),
-                    onUndo: async () => { await updateTransaction(prev); await afterChange(); },
-                });
+                // The Undo toast and learn on correct (FT-R-56) load only now, so they stay out of the cold-load core.
+                await (await import('./learn.js')).default(data, prev, next, afterChange);
                 return;
             }
             const row = makeTransaction(fieldsFor());

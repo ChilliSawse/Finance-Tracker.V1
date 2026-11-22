@@ -158,10 +158,10 @@ export function dismissToastTagged(tag) {
 }
 
 /** Toast with an Undo button. onUndo runs on Undo; onExpire when it times out, is dismissed or replaced. */
-export function showUndoToast({ message, onUndo, onExpire, duration = UNDO_DURATION }) {
+export function showUndoToast({ message, onUndo, onExpire, duration = UNDO_DURATION, actionLabel }) {
     getQueue().show({
         message, kind: 'info', duration, onExpire,
-        action: { label: t('d.toast.undo'), onAction: onUndo },
+        action: { label: actionLabel || t('d.toast.undo'), onAction: onUndo },
     });
 }
 

@@ -5,7 +5,7 @@ import { DEFAULT_CATEGORIES, merchantKey, categoriseDescription, categoriseDetai
 import { looksLikeOwnTransfer, transferSuggestion } from '../calc/transfer-suggest.js';
 import { resolveImportRow, previewCategory } from './import-rows.js';
 import { categoriseWithReference, referenceHit } from './reference-match.js';
-import { learnRule, similarUnconfirmed } from './rules.js';
+import { learnRule, similarUnconfirmed } from './rule-learn.js';
 
 const cats = DEFAULT_CATEGORIES;
 const cat = (d) => categoriseDescription(d, cats);

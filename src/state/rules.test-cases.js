@@ -2,7 +2,9 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected).
 
 import { DEFAULT_CATEGORIES, categoriseDescription } from './categories.js';
-import { merchantKey, categorise, resolveCategory, learnRule, removeRule, applyRuleToSimilar, similarUnconfirmed, planManualMerges } from './rules.js';
+import { learnKeyFor, isLearnableKey, learnRule, applyRuleToSimilar, similarUnconfirmed } from './rule-learn.js';
+import { resolveImportRow } from './import-rows.js';
+import { merchantKey, categorise, categoriseDetailed, resolveCategory, removeRule, planManualMerges } from './rules.js';
 
 const cats = DEFAULT_CATEGORIES;
 const row = (o) => ({ id: 'r', date: '2026-11-10', description: 'X', amountCents: -1000, categoryId: 'other', source: 'csv', hash: 'h', ...o });
@@ -100,6 +102,74 @@ export const RULES_TEST_CASES = [
             const rule = { key: 'qwerty', categoryId: 'dining' };
             const confirmed = row({ id: 'k', description: 'QWERTY 5', status: 'ok', categoryId: 'other' });
             assert('confirmed other row untouched', applyRuleToSimilar(rule, [confirmed]).length, 0);
+        },
+    },
+    {
+        name: 'DB9.1 a correction learns a merchant rule; the next import gets it as by rule',
+        fn(assert) {
+            const before = row({ id: 'q1', description: 'ZEDCO 1234 NEWTOWN', categoryId: 'other', status: 'review', amountCents: -500 });
+            const key = learnKeyFor(before, 'dining', cats);
+            assert('key from the stored description', key, 'zedco');
+            const data = { rules: [], categories: cats };
+            const res = learnRule(data, before.description, 'dining');
+            assert('rule stored', [res.ok, data.rules], [true, [{ key: 'zedco', categoryId: 'dining' }]]);
+            const next = categoriseDetailed('ZEDCO 77 OTHERTOWN', cats, data.rules);
+            assert('next import: the user category, by rule', [next.categoryId, next.by], ['dining', 'rule']);
+            assert('and it counts as confirmed (FT-R-55)', resolveImportRow('ZEDCO 77', -100, undefined, { categories: cats, rules: data.rules }, null), { categoryId: 'dining', status: 'ok' });
+            const again = learnRule(data, 'ZEDCO 5', 'travel');
+            assert('a second correction replaces, not duplicates', [data.rules.length, data.rules[0].categoryId, again.created], [1, 'travel', false]);
+            again.onUndo();
+            assert('undo restores the earlier rule', data.rules[0].categoryId, 'dining');
+        },
+    },
+    {
+        name: 'DB9.2 what does not learn: empty or rail key, same category, other, manual, income, transfer',
+        fn(assert) {
+            const base = row({ id: 'n', description: 'ZEDCO 12', categoryId: 'other', status: 'review', amountCents: -500 });
+            const k = (o, to = 'dining') => learnKeyFor({ ...base, ...o }, to, cats);
+            assert('baseline learns', k({}), 'zedco');
+            assert('empty description', k({ description: '' }), '');
+            assert('digits only', k({ description: '7-ELEVEN 123' }), '');
+            assert('card rail text only', k({ description: 'VISA DEBIT PURCHASE CARD 1234' }), '');
+            assert('bank wording only', [k({ description: 'INTERNET TRANSFER 5' }), k({ description: 'Direct Debit 123456' }), k({ description: 'BPAY PAYMENT 9' })], ['', '', '']);
+            assert('isLearnableKey', [isLearnableKey(''), isLearnableKey('transfer payment'), isLearnableKey('zedco'), isLearnableKey('bank zedco')], [false, false, true, true]);
+            assert('same category is no correction', k({ categoryId: 'dining' }), '');
+            assert('to other learns nothing', k({}, 'other'), '');
+            assert('to a missing category learns nothing', k({}, 'gone'), '');
+            assert('a manual row does not learn', [k({ source: 'manual' }), k({ source: 'sample' })], ['', '']);
+            assert('income does not learn', k({ amountCents: 500 }), '');
+            assert('a transfer row, or a move to transfer, does not learn', [k({ categoryId: 'transfer' }), k({}, 'transfer')], ['', '']);
+        },
+    },
+    {
+        name: 'DB9.3 offer counts only unconfirmed same-key rows; transfers and splits never change',
+        fn(assert) {
+            const rule = { key: 'zedco', categoryId: 'dining' };
+            const rows = [
+                row({ id: 'a', description: 'ZEDCO 1', status: 'review' }),
+                row({ id: 'b', description: 'ZEDCO 2 SUBURB', status: 'review' }),
+                row({ id: 'c', description: 'ZEDCO 3', status: 'ok' }),
+                row({ id: 'd', description: 'ZEDCO 4', status: 'review', confirmed: true }),
+                row({ id: 'e', description: 'QWERTY 5', status: 'review' }),
+                row({ id: 'f', description: 'ZEDCO 6', status: 'review', categoryId: 'transfer' }),
+                row({ id: 'g', description: 'ZEDCO 7', status: 'review', splits: [{ categoryId: 'dining', amountCents: -500 }] }),
+            ];
+            assert('only a and b are offered', similarUnconfirmed(rule, rows).map((r) => r.id), ['a', 'b']);
+            const out = applyRuleToSimilar(rule, rows);
+            assert('applied rows get the category and ok', out.map((r) => [r.id, r.categoryId, r.status]), [['a', 'dining', 'ok'], ['b', 'dining', 'ok']]);
+            assert('inputs untouched', rows[0].status, 'review');
+        },
+    },
+    {
+        name: 'DB9.4 a learned rule beats a reference merchant',
+        fn(assert) {
+            const ref = { sources: { merchants: 'cache' }, categories: [], merchants: [{ id: 'zed', key: 'zed', type: 'merchant', categoryId: 'transport', confidence: 'high', match: 'word', patterns: ['zedco'] }] };
+            const d = (rules) => ({ categories: cats, rules });
+            assert('reference alone suggests it', resolveImportRow('ZEDCO 12', -100, undefined, d([]), ref).categoryId, 'transport');
+            const data = { rules: [], categories: cats };
+            learnRule(data, 'ZEDCO 12', 'dining');
+            const r = resolveImportRow('ZEDCO 99', -100, undefined, d(data.rules), ref);
+            assert('the learned rule wins, confirmed', [r.categoryId, r.status, r.referenceSuggested || false], ['dining', 'ok', false]);
         },
     },
 ];
