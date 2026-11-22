@@ -62,6 +62,7 @@ import { BUCKET_METHOD_TEST_CASES } from './ui/bucket-method.test-cases.js';
 import { INCOME_OTHER_TEST_CASES } from './ui/income-other.test-cases.js';
 import { TRANSFERS_TEST_CASES } from './calc/transfers.test-cases.js'; // H9
 import { RECOVERY_UNDO_TEST_CASES, RECOVERY_UNDO_BROWSER_TEST_CASES } from './state/recovery-undo.test-cases.js'; // U3
+import { REFERENCE_TEST_CASES } from './state/reference.test-cases.js'; // R4
 
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
@@ -128,4 +129,5 @@ export const TEST_GROUPS = [
     { name: 'transfers', env: 'pure', cases: TRANSFERS_TEST_CASES }, // H9
     { name: 'recovery-undo', env: 'pure', cases: RECOVERY_UNDO_TEST_CASES }, // U3
     { name: 'recovery-undo-browser', env: 'browser', cases: RECOVERY_UNDO_BROWSER_TEST_CASES }, // U3
+    { name: 'reference', env: 'pure', cases: REFERENCE_TEST_CASES }, // R4
 ];
