@@ -24,7 +24,7 @@ import { refreshSpendCache } from '../state/spend-cache.js';
 import { iconSvgHtml } from './icon-paths.js';
 import { checkCardFor, confirmSuggestion } from './plan-assets-debts.js';
 import { assetTypesFor } from '../state/asset-type-list.js';
-import { wireSheetReopen } from './asset-sheet-wire.js';
+import { wireSheetReopen, focusSheetField } from './asset-sheet-wire.js';
 import {
     planListsModel, listBodyHtml, payBodyHtml, capsHtml, reviewCardHtml, countText, planItemSheetSpec,
     savePlanItem, deletePlanItem, newIncomeSource, clearReview, markReviewed,
@@ -114,7 +114,7 @@ function openItem(id, kind) {
 
 const todayIso = () => getSpendCache().today || localIso();
 
-async function openDebtAsset(kind, index, carry = null, changed = null) {
+async function openDebtAsset(kind, index, carry = null, changed = null, focusKey = null) {
     const data = store.financeData;
     const key = kind === 'debt' ? 'liabilities' : 'assets';
     const row = index == null ? null : (data[key] || [])[index];
@@ -138,7 +138,8 @@ async function openDebtAsset(kind, index, carry = null, changed = null) {
         } : undefined,
     });
     // F5: the questions depend on the kind (or the interest type), so the sheet reopens with what was typed so far.
-    wireSheetReopen(handle, spec, (carryNow, changedKey) => openDebtAsset(kind, index, carryNow, changedKey));
+    if (focusKey) focusSheetField(handle, focusKey);
+    wireSheetReopen(handle, spec, (carryNow, changedKey, next) => openDebtAsset(kind, index, carryNow, changedKey, next));
 }
 
 /** "Check these N" card: confirm one or all (only the flag clears), or open the row to change it. */
@@ -149,10 +150,23 @@ function checkAct(b) {
         openDebtAsset(type === 'asset' ? 'asset' : 'debt', Number(i)); // a label or a loan link opens the debt sheet
         return;
     }
+    const buttons = [...document.querySelectorAll('#plan-check [data-check-confirm]')];
+    const at = b.dataset.checkAll ? -1 : buttons.indexOf(b);
     const res = confirmSuggestion(data, b.dataset.checkAll ? 'all' : b.dataset.checkConfirm);
     if (!res.ok) return;
     updateDataAndUI();
     undoToast(res);
+    refocusCheck(at);
+}
+
+/** After a confirm the row is gone: focus goes to the next row's Confirm, else the card's heading, else the Plan section after it. */
+function refocusCheck(at) {
+    const pick = () => {
+        const next = at >= 0 ? document.querySelectorAll('#plan-check [data-check-confirm]')[at] : null;
+        const target = next || document.getElementById('p-check-h') || document.querySelector('#plan-sec-debts summary');
+        if (target) target.focus();
+    };
+    Promise.resolve().then(() => setTimeout(pick, 0));
 }
 
 function bucketList(data) {

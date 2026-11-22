@@ -20,7 +20,7 @@ import { newLiabilityId } from '../state/bucket-migration.js';
 import { newAssetId, newIncomeSourceId } from '../state/asset-debt-migration.js';
 import { suggestKind, suggestLabel, depreciatedValue, depreciationDiffers, claimField, heldOutAssets, VEHICLE_DEPRECIATION } from '../calc/assets-debts.js';
 import { suggestFromName, applyTypeSuggestion, confirmType, typeFill, appKindOf, powertrainFactors } from '../calc/asset-types.js';
-import { suggestLoanLink } from '../state/loan-link-migration.js';
+import { suggestLoanLink, hasHomeWord } from '../state/loan-link-migration.js';
 
 export const ASSET_KINDS = ['cash', 'invested', 'appreciating', 'depreciating'];
 export { DEBT_LABELS, rateBand } from '../calc/assets-debts.js'; // they live in the core calc module so the Future model does not pull this whole file into the first load
@@ -291,7 +291,7 @@ export function assetSheetSpec(asset, opts = {}) {
             { key: 'depResidual', label: t('f.ad.dep.residual'), type: 'money' },
         );
     }
-    fields.push({ key: 'confirmed', type: 'toggle', hidden: true }, { key: 'useConfirmed', type: 'toggle', hidden: true });
+    fields.push({ key: 'confirmed', type: 'toggle', hidden: true }, { key: 'useConfirmed', type: 'toggle', hidden: true }, { key: 'priorType', type: 'text', hidden: true });
 
     const base = asset
         ? { ...asset, ...depKeys(asset.depreciation) }
@@ -306,16 +306,28 @@ export function assetSheetSpec(asset, opts = {}) {
     base.useConfirmed = false;
     const values = { ...base, ...(carry || {}), kind };
     values.assetType = typeId;
-    if (type && opts.changed === 'assetType' && (!asset || asset.assetType !== type.id)) {
-        // a type just picked or accepted: its suggested figures show, and become the person's on Save (they are theirs once edited)
+    // The type whose figures the sheet is showing: what a change of type may replace, and nothing else.
+    const priorId = carry && carry.priorType !== undefined ? carry.priorType : ((asset && asset.assetType) || '');
+    const priorType = priorId ? types.find((x) => x.id === priorId) || null : null;
+    values.priorType = typeId;
+    if (type && opts.changed === 'assetType' && (!asset || asset.assetType !== type.id || priorId !== type.id)) {
+        // a type just picked or accepted: its suggested figures show, and become the person's on Save (they are theirs once edited).
+        // A figure the person typed is theirs already: only a blank one, or one still equal to the earlier type's, is filled.
         const f = typeFill(type, { powertrain: values.powertrain }).fields;
-        for (const k of ['interestRate', 'expectedReturn', 'growthRate']) if (typeof f[k] === 'number') values[k] = f[k];
+        const was = priorType ? typeFill(priorType, { powertrain: values.powertrain }).fields : {};
+        const open = (v, k) => v == null || v === '' || v === was[k];
+        for (const k of ['interestRate', 'expectedReturn', 'growthRate']) if (typeof f[k] === 'number' && open(values[k], k)) values[k] = f[k];
         if (f.isSuper) values.isSuper = true;
         if (f.depreciation) {
-            values.depMethod = f.depreciation.method === 'straight' ? 'straight' : 'declining';
-            values.depRatePct = f.depreciation.ratePct;
-            values.depResidual = f.depreciation.residual || 0;
-            values.depLifeYears = null;
+            const wd = was.depreciation || {};
+            const norm = (m) => (m === 'straight' ? 'straight' : 'declining');
+            const untouched = !priorType || (values.depRatePct === wd.ratePct && (values.depResidual || 0) === (wd.residual || 0) && norm(values.depMethod) === norm(wd.method));
+            if (untouched || values.depRatePct == null) {
+                values.depMethod = norm(f.depreciation.method);
+                values.depRatePct = f.depreciation.ratePct;
+                values.depResidual = f.depreciation.residual || 0;
+                values.depLifeYears = null;
+            }
         }
     }
     if (kind === 'depreciating') {
@@ -353,19 +365,23 @@ export function assetSheetSpec(asset, opts = {}) {
                 notes.push({ field: 'assetType', message: t('f.ad.type.suggested', { type: chosen.name }), fix: { label: t('f.ad.confirm'), apply: () => ({ confirmed: true }) } });
             } else if (asset && asset.kindSuggested && !v.confirmed && same(v.kind, asset.kind) && same(v.assetType, asset.assetType)) {
                 notes.push({ field: 'kind', message: t('f.ad.kind.notCounted'), fix: { label: t('f.ad.confirm'), apply: () => ({ confirmed: true }) } });
+            } else if (asset && asset.kindSuggested && v.confirmed) {
+                notes.push({ field: asset.assetType && types.length ? 'assetType' : 'kind', message: t('f.ad.confirmedNote') });
             }
             if (v.kind === 'appreciating') {
                 const stored = asset && USES.includes(asset.use) ? asset.use : 'liveIn';
                 const sugUse = (!asset || asset.useSuggested !== false) && !v.useConfirmed && v.use === stored;
                 if (sugUse) notes.push({ field: 'use', message: t('f.ad.use.suggested', { use: t(`f.ad.use.${v.use}`) }), fix: { label: t('f.ad.confirm'), apply: () => ({ useConfirmed: true }) } });
+                else if (v.useConfirmed) notes.push({ field: 'use', message: t('f.ad.confirmedNote') });
             }
             if (v.kind === 'depreciating') {
                 const b = curveBasisOf(chosen, asset);
                 const probe = { balance: Number(v.balance) || 0, depreciation: depreciationFromValues(v) };
                 if (b === 'new' && !(v.depBoughtNew === 'yes' || (v.depBoughtNew === 'no' && nonNeg(v.depAgeAtPurchase) && Number(v.depNewPrice) > 0))) {
                     notes.push({ field: 'depBoughtNew', message: t('f.ad.dep.fallbackNote') });
-                } else if (b === 'pricePaid' && !(v.depPurchaseDate && ISO.test(String(v.depPurchaseDate)))) {
-                    notes.push({ field: 'depPurchaseDate', message: t('f.ad.dep.fallbackDate') });
+                }
+                if (b && !(v.depPurchaseDate && ISO.test(String(v.depPurchaseDate)))) {
+                    notes.push({ field: 'depPurchaseDate', message: t('f.ad.dep.fallbackDate') }); // either curve needs the date to know the age
                 }
                 if (opts.today && !(chosen && !(asset && asset.valueCurve)) && depreciationDiffers({ ...probe, ...(asset && asset.valueCurve ? { valueCurve: asset.valueCurve } : {}) }, opts.today)) {
                     const worked = depreciatedValue({ ...probe, ...(asset && asset.valueCurve ? { valueCurve: asset.valueCurve } : {}) }, opts.today);
@@ -447,7 +463,8 @@ export function debtSheetSpec(debt, opts = {}) {
                 const id = suggestLoanLink({ name: v.name }, opts.assets);
                 return id ? [{ field: 'forAssetId', message: t('f.ad.loan.suggest', { home: nameOf(id) }), fix: { label: t('f.ad.loan.link'), apply: () => ({ forAssetId: id, forAssetConfirmed: true }) } }] : [];
             }
-            if (row && row.forAssetSuggested !== false && stored === String(v.forAssetId) && !v.forAssetConfirmed) {
+            if (v.forAssetConfirmed) return [{ field: 'forAssetId', message: t('f.ad.confirmedNote') }];
+            if (row && row.forAssetSuggested !== false && stored === String(v.forAssetId)) {
                 return [{ field: 'forAssetId', message: t('f.ad.loan.suggested', { home: nameOf(v.forAssetId) }), fix: { label: t('f.ad.confirm'), apply: () => ({ forAssetConfirmed: true }) } }];
             }
             return [];
@@ -594,11 +611,16 @@ export function applyDebtValues(row, v, opts = {}) {
 
 // ---------- the "Check these N" card ----------
 
-const unsureAsset = (a) => a.typeSuggested === true && UNSURE_CONFIDENCE.includes(a.typeConfidence);
+/**
+ * Is an asset's suggested kind a guess "Confirm all" should leave alone? A reference type matched by name is sure unless the
+ * reference itself rates it low. A name that hit a `suggestKind` keyword is sure. A name that matched nothing and only
+ * defaulted to cash is not a finding: it is left for the person.
+ */
+const unsureAsset = (a) => (a.assetType ? a.typeSuggested === true && UNSURE_CONFIDENCE.includes(a.typeConfidence) : suggestKind(a.name).fallback === true);
 
 /**
  * Everything still a guess: [{type, index, id, name, ...}].
- * type 'asset': a kind still only suggested (`value` = the kind; `unsure` when the reference itself is not sure of the type).
+ * type 'asset': a kind still only suggested (`value` = the kind; `unsure` when the type is rated low or the name matched nothing).
  * type 'debt': a good or bad label still only suggested.
  * type 'link': a loan linked to a property by a guess (`forName` = the property), FT-R-128 3. These are the same loans
  * `pendingLoanLinks` counts (an unpaid loan is not listed), and the same assets `heldOutAssets` counts.
@@ -615,7 +637,9 @@ export function checkItems(data) {
     (data.liabilities || []).forEach((l, index) => {
         if (!l || l.forAssetId == null || l.forAssetId === '' || l.forAssetSuggested === false || !(Number(l.balance) > 0)) return;
         const home = assets.find((a) => a && a.id != null && String(a.id) === String(l.forAssetId));
-        out.push({ type: 'link', index, id: l.id || '', name: l.name || '', forName: home ? (home.name || '') : '', unsure: false });
+        // a link is sure only when the loan's own name says it is for a home; one property and no other clue is a weak guess
+        const unsure = !hasHomeWord(l.name) || !!(home && home.kindSuggested === true && unsureAsset(home));
+        out.push({ type: 'link', index, id: l.id || '', name: l.name || '', forName: home ? (home.name || '') : '', unsure });
     });
     return out;
 }
@@ -637,14 +661,15 @@ export function checkCardHtml(items, opts = {}) {
                 : t('f.ad.check.debt', { name: nm, label: t(`f.ad.debt.label.${it.value}`) });
         if (it.unsure) what += ` ${t('f.ad.check.lessSure')}`;
         const key = `${it.type}:${escNum(it.index)}`;
-        return `<li><span class="p-check-text">${esc(what)}</span>`
-            + `<button type="button" class="btn ghost" data-check-confirm="${key}">${esc(t('f.ad.check.confirm'))}</button>`
-            + `<button type="button" class="link" data-check-open="${key}">${esc(t('f.ad.check.change'))}</button></li>`;
+        const tid = `p-check-t-${it.type}-${escNum(it.index)}`; // the repeated buttons are described by their row's text
+        return `<li><span class="p-check-text" id="${tid}">${esc(what)}</span>`
+            + `<button type="button" class="btn ghost" data-check-confirm="${key}" aria-describedby="${tid}">${esc(t('f.ad.check.confirm'))}</button>`
+            + `<button type="button" class="link" data-check-open="${key}" aria-describedby="${tid}">${esc(t('f.ad.check.change'))}</button></li>`;
     }).join('');
     const sure = items.filter((it) => !it.unsure).length;
     const held = opts.heldOut && opts.heldOut.count > 0 ? `<p class="fine p-check-held">${esc(t('f.ad.check.heldOut', { count: opts.heldOut.count }))}</p>` : '';
     const all = sure > 1 ? `<button type="button" class="btn" data-check-all="1">${esc(t(sure < items.length ? 'f.ad.check.allSure' : 'f.ad.check.all'))}</button>` : '';
-    return `<section class="card p-review p-check" id="plan-check" aria-labelledby="p-check-h"><h2 id="p-check-h">${esc(title)}</h2>`
+    return `<section class="card p-review p-check" id="plan-check" aria-labelledby="p-check-h"><h2 id="p-check-h" tabindex="-1">${esc(title)}</h2>`
         + `<p class="muted">${esc(t('f.ad.check.body'))}</p>${held}<ul class="p-review-list p-check-list">${rows}</ul>${all}</section>`;
 }
 
@@ -678,7 +703,7 @@ export function confirmSuggestion(data, which) {
     }
     const left = items.length - chosen.length;
     const message = chosen.length === 1 && which !== 'all' ? t('f.ad.check.confirmed', { name: chosen[0].name || t('a.plan.list.unnamed') })
-        : left > 0 && which === 'all' ? t('f.ad.check.confirmedSure', { count: chosen.length, left })
+        : left > 0 && which === 'all' ? t(chosen.length === 1 ? 'f.ad.check.confirmedSure.one' : 'f.ad.check.confirmedSure', { count: chosen.length, left })
             : t('f.ad.check.confirmedAll', { count: chosen.length });
     return {
         ok: true, count: chosen.length, left, message, onExpire: undefined,

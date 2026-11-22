@@ -144,6 +144,23 @@ function fractionInYear(P, r, A, target) {
 }
 
 /**
+ * Solve inside the crossing year when the need itself moves across the year (the bridge to 60 shrinks every year): the
+ * net worth (opening P, real rate r, contribution A as a continuous annuity) against a need that runs in a straight line
+ * from `need0` to `need1`. With a constant need this is exactly `fractionInYear`. Net worth starts below the need and ends at
+ * or above it, so the first fraction where it is not below is found by bisection.
+ */
+function fractionAgainstMovingNeed(P, r, A, need0, need1) {
+    if (Math.abs(need1 - need0) < 1e-9) return fractionInYear(P, r, A, need1);
+    const nw = (f) => (Math.abs(r) < 1e-12 ? P + A * f : P * Math.pow(1 + r, f) + (A * (Math.pow(1 + r, f) - 1)) / r);
+    const gap = (f) => nw(f) - (need0 + (need1 - need0) * f);
+    if (gap(1) < 0) return 1;
+    if (gap(0) >= 0) return 0;
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 60; i++) { const mid = (lo + hi) / 2; if (gap(mid) >= 0) hi = mid; else lo = mid; }
+    return hi;
+}
+
+/**
  * Run the plan year by year.
  *
  * start: { openInvested, openCash (pools that flows add to; default 0), assets: [raw asset],
@@ -275,7 +292,7 @@ export function runPlan(start, inputsFor, opts = {}) {
             const P = before.fiNetWorth;
             const r = P > 1e-9 ? next.growth / P : realInv;
             const A = next.fiNetWorth - P * (1 + r);
-            yearsToFI = y + fractionInYear(P, r, A, next.fiNeeded);
+            yearsToFI = y + fractionAgainstMovingNeed(P, r, A, before.fiNeeded, next.fiNeeded);
         }
     }
     return { path: path.slice(0, Math.max(horizon, 0) + 1), yearsToFI };

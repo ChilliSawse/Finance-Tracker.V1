@@ -12,7 +12,7 @@ export async function showCheckCard() {
     if (!card) return false;
     const reduce = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     card.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
-    const first = card.querySelector('button');
-    if (first) first.focus({ preventScroll: true });
+    const heading = document.getElementById('p-check-h'); // the card's heading (tabindex -1): a screen reader starts at the card
+    if (heading) heading.focus({ preventScroll: true });
     return true;
 }

@@ -253,6 +253,7 @@ function buildField(f, model, id) {
     const note = el('div', 'sheet-note');
     note.id = `${inputId}-note`;
     note.dataset.noteFor = f.key;
+    note.setAttribute('aria-live', 'polite'); // a note that changes after a tap ("Confirmed. Save to keep it.") is read out
     note.hidden = true;
     describedBy.push(err.id, note.id);
     control.setAttribute('aria-describedby', describedBy.join(' '));
@@ -448,6 +449,10 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
             model.applyFix(Number(a.dataset.noteIndex));
             syncInputs();
             renderNotes();
+            // the button that was tapped may be gone: keep focus on the note that replaced it, else on the field
+            const fk = a.dataset.fixField;
+            const box = fk ? layer.querySelector(`[data-note-for="${CSS.escape(fk)}"]`) : null;
+            if (box && !box.hidden) { box.tabIndex = -1; box.focus(); } else if (fk && inputEl(fk)) inputEl(fk).focus();
         }
     });
     layer.addEventListener('submit', (e) => { e.preventDefault(); save(); });

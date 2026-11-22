@@ -30,7 +30,7 @@ let cached = null; // { key, list }: the sheet reopens on every type or kind cha
 export async function assetTypesFor(data) {
     const overrides = data && data.refOverrides;
     const key = JSON.stringify(overrides || null);
-    if (cached && cached.key === key && cached.list.length) return cached.list;
+    if (cached && cached.key === key) return cached.list; // an empty list is remembered too: offline stays offline until the page reloads
     const list = await loadAssetTypes(overrides);
     cached = { key, list };
     return list;

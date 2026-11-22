@@ -254,7 +254,7 @@ export function goalsModel(data, today) {
 
 /**
  * The target the net worth line has to reach, as the screen states it. For someone under 60 super is locked, so the target is
- * the bridge: `fiNeeded` in the year FI is reached (FT-R-125). It is not the plain FI number, and the crossing point only
+ * the bridge: `fiNeeded` at the moment FI is reached (FT-R-125), read along the line the date was solved on. It is not the plain FI number, and the crossing point only
  * matches the stated date when the line is drawn at this target. With super counted (60 or over, or no birth year) it is the FI
  * number. `bridge` is true when the two differ. With no date it is today's target.
  * @returns {{amount:number, bridge:boolean, year:number}}
@@ -262,11 +262,16 @@ export function goalsModel(data, today) {
 export function fiTarget(summary) {
     const path = Array.isArray(summary.path) ? summary.path : [];
     const y = summary.yearsToFI;
-    const k = Math.max(0, Math.min(Number.isFinite(y) ? Math.ceil(y) : 0, path.length - 1));
-    const p = path[k];
+    const last = Math.max(0, path.length - 1);
+    // The need runs in a straight line from one year end to the next, and the date is solved against that line (fi.js), so
+    // the target at the stated date is read off the same line: the drawn line then crosses it where the date says.
+    const k = Math.max(0, Math.min(Number.isFinite(y) ? Math.floor(y) : 0, last));
+    const frac = Number.isFinite(y) ? Math.max(0, Math.min(1, y - k)) : 0;
+    const p0 = path[k], p1 = path[Math.min(k + 1, last)];
     const locked = path.some((r) => r && r.superCounted === false);
-    const amount = locked && p && Number.isFinite(p.fiNeeded) ? p.fiNeeded : summary.fiNumber;
-    return { amount, bridge: locked && Math.abs(amount - summary.fiNumber) >= 1, year: k };
+    const ok = p0 && p1 && Number.isFinite(p0.fiNeeded) && Number.isFinite(p1.fiNeeded);
+    const amount = locked && ok ? p0.fiNeeded + (p1.fiNeeded - p0.fiNeeded) * frac : summary.fiNumber;
+    return { amount, bridge: locked && Math.abs(amount - summary.fiNumber) >= 1, year: Math.min(k + (frac > 0 ? 1 : 0), last) };
 }
 
 /** What the FI figure leaves out until the person confirms it (FT-R-128 1): {count, value}. */

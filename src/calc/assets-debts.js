@@ -377,7 +377,7 @@ export function debtSchedule(debt, opts = {}) {
 
 // ---------- suggestions (by name, shown on the "Check these N" card; never silent) ----------
 
-/** Suggested asset kind from its name: {kind, isSuper}. Unmatched is cash. */
+/** Suggested asset kind from its name: {kind, isSuper}. Unmatched is cash, marked `fallback: true` (a default, not a keyword hit). */
 export function suggestKind(name) {
     const s = String(name == null ? '' : name).toLowerCase();
     if (/\bsuper(annuation)?\b/.test(s)) return { kind: 'invested', isSuper: true };
@@ -385,7 +385,7 @@ export function suggestKind(name) {
     if (/\b(savings?|offset|cash|everyday|transaction|account)\b/.test(s)) return { kind: 'cash', isSuper: false };
     if (/\b(car|vehicle|ute|motorbike|motorcycle|boat|caravan)\b/.test(s)) return { kind: 'depreciating', isSuper: false };
     if (/\b(house|home|property|unit|apartment|land|flat)\b/.test(s)) return { kind: 'appreciating', isSuper: false };
-    return { kind: 'cash', isSuper: false };
+    return { kind: 'cash', isSuper: false, fallback: true }; // nothing in the name said so: cash is only the default, not a finding
 }
 
 /** Suggested debt label from its name: 'good', 'bad' or null. Display and wording only. */

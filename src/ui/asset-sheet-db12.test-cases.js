@@ -8,7 +8,8 @@ import {
 } from './plan-assets-debts.js';
 import { saveDebtAsset } from './plan-lists.js';
 import { createSheetModel } from './sheet.js';
-import { assetScope, valueDetail, depreciatedValue, effectiveAsset, loanScope, heldOutAssets, pendingLoanLinks } from '../calc/assets-debts.js';
+import { wireSheetReopen } from './asset-sheet-wire.js';
+import { suggestKind, assetScope, valueDetail, depreciatedValue, effectiveAsset, loanScope, heldOutAssets, pendingLoanLinks } from '../calc/assets-debts.js';
 import { fiSummary } from '../calc/fi.js';
 import { explainFi } from '../calc/fi-explain.js';
 import { suggestLoanLink } from '../state/loan-link-migration.js';
@@ -231,7 +232,7 @@ export const DB12_TEST_CASES = [
             assert('a cleared loan is not a pending link (same as the maths)', [pendingLoanLinks(d.liabilities).count, items.filter((i) => i.type === 'link').length], [1, 1]);
             assert('the less sure reference type is marked', items.map((i) => i.unsure), [false, false, true, false, false]);
             const html = checkCardFor(d);
-            assert('the count wording', html.includes('<h2 id="p-check-h">5 details to check</h2>'), true);
+            assert('the count wording', html.includes('id="p-check-h" tabindex="-1">5 details to check</h2>'), true);
             assert('the held-out line wording', html.includes('3 items not counted in FI'), true);
             assert('the link row names the property', html.includes('Mortgage: looks like it is for Home'), true);
             assert('Confirm all becomes "the sure ones" while some are less sure', [html.includes(t('f.ad.check.allSure')), html.includes('(less sure)')], [true, true]);
@@ -248,7 +249,7 @@ export const DB12_TEST_CASES = [
             assert('undo restores everything', JSON.stringify(d), snap);
             const one = confirmSuggestion(d, 'link:0');
             assert('one link: its message and its home\'s kind', [one.message, d.assets[0].kindSuggested, d.assets[2].kindSuggested], [t('f.ad.check.confirmed', { name: 'Mortgage' }), false, true]);
-            const clean = { assets: [{ id: 'a', name: 'A', kind: 'cash', kindSuggested: true }, { id: 'b', name: 'B', kind: 'cash', kindSuggested: true }], liabilities: [] };
+            const clean = { assets: [{ id: 'a', name: 'Savings account', kind: 'cash', kindSuggested: true }, { id: 'b', name: 'Everyday account', kind: 'cash', kindSuggested: true }], liabilities: [] };
             assert('with no less sure item the button says Confirm all and the toast says so', [checkCardFor(clean).includes(`>${t('f.ad.check.all')}<`), confirmSuggestion(clean, 'all').message], [true, t('f.ad.check.confirmedAll', { count: 2 })]);
             assert('nothing left to confirm: refused', confirmSuggestion(clean, 'all').ok, false);
         },
@@ -276,9 +277,11 @@ export const DB12_TEST_CASES = [
             const m = futureModel(d, { today: TODAY });
             const s = m.summary;
             const k = Math.ceil(s.yearsToFI);
-            assert('under 60 the target is the bridge target of the year FI is reached', [m.target.bridge, m.target.amount, m.target.year], [true, s.path[k].fiNeeded, k]);
+            const kk = Math.floor(s.yearsToFI);
+            const wantT = s.path[kk].fiNeeded + (s.path[kk + 1].fiNeeded - s.path[kk].fiNeeded) * (s.yearsToFI - kk);
+            assert('under 60 the target is the bridge target at the moment FI is reached (read along the line the date was solved on)', [m.target.bridge, Math.abs(m.target.amount - wantT) < 1e-6, m.target.year], [true, true, k]);
             assert('it is not the plain FI number', m.target.amount !== s.fiNumber, true);
-            assert('the net worth line is at the target in the crossing year, not before', [s.path[k].fiNetWorth >= m.target.amount, s.path[k - 1].fiNetWorth < s.path[k - 1].fiNeeded], [true, true]);
+            assert('the net worth line reaches the target in the crossing year, not before', [s.path[k].fiNetWorth >= m.target.amount, s.path[k - 1].fiNetWorth < m.target.amount], [true, true]);
             const html = buildFutureHtml(m, { loaded: true });
             assert('the chart line says the target, the card says why', [html.includes('class="fu-fi-line"'), html.includes(t('f.future.fi.bridge', { amount: html.match(/Super is locked until 60, so the target at that date is ([^.]*)\./)[1], age: 60 }))], [true, true]);
             const geo = m.geometry;
@@ -328,6 +331,142 @@ export const DB12_TEST_CASES = [
             plain.assets[2].kindSuggested = true;
             assert('held out: a line with the count and value', explainFi(plain, { today: TODAY }).find((l) => l.id === 'heldOut').text.startsWith('1 item worth'), true);
             assert('no birth year: super counted now line', explainFi(plain, { today: TODAY }).some((l) => l.id === 'noBirth'), true);
+        },
+    },
+    {
+        name: 'DB12.11 "Confirm all the sure ones" leaves guesses alone: a name that matched nothing, a loan that only shares a single property, a low-rated type',
+        fn(assert) {
+            const d = {
+                assets: [
+                    { id: 'a-ring', name: "Grandma's ring", kind: 'cash', kindSuggested: true, balance: 30000 },
+                    { id: 'a-sav', name: 'Savings account', kind: 'cash', kindSuggested: true, balance: 100 },
+                    { id: 'a-etf', name: 'ETF', kind: 'invested', kindSuggested: true, assetType: 'etf', typeSuggested: true, typeConfidence: null, balance: 100 },
+                    { id: 'a-phone', name: 'iPhone', kind: 'depreciating', kindSuggested: true, assetType: 'phone', typeSuggested: true, typeConfidence: 'low', balance: 100 },
+                    { id: 'a-house', name: 'House', kind: 'appreciating', kindSuggested: true, balance: 500000 },
+                ],
+                liabilities: [
+                    { id: 'l-ski', name: 'Jet ski loan', balance: 15000, forAssetId: 'a-house', forAssetSuggested: true },
+                    { id: 'l-home', name: 'Home loan', balance: 400000, forAssetId: 'a-house', forAssetSuggested: true, label: 'good', labelSuggested: true },
+                ],
+            };
+            const by = Object.fromEntries(checkItems(d).map((i) => [i.name, i.unsure]));
+            assert('a name that matched nothing is the cash default, not a finding', by["Grandma's ring"], true);
+            assert('a keyword hit is sure', by['Savings account'], false);
+            assert('a reference type with no concern, and a debt label, are sure', [by.ETF, by['Home loan']], [false, false]);
+            assert('a type the reference rates low is not', by.iPhone, true);
+            assert('a loan with no home word that only shares the one property is not', by['Jet ski loan'], true);
+            const res = confirmSuggestion(d, 'all');
+            assert('confirm all leaves exactly those three', checkItems(d).map((i) => i.name).sort(), ['Jet ski loan', 'iPhone', "Grandma's ring"].sort());
+            assert('the ring still counts nowhere toward FI, the jet ski loan stays a suggestion', [assetScope(d.assets[0]).fi, loanScope(d.liabilities[0], d.assets).reason], ['no', 'suggestedLink']);
+            assert('the toast says how many were left', res.message, t('f.ad.check.confirmedSure', { count: res.count, left: 3 }));
+            const one = { assets: [{ id: 'a-x', name: 'Savings account', kind: 'cash', kindSuggested: true }, { id: 'a-y', name: "Grandma's ring", kind: 'cash', kindSuggested: true }], liabilities: [] };
+            assert('singular wording when one was confirmed', confirmSuggestion(one, 'all').message, t('f.ad.check.confirmedSure.one', { count: 1, left: 1 }));
+            assert('the ring row says less sure, and one sure item has no Confirm all button', [checkCardFor(one).includes('(less sure)'), checkCardFor(one).includes('data-check-all')], [true, false]);
+            assert('the repeated buttons point at their row text', checkCardFor(one).includes('aria-describedby="p-check-t-asset-1"'), true);
+            assert('suggestKind marks only its default', [suggestKind("Grandma's ring").fallback, suggestKind('Savings account').fallback], [true, undefined]);
+            const open = newAsset([], { name: "Grandma's ring", balance: 1 });
+            assert('a ring saved by name is flagged for the person to check', [open.kindSuggested, checkItems({ assets: [open], liabilities: [] })[0].unsure], [true, true]);
+        },
+    },
+    {
+        name: 'DB12.12 the FI date is solved against the need the bridge leaves that year: the clamped case, and the drawn line crosses where the card says',
+        fn(assert) {
+            const d = sample();
+            d.fiSettings.birthYears = [1996];
+            const m = futureModel(d, { today: TODAY });
+            const s = m.summary;
+            assert('birth year 1996 on the sample: FI is reached inside year 28, not at the start of it', [s.yearsToFI > 27.5 && s.yearsToFI < 28.2, s.yearsToFI > 27.5], [true, true]);
+            let bad = 0, n = 0, worst = 0;
+            for (const by of [1972, 1976, 1980, 1984, 1988, 1992, 1996]) for (const a0 of [0, 200000, 500000, 900000]) for (const a2 of [0, 200000, 500000]) {
+                const g = sample();
+                g.assets[0].balance += a0;
+                g.assets[2].balance += a2;
+                g.fiSettings.birthYears = [by];
+                const mm = futureModel(g, { today: TODAY, horizon: 30 });
+                const p = mm.summary.path;
+                if (!mm.target.bridge || !Number.isFinite(mm.summary.yearsToFI) || mm.summary.yearsToFI > 30) continue;
+                n += 1;
+                const T = mm.target.amount;
+                let x = p[0].fiNetWorth >= T ? 0 : null;
+                for (let i = 1; x === null && i < p.length; i += 1) if (p[i - 1].fiNetWorth < T && p[i].fiNetWorth >= T) x = i - 1 + (T - p[i - 1].fiNetWorth) / (p[i].fiNetWorth - p[i - 1].fiNetWorth);
+                const off = x === null ? 99 : Math.abs(x - mm.summary.yearsToFI);
+                worst = Math.max(worst, off);
+                if (off > 0.25) bad += 1;
+            }
+            assert('a grid of bridge cases exists', n > 20, true);
+            assert('no bridge case is out by more than a quarter of a year (worst ' + worst.toFixed(2) + ')', bad, 0);
+        },
+    },
+    {
+        name: 'DB12.13 changing the type never overwrites a figure the person typed',
+        fn(assert) {
+            const FUND = { id: 'fund', name: 'Managed fund', kind: 'invested', match: ['fund'], defaults: { expectedReturn: 6 }, counts: { fi: true } };
+            const types = [ETF, FUND];
+            let spec = assetSheetSpec(null, { types, carry: { name: 'Shares', assetType: 'etf', kind: '' }, changed: 'assetType' });
+            assert('pick ETF: its return shows', spec.values.expectedReturn, 8);
+            const typed = { ...spec.values, expectedReturn: 5 };
+            spec = assetSheetSpec(null, { types, carry: { ...typed, assetType: 'fund' }, changed: 'assetType' });
+            assert('change to Managed fund: the typed 5 stays', spec.values.expectedReturn, 5);
+            const untouched = assetSheetSpec(null, { types, carry: { ...assetSheetSpec(null, { types, carry: { name: 'Shares', assetType: 'etf', kind: '' }, changed: 'assetType' }).values, assetType: 'fund' }, changed: 'assetType' });
+            assert('a return still equal to the first type\'s moves to the new type\'s', untouched.values.expectedReturn, 6);
+            const row = newAsset([], { name: 'Shares', balance: 100 });
+            applyAssetValues(row, { ...typed, balance: 100, kind: 'invested', assetType: 'etf' }, { types, isNew: true });
+            const stored = assetSheetSpec(row, { types, carry: { ...assetSheetSpec(row, { types }).values, assetType: 'fund' }, changed: 'assetType' });
+            assert('a saved row that was edited keeps its figure when the type changes', stored.values.expectedReturn, 5);
+            applyAssetValues(row, { ...stored.values, balance: 100 }, { types });
+            assert('and saves it', [row.assetType, row.expectedReturn, row.typeFilled.includes('expectedReturn')], ['fund', 5, false]);
+            const blank = assetSheetSpec(null, { types, carry: { name: 'x', assetType: 'fund', kind: 'invested', expectedReturn: null }, changed: 'assetType' });
+            assert('a blank return is filled', blank.values.expectedReturn, 6);
+        },
+    },
+    {
+        name: 'DB12.14 notes and wording: Confirm leaves a polite note, the date note covers a "% of new" curve answered Yes new, an empty type list is remembered',
+        async fn(assert) {
+            const car = { ...newAsset([], { name: 'Corolla', balance: 20000 }), kind: 'depreciating', kindSuggested: true, assetType: 'car', typeSuggested: true };
+            const spec = assetSheetSpec(car, { types: TYPES });
+            const before = notesOf(spec, sheetValues(spec)).find((n) => n.field === 'assetType');
+            assert('a suggested type has its Confirm', before.fix.label, t('f.ad.confirm'));
+            const after = notesOf(spec, sheetValues(spec, { confirmed: true })).find((n) => n.field === 'assetType');
+            assert('after the tap the same row says so, politely, with no button', [after.message, !!after.fix], [t('f.ad.confirmedNote'), false]);
+            assert('the wording', t('f.ad.confirmedNote'), 'Confirmed. Save to keep it.');
+            assert('the type note matches the suggested note meaning', t('f.ad.type.suggested', { type: 'X' }), 'Suggested type: X. Its rate and curve are not used until you confirm.');
+            assert('the powertrain hint', t('f.ad.powertrain.hint'), 'Hybrids hold their value better than petrol or diesel cars, plug-in hybrids a little worse, and electric cars lose it fastest.');
+            const ph = assetSheetSpec(null, { types: TYPES, carry: { name: 'iPhone', assetType: 'phone', kind: 'depreciating', depBoughtNew: 'yes', depPurchaseDate: null }, changed: 'assetType' });
+            const msgs = notesOf(ph, sheetValues(ph)).map((n) => n.field + ':' + n.message);
+            assert('Yes, new with no purchase date: the date note shows', msgs.includes('depPurchaseDate:' + t('f.ad.dep.fallbackDate')), true);
+            assert('Yes, new with a date: no note', notesOf(ph, sheetValues(ph, { depPurchaseDate: '2025-01-01' })).length, 0);
+            const loan = debtSheetSpec(null, { assets: [{ id: 'h', name: 'House', kind: 'appreciating' }] });
+            assert('a loan link tap leaves the same note', notesOf(loan, sheetValues(loan, { name: 'Home loan', forAssetId: 'h', forAssetConfirmed: true }))[0].message, t('f.ad.confirmedNote'));
+            let calls = 0;
+            const loadRef = async () => { calls += 1; return { assetTypes: [] }; };
+            const { loadAssetTypes, assetTypesFor } = await import('../state/asset-type-list.js');
+            assert('an empty list loads as empty', (await loadAssetTypes(undefined, loadRef)).length, 0);
+            assert('and (offline) is remembered, not asked for again on every reopen', [(await assetTypesFor({})).length, (await assetTypesFor({})).length], [0, 0]);
+        },
+    },
+    {
+        name: 'DB12.15 keyboard: stepping through a type list does not rebuild the sheet; it reopens when the select is left, with focus on a field',
+        fn(assert) {
+            const listeners = {};
+            const layer = { addEventListener: (n, f) => { (listeners[n] = listeners[n] || []).push(f); }, contains: () => true };
+            const values = { assetType: '', kind: '' };
+            const handle = { layer, getValues: () => ({ ...values }) };
+            const calls = [];
+            wireSheetReopen(handle, { reopenOn: ['kind', 'assetType'] }, (carry, changed, focus) => calls.push([carry.assetType, changed, focus]));
+            const fire = (n, e) => (listeners[n] || []).forEach((f) => f(e));
+            const sel = { tagName: 'SELECT', dataset: { key: 'assetType' } };
+            fire('keydown', { target: sel, key: 'ArrowDown' });
+            values.assetType = 'a';
+            fire('change', { target: sel });
+            values.assetType = 'b';
+            fire('change', { target: sel });
+            values.assetType = 'c';
+            fire('change', { target: sel });
+            assert('three arrow presses rebuild nothing', calls.length, 0);
+            fire('focusout', { target: sel, relatedTarget: { dataset: { key: 'balance' } } });
+            assert('leaving the select reopens once, on the last choice, with focus on the field it moved to', calls, [['c', 'assetType', 'balance']]);
+            fire('change', { target: { tagName: 'SELECT', dataset: { key: 'kind' } } });
+            assert('a mouse pick reopens at once, focus on the field changed', calls[1], ['c', 'kind', 'kind']);
         },
     },
 ];

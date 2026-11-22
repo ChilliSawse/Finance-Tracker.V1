@@ -15,7 +15,7 @@ import { showToast, showUndoToast } from '../toast.js';
 import { updateDataAndUI } from '../render.js';
 import { openScenario } from '../scenario/index.js';
 import { debtAssetSheetSpec, saveDebtAsset, deleteDebtAsset } from '../plan-lists.js';
-import { wireSheetReopen } from '../asset-sheet-wire.js';
+import { wireSheetReopen, focusSheetField } from '../asset-sheet-wire.js';
 import { showCheckCard } from '../check-card-link.js';
 import {
     futureModel, chartIds, withPeople, peopleSlots, assumptionValues, validateAssumptions, applyAssumptions, restoreAssumptions,
@@ -206,7 +206,7 @@ function openAssumptions() {
     });
 }
 
-function openDebt(index, carry = null) {
+function openDebt(index, carry = null, focusKey = null) {
     const data = store.financeData;
     const row = (data.liabilities || [])[index];
     if (!row) return;
@@ -228,5 +228,6 @@ function openDebt(index, carry = null) {
             undo(res);
         },
     });
-    wireSheetReopen(handle, spec, (carryNow) => openDebt(index, carryNow));
+    if (focusKey) focusSheetField(handle, focusKey);
+    wireSheetReopen(handle, spec, (carryNow, changedKey, next) => openDebt(index, carryNow, next));
 }
