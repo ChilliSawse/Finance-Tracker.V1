@@ -12,7 +12,7 @@ import { todayModel } from '../state/today-model.js';
 import { getBuckets } from '../state/saving-model.js';
 import { calculateTotals } from '../calc/calculations.js';
 import { inferPayAnchor, billOccurrences, billStatus, addDays, daysBetween, getCycle } from '../calc/pay-cycle.js';
-import { effectiveBucket, SPENDABLE_POOL } from '../calc/plan.js';
+import { effectiveBucket, SPENDABLE_POOL, netPerPayCents } from '../calc/plan.js';
 import { formatCurrency } from '../utils.js';
 import { esc, escNum } from './html.js';
 import { renderHomeFeed } from './feed.js';
@@ -421,6 +421,22 @@ export function skeletonHtml() {
       </div>`;
 }
 
+// Pay is known (a planned net per pay exists) but no pay day is set and no pay has landed, so the
+// month-mode figure is nil. Say so, instead of asking for pay that is already entered (H1).
+function payDayEmptyHtml() {
+    return `
+      <section class="card today-empty today-empty-payday" aria-labelledby="h-empty">
+        <h2 id="h-empty">${t('a.today.emptyPayDayTitle')}</h2>
+        <p class="muted">${t('a.today.emptyPayDayBody')}</p>
+        <button type="button" class="btn" data-set-payday>${t('a.today.setPayBtn')}</button>
+      </section>`;
+}
+
+/** True when a pay amount is entered for the primary source (planned net per pay above nil). */
+export function hasPlannedPay(data) {
+    try { return netPerPayCents(data || {}) > 0; } catch (_) { return false; }
+}
+
 function emptyHtml() {
     return `
       <section class="card today-empty" aria-labelledby="h-empty">
@@ -434,7 +450,7 @@ function emptyHtml() {
 export function buildTodayHtml(model, ctx) {
     if (!model || !model.ready) return skeletonHtml();
     const c = ctx || { data: {}, rows: [], cycleRows: [], totals: null };
-    if (!(model.netCents > 0) && !c.cycleRows.length) return emptyHtml();
+    if (!(model.netCents > 0) && !c.cycleRows.length) return model.mode === 'month' && hasPlannedPay(c.data) ? payDayEmptyHtml() : emptyHtml();
     const buckets = getBuckets(c.data, model.today);
     return `
     <div class="grid today">
@@ -488,8 +504,12 @@ function wire() {
         }
         if (e.target.closest('#today [data-set-payday]')) {
             const d = store.financeData || {};
-            import('./income-layout.js').then((m) => {
-                if (m.openIncomeSheet(d.primaryIncomeIndex || 0) === false) {
+            const index = d.primaryIncomeIndex || 0;
+            import('./income-layout.js').then(async (m) => {
+                if (m.openIncomeSheet(index) !== false) return;
+                // Self-employed and Variable sources keep their own sheet (as Plan does), not a bounce to Plan (H1).
+                const o = await import('./income-other.js');
+                if (o.openOtherIncomeSheet(index) === false) {
                     const tab = document.querySelector('[data-tab-target="plan"]');
                     if (tab) tab.click();
                 }
@@ -521,7 +541,9 @@ export function renderToday() {
         p.innerHTML = model.ready ? subLine(model) : '';
     }
     const nudge = slotChild('today-setup-slot', 'today-payday-nudge');
-    if (nudge) nudge.innerHTML = model.ready && needsPayDayNudge(ctx.data, ctx.rows, model.today) ? nudgeHtml() : '';
+    // the empty card carries the same button, so the nudge card would only repeat it
+    const payDayEmpty = !!body.querySelector('.today-empty-payday');
+    if (nudge) nudge.innerHTML = model.ready && !payDayEmpty && needsPayDayNudge(ctx.data, ctx.rows, model.today) ? nudgeHtml() : '';
     if (model.ready) renderHomeFeed(); // Story rows from the event log (async)
     mountReviewCard(); // E9
     renderSetupChecklist(); // C7: the setup checklist stays until done

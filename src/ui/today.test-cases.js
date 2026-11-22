@@ -3,7 +3,8 @@
 // Shape: { name, fn(assert) }, assert(label, actual, expected). Fixture: the Today mock's rows (fake data).
 
 import { buildTodayModel } from '../state/today-model.js';
-import { buildTodayHtml, skeletonHtml, splitSegmentsHtml, needsPayDayNudge, savingsRateFigure, dayByDay } from './today.js';
+import { buildTodayHtml, hasPlannedPay, skeletonHtml, splitSegmentsHtml, needsPayDayNudge, savingsRateFigure, dayByDay } from './today.js';
+import { otherIncomeValues, applyOtherIncome } from './income-other.js';
 import { showToast, dismissToastTagged } from './toast.js';
 import { formatCurrency } from '../utils.js';
 import { getBuckets } from '../state/saving-model.js';
@@ -43,6 +44,30 @@ const cur = (cents) => formatCurrency(cents / 100);
 const MOCK_FIGURES = ['422', '2,063.06', '1,430.45', '210.39', '632.61', '106,650'];
 
 export const TODAY_TEST_CASES = [
+    {
+        name: 'H1 pay known but no pay day set: Today says set the pay day, not add your pay',
+        fn(assert) {
+            const noAnchor = mkData({ incomeSources: [{ ...SOURCE, payAnchor: '' }] });
+            const { model, html } = run(noAnchor, []);
+            assert('month mode, nothing landed', [model.mode, model.netCents], ['month', 0]);
+            assert('pay amount exists', hasPlannedPay(noAnchor), true);
+            assert('asks for the pay day', html.includes('Set your pay day to see what is left'), true);
+            assert('has the pay-day button', html.includes('data-set-payday'), true);
+            assert('does not ask for pay', html.includes('Add your pay to see'), false);
+            const noPay = mkData({ incomeSources: [{ incomeType: 'salaried', paySchedule: 'fortnightly', payAnchor: '', grossAnnual: 0 }] });
+            assert('no pay at all keeps the old card', run(noPay, []).html.includes('Add your pay to see what is left'), true);
+            // the same save path the Self-employed sheet uses, then Today again
+            const saved = mkData({ incomeSources: [{ incomeType: 'selfEmployed', paySchedule: 'fortnightly', invoicedPayPostTax: 2000, taxRemoved: 500 }] });
+            const before = run(saved, []).html;
+            assert('before the pay day: asks for it', before.includes('Set your pay day to see what is left'), true);
+            const v = otherIncomeValues(saved, 0, TODAY); v.nextPay = '2026-11-14';
+            applyOtherIncome(saved, 0, v);
+            const after = run(saved, []);
+            assert('after saving the pay day: cycle mode', after.model.mode, 'cycle');
+            assert('after saving the pay day: dashboard, no empty card', [after.html.includes('h-buckets'), after.html.includes('today-empty')], [true, false]);
+            assert('with a pay day set the dashboard shows', run(mkData(), []).html.includes('h-buckets'), true);
+        },
+    },
     {
         name: 'T2 Mojo tile reads the percent once (starter 1,400 of 2,000 is 70%, not 7000%)',
         fn(assert) {

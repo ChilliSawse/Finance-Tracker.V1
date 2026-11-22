@@ -15,6 +15,8 @@ import { showToast, showUndoToast } from './toast.js';
 import { makeIncomeEvent, sumEvents, fyRange, activeFyKey } from '../calc/income-events.js';
 import { AU_TAX_YEARS } from '../calc/tax-au.js';
 import { formatCurrency } from '../utils.js';
+import { getCycle, toIso } from '../calc/pay-cycle.js';
+import { payAnchorFromNext } from './income-layout.js';
 import { acceptPayslipJob } from '../state/income-migration.js';
 
 const CYCLES = ['weekly', 'fortnightly', 'monthly', 'quarterly'];
@@ -79,6 +81,7 @@ export function otherIncomeFields(source) {
     if (!variable) {
         fields.push(
             { key: 'paySchedule', label: t('a12b.income.often'), type: 'select', options: CYCLES.map((c) => ({ value: c, label: t(`a.plan.freqOpt.${c}`) || c })) },
+            { key: 'nextPay', label: t('c.income.nextPay'), type: 'date', hint: t('c.income.nextPay.hint') },
             { key: 'invoicedPayPostTax', label: t('a12b.income.net'), type: 'money', hint: t('a12b.income.netHint') },
             { key: 'taxRemoved', label: t('a12b.income.tax'), type: 'money' },
             { key: 'hoursPerCycle', label: t('a12b.income.hours'), type: 'number' },
@@ -90,9 +93,16 @@ export function otherIncomeFields(source) {
     return fields;
 }
 
-export function otherIncomeValues(data, index) {
+export function otherIncomeValues(data, index, today = toIso(new Date())) {
     const s = data.incomeSources[index];
+    // H1: the next pay day, read back from the stored anchor (the pay before it), as the Salary sheet does.
+    let nextPay = '';
+    if (s.incomeType !== 'variable' && s.payAnchor) {
+        const c = getCycle(s, today);
+        if (c.mode === 'cycle') nextPay = c.nextPay;
+    }
     return {
+        nextPay,
         name: s.name || '', incomeType: s.incomeType === 'variable' ? 'variable' : 'selfEmployed',
         paySchedule: s.paySchedule || 'fortnightly', invoicedPayPostTax: s.invoicedPayPostTax,
         taxRemoved: s.taxRemoved, hoursPerCycle: s.hoursPerCycle, baseHourlyRate: s.baseHourlyRate,
@@ -110,6 +120,9 @@ export function applyOtherIncome(data, index, v) {
         s.baseHourlyRate = v.baseHourlyRate == null ? s.baseHourlyRate ?? null : Number(v.baseHourlyRate);
     } else {
         if (CYCLES.includes(v.paySchedule)) s.paySchedule = v.paySchedule;
+        // H1: a next pay day sets the anchor (the pay before it); blank leaves any saved date alone.
+        const anchor = payAnchorFromNext(v.nextPay || '', s.paySchedule);
+        if (anchor) s.payAnchor = anchor;
         s.invoicedPayPostTax = v.invoicedPayPostTax == null ? null : Number(v.invoicedPayPostTax);
         s.taxRemoved = v.taxRemoved == null ? null : Number(v.taxRemoved);
         s.hoursPerCycle = v.hoursPerCycle == null ? null : Number(v.hoursPerCycle);

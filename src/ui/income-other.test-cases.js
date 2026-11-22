@@ -44,7 +44,7 @@ export const INCOME_OTHER_TEST_CASES = [
     { name: 'A12b.3 the Self-employed sheet round-trips pay figures; Variable keeps its events', fn(assert) {
         const d = two();
         assert('self-employed asks for pay figures', otherIncomeFields(d.incomeSources[0]).map((f) => f.key),
-            ['name', 'incomeType', 'paySchedule', 'invoicedPayPostTax', 'taxRemoved', 'hoursPerCycle', 'primary']);
+            ['name', 'incomeType', 'paySchedule', 'nextPay', 'invoicedPayPostTax', 'taxRemoved', 'hoursPerCycle', 'primary']);
         assert('variable asks for the base rate', otherIncomeFields(d.incomeSources[1]).map((f) => f.key),
             ['name', 'incomeType', 'baseHourlyRate', 'primary']);
         const v = otherIncomeValues(d, 0);
@@ -55,6 +55,18 @@ export const INCOME_OTHER_TEST_CASES = [
         vv.name = 'Gigs 2';
         applyOtherIncome(d, 1, vv);
         assert('events array kept', [d.incomeSources[1].name, Array.isArray(d.incomeSources[1].incomeEvents)], ['Gigs 2', true]);
+    } },
+    { name: 'H1 a Self-employed source can be given a next pay day, so Today can count down to it', fn(assert) {
+        const d = two();
+        assert('no pay day yet', otherIncomeValues(d, 0).nextPay, '');
+        const v = otherIncomeValues(d, 0);
+        v.paySchedule = 'fortnightly'; v.nextPay = '2026-12-04';
+        applyOtherIncome(d, 0, v);
+        assert('anchor is the pay before it', d.incomeSources[0].payAnchor, '2026-11-20');
+        assert('reads back as the next pay day', otherIncomeValues(d, 0, '2026-11-22').nextPay, '2026-12-04');
+        const v2 = otherIncomeValues(d, 0); v2.nextPay = '';
+        applyOtherIncome(d, 0, v2);
+        assert('left blank keeps the date', d.incomeSources[0].payAnchor, '2026-11-20');
     } },
     { name: 'A12b.4 income events add (newest first), edit and remove with Undo', fn(assert) {
         const s = { incomeEvents: [] };
