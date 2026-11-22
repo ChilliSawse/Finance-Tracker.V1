@@ -253,7 +253,6 @@ function buildField(f, model, id) {
     const note = el('div', 'sheet-note');
     note.id = `${inputId}-note`;
     note.dataset.noteFor = f.key;
-    note.setAttribute('aria-live', 'polite'); // a note that changes after a tap ("Confirmed. Save to keep it.") is read out
     note.hidden = true;
     describedBy.push(err.id, note.id);
     control.setAttribute('aria-describedby', describedBy.join(' '));
@@ -446,6 +445,9 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
         else if (act === 'delete') { e.preventDefault(); close(); onDelete(); }
         else if (act === 'fix') {
             e.preventDefault();
+            // only a note a tap on its fix changes is announced ("Confirmed. Save to keep it."); notes that change as you type are not live
+            const live = a.dataset.fixField ? layer.querySelector(`[data-note-for="${CSS.escape(a.dataset.fixField)}"]`) : null;
+            if (live) live.setAttribute('aria-live', 'polite');
             model.applyFix(Number(a.dataset.noteIndex));
             syncInputs();
             renderNotes();
@@ -460,6 +462,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
         const c = e.target.closest('[data-key]');
         if (!c) return;
         model.set(c.dataset.key, c.type === 'checkbox' ? c.checked : c.value);
+        layer.querySelectorAll('[data-note-for][aria-live]').forEach((n) => n.removeAttribute('aria-live')); // typing again: quiet
         setError(c.dataset.key, '');
         renderNotes();
     };
