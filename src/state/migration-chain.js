@@ -24,6 +24,7 @@ import * as bucket from './bucket-migration.js';
 import * as income from './income-migration.js';
 import * as assetDebt from './asset-debt-migration.js';
 import { refOverridesStep } from './ref-overrides-migration.js';
+import { assetScopeStep } from './asset-scope-migration.js';
 
 export const BACKUP_KEY = 'ft-backup-pre-plan';
 
@@ -40,6 +41,7 @@ export const DEFAULT_MODULES = [
     { name: 'migrateBucketModel', needs: bucket.needsBucketMigration, migrate: bucket.migrateBucketModel, afterImport: bucket.afterImport, backupGate: true },
     { name: 'migrateIncomeFields', needs: income.needsIncomeMigration, migrate: income.migrateIncomeFields, afterImport: income.afterImport, backupGate: false },
     { name: 'migrateAssetDebtDetail', needs: assetDebt.needsAssetDebtMigration, migrate: assetDebt.migrateAssetDebtDetail, afterImport: assetDebt.afterImport, backupGate: true },
+    assetScopeStep, // DB10: property use switch (FT-R-125)
     refOverridesStep,
 ];
 

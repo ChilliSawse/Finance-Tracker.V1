@@ -9,6 +9,7 @@ import { calculateYearsToFI, calculateTotals } from './calculations.js';
 import { buildSampleHousehold } from '../state/sample-data.js';
 import { migrateAssetDebtDetail } from '../state/asset-debt-migration.js';
 import { getBuckets } from '../state/saving-model.js';
+import { FI_SCOPE_TEST_CASES } from '../state/asset-types.test-cases.js';
 
 const TODAY = '2026-11-21';
 const near = (a, b, eps) => Math.abs(a - b) < eps;
@@ -29,6 +30,7 @@ const withCar = (d) => {
 };
 
 export const FI_TEST_CASES = [
+    ...FI_SCOPE_TEST_CASES, // DB10: FT-R-125 scope, bridge, one net worth, multiple
     {
         name: 'F3.1 regression: one invested pool and flows equal calculateYearsToFI to 1e-9',
         fn(assert) {
@@ -169,9 +171,9 @@ export const FI_TEST_CASES = [
             const d = sample();
             const totals = calculateTotals(structuredClone(d), { today: new Date(2026, 10, 21) });
             const assetsLess = d.assets.reduce((s, a) => s + a.balance, 0) - d.liabilities.reduce((s, a) => s + a.balance, 0);
-            assert('assets less liabilities 106,650 (calculateTotals agrees)', [r2(assetsLess), r2(totals.netWorth)], [106650, 106650]);
+            assert('assets less liabilities 106,650; calculateTotals now also takes HELP off: 82,050 (FT-R-125)', [r2(assetsLess), r2(totals.netWorth)], [106650, 82050]);
             const p = projectNetWorth(d, { today: TODAY, years: 1 });
-            assert('net worth 106,650 becomes 82,050', r2(p.path[0].netWorth), 82050);
+            assert('net worth 82,050 (106,650 less HELP)', r2(p.path[0].netWorth), 82050);
             assert('fiNetWorth is 82,050 too (no depreciating asset)', r2(p.path[0].fiNetWorth), 82050);
             assert('HELP is 24,600', p.path[0].help, 24600);
             const sum = fiSummary(d, { today: TODAY });

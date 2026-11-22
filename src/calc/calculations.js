@@ -146,7 +146,10 @@ export function calculateTotals(currentData, opts = {}) {
 
     const currentAssets = (currentData.assets || []).reduce((sum, asset) => sum + (asset.balance || 0), 0);
     const currentLiabilities = (currentData.liabilities || []).reduce((sum, liability) => sum + (liability.balance || 0), 0);
-    const netWorth = currentAssets - currentLiabilities;
+    // FT-R-125 (4): a HELP balance is a debt in every net worth figure, so there is one net worth (the Future screen's
+    // path reads the same sum). `currentLiabilities` stays the listed debts; HELP is its own line.
+    const helpBalance = Math.max(0, parseFloat(currentData.taxSettings && currentData.taxSettings.helpBalance) || 0);
+    const netWorth = currentAssets - currentLiabilities - helpBalance;
 
     const savingsRate = weeklyNet > 0 ? (weeklySavings / weeklyNet) * 100 : 0;
 
@@ -168,6 +171,7 @@ export function calculateTotals(currentData, opts = {}) {
         annualSavings: weeklySavings * 52,
         currentAssets,
         currentLiabilities,
+        helpBalance,
         netWorth,
         // LEGACY (FT-R-116): net minus planned expenses over net. Not a displayed savings rate any more;
         // screens, snapshots and milestones use savingsPlanned() in fi.js. Kept as a total for tests and exports.

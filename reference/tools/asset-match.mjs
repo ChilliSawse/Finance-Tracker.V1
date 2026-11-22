@@ -1,36 +1,14 @@
-// Asset-type matching and content checks (FT-0032 DB8, R3 5.3). Run by `npm run ref:check`.
-// The matcher is the same definition of a match as the merchants' `match: 'word'` in src/state/reference-match.js
-// (`norm` + `hasWord`: lowercase letters and digits, single spaces, whole word or whole phrase). No regular expressions, no plurals
-// guessed (list "utes" as well as "ute"). Longest phrase wins (most words, then most characters); a tie goes to the type that comes
-// first in asset-types.json. A type's `exclude` phrase vetoes that type. R7 will wire the app's own matcher to this definition;
-// until then suggestKind (assets-debts.js:216) stays the baseline and offline fallback.
+// Asset-type content checks (FT-0032 DB8, R3 5.3). Run by `npm run ref:check`.
+// DB10: the matcher is the app's own (src/calc/asset-types.js: `matchAssetType`, `appKindOf`), so the name fixtures
+// test the function the app runs and there is one definition of a match. This file keeps only the content checks.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { suggestKind } from '../../src/calc/assets-debts.js';
+import { matchAssetType, appKindOf, APP_KINDS } from '../../src/calc/asset-types.js';
 
-export const APP_KINDS = ['cash', 'invested', 'appreciating', 'depreciating'];
+export { matchAssetType, appKindOf, APP_KINDS };
 
 const norm = (s) => String(s == null ? '' : s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-const hasWord = (hay, p) => { const n = norm(p); return !!n && hay.includes(' ' + n + ' '); };
-
-/** The asset type for a name, or null: { type, phrase }. `types` is asset-types.json's `types` array. */
-export function matchAssetType(name, types) {
-    const hay = ' ' + norm(name) + ' ';
-    let best = null;
-    for (const t of types) {
-        if ((t.exclude || []).some((x) => hasWord(hay, x))) continue;
-        for (const p of t.match || []) {
-            if (!hasWord(hay, p)) continue;
-            const n = norm(p);
-            const score = [n.split(' ').length, n.length];
-            if (!best || score[0] > best.score[0] || (score[0] === best.score[0] && score[1] > best.score[1])) best = { type: t, phrase: p, score };
-        }
-    }
-    return best ? { type: best.type, phrase: best.phrase } : null;
-}
-
-/** The kind the app knows for a type: its own, or its legacyKind. null when neither is an app kind. */
-export const appKindOf = (t) => (APP_KINDS.includes(t.kind) ? t.kind : APP_KINDS.includes(t.legacyKind) ? t.legacyKind : null);
 
 const CURVE_FIELDS = ['pctOfPricePaid', 'pctOfNew'];
 

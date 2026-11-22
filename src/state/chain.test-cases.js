@@ -8,7 +8,7 @@ const LEGACY = [
     'migrateIncomeSourceTypes', 'migrateAllocationFields',
     'migrateLedgerFields', 'migrateVariableIncomeFields',
 ];
-const NEW_STEPS = ['migratePlanModel', 'migrateBucketModel', 'migrateIncomeFields', 'migrateAssetDebtDetail', 'migrateRefOverrides'];
+const NEW_STEPS = ['migratePlanModel', 'migrateBucketModel', 'migrateIncomeFields', 'migrateAssetDebtDetail', 'migrateAssetScope', 'migrateRefOverrides'];
 
 // A save the four legacy migrations leave untouched: run them once up front.
 function settledData() {
@@ -20,6 +20,7 @@ function settledData() {
         allocation: [{ name: 'Daily', percentage: 100 }],
         assetDebtVersion: 1, // F2: nor has the asset and debt step
         refOverrides: { v: 1, dataVersionSeen: null, items: {} }, // DB7: nor has the reference overrides step
+        assetScopeVersion: 1, // DB10: nor has the asset scope step
     };
     runMigrationChain(data, { storage: null, modules: [] });
     return data;
