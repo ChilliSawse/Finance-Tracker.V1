@@ -6,7 +6,7 @@ import { fiSummary, projectNetWorth } from '../../calc/fi.js';
 import { scenarioHeadline } from '../../calc/scenario.js';
 import { planGoalsFromData } from '../../calc/goal-planner.js';
 import { calculateTotals } from '../../calc/calculations.js';
-import { calculateHelpRepayment, projectHelpPayoff, getTaxYear, AU_TAX_YEARS } from '../../calc/tax-au.js';
+import { incomeAfterDeduction, calculateHelpRepayment, projectHelpPayoff, getTaxYear, AU_TAX_YEARS } from '../../calc/tax-au.js';
 import { estimateVariableTaxProvision, hasVariableSources } from '../../calc/income-events.js';
 import { DEBT_LABELS, rateBand } from '../../calc/assets-debts.js';
 
@@ -196,10 +196,13 @@ export function helpPayoffModel(data, now = new Date()) {
     const fy = getTaxYear(ts.financialYear);
     const primary = (data.incomeSources || [])[data.primaryIncomeIndex || 0];
     const income = primary ? (primary._calculatedGrossAnnual != null ? primary._calculatedGrossAnnual : num(primary.grossAnnual)) : 0;
-    const annualRepayment = calculateHelpRepayment(income, fy.help);
+    // Year-end figure: the same deduction as the tax estimate (labour income only).
+    const labour = primary && primary.incomeType !== 'selfEmployed' && primary.incomeType !== 'variable' ? income : 0;
+    const repaymentIncome = incomeAfterDeduction(income, fy, { labourIncome: labour }).income;
+    const annualRepayment = calculateHelpRepayment(repaymentIncome, fy.help);
     const base = { balance, income, annualRepayment, indexationPct: fy.help.indexationPercentDefault, threshold: fy.help.minThreshold };
     if (annualRepayment <= 0) return { ...base, kind: 'none' };
-    const proj = projectHelpPayoff(balance, income, { help: fy.help });
+    const proj = projectHelpPayoff(balance, repaymentIncome, { help: fy.help });
     if (!Number.isFinite(proj.years)) return { ...base, kind: 'never' };
     return { ...base, kind: 'years', years: proj.years, debtFreeYear: now.getFullYear() + proj.years, totalIndexation: proj.totalIndexation, perFortnight: annualRepayment / 26 };
 }

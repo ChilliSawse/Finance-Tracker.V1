@@ -214,7 +214,7 @@ export function readoutFor(values, layout, data, today = todayIso(), initial = {
     return {
         gross, cycles, tax: w.tax, help: w.help, total: w.total, parts: parts.join(' + '),
         net: ds[`_netPerCycleWithheld`] != null ? ds._netPerCycleWithheld : round2(gross - w.total),
-        owed: totals._annualTaxOwed, refund: rb ? { kind: rb.kind, amount: rb.amount } : null,
+        owed: totals._annualTaxOwed, deduction: totals._taxDeduction || 0, deductionKind: totals._taxDeductionKind || 'none', refund: rb ? { kind: rb.kind, amount: rb.amount } : null,
         superAnnual: round2(ds.grossAnnual * superPct / 100),
         helpUnsure: ds.withholding.hasStudyDebt === null,
         fy: taxTablesStatus(parseIso(today)).activeFy,
@@ -494,6 +494,7 @@ function decorate(handle, ctx) {
         row(t('c.income.readout.super'), aud(r.superAnnual));
         if (r.helpUnsure) rbody.appendChild(node('p', 'ils-muted', t('c.income.readout.noHelpYet')));
         rbody.appendChild(node('p', 'ils-muted', t('c.income.readout.note')));
+        if (r.deduction > 0) rbody.appendChild(node('p', 'ils-muted', t(r.deductionKind === 'work' ? 'c.income.readout.workDed' : 'c.income.readout.stdDed', { amount: fmtN(r.deduction) })));
         rbody.appendChild(node('p', 'ils-muted', t('c.income.readout.tables', { fy: r.fy })));
     }
 

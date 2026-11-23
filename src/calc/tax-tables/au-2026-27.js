@@ -73,6 +73,15 @@ export const AU_2026_27 = {
         capRate: 0.10, // 10% of total repayment income from A$186,051
         indexationPercentDefault: 2.8, // 1 June 2026 rate; user-adjustable in projections
     },
+    // Medicare levy surcharge, singles (FT-R-131). Family thresholds are ruled "later".
+    mls: { singleTiers: [
+        { min: 0, max: 105000, rate: 0 },
+        { min: 105001, max: 123000, rate: 0.01 },
+        { min: 123001, max: 164000, rate: 0.0125 },
+        { min: 164001, max: Infinity, rate: 0.015 },
+    ] },
+    // Standard work deduction (FT-R-131): the lesser of this and labour income, or the person's own work deductions if higher.
+    standardDeduction: 1000,
     lito: { maxOffset: 700, fullUntil: 37500, rate1: 0.05, step1Until: 45000, base2: 325, rate2: 0.015, endsAt: 66667 },
     concessionalCap: 32500, // super concessional contributions cap (tax.json super.concessionalCap, legislated)
     superGuarantee: { rate: 0.12, maxBase: 270830 }, // SG rate; maximum contribution base per year (tax.json super.maxContributionBaseAnnual)

@@ -80,6 +80,13 @@ export const AU_2025_26 = {
         capRate: 0.10, // 10% of total repayment income from A$179,286
         indexationPercentDefault: 2.8,
     },
+    // Medicare levy surcharge, singles (FT-R-131). Family thresholds are ruled "later".
+    mls: { singleTiers: [
+        { min: 0, max: 101000, rate: 0 },
+        { min: 101001, max: 118000, rate: 0.01 },
+        { min: 118001, max: 158000, rate: 0.0125 },
+        { min: 158001, max: Infinity, rate: 0.015 },
+    ] },
     // Low income tax offset (annual).
     lito: { maxOffset: 700, fullUntil: 37500, rate1: 0.05, step1Until: 45000, base2: 325, rate2: 0.015, endsAt: 66667 },
     concessionalCap: 30000, // super concessional contributions cap (tax.json super.concessionalCap, legislated)

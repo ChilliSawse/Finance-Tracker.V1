@@ -120,5 +120,11 @@ export const INCOME_OTHER_TEST_CASES = [
         const d = {};
         applyTaxDetails(d, { includeMedicareLevy: true, includeHelpInEstimate: false, helpBalance: -5 });
         assert('written, balance floored at 0', d.taxSettings, { includeMedicareLevy: true, includeHelpInEstimate: false, helpBalance: 0 });
+        applyTaxDetails(d, { includeMedicareLevy: true, includeHelpInEstimate: false, helpBalance: 0, hasPrivateHospitalCover: 'no' });
+        assert('No is stored as false', d.taxSettings.hasPrivateHospitalCover, false);
+        applyTaxDetails(d, { hasPrivateHospitalCover: 'yes' });
+        assert('Yes is stored as true', d.taxSettings.hasPrivateHospitalCover, true);
+        applyTaxDetails(d, { hasPrivateHospitalCover: 'unknown' });
+        assert('not sure removes the answer', Object.hasOwn(d.taxSettings, 'hasPrivateHospitalCover'), false);
     } },
 ];

@@ -47,6 +47,8 @@ Object.assign(en, {
     'c.income.readout.super': 'Super, a year',
     'c.income.readout.note': 'Left this pay uses what is withheld. What If and Future use the tax for the year.',
     'c.income.readout.tables': 'Tax tables: {fy}.',
+    'c.income.readout.workDed': 'Tax for the year takes off your work deductions of A${amount} (an estimate).',
+    'c.income.readout.stdDed': 'Tax for the year takes off a standard deduction of A${amount} (an estimate).',
     'c.income.readout.noHelpYet': 'Before HELP, if you have it.',
     'c.income.part.tax': 'A${amount} tax',
     'c.income.part.help': 'A${amount} HELP',
@@ -106,4 +108,9 @@ Object.assign(en, {
     'a12b.tax.medicare': 'Include the Medicare levy in the tax estimate',
     'a12b.tax.helpInclude': 'Include HELP repayments in the tax estimate',
     'a12b.tax.helpBalance': 'HELP balance',
+    'a12b.tax.cover': 'Do you have private hospital cover?',
+    'a12b.tax.coverHint': 'Without it, higher earners pay the Medicare levy surcharge.',
+    'a12b.tax.cover.unknown': 'Not sure yet',
+    'a12b.tax.cover.yes': 'Yes',
+    'a12b.tax.cover.no': 'No',
 });
