@@ -22,7 +22,7 @@ export function stateLabel(row) {
 export function actionLabel(choice, rows) {
     if (choice === OWN_CHOICE) return t('m.pick.ownYes');
     const row = (rows || []).find((r) => r.id === choice);
-    if (!row) return t('m.pick.ownYes');
+    if (!row) return t('d.sheet.save');
     return row.state === 'switch-back' ? t('e.plan.switchBack') : t('m.pick.useName', { name: row.name });
 }
 

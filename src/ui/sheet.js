@@ -349,6 +349,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
             if (!c) continue;
             if (f.type === 'toggle') c.checked = !!model.raw[f.key]; else c.value = model.raw[f.key] ?? '';
         }
+        if (typeof saveLabel === 'function' && !saving) saveBtn.textContent = labelNow(); // values set in code move the label too
     }
 
     function setError(key, message) {

@@ -8,12 +8,11 @@ import { cloneDefaultFinanceData } from './defaults.js';
 import { forkOwnTemplate, switchBackToBase, getBuckets } from './saving-model.js';
 import {
     validateEnvelope, parseModelFile, builtinEnvelope, catalogueFromIndex, loadCatalogue, entryState, updateAvailable,
-    useModel, cleanRules, replacesSetup, allocationDiffersFromDefault, exportModel, loadEnvelope, MODEL_FILE_MAX_BYTES, wouldLoseBuckets,
+    useModel, OWN_CHOICE, cleanRules, replacesSetup, allocationDiffersFromDefault, exportModel, loadEnvelope, MODEL_FILE_MAX_BYTES, wouldLoseBuckets,
 } from './model-catalogue.js';
 import { en } from '../i18n/en.js';
 import { leftThisPay } from '../calc/pay-cycle.js';
 import { pickerRows, actionLabel } from '../ui/model-picker.js';
-import { OWN_CHOICE } from './model-catalogue.js';
 import { modelStep } from '../ui/setup/steps-buckets.js';
 
 const IS_NODE = typeof process !== 'undefined' && !!(process.versions && process.versions.node);
@@ -305,15 +304,41 @@ export const MODEL_CATALOGUE_TEST_CASES = [
         const c = bare();
         c.allocation[0].name = 'My daily'; c.allocation[0].bankLabel = 'Everyday';
         c.allocation[3].percentage = 25; c.allocation[1].percentage = 5;
-        c.savingsGoalNote = 'kept'; c.categories = [{ id: 'g', bucketId: c.allocation[1].id }]; c.plan = [{ id: 'p', bucketId: c.allocation[3].id }];
+        c.savingsGoalNote = 'kept'; c.rules = [{ key: 'k', categoryId: 'g', bucketId: c.allocation[0].id }]; c.categories = [{ id: 'g', bucketId: c.allocation[1].id }]; c.plan = [{ id: 'p', bucketId: c.allocation[3].id }];
         const cBefore = JSON.stringify(c);
         assert('such a setup is replaced without balances or goals', [replacesSetup(c), wouldLoseBuckets(c), entryState(mk(SPLIT), c)], [true, false, 'use']);
         const rc = useModel(c, SPLIT, { replaceBuckets: true });
         assert('applies', [rc.ok, c.savingsGoalNote], [true, 'kept']);
         rc.onUndo();
         assert('Undo restores the whole setup', JSON.stringify(c), cBefore);
+        assert('an unrecognised choice falls back to the plain save label', actionLabel('nope', rows0), 'Save');
         // balances and goals are never replaced from the picker: not choosable at all
         const e = bare(); e.allocation[0].currentBalance = 25;
         assert('a setup with balances is not offered a rebuild', pickerRows([mk(SPLIT)], e)[0].choosable, false);
+    } },
+    { name: 'DB16.2 (browser) the picker sheet: the button follows the choice and no confirm dialog opens', async fn(assert) {
+        if (typeof document === 'undefined') return;
+        const { openModelPicker } = await import('../ui/model-picker.js');
+        const bucket = catalogueFromIndex([])[0];
+        const entries = [bucket, { ...entryOf(SPLIT), path: 'models/test-split.12345678.json', sha256: 'a'.repeat(64) }];
+        const d = bare();
+        const results = [];
+        const h = await openModelPicker({ data: d, entries, onResult: (r) => results.push(r) });
+        const btn = () => h.layer.querySelector('[data-sheet-action="save"]');
+        const sel = h.layer.querySelector('[data-key="choice"]');
+        const pick = (v) => { sel.value = v; sel.dispatchEvent(new Event('change', { bubbles: true })); };
+        pick('test-split');
+        assert('a catalogue entry: Use {name}', btn().textContent, 'Use Test split');
+        pick(OWN_CHOICE);
+        assert('own copy: Make it mine', btn().textContent, 'Make it mine');
+        btn().click();
+        await new Promise((r) => setTimeout(r, 30));
+        assert('no confirm dialog opened', document.querySelector('dialog.ledger-dialog'), null);
+        assert('it applied at once, with an Undo', [results.length, results[0] && results[0].ok, typeof (results[0] && results[0].onUndo)], [1, true, 'function']);
+        const h2 = await openModelPicker({ data: d, entries, onResult: (r) => results.push(r) });
+        assert('on an own copy the Bucket method reads Switch back', h2.layer.querySelector('[data-sheet-action="save"]').textContent, 'Switch back');
+        h2.layer.querySelector('[data-sheet-action="save"]').click();
+        await new Promise((r) => setTimeout(r, 30));
+        assert('switch back: no dialog, applied', [document.querySelector('dialog.ledger-dialog'), results.length, d.savingModel.id], [null, 2, 'bucket-method']);
     } },
 ];
