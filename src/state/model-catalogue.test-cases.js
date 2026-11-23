@@ -10,8 +10,10 @@ import {
     validateEnvelope, parseModelFile, builtinEnvelope, catalogueFromIndex, loadCatalogue, entryState, updateAvailable,
     useModel, cleanRules, replacesSetup, allocationDiffersFromDefault, exportModel, loadEnvelope, MODEL_FILE_MAX_BYTES, wouldLoseBuckets,
 } from './model-catalogue.js';
+import { en } from '../i18n/en.js';
 import { leftThisPay } from '../calc/pay-cycle.js';
-import { pickerRows } from '../ui/model-picker.js';
+import { pickerRows, actionLabel } from '../ui/model-picker.js';
+import { OWN_CHOICE } from './model-catalogue.js';
 import { modelStep } from '../ui/setup/steps-buckets.js';
 
 const IS_NODE = typeof process !== 'undefined' && !!(process.versions && process.versions.node);
@@ -275,5 +277,43 @@ export const MODEL_CATALOGUE_TEST_CASES = [
         assert('the pools add up to the pay', sum(r.buckets.map((b) => b.poolCents)), 343843);
         assert('essentials come off Daily, the non-essential off Wants', [daily.spentCents, r.buckets.find((b) => b.role === 'splurge').spentCents], [126230, 2400]);
         assert('left is the pool less spending, and not negative', [r.leftCents, r.leftCents >= 0, Number.isFinite(r.perDayCents)], [171921 - 126230, true, true]);
+    } },
+    { name: 'DB16.1 the picker button is named after the choice; every choice applies at once and Undo restores it all', fn(assert) {
+        const bucket = catalogueFromIndex([])[0];
+        const mk = (env) => ({ ...entryOf(env), path: `models/${env.id}.12345678.json`, sha256: 'a'.repeat(64) });
+        const d0 = bare();
+        const rows0 = pickerRows([bucket, mk(SPLIT)], d0);
+        assert('make it mine', actionLabel(OWN_CHOICE, rows0), 'Make it mine');
+        assert('use a catalogue entry names it', actionLabel('test-split', rows0), 'Use Test split');
+        const own = bare();
+        forkOwnTemplate(own);
+        assert('switch back', actionLabel('bucket-method', pickerRows([bucket, mk(SPLIT)], own)), 'Switch back');
+        assert('no generic label is left', Object.keys(en).filter((k) => /^m\.pick\./.test(k) && en[k] === 'Use this'), []);
+        // Make it mine: applies, Undo restores
+        const a = bare(); const aBefore = JSON.stringify(a);
+        const ra = forkOwnTemplate(a);
+        assert('make it mine applies', [ra.ok, a.savingModel.id], [true, 'custom-1']);
+        ra.onUndo();
+        assert('and Undo restores it', JSON.stringify(a), aBefore);
+        // Switch back: applies, Undo restores
+        const b = bare(); forkOwnTemplate(b); const bBefore = JSON.stringify(b);
+        const rb = useModel(b, builtinEnvelope(), {});
+        assert('switch back applies', [rb.ok, b.savingModel.id], [true, 'bucket-method']);
+        rb.onUndo();
+        assert('and Undo restores it', JSON.stringify(b), bBefore);
+        // Use a fixed model over a setup that differs only in names, shares and ticks (no confirm): Undo restores it all
+        const c = bare();
+        c.allocation[0].name = 'My daily'; c.allocation[0].bankLabel = 'Everyday';
+        c.allocation[3].percentage = 25; c.allocation[1].percentage = 5;
+        c.savingsGoalNote = 'kept'; c.categories = [{ id: 'g', bucketId: c.allocation[1].id }]; c.plan = [{ id: 'p', bucketId: c.allocation[3].id }];
+        const cBefore = JSON.stringify(c);
+        assert('such a setup is replaced without balances or goals', [replacesSetup(c), wouldLoseBuckets(c), entryState(mk(SPLIT), c)], [true, false, 'use']);
+        const rc = useModel(c, SPLIT, { replaceBuckets: true });
+        assert('applies', [rc.ok, c.savingsGoalNote], [true, 'kept']);
+        rc.onUndo();
+        assert('Undo restores the whole setup', JSON.stringify(c), cBefore);
+        // balances and goals are never replaced from the picker: not choosable at all
+        const e = bare(); e.allocation[0].currentBalance = 25;
+        assert('a setup with balances is not offered a rebuild', pickerRows([mk(SPLIT)], e)[0].choosable, false);
     } },
 ];
