@@ -70,7 +70,7 @@ export function annualOwed({ taxableIncome, date, hasStudyDebt = false, repaymen
     const tax = cents(Math.max(0, afterLito - wato));
     const lv = yearEndLevies(income, tables, { privateCover, help: hasStudyDebt, helpIncome: repaymentIncome });
     const medicare = cents(lv.medicare), mls = cents(lv.mls), help = cents(lv.help);
-    return { fy, stale, taxableIncome: income, deduction: ded.deduction, deductionKind: ded.kind, tax, lito, wato, medicare, mls, help, total: cents(tax + medicare + mls + help), estimate: true };
+    return { fy, stale, taxableIncome: cents(income), deduction: cents(ded.deduction), deductionKind: ded.kind, tax, lito, wato, medicare, mls, help, total: cents(tax + medicare + mls + help), estimate: true };
 }
 
 /**
