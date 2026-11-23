@@ -149,6 +149,21 @@ export function taxFileProblems(taxDoc) {
     return out;
 }
 
+// DB18: the super-cap warning figures. Each is taken only when legislated and in a sane range, else left out
+// (and the warning stays silent for that year). Cap 20,000 to 60,000; SG rate 5% to 20%; base 100,000 to 500,000 a year.
+function superFigures(fig) {
+    const ok = (f, lo, hi) => (f && f.status === 'legislated' && num(f.value) && f.value >= lo && f.value <= hi ? f.value : undefined);
+    const cap = ok(fig('super', 'concessionalCap'), 20000, 60000);
+    const rate = ok(fig('super', 'sgRate'), 0.05, 0.2);
+    const annual = ok(fig('super', 'maxContributionBaseAnnual'), 100000, 500000);
+    const q = ok(fig('super', 'maxContributionBaseQuarterly'), 25000, 125000);
+    const maxBase = annual !== undefined ? annual : (q !== undefined ? q * 4 : undefined);
+    return {
+        concessionalCap: cap,
+        superGuarantee: rate !== undefined && maxBase !== undefined ? { rate, maxBase } : undefined,
+    };
+}
+
 const malformed = () => ({ held: { reason: 'malformed', figures: [], statuses: [] } });
 
 /**
@@ -212,6 +227,7 @@ export function buildYearTable(fy, year) {
             indexationPercentDefault: Number((idxFig.value * 100).toFixed(6)),
         },
         lito: { maxOffset: l.max, fullUntil: l.fullUntil, rate1: l.rate1, step1Until: l.step1Until, base2: l.base2, rate2: l.rate2, endsAt: l.endsAt },
+        ...superFigures(fig),
         origin: 'reference',
     };
     return { table };
