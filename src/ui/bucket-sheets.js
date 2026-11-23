@@ -341,7 +341,7 @@ async function openTemplate(d) {
         data: d,
         onResult: (res) => finish(res),
         onOwn: () => openSheet({
-            title: t('e.sheet.tplTitle'), saveLabel: t('e.sheet.tplSave'),
+            title: t('e.sheet.tplTitle'), saveLabel: t('e.sheet.tplNameSave'),
             fields: [{ key: 'name', label: t('e.sheet.tplName'), type: 'text', required: true, hint: t('e.sheet.tplHint') }],
             values: { name: t('e.sheet.tplNameDefault') },
             onSave: (v) => finish(forkOwnTemplate(d, { name: v.name })),
