@@ -7,7 +7,7 @@
 // passes data explicitly.
 
 import { getPayCyclesPerYear, getWeeklyAmount } from '../utils.js';
-import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment } from './tax-au.js';
+import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment, lacksPrivateCover } from './tax-au.js';
 import { variableSourceAnnualFigures, activeFyKey } from './income-events.js';
 import { planTotals } from './plan.js';
 import { expectedPay } from './withholding.js';
@@ -104,7 +104,7 @@ export function calculateTotals(currentData, opts = {}) {
             if (withheldPerCycle !== null) {
                 netPerCycleWithheld = hasNetOverride ? netPerCycle : Math.max(0, grossPerCycle - withheldPerCycle);
                 estimateInputs.push({
-                    paySchedule: source.paySchedule, grossAnnual: sourceGrossAnnual,
+                    paySchedule: source.paySchedule, grossAnnual: sourceGrossAnnual, incomeType: type,
                     hasStudyDebt: !!(decl && decl.hasStudyDebt === true), claimsTaxFree: !decl || decl.claimsTaxFree !== false,
                     extraPerPay: decl ? decl.extraPerPay : 0, withheldPerPay: withheldPerCycle,
                 });
@@ -146,17 +146,22 @@ export function calculateTotals(currentData, opts = {}) {
 
     const currentAssets = (currentData.assets || []).reduce((sum, asset) => sum + (asset.balance || 0), 0);
     const currentLiabilities = (currentData.liabilities || []).reduce((sum, liability) => sum + (liability.balance || 0), 0);
-    const netWorth = currentAssets - currentLiabilities;
+    // FT-R-125 (4): a HELP balance is a debt in every net worth figure, so there is one net worth (the Future screen's
+    // path reads the same sum). `currentLiabilities` stays the listed debts; HELP is its own line.
+    const helpBalance = Math.max(0, parseFloat(currentData.taxSettings && currentData.taxSettings.helpBalance) || 0);
+    const netWorth = currentAssets - currentLiabilities - helpBalance;
 
     const savingsRate = weeklyNet > 0 ? (weeklySavings / weeklyNet) * 100 : 0;
 
     let annualEstimate = null;
     if (estimateInputs.length) {
-        annualEstimate = annualEstimateForSources(estimateInputs, taxDate);
+        annualEstimate = annualEstimateForSources(estimateInputs, taxDate, null, { privateCover: lacksPrivateCover(taxSettings) ? false : undefined });
     }
 
     return {
         _annualTaxOwed: annualEstimate ? annualEstimate.owed.total : null,
+        _taxDeduction: annualEstimate ? annualEstimate.owed.deduction : 0,
+        _taxDeductionKind: annualEstimate ? annualEstimate.owed.deductionKind : 'none',
         _refundOrBill: annualEstimate ? { kind: annualEstimate.kind, amount: annualEstimate.amount, label: annualEstimate.label, estimate: true } : null,
         totalGrossAnnualIncome,
         totalAnnualTax: totalAnnualTaxFromSources,
@@ -168,6 +173,7 @@ export function calculateTotals(currentData, opts = {}) {
         annualSavings: weeklySavings * 52,
         currentAssets,
         currentLiabilities,
+        helpBalance,
         netWorth,
         // LEGACY (FT-R-116): net minus planned expenses over net. Not a displayed savings rate any more;
         // screens, snapshots and milestones use savingsPlanned() in fi.js. Kept as a total for tests and exports.

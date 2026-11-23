@@ -8,13 +8,15 @@ import '../scenario/results.js'; // F8b — registers the Answer bottom, Compare
 import '../scenario/answer-top.js'; // F8a — registers the Answer view
 import { t } from '../../i18n/strings.js';
 import { store } from '../../state/store.js';
-import { explainFi } from '../../calc/fi.js';
+import { explainFi } from '../../calc/fi-explain.js';
 import { listScenarios, saveScenario, newScenario } from '../../state/scenarios.js';
 import { openSheet } from '../sheet.js';
 import { showToast, showUndoToast } from '../toast.js';
 import { updateDataAndUI } from '../render.js';
 import { openScenario } from '../scenario/index.js';
 import { debtAssetSheetSpec, saveDebtAsset, deleteDebtAsset } from '../plan-lists.js';
+import { wireSheetReopen, focusSheetField } from '../asset-sheet-wire.js';
+import { showCheckCard } from '../check-card-link.js';
 import {
     futureModel, chartIds, withPeople, peopleSlots, assumptionValues, validateAssumptions, applyAssumptions, restoreAssumptions,
     HORIZONS, DEFAULT_HORIZON, MAX_ON_CHART,
@@ -148,6 +150,7 @@ function onClick(e) {
     if (d.fuArchived) { state.showArchived = !state.showArchived; repaint(); return; }
     if (d.fuExplain) { openExplain(); return; }
     if (d.fuAssume) { openAssumptions(); return; }
+    if (d.fuCheck) { showCheckCard(); return; }
     if (d.fuDebt != null) openDebt(Number(d.fuDebt));
 }
 
@@ -203,16 +206,16 @@ function openAssumptions() {
     });
 }
 
-function openDebt(index, carry = null) {
+function openDebt(index, carry = null, focusKey = null) {
     const data = store.financeData;
     const row = (data.liabilities || [])[index];
     if (!row) return;
-    const spec = debtAssetSheetSpec('debt', row, { today: localIso(), carry });
+    const spec = debtAssetSheetSpec('debt', row, { today: localIso(), carry, assets: data.assets });
     const undo = (res) => showUndoToast({ message: res.message, onUndo: () => { res.onUndo(); updateDataAndUI(); }, onExpire: res.onExpire });
     const handle = openSheet({
         title: spec.title, fields: spec.fields, values: spec.values, validate: spec.validate, plausibility: spec.plausibility,
         onSave(values) {
-            const res = saveDebtAsset(data, 'debt', index, values);
+            const res = saveDebtAsset(data, 'debt', index, values, {});
             if (!res.ok) return false;
             updateDataAndUI();
             undo(res);
@@ -225,10 +228,6 @@ function openDebt(index, carry = null) {
             undo(res);
         },
     });
-    if (spec.reopenOn && spec.reopenOn.length && handle && handle.layer) {
-        handle.layer.addEventListener('change', (ev) => {
-            const k = ev.target && ev.target.dataset ? ev.target.dataset.key : null;
-            if (k && spec.reopenOn.includes(k)) openDebt(index, handle.getValues());
-        });
-    }
+    if (focusKey) focusSheetField(handle, focusKey);
+    wireSheetReopen(handle, spec, (carryNow, changedKey, next) => openDebt(index, carryNow, next));
 }

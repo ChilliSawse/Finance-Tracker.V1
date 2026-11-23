@@ -6,6 +6,8 @@
 // category's essential flag. Bills are plan items with an anchorDue (FT-R-88). Every figure
 // comes from planTotals-style maths (calc/plan.js) or the plan item itself; none is typed in.
 
+import '../i18n/en-lazy-plan-lists.js'; // plan-lists strings (en-lazy)
+import '../i18n/en-lazy-plan.js'; // the a.plan.* strings it builds keys for (shared with the Plan screen)
 import { t } from '../i18n/strings.js';
 import { esc, escNum } from './html.js';
 import { formatCurrency, getPayCyclesPerYear } from '../utils.js';
@@ -391,7 +393,8 @@ export function debtAssetCount(kind, n) {
 
 /**
  * The openSheet spec for a debt or an asset (F5 fields from plan-assets-debts.js). `opts`: today (ISO, for the
- * depreciation offer), kind (override) and carry (values entered so far) when the sheet reopens after a kind change.
+ * depreciation offer), kind (override), carry (values entered so far) and changed (the key that reopened the sheet), plus
+ * `types` (the asset types) and `assets` (for a debt's "This loan is for") from the opener.
  * If a spec ever came back with no fields the three plain fields below would carry the sheet.
  */
 export function debtAssetSheetSpec(kind, row = null, opts = {}) {
@@ -417,26 +420,33 @@ export function debtAssetSheetSpec(kind, row = null, opts = {}) {
     };
 }
 
-/** Add (index null) or edit one debt or asset. Undo restores the whole list. The caller renders and saves. */
-export function saveDebtAsset(data, kind, index, values) {
+/**
+ * Add (index null) or edit one debt or asset. Undo restores the whole list. The caller renders and saves.
+ * opts (DB12): `types` (the reference asset types, for the asset sheet's type) and, on a debt, the link to a property is written
+ * from the person's own assets (a confirmed link also confirms the property's kind, so Undo restores the assets too).
+ */
+export function saveDebtAsset(data, kind, index, values, opts = {}) {
     const key = LIST_KEYS[kind];
     if (!Array.isArray(data[key])) data[key] = [];
     const list = data[key];
     const before = clone(list);
+    const assetsBefore = kind === 'debt' && Array.isArray(data.assets) ? clone(data.assets) : null;
+    const undoAll = () => { restoreList(list, before); if (assetsBefore) restoreList(data.assets, assetsBefore); };
+    const link = kind === 'debt' && Array.isArray(data.assets) ? { assets: data.assets } : {};
     const name = String(values.name || '').trim();
     const balance = Number(values.balance) || 0;
     if (index == null) {
         // F5: the factories give the new row its id and every detail field; the sheet values then go on top.
         const row = kind === 'debt'
-            ? applyDebtValues(newDebt(list, { name, balance }), values)
-            : applyAssetValues(newAsset(list, { name, balance, ...(ASSET_KINDS.includes(values.kind) ? { kind: values.kind } : {}) }), values);
+            ? applyDebtValues(newDebt(list, { name, balance }), values, { ...link, isNew: true })
+            : applyAssetValues(newAsset(list, { name, balance, ...(ASSET_KINDS.includes(values.kind) ? { kind: values.kind } : {}) }), values, { types: opts.types, isNew: true });
         list.push(row);
-        return { ok: true, item: row, message: t('a.plan.list.added', { name }), onUndo() { restoreList(list, before); }, onExpire: undefined };
+        return { ok: true, item: row, message: t('a.plan.list.added', { name }), onUndo: undoAll, onExpire: undefined };
     }
     const row = list[index];
     if (!row) return failed('missing');
-    if (kind === 'debt') applyDebtValues(row, { ...values, name, balance }); else applyAssetValues(row, { ...values, name, balance });
-    return { ok: true, item: row, message: t('a.plan.list.changed', { name }), onUndo() { restoreList(list, before); }, onExpire: undefined };
+    if (kind === 'debt') applyDebtValues(row, { ...values, name, balance }, link); else applyAssetValues(row, { ...values, name, balance }, { types: opts.types });
+    return { ok: true, item: row, message: t('a.plan.list.changed', { name }), onUndo: undoAll, onExpire: undefined };
 }
 
 export function deleteDebtAsset(data, kind, index) {

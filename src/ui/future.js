@@ -3,6 +3,7 @@
 // only while a Variable source exists, and hands the rest to mountFuture. The Debts, HELP payoff and
 // tax-provision cards of the deleted Savings and Liabilities panels render from future/view.js.
 
+import '../i18n/en-lazy-future.js'; // future strings (en-lazy)
 import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
 import { hasVariableSources } from '../calc/income-events.js';

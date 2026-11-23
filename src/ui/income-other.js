@@ -176,6 +176,11 @@ export function taxDetailsFields() {
         { key: 'includeMedicareLevy', label: t('a12b.tax.medicare'), type: 'toggle' },
         { key: 'includeHelpInEstimate', label: t('a12b.tax.helpInclude'), type: 'toggle' },
         { key: 'helpBalance', label: t('a12b.tax.helpBalance'), type: 'money', hint: t('a12b.tax.helpHint') },
+        { key: 'hasPrivateHospitalCover', label: t('a12b.tax.cover'), type: 'select', hint: t('a12b.tax.coverHint'), options: [
+            { value: 'unknown', label: t('a12b.tax.cover.unknown') },
+            { value: 'yes', label: t('a12b.tax.cover.yes') },
+            { value: 'no', label: t('a12b.tax.cover.no') },
+        ] },
     ];
 }
 
@@ -184,6 +189,10 @@ export function applyTaxDetails(data, v) {
     data.taxSettings.includeMedicareLevy = !!v.includeMedicareLevy;
     data.taxSettings.includeHelpInEstimate = !!v.includeHelpInEstimate;
     data.taxSettings.helpBalance = Math.max(0, Number(v.helpBalance) || 0);
+    // FT-R-131: stored only once answered. No key means not asked, and that counts as covered.
+    if (v.hasPrivateHospitalCover === 'yes') data.taxSettings.hasPrivateHospitalCover = true;
+    else if (v.hasPrivateHospitalCover === 'no') data.taxSettings.hasPrivateHospitalCover = false;
+    else delete data.taxSettings.hasPrivateHospitalCover;
 }
 
 // ── DOM ─────────────────────────────────────────────────────────────────────
@@ -320,13 +329,16 @@ export function openOtherIncomeSheet(index) {
     return true;
 }
 
-/** Medicare levy, HELP in the estimate and the HELP balance (the old "Tax details" block). */
+/** Medicare levy, HELP in the estimate, the HELP balance and private hospital cover (the old "Tax details" block). */
 export function openTaxDetailsSheet() {
     const data = store.financeData;
     const ts = data.taxSettings || {};
     openSheet({
         title: t('a12b.tax.title'), fields: taxDetailsFields(),
-        values: { includeMedicareLevy: !!ts.includeMedicareLevy, includeHelpInEstimate: ts.includeHelpInEstimate !== false, helpBalance: Number(ts.helpBalance) || 0 },
+        values: {
+            includeMedicareLevy: !!ts.includeMedicareLevy, includeHelpInEstimate: ts.includeHelpInEstimate !== false, helpBalance: Number(ts.helpBalance) || 0,
+            hasPrivateHospitalCover: ts.hasPrivateHospitalCover === true ? 'yes' : ts.hasPrivateHospitalCover === false ? 'no' : 'unknown',
+        },
         validate: (v) => (v.helpBalance != null && v.helpBalance < 0 ? { helpBalance: t('a12b.event.negative') } : {}),
         onSave: async (v) => { applyTaxDetails(data, v); await persist(); },
     });

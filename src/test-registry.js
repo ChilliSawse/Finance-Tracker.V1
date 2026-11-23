@@ -2,6 +2,16 @@
 // tests.html and by tools/run-cases.mjs. env 'browser' groups need a DOM or
 // IndexedDB and are skipped by the Node runner.
 
+// The tests read strings the app loads with each screen (en-lazy-*): load them all up front.
+import './i18n/en-lazy-activity.js';
+import './i18n/en-lazy-plan.js';
+import './i18n/en-lazy-plan-lists.js';
+import './i18n/en-lazy-future.js';
+import './i18n/en-lazy-onboarding.js';
+import './i18n/en-lazy-income-layout.js';
+import './i18n/en-lazy-scenario.js';
+import './i18n/en-lazy-results.js';
+import './i18n/en-lazy-models.js';
 import { CHAIN_TEST_CASES } from './state/chain.test-cases.js';
 import { PALETTES_TEST_CASES } from './theme/palettes.test-cases.js';
 import { THEME_TEST_CASES } from './theme/theme.test-cases.js';
@@ -11,6 +21,7 @@ import { PLAN_MIGRATION_TEST_CASES } from './state/plan-migration.test-cases.js'
 import { TRANSACTIONS_TEST_CASES } from './state/transactions.test-cases.js';
 import { TODAY_MODEL_TEST_CASES } from './state/today-model.test-cases.js';
 import { RULES_TEST_CASES } from './state/rules.test-cases.js';
+import { SORTING_TEST_CASES } from './state/sorting.test-cases.js'; // DB2
 import { BILL_MATCH_TEST_CASES } from './state/bill-match.test-cases.js';
 import { SAMPLE_HOUSEHOLD_TEST_CASES } from './state/sample-household.test-cases.js';
 import { TAX_TABLES_TEST_CASES } from './calc/tax-tables.test-cases.js';
@@ -57,10 +68,15 @@ import { PWA_TEST_CASES } from './pwa.test-cases.js';
 import { LAZY_SETUP_TEST_CASES, LAZY_SETUP_BROWSER_TEST_CASES } from './lazy-setup.test-cases.js';
 import { IMPORT_ROUTE_TEST_CASES, IMPORT_ROUTE_BROWSER_TEST_CASES } from './import/route.test-cases.js';
 import { ACCEPT_TEST_CASES, ACCEPT_XLSX_TEST_CASES } from './import/accept.test-cases.js';
+import { REF_BUILD_TEST_CASES } from './ref-build.test-cases.js'; // FT-0032 DB1
 import { BUCKET_METHOD_TEST_CASES } from './ui/bucket-method.test-cases.js';
 import { INCOME_OTHER_TEST_CASES } from './ui/income-other.test-cases.js';
 import { TRANSFERS_TEST_CASES } from './calc/transfers.test-cases.js'; // H9
 import { RECOVERY_UNDO_TEST_CASES, RECOVERY_UNDO_BROWSER_TEST_CASES } from './state/recovery-undo.test-cases.js'; // U3
+import { REFERENCE_TEST_CASES } from './state/reference.test-cases.js'; // R4
+import { REF_OVERRIDES_TEST_CASES } from './state/ref-overrides.test-cases.js'; // DB7
+import { MODEL_CATALOGUE_TEST_CASES } from './state/model-catalogue.test-cases.js'; // DB15
+import { TAX_REFERENCE_TEST_CASES } from './calc/tax-reference.test-cases.js'; // DB14
 
 export const TEST_GROUPS = [
     { name: 'chain', env: 'pure', cases: CHAIN_TEST_CASES },
@@ -72,6 +88,7 @@ export const TEST_GROUPS = [
     { name: 'transactions', env: 'browser', cases: TRANSACTIONS_TEST_CASES },
     { name: 'today-model', env: 'pure', cases: TODAY_MODEL_TEST_CASES },
     { name: 'rules', env: 'pure', cases: RULES_TEST_CASES },
+    { name: 'sorting', env: 'pure', cases: SORTING_TEST_CASES }, // DB2
     { name: 'bill-match', env: 'pure', cases: BILL_MATCH_TEST_CASES },
     { name: 'sample-household', env: 'pure', cases: SAMPLE_HOUSEHOLD_TEST_CASES },
     { name: 'tax-tables', env: 'pure', cases: TAX_TABLES_TEST_CASES },
@@ -119,6 +136,7 @@ export const TEST_GROUPS = [
     { name: 'import-route-browser', env: 'browser', cases: IMPORT_ROUTE_BROWSER_TEST_CASES },
     { name: 'accept', env: 'pure', cases: ACCEPT_TEST_CASES },
     { name: 'accept-xlsx', env: 'browser', cases: ACCEPT_XLSX_TEST_CASES },
+    { name: 'ref-build', env: 'pure', cases: REF_BUILD_TEST_CASES }, // FT-0032 DB1 (node only; passes at once in tests.html)
     { name: 'bucket-method', env: 'pure', cases: BUCKET_METHOD_TEST_CASES },
     { name: 'income-other', env: 'pure', cases: INCOME_OTHER_TEST_CASES },
     { name: 'lazy-setup', env: 'pure', cases: LAZY_SETUP_TEST_CASES }, // P3b
@@ -126,4 +144,8 @@ export const TEST_GROUPS = [
     { name: 'transfers', env: 'pure', cases: TRANSFERS_TEST_CASES }, // H9
     { name: 'recovery-undo', env: 'pure', cases: RECOVERY_UNDO_TEST_CASES }, // U3
     { name: 'recovery-undo-browser', env: 'browser', cases: RECOVERY_UNDO_BROWSER_TEST_CASES }, // U3
+    { name: 'reference', env: 'pure', cases: REFERENCE_TEST_CASES }, // R4
+    { name: 'ref-overrides', env: 'pure', cases: REF_OVERRIDES_TEST_CASES }, // DB7
+    { name: 'model-catalogue', env: 'pure', cases: MODEL_CATALOGUE_TEST_CASES }, // DB15
+    { name: 'tax-reference', env: 'pure', cases: TAX_REFERENCE_TEST_CASES }, // DB14
 ];

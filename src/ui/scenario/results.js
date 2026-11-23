@@ -8,10 +8,12 @@
 //
 // The model is pure (no DOM); `renderAnswerBottom` and the view registration at the bottom need a document.
 
+import '../../i18n/en-lazy-results.js'; // results strings (en-lazy)
 import './results.css'; // F8b — What If results, Compare, Make this real
 import { t } from '../../i18n/strings.js';
 import { resolveAt } from '../../calc/scenario.js';
 import { fiSummary, savingsPlanned } from '../../calc/fi.js';
+import { showCheckCard } from '../check-card-link.js';
 import { planGoalsFromData } from '../../calc/goal-planner.js';
 import { getBuckets } from '../../state/saving-model.js';
 import { netPerPayCents } from '../../calc/plan.js';
@@ -323,6 +325,24 @@ function cardEl(card) {
     return li;
 }
 
+/** "N items worth $X aren't counted toward FI until you confirm", opening the Check card; null when nothing is held out. */
+export function heldOutText(set) {
+    const s = set.now && set.now.summary;
+    const n = s && s.heldOut ? s.heldOut.count : 0;
+    return n > 0 ? t(n === 1 ? 'f.res.heldOut.one' : 'f.res.heldOut', { count: n, amount: formatMoney(toCents(s.heldOutValue)) }) : null;
+}
+
+export function heldOutLineEl(set) {
+    const text = heldOutText(set);
+    if (text === null) return null;
+    const p = el('p', 'fine res-held');
+    const b = el('button', 'link', text);
+    b.type = 'button';
+    b.dataset.resAct = 'check';
+    p.appendChild(b);
+    return p;
+}
+
 function tableEl(set) {
     const det = el('details', 'all-nums card');
     const sum = el('summary');
@@ -379,7 +399,10 @@ export function renderAnswerBottom(container, ctx) {
     head.append(h, el('span', 'muted', t('f.res.whatChangesSub')));
     const ul = el('ul', 'wc');
     for (const card of set.cards) ul.appendChild(cardEl(card));
-    sec.append(head, ul, tableEl(set));
+    sec.append(head, ul);
+    const held = heldOutLineEl(set);
+    if (held) sec.appendChild(held);
+    sec.appendChild(tableEl(set));
     container.append(sec);
     renderMakeRealBar(container, ctx);
     // one listener for the container's life: the bottom half is redrawn on every option change, and a listener added
@@ -388,6 +411,8 @@ export function renderAnswerBottom(container, ctx) {
     if (!container._explainWired) {
         container._explainWired = true;
         container.addEventListener('click', (e) => {
+            const c = e.target.closest('[data-res-act="check"]');
+            if (c && container.contains(c)) { showCheckCard(); return; }
             const b = e.target.closest('[data-res-act="explain"]');
             if (!b || !container.contains(b)) return;
             openExplain(container._explain.set, b.dataset.row, container._explain.data);

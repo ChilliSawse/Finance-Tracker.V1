@@ -2,13 +2,13 @@
 //
 // financeData.rules = [{ key, categoryId, bucketId? }], key = merchantKey(description).
 // Categorise order: learned rules, then category keywords, then 'other' (categories.js).
+// learnRule, similarUnconfirmed, applyRuleToSimilar and applyRuleToStored moved to rule-learn.js in DB9: only a
+// dynamic import() uses them, and in this core module they would add to the cold-load budget.
 
 import { merchantKey, categoriseDescription, categoriseDetailed, resolveCategory } from './categories.js';
-import { listTransactions, updateTransaction, isValidIsoDate, addTransactions } from './transactions.js';
+import { listTransactions, isValidIsoDate, addTransactions } from './transactions.js';
 import { withStore } from './db.js';
 import { matchBills } from '../calc/bill-match.js';
-import { transferSuggestion } from '../calc/transfers.js';
-import { plural } from '../i18n/strings.js';
 
 export { merchantKey, categoriseDetailed, resolveCategory };
 
@@ -22,55 +22,6 @@ export function categorise(description, categories, rules = []) {
     return categoriseDescription(description, categories, rules);
 }
 
-/**
- * What an imported row is stored as: its category and review status (resolveCategory), unless it is an outgoing row whose
- * description names a bucket's bank label, which becomes a transfer to that bucket, marked suggested and left in To review
- * until the person confirms it (H9, FT-R-117/119). A category the person picked in the preview, or a learned rule, wins.
- * @returns {{categoryId:string, status:'ok'|'review', bucketId?:string, bucketSuggested?:true}}
- */
-export function resolveImportRow(description, amountCents, chosenId, data) {
-    const d = data || {};
-    const base = resolveCategory(description, chosenId, d.categories || [], d.rules || []);
-    const by = categoriseDetailed(description, d.categories || [], d.rules || []).by;
-    const sug = transferSuggestion({ description, amountCents }, { allocation: d.allocation, categoryBy: by, chosenCategoryId: chosenId });
-    return sug || base;
-}
-
-/** The bucket name an import row would be suggested as a transfer to (H9), or ''. `pickedId` is a category the person chose. */
-export function suggestedTransferName(description, amountCents, pickedId, data) {
-    const r = resolveImportRow(description, amountCents, pickedId, data);
-    if (!r.bucketSuggested) return '';
-    const b = ((data && data.allocation) || []).find((a) => a && String(a.id) === String(r.bucketId));
-    return b && b.name ? b.name : '';
-}
-
-/** The import summary line about suggested transfers (H9), or '' when none were suggested. Counts only, nothing from the file. */
-export function suggestedTransfersLine(rows) {
-    const n = (rows || []).filter((r) => r && r.bucketSuggested).length;
-    return n ? plural(n, 'a.import.transfers.one', 'a.import.transfers.many') : '';
-}
-
-/**
- * Learn on correct (FT-R-54). Adds or updates the rule for this merchant on `data.rules`.
- * @returns {{ok:boolean, rule?:object, created?:boolean, onUndo?:Function}}
- */
-export function learnRule(data, description, categoryId, bucketId) {
-    const key = merchantKey(description);
-    if (!data || !key || !categoryId) return { ok: false };
-    if (!Array.isArray(data.rules)) data.rules = [];
-    const rule = { key, categoryId };
-    if (bucketId) rule.bucketId = bucketId;
-    const i = data.rules.findIndex((r) => r && r.key === key);
-    const prev = i >= 0 ? data.rules[i] : null;
-    if (i >= 0) data.rules[i] = rule; else data.rules.push(rule);
-    const onUndo = () => {
-        const j = data.rules.indexOf(rule);
-        if (j < 0) return;
-        if (prev) data.rules[j] = prev; else data.rules.splice(j, 1);
-    };
-    return { ok: true, rule, created: !prev, onUndo };
-}
-
 /** Remove the rule for a key (Settings list). Returns true when one was removed. */
 export function removeRule(data, key) {
     if (!data || !Array.isArray(data.rules)) return false;
@@ -78,40 +29,6 @@ export function removeRule(data, key) {
     if (i < 0) return false;
     data.rules.splice(i, 1);
     return true;
-}
-
-const sameMerchant = (rule, description) => {
-    const k = merchantKey(description);
-    return k === rule.key || k.startsWith(rule.key + ' ');
-};
-
-/**
- * Past rows a rule may re-categorise: still unconfirmed (status 'review', not flagged confirmed)
- * and the same merchant. A row the user confirmed (status 'ok', or `confirmed`) is never listed.
- */
-export function similarUnconfirmed(rule, rows) {
-    if (!rule || !rule.key) return [];
-    return (rows || []).filter((r) => r && r.status === 'review' && !r.confirmed && sameMerchant(rule, r.description));
-}
-
-/**
- * Apply a rule to similar past unconfirmed rows. Pure: returns new row objects (category from the
- * rule, status 'ok', the rule's bucket when it has one) for the caller to store. Never touches a
- * confirmed row; running it again on the result finds nothing.
- */
-export function applyRuleToSimilar(rule, rows) {
-    return similarUnconfirmed(rule, rows).map((r) => {
-        const next = { ...r, categoryId: rule.categoryId, status: 'ok' };
-        if (rule.bucketId) next.bucketId = rule.bucketId;
-        return next;
-    });
-}
-
-/** Stored version of applyRuleToSimilar; returns how many rows changed. */
-export async function applyRuleToStored(rule) {
-    const changed = applyRuleToSimilar(rule, await listTransactions());
-    for (const r of changed) await updateTransaction(r);
-    return changed.length;
 }
 
 // ---- Manual vs imported duplicates (FT-R-57) ----

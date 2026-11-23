@@ -24,7 +24,7 @@ export const SAMPLE_HOUSEHOLD_TEST_CASES = [
             assert('non-essentials per fortnight', r2(pt.nonEssentialPerCycle), 366.62);
             const assets = data.assets.reduce((s, a) => s + a.balance, 0);
             const debts = data.liabilities.reduce((s, a) => s + a.balance, 0);
-            assert('net worth equals listed assets less debts', [totals.netWorth, assets - debts], [106650, 106650]);
+            assert('net worth equals listed assets less debts less HELP 24,600 (FT-R-125)', [totals.netWorth, assets - debts - 24600], [82050, 82050]);
             assert('hourly rate from gross over hours', data.incomeSources[0].hourlyRate, 43.02);
         },
     },

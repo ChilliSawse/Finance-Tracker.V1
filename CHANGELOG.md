@@ -2,6 +2,35 @@
 
 Reconstructed from git history by Build 15c. Entries before 2026-11-17 were not written at the time; they are grouped by month (Build 13 is the only build tag in the history). The first version is 1.0.0, a reconstruction anchor only: `package.json` was first added on 2026-07-07 (commit 9be0163), so the earlier entries predate any version file. Later groups add one minor version each, and from 2.0.0 each release is written at the time. The top entry is 2.0.0 and `package.json` says the same.
 
+## [2.1.0] — 2026-11-23
+
+Ledger now draws its sorting rules, asset types, tax figures and saving methods from one shared list on its own site, and keeps a built-in copy so it works offline from the first open.
+
+### Sorting
+- Bank descriptions are read more reliably, and short shop names no longer match inside other words
+- Over 400 Australian shops are recognised; their matches show as suggested for you to confirm
+- Correcting a category offers to remember that shop for next time, with Undo
+- Rows that look like a transfer (your own accounts, investments, super) show "Looks like a transfer — confirm?" in To review, and count as spending until you confirm
+- Settings lists the shared sorting rules, with a switch to turn them off and a way to go back to the previous list
+
+### Assets and net worth
+- Each asset suggests its kind, with realistic growth or resale curves (cars adjusted by fuel type)
+- Property has "Do you live here?"; each loan has "This loan is for" to link it to a property
+- Net worth is one figure everywhere and includes HELP
+- Financial independence leaves out your home and its loan, counts super from 60, and leaves out anything not yet confirmed; "Confirm all the sure ones" on Plan confirms the safe ones in one tap
+- Money in an offset account counts as cash
+
+### Tax
+- Tax figures come from the shared list, checked against legal ranges, with the built-in ATO tables kept as the fallback
+- New question: "Do you have private hospital cover?" Answering No adds the Medicare levy surcharge to the year-end estimate when your income is over the threshold
+- From 2026-27 the year-end estimate takes off the $1,000 standard deduction on work income (shown as an estimate); take-home pay is unchanged
+- The $250 Working Australians Tax Offset is ready for 2027-28 and turns on once that year's figures are law
+- A note warns when your employer super is over the yearly concessional cap
+
+### Saving methods
+- Plan's Change opens a Saving model sheet; its button says what it does ("Make it mine", "Switch back") and Undo replaces the second question
+- The Bucket method is the only method offered for now
+
 ## [2.0.0] — 2026-11-22
 
 The phase 1 rebuild of Ledger. Almost every screen is new, and your saved data moves across by itself.

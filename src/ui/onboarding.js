@@ -5,6 +5,7 @@
 // "explore with sample data" path. Settings > Run setup again fires `ledger:run-setup`.
 // `ft-onboarded` is still read, so nobody who finished or skipped the old onboarding sees setup again.
 
+import '../i18n/en-lazy-onboarding.js'; // onboarding strings (en-lazy)
 import './setup/setup.css'; // C7 — full-screen setup
 import { store } from '../state/store.js';
 import { t } from '../i18n/strings.js';

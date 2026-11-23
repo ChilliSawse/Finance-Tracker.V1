@@ -394,14 +394,14 @@ function createPanel({ txn = null, kind: startKind = null } = {}) {
                     description: textNote && textNote !== (txn.note || '') ? f.description : txn.description };
                 if (store && !(isTransfer() && s.incoming)) next.bucketId = store; else delete next.bucketId;
                 delete next.bucketSuggested; // saving it is confirming it (FT-R-117)
+                delete next.transferSuggested;
                 const prev = txn;
                 await updateTransaction(next);
                 close();
                 await afterChange();
-                showUndoToast({
-                    message: t('a.quickAdd.updated', { name: next.description || t('a.quickAdd.entryFallback') }),
-                    onUndo: async () => { await updateTransaction(prev); await afterChange(); },
-                });
+                // Learn on correct (FT-R-56) and its toast load only now, so they stay out of the cold-load core. If that fails
+                // the row is still saved: show the plain Updated toast, never "did not save".
+                if (!await import('./learn.js').then((m) => m.default(data, prev, next, afterChange), () => 0)) showUndoToast({ message: t('a.quickAdd.updated', { name: next.description || t('a.quickAdd.entryFallback') }), onUndo: async () => { await updateTransaction(prev); await afterChange(); } });
                 return;
             }
             const row = makeTransaction(fieldsFor());

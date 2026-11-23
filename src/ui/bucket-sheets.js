@@ -8,9 +8,9 @@ import { t } from '../i18n/strings.js';
 import { store } from '../state/store.js';
 import {
     getBuckets, setSplit, renameBucket, addBucket, deleteBucketWithMove, addGoal, updateGoal, removeGoal,
-    forkOwnTemplate, switchBackToBase, setMojo, addMojoStep, addTarget, updateTarget, removeTarget,
+    forkOwnTemplate, setMojo, addMojoStep, addTarget, updateTarget, removeTarget,
 } from '../state/saving-model.js';
-import { BUCKET_METHOD, suggestSplit, buildTree, bucketBalanceCents, canReturnToBase } from '../calc/saving-model.js';
+import { BUCKET_METHOD, suggestSplit, buildTree, bucketBalanceCents } from '../calc/saving-model.js';
 import { smilePlan } from '../calc/smile.js';
 import { planTotals, netPerPayCents } from '../calc/plan.js';
 import { nextPayDates, toIso, parseIso } from '../calc/pay-cycle.js';
@@ -336,18 +336,16 @@ function openSplit(d) {
 async function openTemplate(d) {
     const sm = d.savingModel;
     if (!sm) return;
-    const custom = typeof sm.id === 'string' && sm.id.startsWith('custom-');
-    const baseName = BUCKET_METHOD.name;
-    if (custom) {
-        if (!canReturnToBase(sm, d.allocation, d.bucketGoals)) { showToast(t('e.plan.tplStays', { name: baseName })); return; }
-        if (await confirmDialog({ title: t('e.plan.tplBackAsk', { name: baseName }), confirmLabel: t('e.plan.switchBack') })) finish(switchBackToBase(d));
-        return;
-    }
-    openSheet({
-        title: t('e.sheet.tplTitle'), saveLabel: t('e.sheet.tplSave'),
-        fields: [{ key: 'name', label: t('e.sheet.tplName'), type: 'text', required: true, hint: t('e.sheet.tplHint') }],
-        values: { name: t('e.sheet.tplNameDefault') },
-        onSave: (v) => finish(forkOwnTemplate(d, { name: v.name })),
+    const { openModelPicker } = await import('./model-picker.js'); // lazy: the catalogue picker (DB15)
+    openModelPicker({
+        data: d,
+        onResult: (res) => finish(res),
+        onOwn: () => openSheet({
+            title: t('e.sheet.tplTitle'), saveLabel: t('e.sheet.tplNameSave'),
+            fields: [{ key: 'name', label: t('e.sheet.tplName'), type: 'text', required: true, hint: t('e.sheet.tplHint') }],
+            values: { name: t('e.sheet.tplNameDefault') },
+            onSave: (v) => finish(forkOwnTemplate(d, { name: v.name })),
+        }),
     });
 }
 

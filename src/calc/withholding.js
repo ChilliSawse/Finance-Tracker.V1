@@ -4,7 +4,7 @@
 // exactly: a and b are scaled by 10^4, x is in cents, y comes out in 10^-6 dollars.
 // Tables come from tax-tables/ by income year (picked by date elsewhere; FT-R-66).
 
-import { TAX_TABLES, resolveTablesForDate } from './tax-tables/index.js';
+import { tablesForFy, resolveTablesForDate } from './tax-tables/index.js';
 
 const COEF = 10000; // coefficient scale
 const MICRO = 1000000; // y unit: 10^-6 dollars (a x 10^4 times x in cents)
@@ -25,7 +25,7 @@ const toCents = (dollars) => Math.round((Number(dollars) || 0) * 100);
 
 /** Tables for an income-year key ('2025-26') or an ISO date; never undefined. */
 function tablesFor(fy) {
-    if (typeof fy === 'string' && TAX_TABLES[fy]) return TAX_TABLES[fy];
+    if (typeof fy === 'string' && tablesForFy(fy)) return tablesForFy(fy);
     return resolveTablesForDate(fy || new Date()).tables;
 }
 

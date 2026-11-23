@@ -163,6 +163,7 @@ export const TODAY_TEST_CASES = [
                 const snaps = listSnapshots();
                 assert('the old snapshot is untouched (no definition mark)', snaps[0], { date: '2000-01-01', netWorth: 1, savingsRate: 12.3 });
                 assert('the new snapshot is marked and has the amount', [snaps[1].savingsDef, snaps[1].savingsPerPayCents, snaps[1].savingsRate], ['buckets', 54000, 29]);
+                assert('FT-R-125: the new snapshot says net worth now includes HELP; the old one is left unmarked so a chart can say the measure changed', [snaps[0].netWorthDef, snaps[1].netWorthDef], [undefined, 'withHelp']);
                 mem.set('ft-milestones', JSON.stringify({ savingsRate: 20 }));
                 checkMilestones({ netWorth: 0, savingsRate: 45, savingsPerPayCents: 80000 });
                 assert('first run after the change: baseline set silently, nothing announced', [heard.length, JSON.parse(mem.get('ft-milestones')).savingsRate, JSON.parse(mem.get('ft-milestones')).savingsDef], [0, 30, 'buckets']);

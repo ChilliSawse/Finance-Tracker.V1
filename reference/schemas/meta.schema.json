@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledger.invalid/ref/schemas/meta.schema.json",
+  "title": "merchants/_meta.json and models/_meta.json: the rev of a kind that is built from many files",
+  "type": "object",
+  "required": ["schema", "rev"],
+  "additionalProperties": false,
+  "properties": { "schema": { "const": 1 }, "rev": { "$ref": "common.schema.json#/$defs/rev" } }
+}

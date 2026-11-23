@@ -32,7 +32,7 @@ export function transactionHash(date, description, amountCents) {
 }
 
 export function makeTransaction({ date, description, amountCents, categoryId = 'other', source = 'manual', importBatchId = null,
-    status, bucketId, bucketSuggested, billMatch, note }) {
+    status, bucketId, bucketSuggested, transferSuggested, billMatch, note }) {
     const cents = Math.round(amountCents || 0);
     const id = crypto.randomUUID();
     const row = {
@@ -49,6 +49,7 @@ export function makeTransaction({ date, description, amountCents, categoryId = '
     if (status !== undefined) row.status = status;
     if (bucketId !== undefined) row.bucketId = bucketId;
     if (bucketSuggested) row.bucketSuggested = true;
+    if (transferSuggested) row.transferSuggested = true; // wording guess only (FT-R-129): never changes the category or the totals
     if (billMatch !== undefined) row.billMatch = billMatch;
     if (note !== undefined) row.note = note;
     return row;
@@ -145,6 +146,12 @@ export async function listTransactions(opts = {}) {
     result.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
     result = result.map(normaliseTransaction);
     return limit ? result.slice(0, limit) : result;
+}
+
+/** One stored row by id, or null. */
+export async function getTransaction(id) {
+    const row = await withStore('transactions', 'readonly', (store) => store.get(id));
+    return row ? normaliseTransaction(row) : null;
 }
 
 export async function countTransactions() {

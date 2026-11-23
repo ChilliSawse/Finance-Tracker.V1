@@ -4,7 +4,7 @@
 //   openSheet({title, fields, values, onSave, onDelete, validate, plausibility, saveLabel, content, readOnly})
 //     -> { close(), setError(field, message), setNote(field, message, fixes), getValues(), el }
 //
-// fields:       [{key, label, type: text|money|number|select|date|percent|toggle, options, hint, required, unit}]
+// fields:       [{key, label, type: text|money|number|select|date|percent|toggle, options, hint, required, unit, hidden}]
 //               money is returned in the collection's own unit (dollars; `unit:'cents'` gives integer cents).
 // validate:     (values) => {field: message}. Any message blocks Save, and the rejected value is put back.
 // plausibility: (values) => [{field, message, fix?: {label, apply(values) -> patch}}]. A quiet note, never blocks.
@@ -309,7 +309,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
     const form = el('form', 'sheet-body');
     form.noValidate = true;
     if (Array.isArray(content)) for (const n of content) if (n) form.appendChild(n); // A11: read-only blocks (help text), built with textContent
-    for (const f of fields) form.appendChild(buildField(f, model, id));
+    for (const f of fields) if (!f.hidden) form.appendChild(buildField(f, model, id)); // a hidden field has no row: its value only travels (a confirm tap on a note sets it)
     const formError = el('div', 'sheet-error sheet-form-error');
     formError.setAttribute('role', 'alert');
     formError.hidden = true;
@@ -327,7 +327,9 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
     const cancelBtn = el('button', 'sheet-btn', readOnly ? t('d.sheet.close') : t('d.sheet.cancel'));
     cancelBtn.type = 'button';
     cancelBtn.dataset.sheetAction = 'close';
-    const saveBtn = el('button', 'sheet-btn is-primary', saveLabel || t('d.sheet.save'));
+    // saveLabel may be a function of the current values (the button is named after the choice)
+    const labelNow = () => (typeof saveLabel === 'function' ? saveLabel(model.current()) : saveLabel) || t('d.sheet.save');
+    const saveBtn = el('button', 'sheet-btn is-primary', labelNow());
     saveBtn.type = 'submit';
     saveBtn.dataset.sheetAction = 'save';
     saveBtn.setAttribute('form', `${id}-form`);
@@ -347,6 +349,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
             if (!c) continue;
             if (f.type === 'toggle') c.checked = !!model.raw[f.key]; else c.value = model.raw[f.key] ?? '';
         }
+        if (typeof saveLabel === 'function' && !saving) saveBtn.textContent = labelNow(); // values set in code move the label too
     }
 
     function setError(key, message) {
@@ -420,7 +423,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
         saveBtn.textContent = t('d.sheet.saving');
         try {
             const r = typeof onSave === 'function' ? await onSave(res.values) : undefined;
-            if (r === false) { saving = false; saveBtn.disabled = false; saveBtn.textContent = saveLabel || t('d.sheet.save'); return; }
+            if (r === false) { saving = false; saveBtn.disabled = false; saveBtn.textContent = labelNow(); return; }
             close();
         } catch (err) {
             // H4: log what failed and where, never the values: error type, a short message, the top stack frames, field keys.
@@ -431,7 +434,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
             }));
             saving = false;
             saveBtn.disabled = false;
-            saveBtn.textContent = saveLabel || t('d.sheet.save');
+            saveBtn.textContent = labelNow();
             setError('_form', t('d.sheet.saveFailed'));
         }
     }
@@ -445,9 +448,16 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
         else if (act === 'delete') { e.preventDefault(); close(); onDelete(); }
         else if (act === 'fix') {
             e.preventDefault();
+            // only a note a tap on its fix changes is announced ("Confirmed. Save to keep it."); notes that change as you type are not live
+            const live = a.dataset.fixField ? layer.querySelector(`[data-note-for="${CSS.escape(a.dataset.fixField)}"]`) : null;
+            if (live) live.setAttribute('aria-live', 'polite');
             model.applyFix(Number(a.dataset.noteIndex));
             syncInputs();
             renderNotes();
+            // the button that was tapped may be gone: keep focus on the note that replaced it, else on the field
+            const fk = a.dataset.fixField;
+            const box = fk ? layer.querySelector(`[data-note-for="${CSS.escape(fk)}"]`) : null;
+            if (box && !box.hidden) { box.tabIndex = -1; box.focus(); } else if (fk && inputEl(fk)) inputEl(fk).focus();
         }
     });
     layer.addEventListener('submit', (e) => { e.preventDefault(); save(); });
@@ -455,6 +465,8 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
         const c = e.target.closest('[data-key]');
         if (!c) return;
         model.set(c.dataset.key, c.type === 'checkbox' ? c.checked : c.value);
+        if (typeof saveLabel === 'function' && !saving) saveBtn.textContent = labelNow();
+        layer.querySelectorAll('[data-note-for][aria-live]').forEach((n) => n.removeAttribute('aria-live')); // typing again: quiet
         setError(c.dataset.key, '');
         renderNotes();
     };

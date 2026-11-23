@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
 
 const APP_VERSION = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')).version;
 
@@ -25,6 +26,23 @@ function ftCspHash() {
                 if (!/script-src [^;]*'sha256-[^']+'/.test(html)) throw new Error('ft-csp-hash: no sha256 source in script-src');
                 return html.replace(/(script-src [^;]*)'sha256-[^']+'/, "$1'sha256-" + hash + "'");
             },
+        },
+    };
+}
+
+// FT-0032 DB1: builds the shared reference database (reference/) into <outDir>/ref/: hashed data files, manifest.json
+// and the pinned baseline. It runs in writeBundle, before vite-plugin-pwa's closeBundle globs the output, so the baseline
+// (and only the baseline) lands in the precache. Invalid data fails the build. FT_REF_SRC points it at another source folder (tests).
+function ftReference() {
+    let outDir = '';
+    return {
+        name: 'ft-reference',
+        apply: 'build',
+        configResolved(c) { outDir = resolve(c.root, c.build.outDir); },
+        async writeBundle() {
+            const { buildToDist } = await import(pathToFileURL(resolve(__dirname, 'reference/tools/build.mjs')).href);
+            const r = buildToDist(outDir, { src: process.env.FT_REF_SRC || undefined });
+            this.info('reference ' + r.built.manifest.dataVersion + ' written to ref/ (baseline ' + r.baselineGzip + ' bytes gzip)');
         },
     };
 }
@@ -73,6 +91,7 @@ const STARTUP_MODULES = new Set([
     'state/migrations.js',
     'state/milestones.js',
     'state/plan-migration.js',
+    'state/ref-overrides-migration.js',
     'state/safety-db.js',
     'state/sample-flag.js',
     'state/sanitize.js',
@@ -140,6 +159,7 @@ export default defineConfig({
     },
     plugins: [
         ftCspHash(),
+        ftReference(),
         VitePWA({
             registerType: 'prompt', // keep the explicit "Update Now" banner UX
             // manifest.json + icons live in public/ and are referenced from the
@@ -151,6 +171,13 @@ export default defineConfig({
                 // App-shell fallback so deep links / offline navigations resolve.
                 navigateFallback: 'index.html',
                 cleanupOutdatedCaches: true,
+                // FT-0032 R3: ref/ data is fetched and cached at run time, so a data-only deploy leaves sw.js unchanged (no update
+                // banner). Only ref/baseline/** (the pinned offline fallback) is precached.
+                globIgnores: ['ref/*.json', 'ref/!(baseline)/**'],
+                runtimeCaching: [
+                    { urlPattern: /\/ref\/manifest\.json$/, handler: 'NetworkFirst', options: { cacheName: 'ft-ref-manifest', networkTimeoutSeconds: 3 } },
+                    { urlPattern: /\/ref\/(?!baseline\/)[^?]+\.json$/, handler: 'NetworkOnly' }, // the client keeps its own verified copies (ft-ref-v1)
+                ],
             },
         }),
     ],

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ledger.invalid/ref/schemas/manifest.schema.json",
+  "title": "ref/manifest.json (R3 section 5.1)",
+  "type": "object",
+  "required": ["schema", "dataVersion", "released", "minApp", "files", "disabled", "sig"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "$ref": "common.schema.json#/$defs/schemaInt" },
+    "dataVersion": { "type": "string", "pattern": "^\\d{4}\\.(0[1-9]|1[0-2])\\.[1-9]\\d*$" },
+    "released": { "$ref": "common.schema.json#/$defs/date" },
+    "minApp": { "$ref": "common.schema.json#/$defs/semver" },
+    "files": {
+      "type": "object",
+      "required": ["categories", "merchants", "assetTypes", "models"],
+      "additionalProperties": false,
+      "properties": {
+        "categories": { "$ref": "#/$defs/file" },
+        "merchants": { "$ref": "#/$defs/file" },
+        "assetTypes": { "$ref": "#/$defs/file" },
+        "models": { "$ref": "#/$defs/file" },
+        "tax": { "$ref": "#/$defs/file" }
+      }
+    },
+    "disabled": { "type": "array", "items": { "enum": ["categories", "merchants", "assetTypes", "models", "tax"] }, "uniqueItems": true, "description": "Kill switch: file kinds the app must ignore" },
+    "sig": { "type": ["string", "null"], "description": "Reserved for a later signature; null while the data is same-origin" }
+  },
+  "$defs": {
+    "file": {
+      "type": "object",
+      "required": ["path", "sha256", "bytes", "rev"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "pattern": "^[a-z0-9][a-z0-9/_-]*\\.[0-9a-f]{8}\\.json$" },
+        "sha256": { "$ref": "common.schema.json#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "rev": { "$ref": "common.schema.json#/$defs/rev" }
+      }
+    }
+  }
+}

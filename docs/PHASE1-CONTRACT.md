@@ -20,7 +20,7 @@ search `src/` before writing new code; never skip, weaken or delete a test.
 | 5 | `leftThisPay({data, totals, txns, today})` returns `{poolCents, spentCents, billsDueCents, leftCents, perDayCents, cycle, essentialSoFarCents, nonEssentialSoFarCents, unsortedCents, toReview}` per bucket | B3b | A6, A7 | no | n/a |
 | 6 | `todayModel()` and `activityFeed(range)` (transactions plus bill occurrences: Upcoming, Due, Missed, Paid); `ready:false` until the spend cache loads | B7 | A6, A7 | no (wave 7 before the screens) | n/a |
 | 7 | `plan[]` PlanItem `{id, categoryId, name, amount, frequency, anchorDue, matchRule, bucketId, inTotals, legacy}`; state API `addPlanItem`, `updatePlanItem`, `removePlanItem`, `convertToBill`, each returning an undo payload | B3 (shape), B4 (API) | A9a, A9b, C6, C7, F1 | no | n/a |
-| 8 | `categorise(description, categories, rules=[])`, `learnRule`, `applyRuleToSimilar`, `merchantKey`, `matchBills` | B8 (body) | A8, import flows | yes: `categorise` delegates to `categoriseDescription` | `src/state/rules.js` |
+| 8 | `categorise(description, categories, rules=[])`, `learnRule`, `applyRuleToSimilar`, `merchantKey`, `matchBills` (DB9: `learnRule` and the apply helpers live in `src/state/rule-learn.js`, loaded on demand) | B8 (body) | A8, import flows | yes: `categorise` delegates to `categoriseDescription` | `src/state/rules.js` |
 | 9 | `exportAllTransactions()`, `importTransactions(rows)` | B2 | D2 | no | n/a |
 | 10 | `savingModel`, `allocation[i]` fields (`id, role, slot, kind, bankLabel, autoCreated`), `bucketGoals[]`, `liabilities[i].id`, `liabilities[i].minRepayment` (name fixed here; F2 adds the other debt fields) | E4 (shape, migration), E5 (API) | A6, B3b, C7, E6 to E9 | no | n/a |
 | 11 | `newBucket()` factory, `runPayRoll`, `setAutoCredit`, `relinkCategory`, `canReturnToBase`, `forkOwnTemplate` | E5 | E6, E7, E8 | no | n/a |
@@ -35,7 +35,7 @@ search `src/` before writing new code; never skip, weaken or delete a test.
 | 20 | `runMigrationChain(data, {raw, source, storage})` with the four modules' `needsX`, `migrateX`, `afterImport` (F2's included) | M0 | autosave, import, dry-run script | yes: all four steps wired, modules are stubs until their owners land | `src/state/migration-chain.js`, `plan-migration.js`, `bucket-migration.js`, `income-migration.js`, `asset-debt-migration.js` |
 | 21 | `resolveAt(data, changes, date)`, `segments(changes, from, to)`, `scenarioHeadline`, `makeRealPlan`; store API `listScenarios`, `saveScenario`, `duplicateScenario` | F1 (body) | F3, F4, F6, F7, F8a, F8b | yes (M-14): `resolveAt` returns a deep clone, `segments` returns `[]` | `src/calc/scenario.js` |
 | 22 | `assetValueAt`, `debtSchedule`, `suggestKind`, `suggestLabel`; `newAsset`, `newDebt`, `assetSheetSpec`, `debtSheetSpec` | F2 (maths), F5 (sheets) | A9b, F3, F6 | yes (M-14): legacy shape | `src/ui/plan-assets-debts.js` |
-| 23 | `fiNumber`, `yearsToFI`, `projectNetWorth`, `goingTowardsPerYear`, `savingsRatePlanned`, `explainFi`, `fiAge` | F3 | F6, F8b | no | n/a |
+| 23 | `fiNumber`, `yearsToFI`, `projectNetWorth`, `goingTowardsPerYear`, `savingsRatePlanned`, `explainFi` (DB12: now in `src/calc/fi-explain.js`, so its lazy strings stay out of the first load), `fiAge` | F3 | F6, F8b | no | n/a |
 | 24 | `planGoals`, `requiredPerPay`, `earningsThreeWays`, `explainRequired` | F4 | F8a, F8b | no | n/a |
 | 25 | `openScenario(id)` | F7 | F6 | yes (M-14): returns false | `src/ui/scenario/index.js` |
 

@@ -26,7 +26,6 @@ import { todayModel } from '../state/today-model.js';
 import { esc, escNum } from './html.js';
 import { openSheet } from './sheet.js';
 import { showUndoToast, showToast } from './toast.js';
-import { confirmDialog } from './confirm.js';
 import { openBucketSheet } from './bucket-sheets.js';
 
 // ---------- small helpers ----------
@@ -209,7 +208,7 @@ export function buildBucketsModel(data, today, ctx = {}) {
 
     return {
         today, netCents: net, freq: source && source.paySchedule ? String(source.paySchedule) : '',
-        template: { custom, name: sm.name || BUCKET_METHOD.name, after: sm.after || null, baseName: BUCKET_METHOD.name, coreCount: (rules.coreBuckets || BUCKET_METHOD.rules.coreBuckets).length },
+        template: { custom, name: sm.name || BUCKET_METHOD.name, after: sm.after || null, baseName: BUCKET_METHOD.name, basedOnName: custom && typeof sm.basedOnName === 'string' && sm.basedOnName ? sm.basedOnName : null, coreCount: (rules.coreBuckets || BUCKET_METHOD.rules.coreBuckets).length },
         canReturn: custom && canReturnToBase(sm, d.allocation, d.bucketGoals),
         whyNot: custom ? [...new Set(bounds.violations.map((v) => v.code))] : [],
         tiles, linkable: linkable.map((b) => ({ id: b.id, name: b.name, slot: slotOf(b) })),
@@ -298,7 +297,7 @@ function addBucketHtml(m, ui) {
 
 function mainCardHtml(m, ui) {
     const tp = m.template;
-    const who = tp.custom ? t('e.plan.tplOwnBased', { name: tp.name, base: tp.baseName }) : (tp.after ? t('e.plan.tplAfter', { name: tp.name, after: tp.after }) : tp.name);
+    const who = tp.custom ? t('e.plan.tplOwnBased', { name: tp.name, base: tp.basedOnName || tp.baseName }) : (tp.after ? t('e.plan.tplAfter', { name: tp.name, after: tp.after }) : tp.name);
     const nudge = m.nudge ? `<div class="pb-nudge" role="status"><span>${T('e.plan.nudge', { parts: suggestParts(m.nudge) })}</span>
         <span class="pb-acts"><button type="button" class="btn sm primary" data-pb="use-suggested">${esc(t('e.plan.useThese'))}</button><button type="button" class="btn sm" data-pb="dismiss-nudge">${esc(t('e.plan.notNow'))}</button></span></div>` : '';
     const guide = BUCKET_METHOD.guide;
@@ -587,15 +586,9 @@ function openSplitSheet(root) {
 
 async function openTemplateSheet(root) {
     const d = store.financeData;
-    const m = buildBucketsModel(d, todayIso(), {});
-    if (!m) return;
-    const name = m.template.baseName;
-    if (m.template.custom) {
-        if (!m.canReturn) { showToast(t('e.plan.tplStays', { name })); return; }
-        if (await confirmDialog({ title: t('e.plan.tplBackAsk', { name }), confirmLabel: t('e.plan.switchBack') })) handleResult(root, switchBackToBase(d));
-        return;
-    }
-    if (await confirmDialog({ title: t('e.plan.ownTitle'), body: t('e.plan.tplAsk'), confirmLabel: t('e.plan.makeMine') })) handleResult(root, forkOwnTemplate(d));
+    if (!d || !d.savingModel) return;
+    const { openModelPicker } = await import('./model-picker.js'); // lazy: the catalogue picker (DB15)
+    openModelPicker({ data: d, onResult: (res) => handleResult(root, res) });
 }
 
 function openGoalSheet(root, id, parent) {

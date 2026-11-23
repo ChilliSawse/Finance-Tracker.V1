@@ -1,0 +1,2014 @@
+{
+ "schema": 1,
+ "rev": 1,
+ "years": {
+  "2025-26": {
+   "incomeTax": {
+    "resident": {
+     "value": [
+      [
+       0,
+       18200,
+       0
+      ],
+      [
+       18200,
+       45000,
+       0.16
+      ],
+      [
+       45000,
+       135000,
+       0.3
+      ],
+      [
+       135000,
+       190000,
+       0.37
+      ],
+      [
+       190000,
+       null,
+       0.45
+      ]
+     ],
+     "unit": "[from,to,rate] AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents",
+     "retrieved": "2026-11-22",
+     "quote": "Resident tax rates 2025-26: $18,201-$45,000 16c for each $1 over $18,200; $45,001-$135,000 $4,288 plus 30c ...; $135,001-$190,000 $31,288 plus 37c; $190,001 and over $51,638 plus 45c"
+    },
+    "foreignResident": {
+     "value": [
+      [
+       0,
+       135000,
+       0.3
+      ],
+      [
+       135000,
+       190000,
+       0.37
+      ],
+      [
+       190000,
+       null,
+       0.45
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-foreign-residents",
+     "retrieved": "2026-11-22",
+     "quote": "Foreign resident tax rates 2025-26: 0-$135,000 30c for each $1; $135,001-$190,000 $40,500 plus 37c; $190,001 and over $60,850 plus 45c"
+    },
+    "workingHolidayMaker": {
+     "value": [
+      [
+       0,
+       45000,
+       0.15
+      ],
+      [
+       45000,
+       135000,
+       0.3
+      ],
+      [
+       135000,
+       190000,
+       0.37
+      ],
+      [
+       190000,
+       null,
+       0.45
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-working-holiday-makers",
+     "retrieved": "2026-11-22",
+     "quote": "Working holiday maker tax rates 2025-26: 0-$45,000 15c for each $1; $45,001-$135,000 $6,750 plus 30c; ..."
+    },
+    "lito": {
+     "value": {
+      "max": 700,
+      "fullUntil": 37500,
+      "rate1": 0.05,
+      "step1Until": 45000,
+      "base2": 325,
+      "rate2": 0.015,
+      "endsAt": 66667
+     },
+     "unit": "AUD / rate",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/tax-offsets/low-income-tax-offset",
+     "retrieved": "2026-11-22",
+     "quote": "$37,500 or less max offset $700; $37,501-$45,000 $700 minus 5c per $1 above $37,500; $45,001-$66,667 $325 minus 1.5c per $1 above $45,000"
+    }
+   },
+   "medicare": {
+    "levyRate": {
+     "value": 0.02,
+     "unit": "fraction of taxable income",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents",
+     "retrieved": "2026-11-22",
+     "quote": "The above rates do not include the Medicare levy of 2%."
+    },
+    "singleLowerThreshold": {
+     "value": 28011,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-for-low-income-earners",
+     "retrieved": "2026-11-22",
+     "quote": "In 2025-26 ... All other taxpayers lower threshold $28,011, upper $35,013",
+     "note": "Raised from $27,222 by Act No. 58 of 2026 (C2026A00058, Royal Assent 30 Jun 2026), effective 1 Jul 2025; Act text opened and confirmed by the independent check.",
+     "act": {
+      "name": "Treasury Laws Amendment (Delivering an Efficient and Trusted Tax System) Act 2026",
+      "no": "No. 58 of 2026",
+      "id": "C2026A00058",
+      "assent": "2026-06-30",
+      "ref": "Schedule 5"
+     }
+    },
+    "singleUpperThreshold": {
+     "value": 35013,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-for-low-income-earners",
+     "retrieved": "2026-11-22",
+     "quote": "All other taxpayers $28,011 / $35,013"
+    },
+    "singleSeniorLowerThreshold": {
+     "value": 44268,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-for-low-income-earners",
+     "retrieved": "2026-11-22",
+     "quote": "If you're entitled to SAPTO $44,268 / $55,335"
+    },
+    "singleSeniorUpperThreshold": {
+     "value": 55335,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-for-low-income-earners",
+     "retrieved": "2026-11-22",
+     "quote": "If you're entitled to SAPTO $44,268 / $55,335"
+    },
+    "familyLowerThreshold": {
+     "value": 47238,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-family-income",
+     "retrieved": "2026-11-22",
+     "quote": "The lower family income threshold is either $47,238 / $61,623 if you're entitled to the SAPTO"
+    },
+    "familyLowerThresholdSenior": {
+     "value": 61623,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-family-income",
+     "retrieved": "2026-11-22",
+     "quote": "$61,623 if you're entitled to the SAPTO"
+    },
+    "familyUpperThreshold": {
+     "value": 59047,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-family-income",
+     "retrieved": "2026-11-22",
+     "quote": "The upper family income threshold is either $59,047 / $77,028 if SAPTO"
+    },
+    "familyUpperThresholdSenior": {
+     "value": 77028,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-family-income",
+     "retrieved": "2026-11-22",
+     "quote": "$77,028 if you're entitled to SAPTO"
+    },
+    "perChildLower": {
+     "value": 4338,
+     "unit": "AUD per dependent child",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-family-income",
+     "retrieved": "2026-11-22",
+     "quote": "The lower family income threshold increases by $4,338 for each dependent child."
+    },
+    "perChildUpper": {
+     "value": 5423,
+     "unit": "AUD per dependent child",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-family-income",
+     "retrieved": "2026-11-22",
+     "quote": "The upper income threshold increases by $5,423 for each dependent child."
+    },
+    "phaseInRate": {
+     "value": 0.1,
+     "unit": "fraction of income above lower threshold",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy/medicare-levy-reduction/medicare-levy-reduction-for-low-income-earners",
+     "retrieved": "2026-11-22",
+     "quote": "ATO example: taxable income $29,000 gives levy $98.90",
+     "working": "(29,000 - 28,011) x 10% = 98.90"
+    }
+   },
+   "mls": {
+    "singleTiers": {
+     "value": [
+      [
+       0,
+       101000,
+       0
+      ],
+      [
+       101001,
+       118000,
+       0.01
+      ],
+      [
+       118001,
+       158000,
+       0.0125
+      ],
+      [
+       158001,
+       null,
+       0.015
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy-surcharge/medicare-levy-surcharge-income-thresholds-and-rates",
+     "retrieved": "2026-11-22",
+     "quote": "MLS 2025-26 single $101,000 or less / $101,001-$118,000 / $118,001-$158,000 / $158,001 or more; 0% 1% 1.25% 1.5%"
+    },
+    "familyTiers": {
+     "value": [
+      [
+       0,
+       202000,
+       0
+      ],
+      [
+       202001,
+       236000,
+       0.01
+      ],
+      [
+       236001,
+       316000,
+       0.0125
+      ],
+      [
+       316001,
+       null,
+       0.015
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy-surcharge/medicare-levy-surcharge-income-thresholds-and-rates",
+     "retrieved": "2026-11-22",
+     "quote": "Family threshold $202,000 or less / $202,001-$236,000 / $236,001-$316,000 / $316,001 or more"
+    },
+    "familyPerChildAfterFirst": {
+     "value": 1500,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy-surcharge/medicare-levy-surcharge-income-thresholds-and-rates",
+     "retrieved": "2026-11-22",
+     "quote": "The family income threshold is increased by $1,500 for each MLS dependent child after the first child."
+    }
+   },
+   "help": {
+    "bands": {
+     "value": [
+      [
+       0,
+       67000,
+       0
+      ],
+      [
+       67000,
+       125000,
+       0.15
+      ],
+      [
+       125000,
+       179285,
+       0.17
+      ],
+      [
+       179286,
+       null,
+       0.1
+      ]
+     ],
+     "unit": "[from,to,rate] on repayment income",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/study-and-training-support-loans-rates-and-repayment-thresholds",
+     "retrieved": "2026-11-22",
+     "quote": "2025-26: $0-$67,000 Nil; $67,001-$125,000 15c for each $1 over $67,000; $125,001-$179,285 $8,700 plus 17c for each $1 over $125,000; $179,286 and over 10% of your total repayment income",
+     "note": "The second band is 17c for each $1 over the band start, plus a fixed $8700 (the first band's 15c over its width). The draft carried this row's rate as a sentence; it is the number 0.17 here."
+    },
+    "indexation": {
+     "value": 0.028,
+     "unit": "fraction (applied 1 Jun 2026, the rate for the 2025-26 year)",
+     "fy": "2025-26",
+     "appliesFrom": "2026-06-01",
+     "status": "legislated",
+     "source": "https://www.studyassist.gov.au/news/indexation-28-will-be-applied-your-study-loan-1-june-2026",
+     "retrieved": "2026-11-22",
+     "quote": "Indexation in 2026 will be applied at the rate of 2.8%",
+     "note": "Indexation is applied on 1 June, inside the income year ending 30 June, so 2.8% (1 Jun 2026) is the 2025-26 year rate and 3.2% (1 Jun 2025) belonged to 2024-25."
+    }
+   },
+   "payg": {
+    "instrument": {
+     "value": "Taxation Administration (Withholding Schedules) Instrument (No. 2) 2025, F2025L01016",
+     "unit": "id",
+     "fy": "2025-26",
+     "appliesFrom": "2025-09-24",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2025L01016/asmade/2025-09-01/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "The whole of this instrument ... commences 24 September 2025"
+    },
+    "scale1_noTFT": {
+     "value": [
+      [
+       150,
+       0.16,
+       0.16
+      ],
+      [
+       371,
+       0.2117,
+       7.755
+      ],
+      [
+       515,
+       0.189,
+       -0.6702
+      ],
+      [
+       932,
+       0.3227,
+       68.2367
+      ],
+      [
+       2246,
+       0.32,
+       65.7202
+      ],
+      [
+       3303,
+       0.39,
+       222.951
+      ],
+      [
+       null,
+       0.47,
+       487.2587
+      ]
+     ],
+     "unit": "[x less than, a, b] weekly; y = a*x - b",
+     "fy": "2025-26",
+     "appliesFrom": "2025-09-24",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2025L01016/asmade/2025-09-01/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Scale 1: 150 0.1600 0.1600; 371 0.2117 7.7550; 515 0.1890 -0.6702; 932 0.3227 68.2367; 2,246 0.3200 65.7202; 3,303 0.3900 222.9510; 3,303 & over 0.4700 487.2587"
+    },
+    "scale2_TFT": {
+     "value": [
+      [
+       361,
+       0,
+       0
+      ],
+      [
+       500,
+       0.16,
+       57.8462
+      ],
+      [
+       625,
+       0.26,
+       107.8462
+      ],
+      [
+       721,
+       0.18,
+       57.8462
+      ],
+      [
+       865,
+       0.189,
+       64.3365
+      ],
+      [
+       1282,
+       0.3227,
+       180.0385
+      ],
+      [
+       2596,
+       0.32,
+       176.5769
+      ],
+      [
+       3653,
+       0.39,
+       358.3077
+      ],
+      [
+       null,
+       0.47,
+       650.6154
+      ]
+     ],
+     "unit": "[x less than, a, b]",
+     "fy": "2025-26",
+     "appliesFrom": "2025-09-24",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2025L01016/asmade/2025-09-01/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Scale 2: 361 - -; 500 0.1600 57.8462; 625 0.2600 107.8462; 721 0.1800 57.8462; 865 0.1890 64.3365; 1,282 0.3227 180.0385; 2,596 0.3200 176.5769; 3,653 0.3900 358.3077; 3,653 & over 0.4700 650.6154"
+    },
+    "scale3_foreign": {
+     "value": [
+      [
+       2596,
+       0.3,
+       0.3
+      ],
+      [
+       3653,
+       0.37,
+       181.7308
+      ],
+      [
+       null,
+       0.45,
+       474.0385
+      ]
+     ],
+     "unit": "[x less than, a, b]",
+     "fy": "2025-26",
+     "appliesFrom": "2025-09-24",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2025L01016/asmade/2025-09-01/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Foreign residents - Scale 3: 2,596 0.3000 0.3000; 3,653 0.3700 181.7308; 3,653 & over 0.4500 474.0385"
+    },
+    "stsl_TFT": {
+     "value": [
+      [
+       1288,
+       0,
+       0
+      ],
+      [
+       2403,
+       0.15,
+       193.2692
+      ],
+      [
+       3447,
+       0.17,
+       241.3462
+      ],
+      [
+       null,
+       0.1,
+       0
+      ]
+     ],
+     "unit": "[x less than, a, b]",
+     "fy": "2025-26",
+     "appliesFrom": "2025-09-24",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2025L01016/asmade/2025-09-01/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Schedule 8 tax-free threshold claimed: 1,288 0.00; 2,403 0.15 193.2692; 3,447 0.17 241.3462; 3,447 & over 0.10"
+    },
+    "stsl_noTFT": {
+     "value": [
+      [
+       938,
+       0,
+       0
+      ],
+      [
+       2053,
+       0.15,
+       140.7692
+      ],
+      [
+       2597,
+       0.17,
+       181.8462
+      ],
+      [
+       null,
+       0.1,
+       0
+      ]
+     ],
+     "unit": "[x less than, a, b]",
+     "fy": "2025-26",
+     "appliesFrom": "2025-09-24",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2025L01016/asmade/2025-09-01/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Schedule 8 no tax-free threshold: 938; 2,053 0.15 140.7692; 2,597 0.17 181.8462; 2,597 & over 0.10"
+    },
+    "medicareParamsInSchedule": {
+     "value": {
+      "weeklyThreshold": 500,
+      "weeklyShadeIn": 625,
+      "familyThreshold": 43846,
+      "perChild": 4027
+     },
+     "unit": "Schedule 1 Medicare levy parameters (scale 2)",
+     "fy": "2025-26",
+     "appliesFrom": "2025-09-24",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2025L01016/asmade/2025-09-01/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Medicare levy parameters Scale 2: Weekly earnings threshold 500; shade-in 625; family threshold 43,846; additional child 4,027",
+     "note": "These are the OLDER ($26,000-based) thresholds. The schedule's Scale 2 does not use the $28,011 annual threshold during 2025-26."
+    },
+    "pay53weeks": {
+     "value": "ATO has a separate rule for 53 weekly / 27 fortnightly pay years",
+     "unit": "note",
+     "fy": "2025-26",
+     "appliesFrom": "2025-09-24",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2025L01016/asmade/2025-09-01/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "If you have 53 weekly pays or 27 fortnightly pays in a financial year, refer to the 'When there are 53 weekly or 27 fortnightly pays in a year' section."
+    }
+   },
+   "super": {
+    "sgRate": {
+     "value": 0.12,
+     "unit": "fraction of ordinary time earnings",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/super-guarantee",
+     "retrieved": "2026-11-22",
+     "quote": "1 July 2025 - 30 June 2026 General super guarantee 12.00"
+    },
+    "concessionalCap": {
+     "value": 30000,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps",
+     "retrieved": "2026-11-22",
+     "quote": "2025-26 All ages $30,000"
+    },
+    "nonConcessionalCap": {
+     "value": 120000,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps",
+     "retrieved": "2026-11-22",
+     "quote": "2025-26 $120,000"
+    },
+    "bringForward": {
+     "value": [
+      [
+       1760000,
+       360000,
+       3
+      ],
+      [
+       1880000,
+       240000,
+       2
+      ],
+      [
+       2000000,
+       120000,
+       1
+      ]
+     ],
+     "unit": "[TSB upper bound, first-year cap, years] (below 1.76m: 360k/3y; 1.76m-<1.88m: 240k/2y; 1.88m-<2.0m: 120k; 2.0m+: nil)",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super/growing-and-keeping-track-of-your-super/caps-limits-and-tax-on-super-contributions/non-concessional-contributions-cap",
+     "retrieved": "2026-11-22",
+     "quote": "Bring-forward cap first year (applying to 2025-26): Less than $1.76 million $360,000 3 years; $1.76 million to less than $1.88 million $240,000 2 years; $1.88 million to less than $2 million $120,000"
+    },
+    "carryForwardTsbLimit": {
+     "value": 500000,
+     "unit": "AUD total super balance on 30 June prior year",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps",
+     "retrieved": "2026-11-22",
+     "quote": "if you have a total superannuation balance of less than $500,000 on 30 June of the previous financial year, you may be entitled to contribute more... unused amounts available for a maximum of 5 years"
+    },
+    "carryForwardYears": {
+     "value": 5,
+     "unit": "years",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps",
+     "retrieved": "2026-11-22",
+     "quote": "Unused amounts are available for a maximum of 5 years, after which they will expire."
+    },
+    "transferBalanceCap": {
+     "value": 2000000,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/transfer-balance-cap",
+     "retrieved": "2026-11-22",
+     "quote": "2025-26 general transfer balance cap 2 ($m)"
+    },
+    "definedBenefitIncomeCap": {
+     "value": 125000,
+     "unit": "AUD",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/transfer-balance-cap",
+     "retrieved": "2026-11-22",
+     "quote": "Defined benefit income cap 2025-26 $125,000"
+    },
+    "div293Threshold": {
+     "value": 250000,
+     "unit": "AUD (income + low tax contributions)",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/division-293-tax",
+     "retrieved": "2026-11-22",
+     "quote": "2017-18 onwards $250,000; rate of Division 293 tax is 15%"
+    },
+    "div293Rate": {
+     "value": 0.15,
+     "unit": "fraction",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/division-293-tax",
+     "retrieved": "2026-11-22",
+     "quote": "The rate of Division 293 tax is 15%."
+    },
+    "preservationAge": {
+     "value": 60,
+     "unit": "years (born from 1 July 1964)",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/payments-from-super",
+     "retrieved": "2026-11-22",
+     "quote": "Table 12: Preservation age ... From 1 July 1964 60"
+    },
+    "maxContributionBaseQuarterly": {
+     "value": 62500,
+     "unit": "AUD per quarter (to 30 Jun 2026)",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/super-guarantee",
+     "retrieved": "2026-11-22",
+     "quote": "2025-26 $62,500 per quarter; max SG $7,500.00"
+    }
+   },
+   "deductions": {
+    "wfhFixedRate": {
+     "value": 0.7,
+     "unit": "AUD per hour worked from home",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "guidance",
+     "source": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/work-related-deductions/working-from-home-expenses/fixed-rate-method",
+     "retrieved": "2026-11-22",
+     "quote": "2024-25 and 2025-26: use 70 cents per work hour",
+     "note": "ATO guidance (PCG 2023/1), not legislation. Commissioner's determination text not opened."
+    },
+    "carCentsPerKm": {
+     "value": 0.88,
+     "unit": "AUD per km, max 5,000 km",
+     "fy": "2025-26",
+     "appliesFrom": "2025-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/work-related-deductions/cars-transport-and-travel/motor-vehicle-and-car-expenses/expenses-for-a-car-you-own-or-lease/cents-per-kilometre-method",
+     "retrieved": "2026-11-22",
+     "quote": "2024-25 and 2025-26: use 88 cents per kilometre",
+     "note": "ATO-published rate"
+    }
+   }
+  },
+  "2026-27": {
+   "incomeTax": {
+    "resident": {
+     "value": [
+      [
+       0,
+       18200,
+       0
+      ],
+      [
+       18200,
+       45000,
+       0.15
+      ],
+      [
+       45000,
+       135000,
+       0.3
+      ],
+      [
+       135000,
+       190000,
+       0.37
+      ],
+      [
+       190000,
+       null,
+       0.45
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents",
+     "retrieved": "2026-11-22",
+     "quote": "Resident tax rates 2026-27: $18,201-$45,000 15c for each $1 over $18,200; $45,001-$135,000 $4,020 plus 30c; $135,001-$190,000 $31,020 plus 37c; $190,001 and over $51,370 plus 45c",
+     "note": "Law: Treasury Laws Amendment (More Cost of Living Relief) Act 2025 No. 28 (Sch 1) - Tax rates for the 2026-27 year of income: 15%/30%/37%/45%"
+    },
+    "foreignResident": {
+     "value": [
+      [
+       0,
+       135000,
+       0.3
+      ],
+      [
+       135000,
+       190000,
+       0.37
+      ],
+      [
+       190000,
+       null,
+       0.45
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-foreign-residents",
+     "retrieved": "2026-11-22",
+     "quote": "Foreign resident tax rates 2026-27: 0-$135,000 30c for each $1; ... $190,001 and over $60,850 plus 45c"
+    },
+    "workingHolidayMaker": {
+     "value": [
+      [
+       0,
+       45000,
+       0.15
+      ],
+      [
+       45000,
+       135000,
+       0.3
+      ],
+      [
+       135000,
+       190000,
+       0.37
+      ],
+      [
+       190000,
+       null,
+       0.45
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-working-holiday-makers",
+     "retrieved": "2026-11-22",
+     "quote": "ATO WHM page last updated 1 June 2026 lists rates only to 2025-26",
+     "settlingCheck": "Re-open the ATO working holiday maker tax rates page after it adds 2026-27 (rate 15% to $45,000 is the legislated WHM rate in ITRA 1986; confirm)"
+    },
+    "lito": {
+     "value": {
+      "max": 700,
+      "fullUntil": 37500,
+      "rate1": 0.05,
+      "step1Until": 45000,
+      "base2": 325,
+      "rate2": 0.015,
+      "endsAt": 66667
+     },
+     "unit": "AUD / rate",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/tax-offsets/low-income-tax-offset",
+     "retrieved": "2026-11-22",
+     "quote": "ATO LITO page (updated 8 June 2026): same $700 / $37,500 / $45,000 / $66,667 figures"
+    },
+    "sapto": {
+     "value": {
+      "single": {
+       "max": 2230,
+       "shadeOut": 36034,
+       "cutOut": 53874
+      },
+      "couplePerPartner": {
+       "max": 1602,
+       "shadeOut": 31847,
+       "cutOut": 44663
+      },
+      "illnessSeparated": {
+       "max": 2040,
+       "shadeOut": 34767,
+       "cutOut": 51087
+      }
+     },
+     "unit": "AUD rebate income",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/about-ato/new-legislation/in-detail/individuals/personal-income-tax-new-tax-cuts-for-every-australian-taxpayer",
+     "retrieved": "2026-11-22",
+     "quote": "SAPTO rates and rebate income thresholds for 2026-27: Single $2,230 / $36,034 / $53,874"
+    }
+   },
+   "medicare": {
+    "levyRate": {
+     "value": 0.02,
+     "unit": "fraction",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents",
+     "retrieved": "2026-11-22",
+     "quote": "The above rates do not include the Medicare levy of 2%."
+    },
+    "singleLowerThreshold": {
+     "value": 28011,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00058/asmade/2026-06-30/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "Act No. 58 of 2026, Schedule 5: the new thresholds apply \"for the 2025-26 year of income and later years of income\" (single $28,011 / $35,013; family $47,238; child $4,338). Withholding schedule F2026L00716 uses the same figures.",
+     "note": "Law, standing until Parliament changes it; watch the 2027-28 Budget.",
+     "act": {
+      "name": "Treasury Laws Amendment (Delivering an Efficient and Trusted Tax System) Act 2026",
+      "no": "No. 58 of 2026",
+      "id": "C2026A00058",
+      "assent": "2026-06-30",
+      "ref": "Schedule 5, item 14"
+     },
+     "sourceAlso": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word"
+    },
+    "singleUpperThreshold": {
+     "value": 35013,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00058/asmade/2026-06-30/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "Act No. 58 of 2026, Schedule 5: the new thresholds apply \"for the 2025-26 year of income and later years of income\" (single $28,011 / $35,013; family $47,238; child $4,338). Withholding schedule F2026L00716 uses the same figures.",
+     "act": {
+      "name": "Treasury Laws Amendment (Delivering an Efficient and Trusted Tax System) Act 2026",
+      "no": "No. 58 of 2026",
+      "id": "C2026A00058",
+      "assent": "2026-06-30",
+      "ref": "Schedule 5, item 14"
+     },
+     "sourceAlso": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word",
+     "note": "Law, standing until Parliament changes it; watch the 2027-28 Budget."
+    },
+    "familyLowerThreshold": {
+     "value": 47238,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00058/asmade/2026-06-30/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "Act No. 58 of 2026, Schedule 5: the new thresholds apply \"for the 2025-26 year of income and later years of income\" (single $28,011 / $35,013; family $47,238; child $4,338). Withholding schedule F2026L00716 uses the same figures.",
+     "act": {
+      "name": "Treasury Laws Amendment (Delivering an Efficient and Trusted Tax System) Act 2026",
+      "no": "No. 58 of 2026",
+      "id": "C2026A00058",
+      "assent": "2026-06-30",
+      "ref": "Schedule 5, item 14"
+     },
+     "sourceAlso": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word",
+     "note": "Law, standing until Parliament changes it; watch the 2027-28 Budget."
+    },
+    "perChildLower": {
+     "value": 4338,
+     "unit": "AUD per child",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00058/asmade/2026-06-30/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "Act No. 58 of 2026, Schedule 5: the new thresholds apply \"for the 2025-26 year of income and later years of income\" (single $28,011 / $35,013; family $47,238; child $4,338). Withholding schedule F2026L00716 uses the same figures.",
+     "act": {
+      "name": "Treasury Laws Amendment (Delivering an Efficient and Trusted Tax System) Act 2026",
+      "no": "No. 58 of 2026",
+      "id": "C2026A00058",
+      "assent": "2026-06-30",
+      "ref": "Schedule 5, item 14"
+     },
+     "sourceAlso": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word",
+     "note": "Law, standing until Parliament changes it; watch the 2027-28 Budget."
+    },
+    "phaseInRate": {
+     "value": 0.1,
+     "unit": "fraction",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "levy is shaded in at the rate of 10% of the excess over $28,011"
+    }
+   },
+   "mls": {
+    "singleTiers": {
+     "value": [
+      [
+       0,
+       105000,
+       0
+      ],
+      [
+       105001,
+       123000,
+       0.01
+      ],
+      [
+       123001,
+       164000,
+       0.0125
+      ],
+      [
+       164001,
+       null,
+       0.015
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy-surcharge/medicare-levy-surcharge-income-thresholds-and-rates",
+     "retrieved": "2026-11-22",
+     "quote": "MLS 2026-27 single $105,000 or less / $105,001-$123,000 / $123,001-$164,000 / $164,001 or more; 0% 1% 1.25% 1.5%"
+    },
+    "familyTiers": {
+     "value": [
+      [
+       0,
+       210000,
+       0
+      ],
+      [
+       210001,
+       246000,
+       0.01
+      ],
+      [
+       246001,
+       328000,
+       0.0125
+      ],
+      [
+       328001,
+       null,
+       0.015
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy-surcharge/medicare-levy-surcharge-income-thresholds-and-rates",
+     "retrieved": "2026-11-22",
+     "quote": "Family threshold $210,000 or less / $210,001-$246,000 / $246,001-$328,000 / $328,001 or more"
+    },
+    "familyPerChildAfterFirst": {
+     "value": 1500,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy-surcharge/medicare-levy-surcharge-income-thresholds-and-rates",
+     "retrieved": "2026-11-22",
+     "quote": "increased by $1,500 for each MLS dependent child after the first child"
+    }
+   },
+   "help": {
+    "bands": {
+     "value": [
+      [
+       0,
+       69528,
+       0
+      ],
+      [
+       69528,
+       129717,
+       0.15
+      ],
+      [
+       129717,
+       186050,
+       0.17
+      ],
+      [
+       186051,
+       null,
+       0.1
+      ]
+     ],
+     "unit": "[from,to,rate] on repayment income",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/study-and-training-support-loans-rates-and-repayment-thresholds",
+     "retrieved": "2026-11-22",
+     "quote": "Table 1: 2026-27: $0-$69,528 Nil; $69,529-$129,717 15c for each $1 over $69,528; $129,718-$186,050 $9,028 plus 17c for each $1 over $129,717; $186,051 and over 10% of your total repayment income",
+     "note": "The second band is 17c for each $1 over the band start, plus a fixed $9028 (the first band's 15c over its width). The draft carried this row's rate as a sentence; it is the number 0.17 here."
+    },
+    "minimumRepaymentIncome": {
+     "value": 69528,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026G00249/asmade/2026-03-09/text/original/pdf",
+     "retrieved": "2026-11-22",
+     "quote": "HESA 154-20: The minimum repayment income for the 2026-27 income year is $69,528; replacement indexable amount $129,717",
+     "note": "Settles R4: 69,528 is correct. $69,529 is the first dollar in the 15c band (ATO table wording). $67,528 was a typo in a third-party page."
+    },
+    "secondThreshold": {
+     "value": 129717,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026G00249/asmade/2026-03-09/text/original/pdf",
+     "retrieved": "2026-11-22",
+     "quote": "replacement indexable amount ... for the 2026-27 income year is $129,717"
+    },
+    "capStart": {
+     "value": 186051,
+     "unit": "AUD (10% of whole repayment income from here)",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/study-and-training-support-loans-rates-and-repayment-thresholds",
+     "retrieved": "2026-11-22",
+     "quote": "$186,051 and over 10% of your total repayment income",
+     "note": "ATO Example 3 on the same page says '$179,286' (the 2025-26 figure): an ATO typo in an example; table value used"
+    },
+    "indexation": {
+     "value": null,
+     "unit": "fraction (to be applied 1 Jun 2027)",
+     "fy": "2026-27",
+     "appliesFrom": "2027-06-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.studyassist.gov.au/",
+     "retrieved": "2026-11-22",
+     "quote": "The 1 June 2027 indexation rate is not yet known; 2.8% is only the 2025-26 year rate and a projection default",
+     "settlingCheck": "Study Assist / ATO indexation rates page after the 1 June 2027 rate is announced (about May 2027)"
+    },
+    "indexationProjection": {
+     "value": 0.028,
+     "unit": "fraction (projection default for the 1 Jun 2027 indexation)",
+     "fy": "2026-27",
+     "appliesFrom": "2027-06-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.studyassist.gov.au/news/indexation-28-will-be-applied-your-study-loan-1-june-2026",
+     "retrieved": "2026-11-22",
+     "quote": "The 1 June 2027 indexation rate is not yet known; 2.8% is the 1 June 2026 rate, kept as the app's projection default and adjustable by the person",
+     "settlingCheck": "Study Assist / ATO indexation rates page after the 1 June 2027 rate is announced (about May 2027)"
+    }
+   },
+   "payg": {
+    "instrument": {
+     "value": "Taxation Administration (Withholding Schedules) Instrument 2026, F2026L00716 (registered 12 June 2026)",
+     "unit": "id",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Taxation Administration (Withholding Schedules) Instrument 2026 F2026L00716 12 June 2026"
+    },
+    "scale1_noTFT": {
+     "value": [
+      [
+       188,
+       0.15,
+       0.15
+      ],
+      [
+       371,
+       0.2084,
+       11.0185
+      ],
+      [
+       515,
+       0.179,
+       0.1066
+      ],
+      [
+       932,
+       0.3227,
+       74.1674
+      ],
+      [
+       2246,
+       0.32,
+       71.6508
+      ],
+      [
+       3303,
+       0.39,
+       228.8816
+      ],
+      [
+       null,
+       0.47,
+       493.1893
+      ]
+     ],
+     "unit": "[x less than, a, b]",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Scale 1: Less than 188 0.1500 0.1500; 371 0.2084 11.0185; 515 0.1790 0.1066; 932 0.3227 74.1674; 2,246 0.3200 71.6508; 3,303 0.3900 228.8816; 3,303 & over 0.4700 493.1893"
+    },
+    "scale2_TFT": {
+     "value": [
+      [
+       362,
+       0,
+       0
+      ],
+      [
+       538,
+       0.15,
+       54.3462
+      ],
+      [
+       673,
+       0.25,
+       108.2135
+      ],
+      [
+       721,
+       0.17,
+       54.3473
+      ],
+      [
+       865,
+       0.179,
+       60.8377
+      ],
+      [
+       1282,
+       0.3227,
+       185.1935
+      ],
+      [
+       2596,
+       0.32,
+       181.7319
+      ],
+      [
+       3653,
+       0.39,
+       363.4627
+      ],
+      [
+       null,
+       0.47,
+       655.7704
+      ]
+     ],
+     "unit": "[x less than, a, b]",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Scale 2: Less than 362 - -; 538 0.1500 54.3462; 673 0.2500 108.2135; 721 0.1700 54.3473; 865 0.1790 60.8377; 1,282 0.3227 185.1935; 2,596 0.3200 181.7319; 3,653 0.3900 363.4627; 3,653 & over 0.4700 655.7704"
+    },
+    "scale3_foreign": {
+     "value": [
+      [
+       2596,
+       0.3,
+       0.3
+      ],
+      [
+       3653,
+       0.37,
+       181.7308
+      ],
+      [
+       null,
+       0.45,
+       474.0385
+      ]
+     ],
+     "unit": "[x less than, a, b]",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Scale 3: 2,596 0.3000 0.3000; 3,653 0.3700 181.7308; 3,653 & over 0.4500 474.0385"
+    },
+    "stsl_TFT": {
+     "value": [
+      [
+       1337,
+       0,
+       0
+      ],
+      [
+       2494,
+       0.15,
+       200.5615
+      ],
+      [
+       3577,
+       0.17,
+       250.4527
+      ],
+      [
+       null,
+       0.1,
+       0
+      ]
+     ],
+     "unit": "[x less than, a, b]",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/schedule-8-statement-of-formulas-for-calculating-study-and-training-support-loans-components",
+     "retrieved": "2026-11-22",
+     "quote": "Less than $1,337 0.00; $2,494 0.15 200.5615; $3,577 0.17 250.4527; $3,577 & over 0.10"
+    },
+    "stsl_noTFT": {
+     "value": [
+      [
+       987,
+       0,
+       0
+      ],
+      [
+       2144,
+       0.15,
+       148.0615
+      ],
+      [
+       2727,
+       0.17,
+       190.9527
+      ],
+      [
+       null,
+       0.1,
+       0
+      ]
+     ],
+     "unit": "[x less than, a, b]",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/schedule-8-statement-of-formulas-for-calculating-study-and-training-support-loans-components",
+     "retrieved": "2026-11-22",
+     "quote": "Less than $987 0.00; $2,144 0.15 148.0615; $2,727 0.17 190.9527; 2,727 & over 0.10"
+    },
+    "stsl_startEarnings": {
+     "value": {
+      "tft": {
+       "weekly": 1337,
+       "fortnightly": 2674,
+       "monthly": 5793.67,
+       "quarterly": 17381
+      },
+      "noTft": {
+       "weekly": 987,
+       "fortnightly": 1974,
+       "monthly": 4277,
+       "quarterly": 12831
+      }
+     },
+     "unit": "AUD earnings per pay at which the STSL component starts",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/schedule-8-statement-of-formulas-for-calculating-study-and-training-support-loans-components",
+     "retrieved": "2026-11-22",
+     "quote": "$1,337 or more if paid weekly; $2,674 fortnightly; $5,793.67 monthly; $17,381 quarterly"
+    },
+    "medicareParamsInSchedule": {
+     "value": {
+      "weeklyThreshold": 538,
+      "weeklyShadeIn": 673,
+      "familyThreshold": 47238,
+      "perChild": 4338,
+      "weeklyLevyAdjustmentFactor": 538.67
+     },
+     "unit": "Schedule 1 Medicare levy parameters (scale 2)",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "Weekly earnings threshold 538; shade-in 673; family threshold 47,238; additional child 4,338; weekly levy adjustment factor 538.6700"
+    },
+    "howToCompute": {
+     "value": "x = whole dollars of weekly earnings + 99c (fortnightly: earnings/2 drop cents; monthly: if ends 33c add 1c, x3 /13 drop cents; quarterly: /13 drop cents). y = a*x - b, round to nearest dollar. Fortnightly = y*2; monthly = y*13/3 rounded to the dollar; quarterly = y*13. HELP component uses its own table, same x; the combined scale = coefficients added.",
+     "unit": "procedure",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/schedule-8-statement-of-formulas-for-calculating-study-and-training-support-loans-components",
+     "retrieved": "2026-11-22",
+     "quote": "Calculating fortnightly, monthly or quarterly withholding amounts (Schedule 8, matches Schedule 1 text)"
+    }
+   },
+   "super": {
+    "sgRate": {
+     "value": 0.12,
+     "unit": "fraction of qualifying earnings from 1 Jul 2026",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/super-guarantee",
+     "retrieved": "2026-11-22",
+     "quote": "1 July 2026 - 30 June 2027 General super guarantee 12.00 ... From 1 July 2026 the minimum super guarantee is calculated as a percentage of each eligible employee's qualifying earnings"
+    },
+    "concessionalCap": {
+     "value": 32500,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps",
+     "retrieved": "2026-11-22",
+     "quote": "From 1 July 2026, the general concessional contributions cap is $32,500 as a result of indexation in line with AWOTE"
+    },
+    "nonConcessionalCap": {
+     "value": 130000,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps",
+     "retrieved": "2026-11-22",
+     "quote": "2026-27 $130,000 (4 x concessional cap)",
+     "working": "Cap = 4 x concessional cap: 4 x 32,500 = 130,000"
+    },
+    "bringForward": {
+     "value": [
+      [
+       1840000,
+       390000,
+       3
+      ],
+      [
+       1970000,
+       260000,
+       2
+      ],
+      [
+       2100000,
+       130000,
+       1
+      ]
+     ],
+     "unit": "[TSB upper bound, first-year cap, years]; 2.1m+ nil",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/super-for-individuals-and-families/super/growing-and-keeping-track-of-your-super/caps-limits-and-tax-on-super-contributions/non-concessional-contributions-cap",
+     "retrieved": "2026-11-22",
+     "quote": "Bring-forward cap first year (applying to 2026-27 and later years): Less than $1.84 million $390,000 3 years; $1.84 million to less than $1.97 million $260,000 2 years; $1.97 million to less than $2.1 million $130,000; $2.1 million or more nil"
+    },
+    "carryForwardTsbLimit": {
+     "value": 500000,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps",
+     "retrieved": "2026-11-22",
+     "quote": "total superannuation balance of less than $500,000 on 30 June of the previous financial year"
+    },
+    "carryForwardYears": {
+     "value": 5,
+     "unit": "years",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps",
+     "retrieved": "2026-11-22",
+     "quote": "Unused amounts are available for a maximum of 5 years"
+    },
+    "transferBalanceCap": {
+     "value": 2100000,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/transfer-balance-cap",
+     "retrieved": "2026-11-22",
+     "quote": "2026-27 general transfer balance cap 2.1 ($m)"
+    },
+    "definedBenefitIncomeCap": {
+     "value": 131250,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/transfer-balance-cap",
+     "retrieved": "2026-11-22",
+     "quote": "Defined benefit income cap 2026-27 $131,250"
+    },
+    "maxContributionBaseAnnual": {
+     "value": 270830,
+     "unit": "AUD per year (annual from 1 Jul 2026)",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/super-guarantee",
+     "retrieved": "2026-11-22",
+     "quote": "Table 23: 2026-27 $270,830",
+     "working": "32,500 x 100 / 12 = 270,833, rounded down to $10 = 270,830"
+    },
+    "div293Threshold": {
+     "value": 250000,
+     "unit": "AUD",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/division-293-tax",
+     "retrieved": "2026-11-22",
+     "quote": "2017-18 onwards $250,000"
+    },
+    "div293Rate": {
+     "value": 0.15,
+     "unit": "fraction",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/division-293-tax",
+     "retrieved": "2026-11-22",
+     "quote": "The rate of Division 293 tax is 15%."
+    },
+    "div296": {
+     "value": {
+      "LSBT": 3000000,
+      "VLSBT": 10000000,
+      "rateOverLSBT": 0.15,
+      "additionalRateOverVLSBT": 0.1,
+      "indexation": "CPI, $150,000 steps (LSBT), $500,000 steps (VLSBT)"
+     },
+     "unit": "AUD / rate on proportion of earnings",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00008/asmade/2026-03-13/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "From 1 July 2026, Division 296 tax ... 15% on the proportion of your taxable super earnings relating to your TSB that exceeds the LSBT, and an additional 10% ... exceeds the VLSBT. Table 28: 2026-27 $3,000,000 / 10,000,000",
+     "note": "Legislated by Act No. 8 of 2026 (C2026A00008, Royal Assent 13 Mar 2026; Act text opened by the independent check). ATO page also says \"now law\". Assessments start later in 2027-28.",
+     "sourceAlso": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/division-296-tax-thresholds-and-interest",
+     "act": {
+      "ref": "LSBT \"for the 2026-27 income year - $3,000,000\"; VLSBT $10,000,000",
+      "name": "Treasury Laws Amendment (Building a Stronger and Fairer Super System) Act 2026",
+      "no": "No. 8 of 2026",
+      "id": "C2026A00008",
+      "assent": "2026-03-13"
+     }
+    },
+    "preservationAge": {
+     "value": 60,
+     "unit": "years (born from 1 July 1964)",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/payments-from-super",
+     "retrieved": "2026-11-22",
+     "quote": "Table 12: From 1 July 1964 60"
+    },
+    "lowRateCap": {
+     "value": 260000,
+     "unit": "AUD lifetime",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/payments-from-super",
+     "retrieved": "2026-11-22",
+     "quote": "From 1 July 2026, the low rate cap is $260,000."
+    },
+    "paydaySuper": {
+     "value": {
+      "start": "2026-07-01",
+      "rule": "employer pays SG for each payday on qualifying earnings; contribution must be received by the fund within 7 business days of the payday (QE day); first payment to a new fund has 20 business days",
+      "individualEffect": "Super lands in the employee's fund each pay, not quarterly; no change to the 12% rate or the cap; employees see it on the payslip/ATO online"
+     },
+     "unit": "rule",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/businesses-and-organisations/super-for-employers/paying-super-on-payday/payment-deadlines-for-payday-super",
+     "retrieved": "2026-11-22",
+     "quote": "must be received by Mary's super fund within 7 business days of 30 July 2026 ... later due date of 7 August 2026, which is 20 business days after QE day 1",
+     "act": {
+      "name": "Treasury Laws Amendment (Payday Superannuation) Act 2025",
+      "no": "No. 57 of 2025",
+      "id": "C2025A00057",
+      "url": "https://www.legislation.gov.au/C2025A00057"
+     },
+     "note": "Act found via the register search; its text was not opened. Timing rules read from the ATO page."
+    }
+   },
+   "deductions": {
+    "wfhFixedRate": {
+     "value": 0.7,
+     "unit": "AUD per hour",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/work-related-deductions/working-from-home-expenses/fixed-rate-method",
+     "retrieved": "2026-11-22",
+     "quote": "ATO page (updated 8 Jun 2026) lists rates only up to 2025-26: 70c",
+     "settlingCheck": "Re-open the ATO fixed rate method page after the 2026-27 rate is published (expected before Tax Time 2027)"
+    },
+    "carCentsPerKm": {
+     "value": 0.91,
+     "unit": "AUD per km, max 5,000 km",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/work-related-deductions/cars-transport-and-travel/motor-vehicle-and-car-expenses/expenses-for-a-car-you-own-or-lease/cents-per-kilometre-method",
+     "retrieved": "2026-11-22",
+     "quote": "2026-27: use 91 cents per kilometre",
+     "note": "ATO-published rate (Commissioner's determination not opened)"
+    },
+    "standardDeduction": {
+     "value": 1000,
+     "unit": "AUD maximum, lower of $1,000 or labour income; reduced dollar-for-dollar by actual work-related expenses claimed",
+     "fy": "2026-27",
+     "appliesFrom": "2026-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00049/asmade/2026-06-26/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "\"The amount is the lesser of: (a) $1,000; and (b) the total amount of your assessable labour income\" (s 25-130); applies to the 2026-27 income year and later",
+     "note": "Reduced by work-related deductions (not by income protection insurance or professional association fees). Operating detail in draft LCR 2026/D5.",
+     "sourceAlso": "https://www.ato.gov.au/individuals-and-families/your-tax-return/instructions-to-complete-your-tax-return/mytax-instructions/2026/deductions/claiming-deductions",
+     "act": {
+      "ref": "Schedule 4, ITAA 1997 s 25-130",
+      "name": "Treasury Laws Amendment (Tax Reform No. 1) Act 2026",
+      "no": "No. 49 of 2026",
+      "id": "C2026A00049",
+      "assent": "2026-06-26"
+     }
+    }
+   }
+  },
+  "2027-28": {
+   "incomeTax": {
+    "resident": {
+     "value": [
+      [
+       0,
+       18200,
+       0
+      ],
+      [
+       18200,
+       45000,
+       0.14
+      ],
+      [
+       45000,
+       135000,
+       0.3
+      ],
+      [
+       135000,
+       190000,
+       0.37
+      ],
+      [
+       190000,
+       null,
+       0.45
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2025A00028",
+     "retrieved": "2026-11-22",
+     "quote": "Tax rates for resident taxpayers for the 2027-28 year of income or a later year of income: item 1 ... exceeds the tax-free threshold but does not exceed $45,000 14%; 30%; 37%; 45%",
+     "note": "ATO page 'new tax cuts for every Australian taxpayer': 'From 1 July 2027, the 15 per cent rate will be reduced further to 14 per cent. This measure is now law.' The ATO rates page does not yet list 2027-28.",
+     "act": {
+      "name": "Treasury Laws Amendment (More Cost of Living Relief) Act 2025",
+      "no": "No. 28 of 2025",
+      "id": "C2025A00028",
+      "assent": "2025-03-27"
+     },
+     "sourceAlso": "https://www.ato.gov.au/law/view/pdf/acts/20250028.pdf"
+    },
+    "foreignResident": {
+     "value": [
+      [
+       0,
+       135000,
+       0.3
+      ],
+      [
+       135000,
+       190000,
+       0.37
+      ],
+      [
+       190000,
+       null,
+       0.45
+      ]
+     ],
+     "unit": "[from,to,rate]",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-foreign-residents",
+     "retrieved": "2026-11-22",
+     "quote": "Rates unchanged 2024-25 to 2026-27; no change announced",
+     "settlingCheck": "ATO foreign resident rates page once it lists 2027-28"
+    },
+    "workingAustraliansTaxOffset": {
+     "value": {
+      "max": 250,
+      "nonRefundable": true,
+      "condition": "Australian resident with net labour income above the tax-free threshold; tax payable on net labour income must exceed $250",
+      "effectiveTaxFreeThreshold": 19985,
+      "effectiveTaxFreeThresholdWithLITO": 24985
+     },
+     "unit": "AUD offset",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00049/asmade/2026-06-26/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "\"the lesser of: (a) $250; and (b) ... basic income tax liability ... net labour income\"; applies to \"the 2027-28 income year and later income years\"",
+     "working": "Check: 18,200 + 250/0.14 = 19,985.7, matches the Treasury 'nearly $1,800 to $19,985'",
+     "sourceAlso": "https://www.ato.gov.au/about-ato/new-legislation/in-detail/individuals/working-australians-tax-offset",
+     "act": {
+      "ref": "Schedule 3, s 61-160",
+      "name": "Treasury Laws Amendment (Tax Reform No. 1) Act 2026",
+      "no": "No. 49 of 2026",
+      "id": "C2026A00049",
+      "assent": "2026-06-26"
+     }
+    },
+    "lito": {
+     "value": {
+      "max": 700,
+      "fullUntil": 37500,
+      "rate1": 0.05,
+      "step1Until": 45000,
+      "base2": 325,
+      "rate2": 0.015,
+      "endsAt": 66667
+     },
+     "unit": "AUD / rate",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "UNVERIFIED:derived",
+     "source": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/tax-offsets/low-income-tax-offset",
+     "retrieved": "2026-11-22",
+     "quote": "Treasury says effective threshold with LITO becomes $24,985 from 2027-28, which assumes LITO is unchanged",
+     "working": "No change announced; Treasury factsheet figure $24,985 = 19,985 + 5,000 implies unchanged LITO",
+     "settlingCheck": "Open Income Tax Assessment Act 1936/1997 LITO provision (s 61-110 ITAA 1997) for any sunset; expect none"
+    },
+    "cgtDiscountReplacement": {
+     "value": "For resident individuals and trusts, cost-base indexation (s 110-36(1A)) applies to CGT events on or after 1 July 2027 and the 30% minimum tax (Division 119, resident individuals) applies. The 50% discount remains for individuals on CGT events before 1 July 2027 and, on later events, for new residential dwellings (s 115-102). Assets held on 30 June 2027 can be treated as sold and bought back on 1 July 2027, so only growth from that date is indexed.",
+     "unit": "rule",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00049/asmade/2026-06-26/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "Paragraph 115-100(a) repealed: discount only for CGT events \"before 1 July 2027\", or new residential dwellings (s 115-102); new s 110-36(1A) indexation for CGT events on or after 1 July 2027; new Division 119 \"30% minimum tax\"",
+     "sourceAlso": "https://www.ato.gov.au/about-ato/new-legislation/in-detail/individuals/tax-reform-boosting-home-ownership-reforming-negative-gearing-and-capital-gains-tax",
+     "act": {
+      "ref": "Schedule 1; ITAA 1997 s 115-100, 115-102, 110-36(1A), Division 119",
+      "name": "Treasury Laws Amendment (Tax Reform No. 1) Act 2026",
+      "no": "No. 49 of 2026",
+      "id": "C2026A00049",
+      "assent": "2026-06-26"
+     },
+     "note": "ATO: \"These measures are now law.\" Indexation applies to resident individuals and trusts only."
+    },
+    "negativeGearing": {
+     "value": "From 1 July 2027, excess residential rental deductions on established dwellings are quarantined and carried forward, not lost: they can be used against later residential rental income and against capital gains on residential dwellings. The rule does not apply to a dwelling acquired before 7.30pm (ACT legal time) on 12 May 2026 (counted from the contract date) or to a new residential dwelling.",
+     "unit": "rule",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00049/asmade/2026-06-26/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "New s 26-155: does not apply to a dwelling acquired before \"7.30 pm, by legal time in the ACT, on 12 May 2026\" or to a new residential dwelling; applies to \"the 2027-28 income year and later income years\"",
+     "sourceAlso": "https://www.ato.gov.au/about-ato/new-legislation/in-detail/individuals/tax-reform-boosting-home-ownership-reforming-negative-gearing-and-capital-gains-tax",
+     "act": {
+      "ref": "Schedule 2, s 26-155",
+      "name": "Treasury Laws Amendment (Tax Reform No. 1) Act 2026",
+      "no": "No. 49 of 2026",
+      "id": "C2026A00049",
+      "assent": "2026-06-26"
+     },
+     "note": "Matters if the app ever models investment property."
+    }
+   },
+   "medicare": {
+    "levyRate": {
+     "value": 0.02,
+     "unit": "fraction",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/tax-rates-australian-residents",
+     "retrieved": "2026-11-22",
+     "quote": "Medicare levy 2% (no change announced)"
+    },
+    "singleLowerThreshold": {
+     "value": 28011,
+     "unit": "AUD",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00058/asmade/2026-06-30/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "Thresholds apply for 2025-26 \"and later years of income\" until amended",
+     "note": "Current law, subject to the 2027-28 Budget.",
+     "act": {
+      "name": "Treasury Laws Amendment (Delivering an Efficient and Trusted Tax System) Act 2026",
+      "no": "No. 58 of 2026",
+      "id": "C2026A00058",
+      "assent": "2026-06-30",
+      "ref": "Schedule 5, item 14"
+     }
+    }
+   },
+   "mls": {
+    "singleTiers": {
+     "value": null,
+     "unit": "[from,to,rate]",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.ato.gov.au/individuals-and-families/medicare-and-private-health-insurance/medicare-levy-surcharge/medicare-levy-surcharge-income-thresholds-and-rates",
+     "retrieved": "2026-11-22",
+     "quote": "ATO page lists MLS thresholds to 2026-27 only",
+     "settlingCheck": "ATO MLS thresholds page after the 2027-28 Budget"
+    }
+   },
+   "help": {
+    "bands": {
+     "value": null,
+     "unit": "[from,to,rate]",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/study-and-training-support-loans-rates-and-repayment-thresholds",
+     "retrieved": "2026-11-22",
+     "quote": "ATO table lists 2026-27 and earlier; marginal-rate structure (15c / 17c / 10% whole income) continues",
+     "settlingCheck": "Study Assist / Federal Register gazette notice of the 2027-28 minimum repayment income (the 2026-27 notice was registered 20 Apr 2026, ATO table published by 30 Jun 2026)"
+    }
+   },
+   "payg": {
+    "schedule1": {
+     "value": "New Schedule 1 / NAT 1004 needed for the 14% rate and WATO",
+     "unit": "note",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.legislation.gov.au/F2026L00716/asmade/2026-06-12/text/original/word",
+     "retrieved": "2026-11-22",
+     "quote": "2026-27 instrument registered 12 June 2026 for payments from 1 July 2026",
+     "settlingCheck": "Federal Register of Legislation for the Taxation Administration (Withholding Schedules) Instrument 2027 (expected about June 2027); coefficients cannot be derived reliably before publication"
+    }
+   },
+   "super": {
+    "sgRate": {
+     "value": 0.12,
+     "unit": "fraction",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/super-guarantee",
+     "retrieved": "2026-11-22",
+     "quote": "1 July 2027 onwards General super guarantee 12.00"
+    },
+    "concessionalCap": {
+     "value": null,
+     "unit": "AUD",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/contributions-caps",
+     "retrieved": "2026-11-22",
+     "quote": "Indexed to AWOTE in $2,500 steps; no 2027-28 figure published",
+     "settlingCheck": "ATO key super rates page after the AWOTE figure (Nov 2026 quarter) is released; ATO normally publishes by about Feb-Mar of the year"
+    },
+    "transferBalanceCap": {
+     "value": null,
+     "unit": "AUD",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/transfer-balance-cap",
+     "retrieved": "2026-11-22",
+     "quote": "Indexed to CPI in $100,000 steps; $2.1m for 2026-27",
+     "settlingCheck": "ATO TBC page after December 2026 CPI (released Jan 2027)"
+    },
+    "div293Threshold": {
+     "value": 250000,
+     "unit": "AUD",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/division-293-tax",
+     "retrieved": "2026-11-22",
+     "quote": "2017-18 onwards $250,000"
+    },
+    "div296": {
+     "value": {
+      "LSBT": null,
+      "VLSBT": null
+     },
+     "unit": "AUD",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/division-296-tax-thresholds-and-interest",
+     "retrieved": "2026-11-22",
+     "quote": "Thresholds indexed to CPI in $150,000 / $500,000 steps; 2026-27 is $3m / $10m",
+     "settlingCheck": "ATO Division 296 thresholds page for 2027-28"
+    },
+    "preservationAge": {
+     "value": 60,
+     "unit": "years",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.ato.gov.au/tax-rates-and-codes/key-superannuation-rates-and-thresholds/payments-from-super",
+     "retrieved": "2026-11-22",
+     "quote": "From 1 July 1964 60"
+    },
+    "listoBoost": {
+     "value": {
+      "incomeThreshold": 45000,
+      "maxPayment": 810
+     },
+     "unit": "AUD",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00008/asmade/2026-03-13/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "Replaces \"$37,000\" with the top of the first taxed bracket in Income Tax Rates Act Sch 7 ($45,000) and the $500 cap with a formula in s 12E(3A); applies to \"the 2027-28 income year and later income years\"",
+     "sourceAlso": "https://www.ato.gov.au/about-ato/new-legislation/in-detail/superannuation/low-income-superannuation-tax-offset-listo",
+     "act": {
+      "ref": "Schedule 4; Co-contribution Act s 12E(3A)",
+      "name": "Treasury Laws Amendment (Building a Stronger and Fairer Super System) Act 2026",
+      "no": "No. 8 of 2026",
+      "id": "C2026A00008",
+      "assent": "2026-03-13"
+     },
+     "note": "The $810 cap comes from the formula (15% x 12% x $45,000), not a written figure; the ATO page states $810."
+    }
+   },
+   "deductions": {
+    "standardDeduction": {
+     "value": 1000,
+     "unit": "AUD maximum",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "legislated",
+     "source": "https://www.legislation.gov.au/C2026A00049/asmade/2026-06-26/text/original/epub/OEBPS/document_1/document_1.html",
+     "retrieved": "2026-11-22",
+     "quote": "Applies \"to assessments for the 2026-27 income year and later income years\"",
+     "note": "No sunset.",
+     "sourceAlso": "https://www.ato.gov.au/individuals-and-families/your-tax-return/instructions-to-complete-your-tax-return/mytax-instructions/2026/deductions/claiming-deductions",
+     "act": {
+      "ref": "Schedule 4, ITAA 1997 s 25-130",
+      "name": "Treasury Laws Amendment (Tax Reform No. 1) Act 2026",
+      "no": "No. 49 of 2026",
+      "id": "C2026A00049",
+      "assent": "2026-06-26"
+     }
+    },
+    "wfhFixedRate": {
+     "value": null,
+     "unit": "AUD per hour",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/work-related-deductions/working-from-home-expenses/fixed-rate-method",
+     "retrieved": "2026-11-22",
+     "quote": "Not published",
+     "settlingCheck": "ATO fixed rate method page for 2027-28"
+    },
+    "carCentsPerKm": {
+     "value": null,
+     "unit": "AUD per km",
+     "fy": "2027-28",
+     "appliesFrom": "2027-07-01",
+     "status": "UNVERIFIED:estimate",
+     "source": "https://www.ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/work-related-deductions/cars-transport-and-travel/motor-vehicle-and-car-expenses/expenses-for-a-car-you-own-or-lease/cents-per-kilometre-method",
+     "retrieved": "2026-11-22",
+     "quote": "Not published",
+     "settlingCheck": "ATO cents per km page for 2027-28"
+    }
+   }
+  }
+ }
+}

@@ -4,7 +4,7 @@
 
 import { t } from '../../i18n/strings.js';
 import { explainRequired, audCents } from '../../calc/goal-planner.js';
-import { explainFi } from '../../calc/fi.js';
+import { explainFi } from '../../calc/fi-explain.js';
 import { fmtMoney } from './starters.js';
 import { openSheet } from '../sheet.js';
 
