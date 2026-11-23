@@ -140,6 +140,8 @@ export const TAX_REFERENCE_TEST_CASES = [
             assert('still the latest built-in, marked stale', [res.fy, res.stale], ['2026-27', true]);
             // A complete copy of 2026-27 labelled as a later year: usable only while every figure is legislated.
             const later = clone(taxFile.years['2026-27']);
+            later.incomeTax.workingAustraliansTaxOffset = clone(taxFile.years['2027-28'].incomeTax.workingAustraliansTaxOffset); // law from 2027-28 on
+            later.incomeTax.workingAustraliansTaxOffset.appliesFrom = '2026-07-01'; // so the retag below lands it in 2028-29
             const retag = (law) => {
                 const y = clone(later);
                 for (const g of Object.values(y)) for (const f of Object.values(g)) { f.fy = '2028-29'; if (f.appliesFrom) f.appliesFrom = f.appliesFrom.replace('2026', '2028').replace('2027', '2029'); if (!law && f.status === 'legislated') f.status = 'announced'; }

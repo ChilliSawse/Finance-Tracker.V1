@@ -59,6 +59,31 @@ export function calculateMedicareLevy(taxableIncome, medicare = getTaxYear().med
 }
 
 /**
+ * Medicare levy surcharge rate for a single person (FT-R-131): the tier the income for MLS purposes falls in.
+ * Tier rows are [min, max, rate] with whole-dollar edges (0 to 101,000 is nil, 101,001 to 118,000 is the next rate).
+ * @param {number} income - income for MLS purposes (taxable income here).
+ * @param {{singleTiers:Array<{min:number,max:number,rate:number}>}} [mls] - none means no surcharge figures.
+ * @returns {number} Rate 0 to 1, or 0 when the table has no MLS figures.
+ */
+export function mlsRate(income, mls) {
+    const tiers = mls && Array.isArray(mls.singleTiers) ? mls.singleTiers : null;
+    const inc = parseFloat(income) || 0;
+    if (!tiers || !tiers.length || inc <= 0) return 0;
+    const row = tiers.find((r) => inc <= (r.max == null ? Infinity : r.max));
+    return row ? row.rate : 0;
+}
+
+/** Medicare levy surcharge: the tier rate on the whole income. Nil with no figures. */
+export function calculateMedicareSurcharge(income, mls) {
+    return (parseFloat(income) || 0) * mlsRate(income, mls);
+}
+
+/** True only when the person has answered "No" to private hospital cover. Unanswered counts as covered. */
+export function lacksPrivateCover(taxSettings) {
+    return !!taxSettings && taxSettings.hasPrivateHospitalCover === false;
+}
+
+/**
  * Compulsory HELP/HECS repayment under the marginal system (2025–26 onward):
  * nil below the minimum threshold, then the band rates on income above it,
  * capped at capRate × repayment income.

@@ -12,7 +12,14 @@ const REQUIRED = [
     ['medicare', 'levyRate'], ['medicare', 'singleLowerThreshold'], ['medicare', 'singleUpperThreshold'], ['medicare', 'phaseInRate'],
     ['help', 'bands'],
     ['payg', 'instrument'], ['payg', 'scale1_noTFT'], ['payg', 'scale2_TFT'], ['payg', 'stsl_TFT'], ['payg', 'stsl_noTFT'],
+    ['mls', 'singleTiers'],
 ];
+// FT-R-131: figures a year needs only from the year a rule starts. The standard deduction is law from 2026-27, the
+// Working Australians tax offset from 2027-28; a year from then on is held until the figure is present and legislated.
+const requiredFor = (start) => REQUIRED.concat(
+    start >= 2026 ? [['deductions', 'standardDeduction']] : [],
+    start >= 2027 ? [['incomeTax', 'workingAustraliansTaxOffset']] : [],
+);
 const FY = /^(\d{4})-(\d{2})$/;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const num = (v) => typeof v === 'number' && Number.isFinite(v);
@@ -161,7 +168,9 @@ export function buildYearTable(fy, year) {
     const m = FY.exec(fy);
     if (!m || !year || typeof year !== 'object') return malformed();
     const fig = (g, n) => (Object.hasOwn(year, g) && year[g] && Object.hasOwn(year[g], n) && year[g][n] && typeof year[g][n] === 'object' ? year[g][n] : null);
-    const missing = REQUIRED.filter(([g, n]) => { const f = fig(g, n); return !f || f.value === null || f.value === undefined; }).map(([g, n]) => `${g}.${n}`);
+    const start = +m[1];
+    const REQ = requiredFor(start);
+    const missing = REQ.filter(([g, n]) => { const f = fig(g, n); return !f || f.value === null || f.value === undefined; }).map(([g, n]) => `${g}.${n}`);
     // HELP indexation: the app keeps a projection default (a person-adjustable guess, not a published rate). A year
     // A legislated help.indexation is preferred; otherwise help.indexationProjection is used.
     const proj = fig('help', 'indexationProjection');
@@ -169,7 +178,7 @@ export function buildYearTable(fy, year) {
     const idxFig = idx && num(idx.value) && idx.status === 'legislated' ? idx : (proj && num(proj.value) ? proj : null);
     if (!idxFig) missing.push('help.indexation');
     if (missing.length) return { held: { reason: 'incomplete', figures: missing, statuses: [] } };
-    const notLaw = REQUIRED.filter(([g, n]) => fig(g, n).status !== 'legislated');
+    const notLaw = REQ.filter(([g, n]) => fig(g, n).status !== 'legislated');
     if (notLaw.length) return { held: { reason: 'not-legislated', figures: notLaw.map(([g, n]) => `${g}.${n}`), statuses: [...new Set(notLaw.map(([g, n]) => fig(g, n).status))] } };
 
     const rp = taxRangeProblems(fy, year);
@@ -192,8 +201,13 @@ export function buildYearTable(fy, year) {
         || !num(hb[2][0]) || !num(hb[2][2]) || !num(hb[3][2]) || hb[2][0] <= hb[1][0]) return malformed();
     if (typeof from !== 'string' || !ISO.test(from) || typeof sched !== 'string' || !ISO.test(sched)) return malformed();
 
-    const start = +m[1];
-    const used = REQUIRED.map(([g, n]) => fig(g, n)).concat([idxFig]);
+    const mlsRows = rowsOf(v('mls', 'singleTiers'), 3, (r) => (num(r[0]) && (r[1] === null || num(r[1])) && num(r[2]) ? { min: r[0], max: lim(r[1]), rate: r[2] } : null));
+    if (!mlsRows || mlsRows[mlsRows.length - 1].max !== Infinity) return malformed();
+    const sd = start >= 2026 ? v('deductions', 'standardDeduction') : null;
+    const wato = start >= 2027 ? v('incomeTax', 'workingAustraliansTaxOffset') : null;
+    if (start >= 2026 && !(num(sd) && sd >= 0)) return malformed();
+    if (start >= 2027 && !(wato && typeof wato === 'object' && num(wato.max) && wato.max >= 0)) return malformed();
+    const used = REQ.map(([g, n]) => fig(g, n)).concat([idxFig]);
     const table = {
         fy,
         label: `${start}–${m[2]}`,
@@ -211,6 +225,9 @@ export function buildYearTable(fy, year) {
             capRate: hb[3][2],
             indexationPercentDefault: Number((idxFig.value * 100).toFixed(6)),
         },
+        mls: { singleTiers: mlsRows },
+        ...(start >= 2026 ? { standardDeduction: sd } : {}),
+        ...(start >= 2027 ? { wato: { max: wato.max } } : {}),
         lito: { maxOffset: l.max, fullUntil: l.fullUntil, rate1: l.rate1, step1Until: l.step1Until, base2: l.base2, rate2: l.rate2, endsAt: l.endsAt },
         origin: 'reference',
     };

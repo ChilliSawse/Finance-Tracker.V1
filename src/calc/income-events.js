@@ -27,7 +27,7 @@
 // Cash-only events (netAmount 0, cashReceived > 0) therefore count in full.
 
 import { calculateTaxFromBrackets } from './calculations.js';
-import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment } from './tax-au.js';
+import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment, calculateMedicareSurcharge, lacksPrivateCover } from './tax-au.js';
 
 export const GST_RATE = 0.10;
 
@@ -218,6 +218,7 @@ export function estimateAnnualTax(gross, brackets, taxSettings, { includeHelp = 
     if (taxSettings) {
         const fy = getTaxYear(taxSettings.financialYear);
         if (taxSettings.includeMedicareLevy) tax += calculateMedicareLevy(gross, fy.medicare);
+        if (lacksPrivateCover(taxSettings)) tax += calculateMedicareSurcharge(gross, fy.mls);
         if (includeHelp && taxSettings.includeHelpInEstimate !== false
             && (num(taxSettings.helpBalance) > 0)) {
             tax += calculateHelpRepayment(gross, fy.help);

@@ -6,7 +6,7 @@
 // year can hold 27 pays).
 
 import { resolveTablesForDate } from './tax-tables/index.js';
-import { calculateMedicareLevy, calculateHelpRepayment } from './tax-au.js';
+import { calculateMedicareLevy, calculateHelpRepayment, calculateMedicareSurcharge } from './tax-au.js';
 import { expectedPay } from './withholding.js';
 
 const cents = (n) => Math.round((Number(n) || 0) * 100 + 1e-9) / 100;
@@ -37,22 +37,41 @@ export function litoFor(taxableIncome, date) {
 }
 
 /**
+ * Working Australians tax offset (FT-R-131): the lesser of the table's maximum and the tax still payable after LITO,
+ * and only when the year's table carries it (a held year never does). Never refundable.
+ */
+export function watoFor(taxAfterLito, tables) {
+    const w = tables && tables.wato;
+    if (!w || !(w.max > 0)) return 0;
+    return cents(Math.min(w.max, Math.max(0, Number(taxAfterLito) || 0)));
+}
+
+/**
  * Annual owed for one income year picked by `date`. Extra input fields (such as a saved
  * `taxBrackets`) are ignored by design.
- * @param {{taxableIncome:number, date?:Date|string, hasStudyDebt?:boolean, repaymentIncome?:number}} p
- * @returns {{fy:string, stale:boolean, taxableIncome:number, tax:number, lito:number,
- *   medicare:number, help:number, total:number, estimate:true}}
+ * From 2026-27 the year's standard deduction comes off first (the lesser of it and the income), unless
+ * `workDeductions` is higher. `privateCover: false` adds the Medicare levy surcharge; anything else is covered.
+ * @param {{taxableIncome:number, date?:Date|string, hasStudyDebt?:boolean, repaymentIncome?:number,
+ *   workDeductions?:number, privateCover?:boolean}} p
+ * @returns {{fy:string, stale:boolean, taxableIncome:number, deduction:number, tax:number, lito:number, wato:number,
+ *   medicare:number, mls:number, help:number, total:number, estimate:true}}
  */
-export function annualOwed({ taxableIncome, date, hasStudyDebt = false, repaymentIncome }) {
+export function annualOwed({ taxableIncome, date, hasStudyDebt = false, repaymentIncome, workDeductions = 0, privateCover }) {
     const { tables, fy, stale } = resolveTablesForDate(date || new Date());
-    const income = Math.max(0, Number(taxableIncome) || 0);
+    const gross = Math.max(0, Number(taxableIncome) || 0);
+    const std = tables.standardDeduction > 0 ? Math.min(tables.standardDeduction, gross) : 0;
+    const deduction = cents(Math.min(gross, Math.max(std, Number(workDeductions) || 0)));
+    const income = cents(gross - deduction);
     const lito = litoFor(income, date);
-    const tax = cents(Math.max(0, bracketTax(income, tables.brackets) - lito));
+    const afterLito = Math.max(0, bracketTax(income, tables.brackets) - lito);
+    const wato = watoFor(afterLito, tables);
+    const tax = cents(Math.max(0, afterLito - wato));
     const medicare = cents(calculateMedicareLevy(income, tables.medicare));
+    const mls = privateCover === false ? cents(calculateMedicareSurcharge(income, tables.mls)) : 0;
     const help = hasStudyDebt
         ? cents(calculateHelpRepayment(repaymentIncome != null ? repaymentIncome : income, tables.help))
         : 0;
-    return { fy, stale, taxableIncome: income, tax, lito, medicare, help, total: cents(tax + medicare + help), estimate: true };
+    return { fy, stale, taxableIncome: income, deduction, tax, lito, wato, medicare, mls, help, total: cents(tax + medicare + mls + help), estimate: true };
 }
 
 /**
@@ -72,10 +91,11 @@ export function refundOrBill({ withheldPerPay, cycles, withheld, owed }) {
 /**
  * Annual estimate across income sources. Taxable income and withholding are summed;
  * HELP applies on the TOTAL repayment income when any source declares study debt
- * (FT-R-75 D10). The optional third argument (a saved data object) is ignored.
+ * (FT-R-75 D10). The optional third argument (a saved data object) is ignored. The fourth carries the person's
+ * private hospital cover answer and any work deductions they have entered.
  * @param {object[]} sources - { paySchedule, grossAnnual, hasStudyDebt, claimsTaxFree, extraPerPay, withheldPerPay? }
  */
-export function annualEstimateForSources(sources, date, _data) {
+export function annualEstimateForSources(sources, date, _data, { privateCover, workDeductions } = {}) {
     const list = Array.isArray(sources) ? sources : [];
     const { fy } = resolveTablesForDate(date || new Date());
     let taxableIncome = 0, withheld = 0, anyDebt = false;
@@ -88,7 +108,7 @@ export function annualEstimateForSources(sources, date, _data) {
         if (s.hasStudyDebt) anyDebt = true;
     }
     taxableIncome = cents(taxableIncome);
-    const owed = annualOwed({ taxableIncome, date, hasStudyDebt: anyDebt });
+    const owed = annualOwed({ taxableIncome, date, hasStudyDebt: anyDebt, privateCover, workDeductions });
     const rb = refundOrBill({ withheld, owed: owed.total });
     return { fy, taxableIncome, owed, withheld: rb.withheld, amount: rb.amount, kind: rb.kind, label: rb.label, withheldTotal: cents(withheld), estimate: true };
 }

@@ -7,7 +7,7 @@
 // passes data explicitly.
 
 import { getPayCyclesPerYear, getWeeklyAmount } from '../utils.js';
-import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment } from './tax-au.js';
+import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment, calculateMedicareSurcharge, lacksPrivateCover } from './tax-au.js';
 import { variableSourceAnnualFigures, activeFyKey } from './income-events.js';
 import { planTotals } from './plan.js';
 import { expectedPay } from './withholding.js';
@@ -76,6 +76,10 @@ export function calculateTotals(currentData, opts = {}) {
                 // source only (one debt per person — the primary is "you").
                 if (taxSettings && taxSettings.includeMedicareLevy) {
                     sourceAnnualTax += calculateMedicareLevy(sourceGrossAnnual, taxYear.medicare);
+                }
+                // FT-R-131: the surcharge only after an explicit "No" to private hospital cover.
+                if (lacksPrivateCover(taxSettings)) {
+                    sourceAnnualTax += calculateMedicareSurcharge(sourceGrossAnnual, taxYear.mls);
                 }
                 if (taxSettings && taxSettings.includeHelpInEstimate
                     && (parseFloat(taxSettings.helpBalance) || 0) > 0
@@ -155,11 +159,12 @@ export function calculateTotals(currentData, opts = {}) {
 
     let annualEstimate = null;
     if (estimateInputs.length) {
-        annualEstimate = annualEstimateForSources(estimateInputs, taxDate);
+        annualEstimate = annualEstimateForSources(estimateInputs, taxDate, null, { privateCover: lacksPrivateCover(taxSettings) ? false : undefined });
     }
 
     return {
         _annualTaxOwed: annualEstimate ? annualEstimate.owed.total : null,
+        _taxDeduction: annualEstimate ? annualEstimate.owed.deduction : 0,
         _refundOrBill: annualEstimate ? { kind: annualEstimate.kind, amount: annualEstimate.amount, label: annualEstimate.label, estimate: true } : null,
         totalGrossAnnualIncome,
         totalAnnualTax: totalAnnualTaxFromSources,
