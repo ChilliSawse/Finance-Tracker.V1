@@ -107,6 +107,7 @@ Object.assign(en, {
     'e.sheet.tplNameDefault': 'My template',
     'e.sheet.tplHint': 'Every bucket, dollar and goal comes with it. You can switch back while your buckets still fit the Bucket method.',
     'e.sheet.tplSave': 'Make it mine',
+    'e.sheet.tplNameSave': 'Save name',
     'e.sheet.bucketTitle': 'Bucket',
     'e.sheet.bucketNew': 'Add a bucket',
     'e.sheet.bucketName': 'Name',

@@ -70,7 +70,6 @@ export const enE = {
     'e.plan.goalCost': 'Cost',
     'e.plan.goalSavedLabel': 'Saved so far',
     'e.plan.goalDue': 'Wanted by',
-    'e.plan.tplBackAsk': 'Switch back to the {name}?',
     'e.plan.tplStays': 'Your buckets do not fit the {name} yet, so this stays as your own template.',
 
     // E7: bucket sheets and the category bucket field. Figures are filled in, never typed.

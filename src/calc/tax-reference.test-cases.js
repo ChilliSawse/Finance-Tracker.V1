@@ -279,6 +279,17 @@ export const TAX_REFERENCE_TEST_CASES = [
             assert('and nothing is left applied', [tablesForFy('2026-27'), heldReferenceYears()], [TAX_TABLES['2026-27'], {}]);
         });
     } },
+    { name: 'DB18 super-cap figures come from legislated, in-range reference values only', fn(assert) {
+        const t0 = buildYearTable('2026-27', taxFile.years['2026-27']).table;
+        assert('cap, rate and base carried through', [t0.concessionalCap, t0.superGuarantee], [32500, { rate: 0.12, maxBase: 270830 }]);
+        const q = buildYearTable('2025-26', taxFile.years['2025-26']).table;
+        assert('2025-26 base is the quarterly figure x 4', q.superGuarantee, { rate: 0.12, maxBase: 250000 });
+        const mod = (fn) => { const d = clone(taxFile); fn(d.years['2026-27'].super); return buildYearTable('2026-27', d.years['2026-27']).table; };
+        assert('estimate cap is dropped', mod((s) => { s.concessionalCap.status = 'UNVERIFIED:estimate'; }).concessionalCap, undefined);
+        assert('out-of-range cap is dropped', mod((s) => { s.concessionalCap.value = 3250000; }).concessionalCap, undefined);
+        assert('out-of-range base drops the guarantee figures', mod((s) => { s.maxContributionBaseAnnual.value = 5; }).superGuarantee, undefined);
+        assert('non-legislated rate drops the guarantee figures', mod((s) => { s.sgRate.status = 'UNVERIFIED:estimate'; }).superGuarantee, undefined);
+    } },
     { name: 'DB14.13 a legislated indexation is preferred; lookups ignore inherited keys', fn(assert) {
         const d = clone(taxFile);
         d.years['2026-27'].help.indexation = { ...clone(taxFile.years['2025-26'].help.indexation), value: 0.03, fy: '2026-27', appliesFrom: '2027-06-01' };

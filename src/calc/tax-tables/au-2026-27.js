@@ -83,4 +83,6 @@ export const AU_2026_27 = {
     // Standard work deduction (FT-R-131): the lesser of this and labour income, or the person's own work deductions if higher.
     standardDeduction: 1000,
     lito: { maxOffset: 700, fullUntil: 37500, rate1: 0.05, step1Until: 45000, base2: 325, rate2: 0.015, endsAt: 66667 },
+    concessionalCap: 32500, // super concessional contributions cap (tax.json super.concessionalCap, legislated)
+    superGuarantee: { rate: 0.12, maxBase: 270830 }, // SG rate; maximum contribution base per year (tax.json super.maxContributionBaseAnnual)
 };

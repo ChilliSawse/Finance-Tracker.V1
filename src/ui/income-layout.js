@@ -22,6 +22,8 @@ import { getCycle, addDays, addMonthsClamped, toIso, parseIso } from '../calc/pa
 import { taxTablesStatus, taxYearKeyForDate } from '../calc/tax-tables/index.js';
 import { acceptPayslipJob } from '../state/income-migration.js';
 import { rebasePayslipFigures, DEFAULT_SUPER_PCT } from '../calc/income-rebase.js';
+import { concessionalCapCheck } from '../calc/super-cap.js';
+import { formatCurrency } from '../utils.js';
 import { deleteIncomeSourceFlow } from './income-other.js';
 
 /** Legal minimum super shown when nothing is stored yet (a rate, not a payslip figure). */
@@ -314,11 +316,24 @@ function validateValues(layout) {
     };
 }
 
-function plausibilityFor(layout) {
+/** FT-R-131 (E): a calm warning when employer super (this sheet plus the other jobs) is over the year's concessional cap. No figure changes. */
+export function superCapNote(v, layout, ctx = {}) {
+    const { source, data, initial, today } = ctx;
+    if (!today) return null;
+    const mine = { incomeType: 'salaried', grossAnnual: grossAnnualFrom(v, layout, initial || {}), superPct: v.superPct };
+    const others = ((data && data.incomeSources) || []).filter((s) => s !== source);
+    const r = concessionalCapCheck([mine, ...others], today);
+    if (!r.over) return null;
+    return { field: 'superPct', message: t('c.income.superCap', { year: r.label, amount: formatCurrency(Math.round(r.amount), undefined, 0), cap: formatCurrency(r.cap, undefined, 0) }) };
+}
+
+function plausibilityFor(layout, ctx = {}) {
     const hours = layout === 'hours' ? hoursRule({ field: 'hoursPerWeek' }) : () => [];
     return (v) => {
         const notes = hours(v);
         if (v.medicareExemption === 'yes') notes.push({ field: 'medicareExemption', message: t('c.income.notModelled.medicare') });
+        const cap = superCapNote(v, layout, ctx);
+        if (cap) notes.push(cap);
         if (v.salarySacrifice === 'yes') notes.push({ field: 'salarySacrifice', message: t('c.income.notModelled.sacrifice') });
         return notes;
     };
@@ -382,7 +397,7 @@ export function openIncomeSheet(index, opts = {}) {
         values,
         saveLabel: t('c.income.save'),
         validate: validateValues(layout),
-        plausibility: plausibilityFor(layout),
+        plausibility: plausibilityFor(layout, { source, data, initial, today }),
         onSave: (v) => saveIncomeSheet({ source, data, layout, initial, draft, onSaved: opts.onSaved }, v),
         // A12b: delete with Undo; the last source is refused (the old guard, now a toast).
         onDelete: draft ? undefined : () => { deleteIncomeSourceFlow(index); },

@@ -327,7 +327,9 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
     const cancelBtn = el('button', 'sheet-btn', readOnly ? t('d.sheet.close') : t('d.sheet.cancel'));
     cancelBtn.type = 'button';
     cancelBtn.dataset.sheetAction = 'close';
-    const saveBtn = el('button', 'sheet-btn is-primary', saveLabel || t('d.sheet.save'));
+    // saveLabel may be a function of the current values (the button is named after the choice)
+    const labelNow = () => (typeof saveLabel === 'function' ? saveLabel(model.current()) : saveLabel) || t('d.sheet.save');
+    const saveBtn = el('button', 'sheet-btn is-primary', labelNow());
     saveBtn.type = 'submit';
     saveBtn.dataset.sheetAction = 'save';
     saveBtn.setAttribute('form', `${id}-form`);
@@ -347,6 +349,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
             if (!c) continue;
             if (f.type === 'toggle') c.checked = !!model.raw[f.key]; else c.value = model.raw[f.key] ?? '';
         }
+        if (typeof saveLabel === 'function' && !saving) saveBtn.textContent = labelNow(); // values set in code move the label too
     }
 
     function setError(key, message) {
@@ -420,7 +423,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
         saveBtn.textContent = t('d.sheet.saving');
         try {
             const r = typeof onSave === 'function' ? await onSave(res.values) : undefined;
-            if (r === false) { saving = false; saveBtn.disabled = false; saveBtn.textContent = saveLabel || t('d.sheet.save'); return; }
+            if (r === false) { saving = false; saveBtn.disabled = false; saveBtn.textContent = labelNow(); return; }
             close();
         } catch (err) {
             // H4: log what failed and where, never the values: error type, a short message, the top stack frames, field keys.
@@ -431,7 +434,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
             }));
             saving = false;
             saveBtn.disabled = false;
-            saveBtn.textContent = saveLabel || t('d.sheet.save');
+            saveBtn.textContent = labelNow();
             setError('_form', t('d.sheet.saveFailed'));
         }
     }
@@ -462,6 +465,7 @@ export function openSheet({ title, fields = [], values = {}, onSave, onDelete, v
         const c = e.target.closest('[data-key]');
         if (!c) return;
         model.set(c.dataset.key, c.type === 'checkbox' ? c.checked : c.value);
+        if (typeof saveLabel === 'function' && !saving) saveBtn.textContent = labelNow();
         layer.querySelectorAll('[data-note-for][aria-live]').forEach((n) => n.removeAttribute('aria-live')); // typing again: quiet
         setError(c.dataset.key, '');
         renderNotes();
