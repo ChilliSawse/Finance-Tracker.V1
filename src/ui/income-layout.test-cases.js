@@ -4,9 +4,11 @@
 
 import {
     layoutFor, sheetValuesFor, draftSource, applyIncomeValues, readoutFor, describeCheck,
-    patchForFix, payAnchorFromNext, grossAnnualFrom, recordPayslipCheck, openIncomeSheet, saveIncomeSheet,
+    patchForFix, payAnchorFromNext, grossAnnualFrom, recordPayslipCheck, openIncomeSheet, saveIncomeSheet, superCapNote,
 } from './income-layout.js';
 import { store } from '../state/store.js';
+import { AU_2025_26 } from '../calc/tax-tables/au-2025-26.js';
+import { AU_2026_27 } from '../calc/tax-tables/au-2026-27.js';
 import { acceptPayslipJob } from '../state/income-migration.js';
 
 const TODAY = '2026-03-10';
@@ -182,6 +184,22 @@ export const INCOME_LAYOUT_TEST_CASES = [
                 assert('with the payslip date', src.taxCheck && src.taxCheck.date, '2026-03-06');
                 document.querySelector('[data-sheet-action="close"]').click();
             } finally { store.financeData = saved; }
+        },
+    },
+    {
+        name: 'DB18 concessional cap warning (FT-R-131 E)',
+        fn(assert) {
+            const ctx = (today, data) => ({ source: null, data, initial: {}, today });
+            const v = (gross, pct) => ({ ...vals({ enterAs: 'year', amount: gross, superPct: pct }) });
+            assert('under cap: no warning', superCapNote(v(150000, 12), 'salary', ctx('2026-03-10')), null);
+            const over = superCapNote(v(300000, 12), 'salary', ctx('2026-03-10'));
+            assert('over cap: warns on super', over && over.field, 'superPct');
+            assert('names the 2025-26 cap and the amount', over && /2025.26/.test(over.message) && over.message.includes('30,000') && over.message.includes('36,000'), true);
+            assert('mentions carry-forward', over && /carry it forward/.test(over.message), true);
+            assert('2025-26: 31,200 is over the 30,000 cap', superCapNote(v(260000, 12), 'salary', ctx('2026-03-10')) !== null, true);
+            assert('same pay is under the 2026-27 cap (31,200 < 32,500)', superCapNote(v(260000, 12), 'salary', ctx('2026-09-10')), null);
+            assert('other jobs are added', superCapNote(v(150000, 12), 'salary', ctx('2026-09-10', { incomeSources: [{ incomeType: 'salaried', grossAnnual: 150000, superPct: 12 }] })) !== null, true);
+            assert('caps are in the built-in tables', [AU_2025_26.concessionalCap, AU_2026_27.concessionalCap], [30000, 32500]);
         },
     },
     {

@@ -74,4 +74,5 @@ export const AU_2026_27 = {
         indexationPercentDefault: 2.8, // 1 June 2026 rate; user-adjustable in projections
     },
     lito: { maxOffset: 700, fullUntil: 37500, rate1: 0.05, step1Until: 45000, base2: 325, rate2: 0.015, endsAt: 66667 },
+    concessionalCap: 32500, // super concessional contributions cap (tax.json super.concessionalCap, legislated)
 };

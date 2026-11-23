@@ -212,6 +212,7 @@ export function buildYearTable(fy, year) {
             indexationPercentDefault: Number((idxFig.value * 100).toFixed(6)),
         },
         lito: { maxOffset: l.max, fullUntil: l.fullUntil, rate1: l.rate1, step1Until: l.step1Until, base2: l.base2, rate2: l.rate2, endsAt: l.endsAt },
+        concessionalCap: num(fig('super', 'concessionalCap') && fig('super', 'concessionalCap').value) ? fig('super', 'concessionalCap').value : undefined,
         origin: 'reference',
     };
     return { table };
