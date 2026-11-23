@@ -47,6 +47,7 @@ Object.assign(en, {
     'c.income.readout.super': 'Super, a year',
     'c.income.readout.note': 'Left this pay uses what is withheld. What If and Future use the tax for the year.',
     'c.income.readout.tables': 'Tax tables: {fy}.',
+    'c.income.readout.workDed': 'Tax for the year takes off your work deductions of A${amount} (an estimate).',
     'c.income.readout.stdDed': 'Tax for the year takes off a standard deduction of A${amount} (an estimate).',
     'c.income.readout.noHelpYet': 'Before HELP, if you have it.',
     'c.income.part.tax': 'A${amount} tax',

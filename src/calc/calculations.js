@@ -7,7 +7,7 @@
 // passes data explicitly.
 
 import { getPayCyclesPerYear, getWeeklyAmount } from '../utils.js';
-import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment, calculateMedicareSurcharge, lacksPrivateCover } from './tax-au.js';
+import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment, lacksPrivateCover } from './tax-au.js';
 import { variableSourceAnnualFigures, activeFyKey } from './income-events.js';
 import { planTotals } from './plan.js';
 import { expectedPay } from './withholding.js';
@@ -77,10 +77,6 @@ export function calculateTotals(currentData, opts = {}) {
                 if (taxSettings && taxSettings.includeMedicareLevy) {
                     sourceAnnualTax += calculateMedicareLevy(sourceGrossAnnual, taxYear.medicare);
                 }
-                // FT-R-131: the surcharge only after an explicit "No" to private hospital cover.
-                if (lacksPrivateCover(taxSettings)) {
-                    sourceAnnualTax += calculateMedicareSurcharge(sourceGrossAnnual, taxYear.mls);
-                }
                 if (taxSettings && taxSettings.includeHelpInEstimate
                     && (parseFloat(taxSettings.helpBalance) || 0) > 0
                     && sourceIndex === (currentData.primaryIncomeIndex || 0)) {
@@ -108,7 +104,7 @@ export function calculateTotals(currentData, opts = {}) {
             if (withheldPerCycle !== null) {
                 netPerCycleWithheld = hasNetOverride ? netPerCycle : Math.max(0, grossPerCycle - withheldPerCycle);
                 estimateInputs.push({
-                    paySchedule: source.paySchedule, grossAnnual: sourceGrossAnnual,
+                    paySchedule: source.paySchedule, grossAnnual: sourceGrossAnnual, incomeType: type,
                     hasStudyDebt: !!(decl && decl.hasStudyDebt === true), claimsTaxFree: !decl || decl.claimsTaxFree !== false,
                     extraPerPay: decl ? decl.extraPerPay : 0, withheldPerPay: withheldPerCycle,
                 });
@@ -165,6 +161,7 @@ export function calculateTotals(currentData, opts = {}) {
     return {
         _annualTaxOwed: annualEstimate ? annualEstimate.owed.total : null,
         _taxDeduction: annualEstimate ? annualEstimate.owed.deduction : 0,
+        _taxDeductionKind: annualEstimate ? annualEstimate.owed.deductionKind : 'none',
         _refundOrBill: annualEstimate ? { kind: annualEstimate.kind, amount: annualEstimate.amount, label: annualEstimate.label, estimate: true } : null,
         totalGrossAnnualIncome,
         totalAnnualTax: totalAnnualTaxFromSources,

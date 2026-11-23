@@ -3,12 +3,29 @@
 // Fixture: an unnamed fortnightly pay of A$3,057.69 (gross 79,499.94 a year), no real data.
 
 import { annualOwed, litoFor, refundOrBill, annualEstimateForSources, watoFor } from './tax-owed.js';
-import { LEGACY_DEFAULT_BRACKETS, mlsRate, lacksPrivateCover } from './tax-au.js';
+import { LEGACY_DEFAULT_BRACKETS, mlsRate, lacksPrivateCover, getTaxYear, helpRepaymentForYear, calculateHelpRepayment } from './tax-au.js';
 import { estimateAnnualTax } from './income-events.js';
 import { setReferenceTaxTables } from './tax-tables/index.js';
 import { applyReferenceTax } from '../state/reference-tax.js';
 import { tablesFromReference } from './tax-tables/reference-tables.js';
 import taxFile from '../../reference/src/tax.json' with { type: 'json' };
+import { calculateTotals } from './calculations.js';
+import { yearInputs } from './fi.js';
+import { helpPayoffModel } from '../ui/future/model.js';
+import { buildSampleHousehold } from '../state/sample-data.js';
+
+const TODAY = '2026-11-23';
+/** The sample household with the given salaried sources and the cover answer; the year is picked by date. */
+function household(grosses, cover) {
+    const d = buildSampleHousehold(TODAY).data;
+    const alex = d.incomeSources[0];
+    d.incomeSources = grosses.map((g, i) => ({ ...JSON.parse(JSON.stringify(alex)), name: `Job ${i + 1}`, grossAnnual: g, hasStudyDebt: false, withholding: { ...alex.withholding, hasStudyDebt: false } }));
+    d.primaryIncomeIndex = 0;
+    d.taxSettings = { financialYear: null, includeMedicareLevy: true, includeHelpInEstimate: false, helpBalance: 0 };
+    if (cover !== undefined) d.taxSettings.hasPrivateHospitalCover = cover;
+    return d;
+}
+const r2 = (n) => Math.round(n * 100) / 100;
 
 const GROSS = 79499.94;
 // The stale bracket copy a saved file might carry (the A$627 trap input).
@@ -194,6 +211,103 @@ export const TAX_OWED_TEST_CASES = [
             } finally { setReferenceTaxTables({}); }
             assert('back on the built-in tables afterwards', annualOwed({ taxableIncome: 30000, date: '2027-10-01' }).wato, 0);
             assert('the offset is the lesser of A$250 and the tax left', [watoFor(100, { wato: { max: 250 } }), watoFor(1000, { wato: { max: 250 } }), watoFor(1000, {}), watoFor(-5, { wato: { max: 250 } })], [100, 250, 0, 0]);
+        },
+    },
+    {
+        name: 'DB17.6 the surcharge is one cliff on total income: two jobs of A$70k and A$60k, answered No',
+        fn(assert) {
+            const no = household([70000, 60000], false);
+            const unasked = household([70000, 60000]);
+            const a = calculateTotals(JSON.parse(JSON.stringify(no)), { today: TODAY });
+            const b = calculateTotals(JSON.parse(JSON.stringify(unasked)), { today: TODAY });
+            // 130,000 less the A$1,000 deduction = 129,000, in the 1.25% tier (123,001 to 164,000): 1,612.50.
+            const owed = annualOwed({ taxableIncome: 130000, date: TODAY, privateCover: false, labourIncome: 130000 });
+            assert('year-end: total income after the deduction', [owed.taxableIncome, owed.mls], [129000, 1612.5]);
+            assert('year-end tax for the year differs by exactly the surcharge', r2(a._annualTaxOwed - b._annualTaxOwed), 1612.5);
+            assert('take-home is pure withholding: unchanged by the answer', [a.totalAnnualTax, a.totalNetAnnualIncome], [b.totalAnnualTax, b.totalNetAnnualIncome]);
+            assert('no per-source surcharge on either job', a.totalAnnualTax, b.totalAnnualTax);
+            const ts = { financialYear: null, includeMedicareLevy: false };
+            const est = estimateAnnualTax(130000, [{ min: 0, max: Infinity, rate: 0 }], { ...ts, hasPrivateHospitalCover: false }) - estimateAnnualTax(130000, [{ min: 0, max: Infinity, rate: 0 }], ts);
+            assert('the estimate helper shows the same surcharge', r2(est), 1612.5);
+        },
+    },
+    {
+        name: 'DB17.7 a single job of A$105,500 answered No: the deduction keeps it under the cliff everywhere',
+        fn(assert) {
+            const owed = annualOwed({ taxableIncome: 105500, date: TODAY, privateCover: false });
+            assert('104,500 is at or under 105,000: no surcharge', [owed.taxableIncome, owed.mls], [104500, 0]);
+            const a = calculateTotals(household([105500], false), { today: TODAY });
+            const b = calculateTotals(household([105500]), { today: TODAY });
+            assert('screens agree: same year-end tax with or without the answer', a._annualTaxOwed, b._annualTaxOwed);
+            assert('take-home unchanged', [a.totalAnnualTax, a.totalNetAnnualIncome], [b.totalAnnualTax, b.totalNetAnnualIncome]);
+            const brackets = [{ min: 0, max: Infinity, rate: 0 }];
+            const ts = { financialYear: null, includeMedicareLevy: false };
+            assert('estimate helper: none either', estimateAnnualTax(105500, brackets, { ...ts, hasPrivateHospitalCover: false }), estimateAnnualTax(105500, brackets, ts));
+            assert('A$106,001 is over: 1%', annualOwed({ taxableIncome: 106001, date: TODAY, privateCover: false }).mls, 1050.01);
+        },
+    },
+    {
+        name: 'DB17.8 HELP for the year agrees across the readout, Future and What If under the deduction',
+        fn(assert) {
+            const d = buildSampleHousehold(TODAY).data;
+            d.taxSettings = { financialYear: null, includeMedicareLevy: true, includeHelpInEstimate: true, helpBalance: 24600 };
+            const totals = calculateTotals(JSON.parse(JSON.stringify(d)), { today: TODAY });
+            const gross = d.incomeSources[0].grossAnnual; // 85,000, an employee
+            const readout = annualOwed({ taxableIncome: gross, date: TODAY, hasStudyDebt: true, labourIncome: gross }).help;
+            const future = helpPayoffModel(JSON.parse(JSON.stringify(d)), new Date(TODAY)).annualRepayment;
+            const whatIf = yearInputs(JSON.parse(JSON.stringify(d)), TODAY).helpRepayment;
+            // 84,000 after the deduction: 15% over the A$69,528 threshold.
+            assert('readout HELP is worked on the income after the deduction', r2(readout), 2170.8);
+            assert('Future and What If equal the readout', [r2(future), r2(whatIf)], [2170.8, 2170.8]);
+            assert('the year-estimate uses the same figure', totals._annualTaxOwed > 0, true);
+            // A self-employed primary gets no deduction (the helper that Future and What If share).
+            const tb = getTaxYear();
+            assert('self-employed income: no deduction in the shared HELP helper', helpRepaymentForYear(gross, tb, { labourIncome: 0 }), calculateHelpRepayment(gross, tb.help));
+            assert('employee income: the deduction applies', helpRepaymentForYear(gross, tb, { labourIncome: gross }) < calculateHelpRepayment(gross, tb.help), true);
+        },
+    },
+    {
+        name: 'DB17.9 labour income only: no standard deduction for self-employed income, and the offset follows the labour tax',
+        fn(assert) {
+            const se = annualOwed({ taxableIncome: 50000, date: TODAY, labourIncome: 0 });
+            assert('self-employed only: nothing taken off', [se.deduction, se.deductionKind, se.taxableIncome], [0, 'none', 50000]);
+            const part = annualOwed({ taxableIncome: 50000, date: TODAY, labourIncome: 400 });
+            assert('the lesser of A$1,000 and the labour income', [part.deduction, part.deductionKind], [400, 'standard']);
+            const own = annualOwed({ taxableIncome: 50000, date: TODAY, labourIncome: 0, workDeductions: 1500 });
+            assert('own work deductions still count against any income', [own.deduction, own.deductionKind], [1500, 'work']);
+            const e = annualEstimateForSources([{ paySchedule: 'fortnightly', grossAnnual: 600, incomeType: 'selfEmployed' }, { paySchedule: 'fortnightly', grossAnnual: 400 }], TODAY);
+            assert('sources: only the employee income counts for the deduction', [e.taxableIncome, e.owed.deduction], [999.96, 399.88]);
+            try {
+                const y = JSON.parse(JSON.stringify(taxFile.years['2026-27']));
+                y.incomeTax.workingAustraliansTaxOffset = JSON.parse(JSON.stringify(taxFile.years['2027-28'].incomeTax.workingAustraliansTaxOffset));
+                const offset = y.incomeTax.workingAustraliansTaxOffset;
+                for (const g of Object.values(y)) for (const f of Object.values(g)) { f.fy = '2027-28'; if (f !== offset && f.appliesFrom) f.appliesFrom = `${+f.appliesFrom.slice(0, 4) + 1}${f.appliesFrom.slice(4)}`; }
+                setReferenceTaxTables(tablesFromReference({ '2027-28': y }).tables);
+                assert('offset: employee income gets it', annualOwed({ taxableIncome: 30000, date: '2027-10-01' }).wato, 250);
+                assert('offset: self-employed income only gets none', annualOwed({ taxableIncome: 30000, date: '2027-10-01', labourIncome: 0 }).wato, 0);
+            } finally { setReferenceTaxTables({}); }
+        },
+    },
+    {
+        name: 'DB17.10 surcharge tiers are optional: a complete 2027-28 with none is still built, with the offset',
+        fn(assert) {
+            const y = JSON.parse(JSON.stringify(taxFile.years['2026-27']));
+            y.incomeTax.workingAustraliansTaxOffset = JSON.parse(JSON.stringify(taxFile.years['2027-28'].incomeTax.workingAustraliansTaxOffset));
+            const offset = y.incomeTax.workingAustraliansTaxOffset;
+            for (const g of Object.values(y)) for (const f of Object.values(g)) { f.fy = '2027-28'; if (f !== offset && f.appliesFrom) f.appliesFrom = `${+f.appliesFrom.slice(0, 4) + 1}${f.appliesFrom.slice(4)}`; }
+            delete y.mls;
+            const built = tablesFromReference({ '2027-28': y });
+            assert('built without surcharge tiers', Object.keys(built.tables), ['2027-28']);
+            assert('carries the offset and no surcharge', [built.tables['2027-28'].wato, 'mls' in built.tables['2027-28']], [{ max: 250 }, false]);
+            const soft = JSON.parse(JSON.stringify(y));
+            soft.mls = JSON.parse(JSON.stringify(taxFile.years['2026-27'].mls));
+            for (const f of Object.values(soft.mls)) { f.fy = '2027-28'; f.appliesFrom = '2027-07-01'; f.status = 'announced'; }
+            assert('announced tiers are left out, the year is still used', Object.keys(tablesFromReference({ '2027-28': soft }).tables), ['2027-28']);
+            try {
+                setReferenceTaxTables(built.tables);
+                const o = annualOwed({ taxableIncome: 150000, date: '2027-10-01', privateCover: false });
+                assert('no figures, no surcharge, offset year used', [o.fy, o.stale, o.mls], ['2027-28', false, 0]);
+            } finally { setReferenceTaxTables({}); }
         },
     },
 ];

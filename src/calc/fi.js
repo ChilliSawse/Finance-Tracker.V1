@@ -19,7 +19,7 @@ import { assetValueAt, valueDetail, assetScope, loanScope, heldOutAssets, pendin
 import { resolveAt as defaultResolve } from './scenario.js';
 import { planTotals } from './plan.js';
 import { calculateTotals } from './calculations.js';
-import { calculateHelpRepayment, getTaxYear } from './tax-au.js';
+import { getTaxYear, helpRepaymentForYear } from './tax-au.js';
 import { addMonthsClamped, parseIso, toIso } from './pay-cycle.js';
 import { mojoLivingCosts, mojoSteps } from './fire.js';
 import { getBuckets } from '../state/saving-model.js';
@@ -319,7 +319,9 @@ function incomeFigures(d, dateIso) {
         return { gross, superYear: round2(gross * pct / 100), superPct: s && s.superPct };
     });
     const primary = rows[num(d.primaryIncomeIndex)] || rows[0] || { gross: 0 };
-    return { rows, superYear: rows.reduce((s, r) => s + r.superYear, 0), primaryGross: primary.gross };
+    const ps = sources[num(d.primaryIncomeIndex)] || sources[0];
+    const primaryLabour = ps && ps.incomeType !== 'selfEmployed' && ps.incomeType !== 'variable' ? primary.gross : 0;
+    return { rows, superYear: rows.reduce((s, r) => s + r.superYear, 0), primaryGross: primary.gross, primaryLabour };
 }
 
 /**
@@ -327,7 +329,7 @@ function incomeFigures(d, dateIso) {
  * fiNumber = multiple x a year of Daily plus Splurge (per pay amounts from getBuckets), the planned
  * essentials plus non-essentials when the model has neither role. Smile is not counted.
  */
-function yearInputs(d, dateIso) {
+export function yearInputs(d, dateIso) {
     const fs = d && d.fiSettings ? d.fiSettings : {};
     const multiple = isNum(fs.multiple) && fs.multiple > 0 ? fs.multiple : DEFAULT_MULTIPLE;
     const pt = safe(() => planTotals(d), null) || { cyclesPerYear: 26, essentialPerCycle: 0, nonEssentialPerCycle: 0 };
@@ -340,7 +342,8 @@ function yearInputs(d, dateIso) {
     const inc = incomeFigures(d, dateIso);
     const ts = d && d.taxSettings ? d.taxSettings : {};
     const helpOn = ts.includeHelpInEstimate !== false;
-    const help = safe(() => getTaxYear().help, null);
+    const taxTables = safe(() => getTaxYear(), null);
+    const help = taxTables ? taxTables.help : null;
     return {
         dateIso,
         age: ageAt(d, dateIso),
@@ -351,7 +354,7 @@ function yearInputs(d, dateIso) {
         fiNumber: round2(spendYear * multiple),
         fireYear: (bucketPerPayCents(buckets, 'fire') * cycles) / 100,
         superYear: inc.superYear,
-        helpRepayment: helpOn && help ? calculateHelpRepayment(inc.primaryGross, help) : 0,
+        helpRepayment: helpOn && help ? helpRepaymentForYear(inc.primaryGross, taxTables, { labourIncome: inc.primaryLabour }) : 0,
         helpIndexationPct: help ? num(help.indexationPercentDefault) : 0,
         cycles,
         buckets,

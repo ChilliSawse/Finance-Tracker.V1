@@ -78,6 +78,46 @@ export function calculateMedicareSurcharge(income, mls) {
     return (parseFloat(income) || 0) * mlsRate(income, mls);
 }
 
+/**
+ * The one place the year-end deduction is worked out (FT-R-131). From 2026-27 the year's table carries a standard
+ * deduction: the lesser of it and LABOUR income (employee sources, never self-employed or business), unless the
+ * person's own work deductions are higher, which then replace it. Year-end figures only; take-home and withholding
+ * never use it.
+ * @param {number} gross - total income for the year.
+ * @param {{standardDeduction?:number}} tables
+ * @param {{labourIncome?:number, workDeductions?:number}} [o] - labourIncome defaults to all of `gross`.
+ * @returns {{deduction:number, income:number, kind:'standard'|'work'|'none'}} income = gross less the deduction.
+ */
+export function incomeAfterDeduction(gross, tables, { labourIncome, workDeductions = 0 } = {}) {
+    const g = Math.max(0, parseFloat(gross) || 0);
+    const labour = labourIncome == null ? g : Math.min(g, Math.max(0, parseFloat(labourIncome) || 0));
+    const sd = tables && tables.standardDeduction > 0 ? tables.standardDeduction : 0;
+    const std = Math.min(sd, labour);
+    const work = Math.max(0, parseFloat(workDeductions) || 0);
+    const deduction = Math.round(Math.min(g, Math.max(std, work)) * 100) / 100;
+    return { deduction, income: Math.round((g - deduction) * 100) / 100, kind: deduction <= 0 ? 'none' : (std >= work ? 'standard' : 'work') };
+}
+
+/**
+ * The year-end levies on income that is already after the deduction: Medicare levy, the surcharge (only after an
+ * explicit No to private cover, one cliff on total income, never withheld from pay) and the HELP repayment.
+ * @param {number} income
+ * @param {{medicare:object, mls?:object, help:object}} tables
+ * @param {{medicare?:boolean, privateCover?:boolean, help?:boolean, helpIncome?:number}} [o]
+ */
+export function yearEndLevies(income, tables, { medicare = true, privateCover, help = false, helpIncome } = {}) {
+    return {
+        medicare: medicare ? calculateMedicareLevy(income, tables.medicare) : 0,
+        mls: privateCover === false ? calculateMedicareSurcharge(income, tables.mls) : 0,
+        help: help ? calculateHelpRepayment(helpIncome != null ? helpIncome : income, tables.help) : 0,
+    };
+}
+
+/** The year's HELP repayment on a gross income, after the same deduction as annualOwed (Future, What If, payoff card). */
+export function helpRepaymentForYear(gross, tables, { labourIncome, workDeductions } = {}) {
+    return calculateHelpRepayment(incomeAfterDeduction(gross, tables, { labourIncome, workDeductions }).income, tables.help);
+}
+
 /** True only when the person has answered "No" to private hospital cover. Unanswered counts as covered. */
 export function lacksPrivateCover(taxSettings) {
     return !!taxSettings && taxSettings.hasPrivateHospitalCover === false;

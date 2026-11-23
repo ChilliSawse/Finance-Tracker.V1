@@ -12,7 +12,6 @@ const REQUIRED = [
     ['medicare', 'levyRate'], ['medicare', 'singleLowerThreshold'], ['medicare', 'singleUpperThreshold'], ['medicare', 'phaseInRate'],
     ['help', 'bands'],
     ['payg', 'instrument'], ['payg', 'scale1_noTFT'], ['payg', 'scale2_TFT'], ['payg', 'stsl_TFT'], ['payg', 'stsl_noTFT'],
-    ['mls', 'singleTiers'],
 ];
 // FT-R-131: figures a year needs only from the year a rule starts. The standard deduction is law from 2026-27, the
 // Working Australians tax offset from 2027-28; a year from then on is held until the figure is present and legislated.
@@ -216,13 +215,17 @@ export function buildYearTable(fy, year) {
         || !num(hb[2][0]) || !num(hb[2][2]) || !num(hb[3][2]) || hb[2][0] <= hb[1][0]) return malformed();
     if (typeof from !== 'string' || !ISO.test(from) || typeof sched !== 'string' || !ISO.test(sched)) return malformed();
 
-    const mlsRows = rowsOf(v('mls', 'singleTiers'), 3, (r) => (num(r[0]) && (r[1] === null || num(r[1])) && num(r[2]) ? { min: r[0], max: lim(r[1]), rate: r[2] } : null));
-    if (!mlsRows || mlsRows[mlsRows.length - 1].max !== Infinity) return malformed();
+    // The surcharge figures are optional: with no legislated tiers there is no surcharge for the year, and the year is still used.
+    const mf = fig('mls', 'singleTiers');
+    const mlsRows = mf && mf.status === 'legislated'
+        ? rowsOf(mf.value, 3, (r) => (num(r[0]) && (r[1] === null || num(r[1])) && num(r[2]) ? { min: r[0], max: lim(r[1]), rate: r[2] } : null))
+        : null;
+    const mlsOk = !!mlsRows && mlsRows[mlsRows.length - 1].max === Infinity;
     const sd = start >= 2026 ? v('deductions', 'standardDeduction') : null;
     const wato = start >= 2027 ? v('incomeTax', 'workingAustraliansTaxOffset') : null;
     if (start >= 2026 && !(num(sd) && sd >= 0)) return malformed();
     if (start >= 2027 && !(wato && typeof wato === 'object' && num(wato.max) && wato.max >= 0)) return malformed();
-    const used = REQ.map(([g, n]) => fig(g, n)).concat([idxFig]);
+    const used = REQ.concat(mlsOk ? [['mls', 'singleTiers']] : []).map(([g, n]) => fig(g, n)).concat([idxFig]);
     const table = {
         fy,
         label: `${start}–${m[2]}`,
@@ -240,7 +243,7 @@ export function buildYearTable(fy, year) {
             capRate: hb[3][2],
             indexationPercentDefault: Number((idxFig.value * 100).toFixed(6)),
         },
-        mls: { singleTiers: mlsRows },
+        ...(mlsOk ? { mls: { singleTiers: mlsRows } } : {}),
         ...(start >= 2026 ? { standardDeduction: sd } : {}),
         ...(start >= 2027 ? { wato: { max: wato.max } } : {}),
         lito: { maxOffset: l.max, fullUntil: l.fullUntil, rate1: l.rate1, step1Until: l.step1Until, base2: l.base2, rate2: l.rate2, endsAt: l.endsAt },

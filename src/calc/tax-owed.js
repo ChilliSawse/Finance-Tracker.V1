@@ -6,7 +6,7 @@
 // year can hold 27 pays).
 
 import { resolveTablesForDate } from './tax-tables/index.js';
-import { calculateMedicareLevy, calculateHelpRepayment, calculateMedicareSurcharge } from './tax-au.js';
+import { incomeAfterDeduction, yearEndLevies } from './tax-au.js';
 import { expectedPay } from './withholding.js';
 
 const cents = (n) => Math.round((Number(n) || 0) * 100 + 1e-9) / 100;
@@ -50,28 +50,27 @@ export function watoFor(taxAfterLito, tables) {
  * Annual owed for one income year picked by `date`. Extra input fields (such as a saved
  * `taxBrackets`) are ignored by design.
  * From 2026-27 the year's standard deduction comes off first (the lesser of it and the income), unless
- * `workDeductions` is higher. `privateCover: false` adds the Medicare levy surcharge; anything else is covered.
+ * `workDeductions` is higher; the deduction is the lesser of it and `labourIncome` (employee sources, default all of
+ * the income). `privateCover: false` adds the Medicare levy surcharge on the income after the deduction.
  * @param {{taxableIncome:number, date?:Date|string, hasStudyDebt?:boolean, repaymentIncome?:number,
- *   workDeductions?:number, privateCover?:boolean}} p
- * @returns {{fy:string, stale:boolean, taxableIncome:number, deduction:number, tax:number, lito:number, wato:number,
- *   medicare:number, mls:number, help:number, total:number, estimate:true}}
+ *   workDeductions?:number, privateCover?:boolean, labourIncome?:number}} p
+ * @returns {{fy:string, stale:boolean, taxableIncome:number, deduction:number, deductionKind:string, tax:number, lito:number,
+ *   wato:number, medicare:number, mls:number, help:number, total:number, estimate:true}}
  */
-export function annualOwed({ taxableIncome, date, hasStudyDebt = false, repaymentIncome, workDeductions = 0, privateCover }) {
+export function annualOwed({ taxableIncome, date, hasStudyDebt = false, repaymentIncome, workDeductions = 0, privateCover, labourIncome }) {
     const { tables, fy, stale } = resolveTablesForDate(date || new Date());
     const gross = Math.max(0, Number(taxableIncome) || 0);
-    const std = tables.standardDeduction > 0 ? Math.min(tables.standardDeduction, gross) : 0;
-    const deduction = cents(Math.min(gross, Math.max(std, Number(workDeductions) || 0)));
-    const income = cents(gross - deduction);
+    const ded = incomeAfterDeduction(gross, tables, { labourIncome, workDeductions });
+    const income = ded.income;
     const lito = litoFor(income, date);
     const afterLito = Math.max(0, bracketTax(income, tables.brackets) - lito);
-    const wato = watoFor(afterLito, tables);
+    // The offset is capped at the tax on labour income alone (employee income after the deduction).
+    const labour = labourIncome == null ? gross : Math.min(gross, Math.max(0, Number(labourIncome) || 0));
+    const wato = watoFor(Math.min(afterLito, bracketTax(Math.max(0, labour - ded.deduction), tables.brackets)), tables);
     const tax = cents(Math.max(0, afterLito - wato));
-    const medicare = cents(calculateMedicareLevy(income, tables.medicare));
-    const mls = privateCover === false ? cents(calculateMedicareSurcharge(income, tables.mls)) : 0;
-    const help = hasStudyDebt
-        ? cents(calculateHelpRepayment(repaymentIncome != null ? repaymentIncome : income, tables.help))
-        : 0;
-    return { fy, stale, taxableIncome: income, deduction, tax, lito, wato, medicare, mls, help, total: cents(tax + medicare + mls + help), estimate: true };
+    const lv = yearEndLevies(income, tables, { privateCover, help: hasStudyDebt, helpIncome: repaymentIncome });
+    const medicare = cents(lv.medicare), mls = cents(lv.mls), help = cents(lv.help);
+    return { fy, stale, taxableIncome: income, deduction: ded.deduction, deductionKind: ded.kind, tax, lito, wato, medicare, mls, help, total: cents(tax + medicare + mls + help), estimate: true };
 }
 
 /**
@@ -98,17 +97,18 @@ export function refundOrBill({ withheldPerPay, cycles, withheld, owed }) {
 export function annualEstimateForSources(sources, date, _data, { privateCover, workDeductions } = {}) {
     const list = Array.isArray(sources) ? sources : [];
     const { fy } = resolveTablesForDate(date || new Date());
-    let taxableIncome = 0, withheld = 0, anyDebt = false;
+    let taxableIncome = 0, withheld = 0, anyDebt = false, labourIncome = 0;
     for (const s of list) {
         const ep = expectedPay(s, fy);
         const cycles = CYCLES_PER_YEAR[ep.cycle] || 26;
         taxableIncome += ep.gross * cycles;
+        if (s.incomeType !== 'selfEmployed' && s.incomeType !== 'variable') labourIncome += ep.gross * cycles;
         const perPay = s.withheldPerPay != null ? Number(s.withheldPerPay) || 0 : ep.total;
         withheld += perPay * cycles;
         if (s.hasStudyDebt) anyDebt = true;
     }
     taxableIncome = cents(taxableIncome);
-    const owed = annualOwed({ taxableIncome, date, hasStudyDebt: anyDebt, privateCover, workDeductions });
+    const owed = annualOwed({ taxableIncome, date, hasStudyDebt: anyDebt, privateCover, workDeductions, labourIncome: cents(labourIncome) });
     const rb = refundOrBill({ withheld, owed: owed.total });
     return { fy, taxableIncome, owed, withheld: rb.withheld, amount: rb.amount, kind: rb.kind, label: rb.label, withheldTotal: cents(withheld), estimate: true };
 }

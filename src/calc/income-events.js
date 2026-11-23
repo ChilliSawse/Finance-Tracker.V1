@@ -27,7 +27,7 @@
 // Cash-only events (netAmount 0, cashReceived > 0) therefore count in full.
 
 import { calculateTaxFromBrackets } from './calculations.js';
-import { getTaxYear, calculateMedicareLevy, calculateHelpRepayment, calculateMedicareSurcharge, lacksPrivateCover } from './tax-au.js';
+import { getTaxYear, lacksPrivateCover, incomeAfterDeduction, yearEndLevies } from './tax-au.js';
 
 export const GST_RATE = 0.10;
 
@@ -209,20 +209,22 @@ export function fyElapsedFraction(fyKey, now = new Date()) {
 }
 
 /**
- * Estimated annual tax on a gross figure using the app's bracket table plus the
- * optional Medicare/HELP components from taxSettings — the same recipe as
- * calculateTotals' salaried estimate path.
+ * Estimated YEAR-END tax on a gross figure using the app's bracket table plus the optional Medicare, surcharge and
+ * HELP components from taxSettings. It takes the same deduction and levies as annualOwed (tax-au.js helpers), so a
+ * year-end figure reads the same on every screen. `labourIncome` (employee income, default all of `gross`) limits
+ * the standard deduction. Not for take-home: that stays pure withholding.
  */
-export function estimateAnnualTax(gross, brackets, taxSettings, { includeHelp = false } = {}) {
-    let tax = calculateTaxFromBrackets(gross, brackets);
+export function estimateAnnualTax(gross, brackets, taxSettings, { includeHelp = false, labourIncome } = {}) {
+    const fy = getTaxYear(taxSettings ? taxSettings.financialYear : undefined);
+    const { income } = incomeAfterDeduction(gross, fy, { labourIncome });
+    let tax = calculateTaxFromBrackets(income, brackets);
     if (taxSettings) {
-        const fy = getTaxYear(taxSettings.financialYear);
-        if (taxSettings.includeMedicareLevy) tax += calculateMedicareLevy(gross, fy.medicare);
-        if (lacksPrivateCover(taxSettings)) tax += calculateMedicareSurcharge(gross, fy.mls);
-        if (includeHelp && taxSettings.includeHelpInEstimate !== false
-            && (num(taxSettings.helpBalance) > 0)) {
-            tax += calculateHelpRepayment(gross, fy.help);
-        }
+        const lv = yearEndLevies(income, fy, {
+            medicare: !!taxSettings.includeMedicareLevy,
+            privateCover: lacksPrivateCover(taxSettings) ? false : undefined,
+            help: includeHelp && taxSettings.includeHelpInEstimate !== false && num(taxSettings.helpBalance) > 0,
+        });
+        tax += lv.medicare + lv.mls + lv.help;
     }
     return tax;
 }
@@ -244,6 +246,7 @@ export function estimateVariableTaxProvision(data, now = new Date()) {
     const { from, to } = fyRange(fyKey);
 
     let regularAnnualGross = 0;
+    let labourGross = 0;
     let variableIsPrimary = false;
     const events = [];
     (data.incomeSources || []).forEach((source, i) => {
@@ -251,8 +254,9 @@ export function estimateVariableTaxProvision(data, now = new Date()) {
             events.push(...(source.incomeEvents || []));
             if (i === (data.primaryIncomeIndex || 0)) variableIsPrimary = true;
         } else {
-            regularAnnualGross += source._calculatedGrossAnnual != null
-                ? source._calculatedGrossAnnual : num(source.grossAnnual);
+            const g = source._calculatedGrossAnnual != null ? source._calculatedGrossAnnual : num(source.grossAnnual);
+            regularAnnualGross += g;
+            if (source.incomeType !== 'selfEmployed') labourGross += g;
         }
     });
 
@@ -263,7 +267,7 @@ export function estimateVariableTaxProvision(data, now = new Date()) {
     const projectedAnnualGross = ytd.gross / elapsed;
     // HELP repayments attach to the person, and the app models that as the
     // primary source — include them only when a variable source is primary.
-    const opts = { includeHelp: variableIsPrimary };
+    const opts = { includeHelp: variableIsPrimary, labourIncome: labourGross };
     const taxOnAll = estimateAnnualTax(regularAnnualGross + projectedAnnualGross, data.taxBrackets, taxSettings, opts);
     const taxOnRegular = estimateAnnualTax(regularAnnualGross, data.taxBrackets, taxSettings, opts);
     const projectedAnnualTax = Math.max(0, taxOnAll - taxOnRegular);
