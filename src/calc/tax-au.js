@@ -94,8 +94,9 @@ export function incomeAfterDeduction(gross, tables, { labourIncome, workDeductio
     const sd = tables && tables.standardDeduction > 0 ? tables.standardDeduction : 0;
     const std = Math.min(sd, labour);
     const work = Math.max(0, parseFloat(workDeductions) || 0);
-    const deduction = Math.round(Math.min(g, Math.max(std, work)) * 100) / 100;
-    return { deduction, income: Math.round((g - deduction) * 100) / 100, kind: deduction <= 0 ? 'none' : (std >= work ? 'standard' : 'work') };
+    // Not rounded here: a marginal difference of two estimates must not pick up cent noise. annualOwed rounds its own figures.
+    const deduction = Math.min(g, Math.max(std, work));
+    return { deduction, income: g - deduction, kind: deduction <= 0 ? 'none' : (std >= work ? 'standard' : 'work') };
 }
 
 /**
