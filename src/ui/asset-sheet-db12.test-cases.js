@@ -441,7 +441,8 @@ export const DB12_TEST_CASES = [
             const loadRef = async () => { calls += 1; return { assetTypes: [] }; };
             const { loadAssetTypes, assetTypesFor } = await import('../state/asset-type-list.js');
             assert('an empty list loads as empty', (await loadAssetTypes(undefined, loadRef)).length, 0);
-            assert('and (offline) is remembered, not asked for again on every reopen', [(await assetTypesFor({})).length, (await assetTypesFor({})).length], [0, 0]);
+            const first = await assetTypesFor({});
+            assert('the list (empty when offline) is remembered, not asked for again on every reopen', (await assetTypesFor({})) === first, true);
         },
     },
     {
