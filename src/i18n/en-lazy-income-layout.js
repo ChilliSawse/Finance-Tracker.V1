@@ -30,7 +30,7 @@ Object.assign(en, {
     'c.income.q.unsureHint': 'Not sure about HELP? Checking one payslip, below, will tell us.',
     'c.income.notModelled.medicare': 'Not modelled yet: Ledger does not work out a Medicare exemption. Your payslip stays the truth for tax.',
     'c.income.notModelled.sacrifice': 'Not modelled yet: Ledger does not work out salary sacrifice. Your payslip stays the truth for tax.',
-    'c.income.superCap': 'Your concessional super for {year} is about {amount}, over the {cap} cap. Extra can be taxed more. If you had unused cap in earlier years you may be able to carry it forward, so check with the ATO or your fund.',
+    'c.income.superCap': 'Your employer super for {year} is about {amount}, over the {cap} cap. Extra can be taxed more. If you had unused cap in earlier years you may be able to carry it forward, so check with the ATO or your fund.',
     'c.income.err.amount': 'Enter an amount above zero.',
     'c.income.err.hours': 'Enter the hours you work in a week.',
     'c.income.err.date': 'Pick a real date.',

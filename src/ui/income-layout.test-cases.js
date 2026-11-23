@@ -187,18 +187,22 @@ export const INCOME_LAYOUT_TEST_CASES = [
         },
     },
     {
-        name: 'DB18 concessional cap warning (FT-R-131 E)',
+        name: 'DB18 employer super cap warning (FT-R-131 E)',
         fn(assert) {
             const ctx = (today, data) => ({ source: null, data, initial: {}, today });
             const v = (gross, pct) => ({ ...vals({ enterAs: 'year', amount: gross, superPct: pct }) });
             assert('under cap: no warning', superCapNote(v(150000, 12), 'salary', ctx('2026-03-10')), null);
-            const over = superCapNote(v(300000, 12), 'salary', ctx('2026-03-10'));
+            assert('a $300k single job at 12% is held to the base, no false warning', superCapNote(v(300000, 12), 'salary', ctx('2026-03-10')), null);
+            const over = superCapNote(v(300000, 15), 'salary', ctx('2026-03-10'));
             assert('over cap: warns on super', over && over.field, 'superPct');
-            assert('names the 2025-26 cap and the amount', over && /2025.26/.test(over.message) && over.message.includes('30,000') && over.message.includes('36,000'), true);
+            assert('names the 2025-26 cap and the amount (30,000 + 9,000)', over && /2025.26/.test(over.message) && over.message.includes('30,000') && over.message.includes('39,000'), true);
+            assert('says employer super', over && /^Your employer super/.test(over.message), true);
             assert('mentions carry-forward', over && /carry it forward/.test(over.message), true);
-            assert('2025-26: 31,200 is over the 30,000 cap', superCapNote(v(260000, 12), 'salary', ctx('2026-03-10')) !== null, true);
-            assert('same pay is under the 2026-27 cap (31,200 < 32,500)', superCapNote(v(260000, 12), 'salary', ctx('2026-09-10')), null);
-            assert('other jobs are added', superCapNote(v(150000, 12), 'salary', ctx('2026-09-10', { incomeSources: [{ incomeType: 'salaried', grossAnnual: 150000, superPct: 12 }] })) !== null, true);
+            assert('2025-26 cap used: 14% on 260k is over 30,000', superCapNote(v(260000, 14), 'salary', ctx('2026-03-10')) !== null, true);
+            assert('2026-27 cap used: 14% on 230k = 32,200 is under 32,500', superCapNote(v(230000, 14), 'salary', ctx('2026-09-10')), null);
+            assert('two jobs add up over the cap', superCapNote(v(150000, 12), 'salary', ctx('2026-09-10', { incomeSources: [{ incomeType: 'salaried', grossAnnual: 150000, superPct: 12 }] })) !== null, true);
+            assert('blank super % counts as 0, like the readout', superCapNote(v(300000, null), 'salary', ctx('2026-03-10')), null);
+            assert('a stale year (after the last table) shows no warning', superCapNote(v(300000, 15), 'salary', ctx('2031-03-10')), null);
             assert('caps are in the built-in tables', [AU_2025_26.concessionalCap, AU_2026_27.concessionalCap], [30000, 32500]);
         },
     },
